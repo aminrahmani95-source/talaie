@@ -46,8 +46,12 @@ export const TechnicianDashboard: React.FC<Props> = ({
       <div className="bg-[#212121] rounded-3xl p-5 text-white shadow-xl relative overflow-hidden border border-[#C1A056]/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-2xl border border-white/10 shadow-inner">
-              {currentUser.avatar || '🔧'}
+            <div className="w-13 h-13 rounded-2xl bg-white/5 border border-[#C1A056]/40 flex items-center justify-center p-2 shadow-inner">
+              <img
+                src="./talaei-lion-gold.png"
+                alt="نشان گالری طلایی"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">

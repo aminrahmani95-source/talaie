@@ -44,19 +44,16 @@ export const Header: React.FC<Props> = ({
 
       <div className="max-w-7xl mx-auto px-3 sm:px-6">
         <div className="flex items-center justify-between h-20">
-          {/* Brand & Official Logo from talaei.ir */}
+          {/* Brand & Official Logo from user */}
           <div className="flex items-center gap-3 sm:gap-4">
-            <a href="/" className="block py-1">
-              <img
-                src="./logo.webp"
-                alt="گالری طلایی"
-                className="h-10 sm:h-12 w-auto object-contain transition-transform hover:scale-105 duration-200"
-                onError={(e) => {
-                  // Fallback if image fails
-                  const target = e.currentTarget;
-                  target.style.display = 'none';
-                }}
-              />
+            <a href="/" className="flex items-center gap-2.5 py-1 group">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#212121] flex items-center justify-center p-1.5 shadow-sm group-hover:border-[#C1A056] border border-[#212121] transition duration-200">
+                <img
+                  src="./talaei-lion-gold.png"
+                  alt="نشان گالری طلایی"
+                  className="w-full h-full object-contain transition-transform group-hover:scale-105 duration-200"
+                />
+              </div>
             </a>
 
             <div className="border-r border-[#E8E4DC] pr-3 sm:pr-4">

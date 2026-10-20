@@ -49,11 +49,13 @@ export const LoginModal: React.FC<Props> = ({ users, currentUserId, onSelectUser
         {/* Header with talaei.ir luxury palette */}
         <div className="bg-[#212121] px-6 py-6 text-white text-center relative border-b-2 border-[#C1A056]">
           <div className="flex justify-center mb-3">
-            <img
-              src="./logo.webp"
-              alt="گالری طلایی"
-              className="h-12 w-auto object-contain bg-white/10 p-2 rounded-2xl backdrop-blur-sm border border-white/10"
-            />
+            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-[#C1A056]/30 flex items-center justify-center p-2 shadow-inner">
+              <img
+                src="./talaei-lion-gold.png"
+                alt="نشان گالری طلایی"
+                className="w-full h-full object-contain"
+              />
+            </div>
           </div>
           <h2 className="text-lg font-black text-white">سامانه عملیات و کیوسی نصب</h2>
           <p className="text-xs text-[#C1A056] mt-0.5 font-bold">
