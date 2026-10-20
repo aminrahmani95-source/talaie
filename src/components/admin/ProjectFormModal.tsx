@@ -69,6 +69,10 @@ export const ProjectFormModal: React.FC<Props> = ({
     project?.proposalImages || []
   );
 
+  // Status & QC
+  const [status, setStatus] = useState<Project['status']>(project?.status || 'SCHEDULED');
+  const [qcStatus, setQcStatus] = useState<Project['qcStatus']>(project?.qcStatus || 'NOT_STARTED');
+
   const handleToggleFullTools = () => {
     if (!isFullTools) {
       setIsFullTools(true);
@@ -168,9 +172,9 @@ export const ProjectFormModal: React.FC<Props> = ({
       isFullTools,
       toolsRequired,
       customToolsNotes: customToolsNotes.trim(),
-      status: project?.status || 'SCHEDULED',
+      status,
       completionPhotos: project?.completionPhotos || [],
-      qcStatus: project?.qcStatus || 'NOT_STARTED',
+      qcStatus: status === 'COMPLETED' && qcStatus === 'NOT_STARTED' ? 'PENDING' : qcStatus,
       createdAt: project?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -535,6 +539,54 @@ export const ProjectFormModal: React.FC<Props> = ({
                 onChange={(e) => setCustomToolsNotes(e.target.value)}
                 className="w-full text-sm p-2 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white"
               />
+            </div>
+          </div>
+
+          {/* Section 6: Status & QC Management */}
+          <div className="bg-[#FAF7F2] border border-[#E8E4DC] rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-bold text-[#212121] flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-[#C1A056]" />
+              وضعیت اجرای نصب و کنترل کیفیت (QC)
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  وضعیت اجرای پروژه:
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => {
+                    const nextStatus = e.target.value as Project['status'];
+                    setStatus(nextStatus);
+                    if (nextStatus === 'COMPLETED' && qcStatus === 'NOT_STARTED') {
+                      setQcStatus('PENDING');
+                    }
+                  }}
+                  className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white font-bold"
+                >
+                  <option value="SCHEDULED">📅 برنامه‌ریزی شده (هنوز اعزام نشده)</option>
+                  <option value="EN_ROUTE">🚗 در مسیر پروژه</option>
+                  <option value="IN_PROGRESS">⚙️ در حال نصب سر صحنه</option>
+                  <option value="COMPLETED">✓ نصب پایان یافته</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  وضعیت نظارت و بررسی کیوسی (QC):
+                </label>
+                <select
+                  value={qcStatus}
+                  onChange={(e) => setQcStatus(e.target.value as Project['qcStatus'])}
+                  className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white font-bold"
+                >
+                  <option value="NOT_STARTED">هنوز نصب نشده</option>
+                  <option value="PENDING">⏳ در انتظار بررسی و تایید کیوسی</option>
+                  <option value="APPROVED">✓ تایید رسمی کیوسی</option>
+                  <option value="REJECTED">⚠️ عدم تایید / نیاز به اصلاح</option>
+                </select>
+              </div>
             </div>
           </div>
 

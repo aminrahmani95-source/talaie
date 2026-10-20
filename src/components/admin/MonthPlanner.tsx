@@ -272,8 +272,12 @@ export const MonthPlanner: React.FC<Props> = ({
                           </span>
                           <span
                             className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                              proj.status === 'COMPLETED'
+                              proj.qcStatus === 'APPROVED'
                                 ? 'bg-[#194840]/15 text-[#194840]'
+                                : (proj.status === 'COMPLETED' || proj.qcStatus === 'PENDING') && proj.qcStatus !== 'REJECTED'
+                                ? 'bg-[#C1A056] text-[#212121] shadow-2xs'
+                                : proj.qcStatus === 'REJECTED'
+                                ? 'bg-rose-100 text-rose-800'
                                 : proj.status === 'IN_PROGRESS'
                                 ? 'bg-amber-100 text-amber-900 animate-pulse'
                                 : proj.status === 'EN_ROUTE'
@@ -281,8 +285,12 @@ export const MonthPlanner: React.FC<Props> = ({
                                 : 'bg-[#FAF7F2] text-slate-700'
                             }`}
                           >
-                            {proj.status === 'COMPLETED'
-                              ? 'اتمام نصب'
+                            {proj.qcStatus === 'APPROVED'
+                              ? '✓ تایید کیوسی'
+                              : (proj.status === 'COMPLETED' || proj.qcStatus === 'PENDING') && proj.qcStatus !== 'REJECTED'
+                              ? '⏳ در انتظار کیوسی'
+                              : proj.qcStatus === 'REJECTED'
+                              ? '⚠️ نیاز به اصلاح'
                               : proj.status === 'IN_PROGRESS'
                               ? 'در حال نصب'
                               : proj.status === 'EN_ROUTE'

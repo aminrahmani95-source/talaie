@@ -38,21 +38,69 @@ export const App: React.FC = () => {
   const [ticketModalProject, setTicketModalProject] = useState<Project | null>(null);
   const [completionModalProject, setCompletionModalProject] = useState<Project | null>(null);
 
+  // Cross-tab and real-time synchronization
+  useEffect(() => {
+    // 1. BroadcastChannel for instant multi-tab sync
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('talaie_realtime_sync');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'SYNC_DATA') {
+          setProjects(StorageService.getProjects());
+          setTickets(StorageService.getTickets());
+          setUsers(StorageService.getUsers());
+          setSettings(StorageService.getSettings());
+        }
+      };
+    } catch {
+      // BroadcastChannel not available in older environments
+    }
+
+    // 2. Storage event for cross-window / cross-tab fallback
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key?.startsWith('talaie_')) {
+        setProjects(StorageService.getProjects());
+        setTickets(StorageService.getTickets());
+        setUsers(StorageService.getUsers());
+        setSettings(StorageService.getSettings());
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      if (bc) bc.close();
+    };
+  }, []);
+
+  // Broadcast helper
+  const broadcastSync = () => {
+    try {
+      const bc = new BroadcastChannel('talaie_realtime_sync');
+      bc.postMessage({ type: 'SYNC_DATA', timestamp: Date.now() });
+      bc.close();
+    } catch {}
+  };
+
   // Sync state changes with StorageService
   useEffect(() => {
     StorageService.saveProjects(projects);
+    broadcastSync();
   }, [projects]);
 
   useEffect(() => {
     StorageService.saveUsers(users);
+    broadcastSync();
   }, [users]);
 
   useEffect(() => {
     StorageService.saveTickets(tickets);
+    broadcastSync();
   }, [tickets]);
 
   useEffect(() => {
     StorageService.saveSettings(settings);
+    broadcastSync();
   }, [settings]);
 
   useEffect(() => {
@@ -171,11 +219,13 @@ export const App: React.FC = () => {
     setIsProjectFormOpen(true);
   };
 
-  // Counters for alerts
+  // Counters for alerts with synchronized QC status logic
   const openTicketCount = tickets.filter((t) => t.status === 'OPEN').length;
-  const pendingQcCount = projects.filter(
-    (p) => p.status === 'COMPLETED' || p.qcStatus === 'PENDING'
-  ).length;
+  const isAwaitingQc = (p: Project) =>
+    (p.status === 'COMPLETED' || p.qcStatus === 'PENDING') &&
+    p.qcStatus !== 'APPROVED' &&
+    p.qcStatus !== 'REJECTED';
+  const pendingQcCount = projects.filter(isAwaitingQc).length;
 
   const isQcManager = currentUser.role === 'QC_MANAGER';
 
