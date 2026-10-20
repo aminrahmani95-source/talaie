@@ -185,10 +185,10 @@ export const MonthPlanner: React.FC<Props> = ({
               key={day.dateKey}
               className={`flex flex-col rounded-3xl border transition shadow-xs ${
                 day.isToday
-                  ? 'bg-white border-[#C1A056] ring-2 ring-[#C1A056]/30'
+                  ? 'bg-white dark:bg-[#1C1C1C] border-[#C1A056] ring-2 ring-[#C1A056]/30'
                   : isVisibleToTechnicians
-                  ? 'bg-white border-[#E8E4DC]'
-                  : 'bg-[#F5EFEB]/70 border-dashed border-[#D7D3CA] opacity-90'
+                  ? 'bg-white dark:bg-[#1C1C1C] border-[#E8E4DC] dark:border-[#2D2D2D]'
+                  : 'bg-[#F5EFEB]/70 dark:bg-[#151515]/70 border-dashed border-[#D7D3CA] dark:border-[#2A2A2A] opacity-90'
               }`}
             >
               {/* Day Column Header */}
@@ -197,8 +197,8 @@ export const MonthPlanner: React.FC<Props> = ({
                   day.isToday
                     ? 'bg-[#212121] text-[#C1A056] border-[#C1A056]'
                     : isVisibleToTechnicians
-                    ? 'bg-[#FAF7F2] text-[#212121] border-[#E8E4DC]'
-                    : 'bg-[#EAE6DD] text-slate-600 border-[#D7D3CA]'
+                    ? 'bg-[#FAF7F2] dark:bg-[#222222] text-[#212121] dark:text-[#F5EFEB] border-[#E8E4DC] dark:border-[#2D2D2D]'
+                    : 'bg-[#EAE6DD] dark:bg-[#181818] text-slate-600 dark:text-zinc-400 border-[#D7D3CA] dark:border-[#2A2A2A]'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -217,8 +217,8 @@ export const MonthPlanner: React.FC<Props> = ({
                       isVisibleToTechnicians
                         ? day.isToday
                           ? 'bg-[#C1A056] text-[#212121]'
-                          : 'bg-[#C1A056]/20 text-[#A88738]'
-                        : 'bg-slate-300 text-slate-700'
+                          : 'bg-[#C1A056]/20 text-[#A88738] dark:text-[#C1A056]'
+                        : 'bg-slate-300 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300'
                     }`}
                   >
                     <Eye className="w-2.5 h-2.5" />
@@ -226,13 +226,13 @@ export const MonthPlanner: React.FC<Props> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-black/10 text-[11px]">
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-black/10 dark:border-white/10 text-[11px]">
                   <span>
                     {toPersianDigits(dayProjects.length)} مأموریت ثبت‌شده
                   </span>
                   <button
                     onClick={() => onNewProject(day.dateKey)}
-                    className="p-1 hover:bg-black/10 rounded-full transition"
+                    className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition"
                     title="افزودن مأموریت به این روز"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -243,11 +243,11 @@ export const MonthPlanner: React.FC<Props> = ({
               {/* Projects List */}
               <div className="p-3 space-y-3 flex-1 overflow-y-auto min-h-[160px]">
                 {dayProjects.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-slate-400 py-6 text-center">
-                    <div className="w-10 h-10 rounded-2xl bg-[#FAF7F2] border border-[#E8E4DC] flex items-center justify-center mb-2">
+                  <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-zinc-500 py-6 text-center">
+                    <div className="w-10 h-10 rounded-2xl bg-[#FAF7F2] dark:bg-[#222222] border border-[#E8E4DC] dark:border-[#2D2D2D] flex items-center justify-center mb-2">
                       <Calendar className="w-5 h-5 text-[#C1A056]" />
                     </div>
-                    <span className="text-xs font-medium text-slate-500">مأموریتی نیست</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">مأموریتی نیست</span>
                     <button
                       onClick={() => onNewProject(day.dateKey)}
                       className="mt-2 text-[11px] text-[#C1A056] hover:text-[#A88738] font-bold"
@@ -263,26 +263,26 @@ export const MonthPlanner: React.FC<Props> = ({
                     return (
                       <div
                         key={proj.id}
-                        className="bg-white rounded-2xl p-3 border border-[#E8E4DC] shadow-xs hover:border-[#C1A056]/60 transition space-y-2.5 relative group"
+                        className="bg-white dark:bg-[#222222] rounded-2xl p-3 border border-[#E8E4DC] dark:border-[#333333] shadow-xs hover:border-[#C1A056]/60 dark:hover:border-[#C1A056]/60 transition space-y-2.5 relative group"
                       >
                         {/* Status & Code */}
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-mono font-bold text-slate-600 bg-[#FAF7F2] border border-[#E8E4DC] px-1.5 py-0.5 rounded">
+                          <span className="font-mono font-bold text-slate-600 dark:text-zinc-300 bg-[#FAF7F2] dark:bg-[#181818] border border-[#E8E4DC] dark:border-[#333333] px-1.5 py-0.5 rounded">
                             {proj.code}
                           </span>
                           <span
                             className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
                               proj.qcStatus === 'APPROVED'
-                                ? 'bg-[#194840]/15 text-[#194840]'
+                                ? 'bg-[#194840]/15 text-[#194840] dark:bg-[#194840]/30 dark:text-emerald-400'
                                 : (proj.status === 'COMPLETED' || proj.qcStatus === 'PENDING') && proj.qcStatus !== 'REJECTED'
-                                ? 'bg-[#C1A056] text-[#212121] shadow-2xs'
+                                ? 'bg-[#C1A056] text-[#212121] shadow-2xs font-black'
                                 : proj.qcStatus === 'REJECTED'
-                                ? 'bg-rose-100 text-rose-800'
+                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300'
                                 : proj.status === 'IN_PROGRESS'
-                                ? 'bg-amber-100 text-amber-900 animate-pulse'
+                                ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300 animate-pulse'
                                 : proj.status === 'EN_ROUTE'
-                                ? 'bg-blue-100 text-blue-900'
-                                : 'bg-[#FAF7F2] text-slate-700'
+                                ? 'bg-blue-100 text-blue-900 dark:bg-blue-950/50 dark:text-blue-300'
+                                : 'bg-[#FAF7F2] text-slate-700 dark:bg-[#181818] dark:text-zinc-300'
                             }`}
                           >
                             {proj.qcStatus === 'APPROVED'
@@ -301,10 +301,10 @@ export const MonthPlanner: React.FC<Props> = ({
 
                         {/* Title & Customer */}
                         <div>
-                          <h4 className="font-bold text-xs text-[#212121] leading-tight">
+                          <h4 className="font-bold text-xs text-[#212121] dark:text-white leading-tight">
                             {proj.title}
                           </h4>
-                          <div className="flex items-center gap-1 text-[11px] text-[#71717A] mt-1">
+                          <div className="flex items-center gap-1 text-[11px] text-[#71717A] dark:text-zinc-400 mt-1">
                             <Clock className="w-3 h-3 text-[#C1A056]" />
                             <span>ساعت {toPersianDigits(proj.scheduledTime)}</span>
                           </div>
@@ -313,35 +313,35 @@ export const MonthPlanner: React.FC<Props> = ({
                         {/* Panels Specs */}
                         <div className="flex items-center gap-2 text-[10px] font-bold">
                           {proj.shadePanels > 0 && (
-                            <span className="px-2 py-0.5 rounded-md bg-[#FAF7F2] text-[#212121] border border-[#E8E4DC]">
+                            <span className="px-2 py-0.5 rounded-md bg-[#FAF7F2] dark:bg-[#181818] text-[#212121] dark:text-zinc-200 border border-[#E8E4DC] dark:border-[#333333]">
                               {toPersianDigits(proj.shadePanels)} لت شید
                             </span>
                           )}
                           {proj.curtainPanels > 0 && (
-                            <span className="px-2 py-0.5 rounded-md bg-[#FAF7F2] text-[#C1A056] border border-[#C1A056]/30">
+                            <span className="px-2 py-0.5 rounded-md bg-[#FAF7F2] dark:bg-[#181818] text-[#C1A056] border border-[#C1A056]/30">
                               {toPersianDigits(proj.curtainPanels)} لت پرده
                             </span>
                           )}
                         </div>
 
                         {/* Team & Lead */}
-                        <div className="bg-[#FAF7F2] rounded-xl p-2 border border-[#E8E4DC] text-[11px]">
-                          <div className="flex items-center justify-between text-slate-700">
+                        <div className="bg-[#FAF7F2] dark:bg-[#181818] rounded-xl p-2 border border-[#E8E4DC] dark:border-[#333333] text-[11px]">
+                          <div className="flex items-center justify-between text-slate-700 dark:text-zinc-200">
                             <span className="font-semibold flex items-center gap-1">
                               <span className="text-[#C1A056]">⭐</span> {leadName || 'سرپرست'}
                             </span>
-                            <span className="text-[10px] text-slate-500">
+                            <span className="text-[10px] text-slate-500 dark:text-zinc-400">
                               ({toPersianDigits(teamCount)} نفر)
                             </span>
                           </div>
                         </div>
 
                         {/* Tools & Proposal */}
-                        <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-[#E8E4DC]">
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-zinc-400 pt-1 border-t border-[#E8E4DC] dark:border-[#333333]">
                           <span className="flex items-center gap-1">
                             <Wrench className="w-3 h-3 text-[#C1A056]" />
                             {proj.isFullTools ? (
-                              <span className="text-[#A88738] font-bold">فول ابزار</span>
+                              <span className="text-[#A88738] dark:text-[#C1A056] font-bold">فول ابزار</span>
                             ) : (
                               <span>{toPersianDigits(proj.toolsRequired.length)} ابزار</span>
                             )}
@@ -359,10 +359,10 @@ export const MonthPlanner: React.FC<Props> = ({
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center justify-end gap-1 pt-1 border-t border-[#E8E4DC]">
+                        <div className="flex items-center justify-end gap-1 pt-1 border-t border-[#E8E4DC] dark:border-[#333333]">
                           <button
                             onClick={() => onEditProject(proj)}
-                            className="p-1 text-slate-400 hover:text-[#C1A056] hover:bg-[#FAF7F2] rounded-lg transition"
+                            className="p-1 text-slate-400 dark:text-zinc-400 hover:text-[#C1A056] hover:bg-[#FAF7F2] dark:hover:bg-[#2A2A2A] rounded-lg transition"
                             title="ویرایش پروژه"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -373,7 +373,7 @@ export const MonthPlanner: React.FC<Props> = ({
                                 onDeleteProject(proj.id);
                               }
                             }}
-                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                            className="p-1 text-slate-400 dark:text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
                             title="حذف پروژه"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

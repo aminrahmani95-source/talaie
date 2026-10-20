@@ -11,18 +11,25 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
+  Sun,
+  Moon,
+  Sparkles,
 } from 'lucide-react';
 import { StorageService } from '../../utils/storage';
 import { toPersianDigits } from '../../utils/jalali';
 
 interface Props {
   settings: SystemSettings;
+  isDarkMode?: boolean;
+  onToggleDarkMode?: () => void;
   onUpdateSettings: (settings: SystemSettings) => void;
   onResetData: () => void;
 }
 
 export const SettingsView: React.FC<Props> = ({
   settings,
+  isDarkMode = false,
+  onToggleDarkMode,
   onUpdateSettings,
   onResetData,
 }) => {
@@ -100,57 +107,104 @@ export const SettingsView: React.FC<Props> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto pb-10">
       {/* Banner */}
       <div className="bg-[#212121] rounded-3xl p-6 text-white shadow-xl flex items-center justify-between border border-[#C1A056]/30">
         <div>
           <div className="flex items-center gap-2">
-            <Layers className="w-6 h-6 text-[#C1A056]" />
+            <Layers className="w-6 h-6 text-[#C1A056]" aria-hidden="true" />
             <h2 className="text-xl font-black text-white">تنظیمات و همگام‌سازی گالری طلایی</h2>
           </div>
           <p className="text-xs text-[#E8E4DC] mt-1">
-            شخصی‌سازی بانک ابزارها، کنترل تعداد روزهای مجاز برای نمایش به نصاب‌ها و پشتیبان‌گیری از اطلاعات
+            شخصی‌سازی ظاهر (تم تیره/روشن)، بانک ابزارها، پنجره دید تکنسین‌ها و پشتیبان‌گیری
           </p>
+        </div>
+      </div>
+
+      {/* Theme Switcher Card (UI/UX Pro Max) */}
+      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-sm text-[#212121] dark:text-white flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
+            حالت نمایشی سامانه (Theme Mode)
+          </h3>
+          <span className="text-xs font-mono text-[#C1A056] font-bold">
+            {isDarkMode ? 'حالت شب فعال است' : 'حالت روز فعال است'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (isDarkMode && onToggleDarkMode) onToggleDarkMode();
+            }}
+            className={`flex items-center justify-center gap-2 p-4 rounded-2xl border transition min-h-[52px] active:scale-95 ${
+              !isDarkMode
+                ? 'border-[#C1A056] bg-[#FAF7F2] text-[#212121] ring-2 ring-[#C1A056]/30 font-bold shadow-xs'
+                : 'border-[#E8E4DC] dark:border-[#333333] text-slate-500 dark:text-zinc-400 hover:bg-[#FAF7F2] dark:hover:bg-[#222222]'
+            }`}
+          >
+            <Sun className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
+            <span>حالت روز (روشن)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!isDarkMode && onToggleDarkMode) onToggleDarkMode();
+            }}
+            className={`flex items-center justify-center gap-2 p-4 rounded-2xl border transition min-h-[52px] active:scale-95 ${
+              isDarkMode
+                ? 'border-[#C1A056] bg-[#222222] text-[#C1A056] ring-2 ring-[#C1A056]/30 font-bold shadow-xs'
+                : 'border-[#E8E4DC] text-slate-500 hover:bg-[#FAF7F2]'
+            }`}
+          >
+            <Moon className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
+            <span>حالت شب (دارک لوکس)</span>
+          </button>
         </div>
       </div>
 
       <form onSubmit={handleSaveGeneral} className="space-y-6">
         {/* Section 1: General & Visibility */}
-        <div className="bg-white rounded-3xl p-6 border border-[#E8E4DC] shadow-xs space-y-4">
-          <h3 className="font-bold text-sm text-[#212121] flex items-center gap-2">
-            <Eye className="w-4 h-4 text-[#C1A056]" />
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
+          <h3 className="font-bold text-sm text-[#212121] dark:text-white flex items-center gap-2">
+            <Eye className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
             پنجره دید تکنسین‌ها و نام مجموعه
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label htmlFor="settings-company-name" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                 نام مجموعه / عنوان سامانه:
               </label>
               <input
+                id="settings-company-name"
                 type="text"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-[#FAF7F2]"
+                className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
               />
             </div>
 
             <div>
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-1">
-                <span>پنجره دید تکنسین‌ها:</span>
-                <span className="font-bold text-[#A88738] font-mono">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="settings-visibility-slider">پنجره دید تکنسین‌ها:</label>
+                <span className="font-bold text-[#A88738] dark:text-[#C1A056] font-mono">
                   {toPersianDigits(visibilityDays)} روز آینده
                 </span>
               </div>
               <input
+                id="settings-visibility-slider"
                 type="range"
                 min="1"
                 max="14"
                 value={visibilityDays}
                 onChange={(e) => setVisibilityDays(Number(e.target.value))}
-                className="w-full accent-[#C1A056] h-2 bg-slate-100 rounded-lg cursor-pointer"
+                className="w-full accent-[#C1A056] h-2 bg-slate-100 dark:bg-zinc-800 rounded-lg cursor-pointer"
               />
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1">
                 تکنسین‌ها با ورود به اپ، فقط مأموریت‌های {toPersianDigits(visibilityDays)} روز آینده را مشاهده خواهند کرد و برنامه‌های بعدی تا زمان باز شدن موعد برایشان مخفی خواهد ماند.
               </p>
             </div>
@@ -158,19 +212,19 @@ export const SettingsView: React.FC<Props> = ({
         </div>
 
         {/* Section 2: Master Tools Bank */}
-        <div className="bg-white rounded-3xl p-6 border border-[#E8E4DC] shadow-xs space-y-4">
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-sm text-[#212121] flex items-center gap-2">
-              <Wrench className="w-4 h-4 text-[#C1A056]" />
+            <h3 className="font-bold text-sm text-[#212121] dark:text-white flex items-center gap-2">
+              <Wrench className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
               بانک پیش‌فرض ابزارها (تجهیزات دکمه «فول ابزار»)
             </h3>
-            <span className="text-xs text-[#A88738] font-mono font-bold">
+            <span className="text-xs text-[#A88738] dark:text-[#C1A056] font-mono font-bold">
               {toPersianDigits(tools.length)} قلم ابزار
             </span>
           </div>
 
-          <p className="text-xs text-slate-500">
-            ابزارهای این لیست، تجهیزاتی هستند که با کلیک روی دکمه **«فول ابزار»** به صورت خودکار برای مأموریت انتخاب می‌شوند.
+          <p className="text-xs text-slate-500 dark:text-zinc-400">
+            ابزارهای این لیست، تجهیزاتی هستند که با کلیک روی دکمه «فول ابزار» به صورت خودکار برای مأموریت انتخاب می‌شوند.
           </p>
 
           {/* Add new tool input */}
@@ -180,14 +234,14 @@ export const SettingsView: React.FC<Props> = ({
               placeholder="نام ابزار جدید (مثلاً: دریل مگنتی، ریل‌بر برقی)..."
               value={newTool}
               onChange={(e) => setNewTool(e.target.value)}
-              className="flex-1 text-xs p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-[#FAF7F2]"
+              className="flex-1 text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-[#FAF7F2] dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500"
             />
             <button
               type="button"
               onClick={handleAddTool}
-              className="px-5 py-2.5 bg-[#212121] text-[#C1A056] rounded-xl text-xs font-bold hover:bg-[#333333] transition flex items-center gap-1 border border-[#C1A056]/30"
+              className="px-5 py-2.5 bg-[#212121] dark:bg-[#C1A056] text-[#C1A056] dark:text-[#121212] rounded-xl text-xs font-bold hover:bg-[#333333] transition flex items-center gap-1 border border-[#C1A056]/30 active:scale-95 min-h-[44px]"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4" aria-hidden="true" />
               افزودن به بانک
             </button>
           </div>
@@ -197,16 +251,17 @@ export const SettingsView: React.FC<Props> = ({
             {tools.map((t) => (
               <div
                 key={t}
-                className="flex items-center justify-between p-2.5 rounded-xl border border-[#E8E4DC] bg-[#FAF7F2] text-xs text-[#212121]"
+                className="flex items-center justify-between p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] bg-[#FAF7F2] dark:bg-[#202020] text-xs text-[#212121] dark:text-zinc-200"
               >
                 <span className="truncate">{t}</span>
                 <button
                   type="button"
                   onClick={() => handleRemoveTool(t)}
-                  className="p-1 text-slate-400 hover:text-rose-600 transition"
+                  className="p-1.5 text-slate-400 hover:text-rose-600 transition"
                   title="حذف از بانک"
+                  aria-label={`حذف ${t} از بانک ابزار`}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
               </div>
             ))}
@@ -214,44 +269,46 @@ export const SettingsView: React.FC<Props> = ({
         </div>
 
         {/* Section 3: Supabase Cloud Sync */}
-        <div className="bg-white rounded-3xl p-6 border border-[#E8E4DC] shadow-xs space-y-4">
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
           <div className="flex items-center gap-2">
-            <Cloud className="w-5 h-5 text-[#C1A056]" />
-            <h3 className="font-bold text-sm text-[#212121]">
+            <Cloud className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
+            <h3 className="font-bold text-sm text-[#212121] dark:text-white">
               اتصال ابری همگام‌سازی لحظه‌ای بین چند دستگاه (Supabase Free Sync)
             </h3>
           </div>
 
-          <div className="bg-[#FAF7F2] border border-[#C1A056]/30 rounded-2xl p-4 text-xs text-slate-800 leading-relaxed">
-            <p className="font-bold mb-1 text-[#212121]">💡 همگام‌سازی رایگان و آنلاین:</p>
+          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#C1A056]/30 rounded-2xl p-4 text-xs text-slate-800 dark:text-zinc-200 leading-relaxed">
+            <p className="font-bold mb-1 text-[#212121] dark:text-[#C1A056]">همگام‌سازی رایگان و آنلاین:</p>
             سایت شما روی GitHub Pages به صورت رایگان بالا می‌آید. برای اینکه وقتی شما برنامه‌ای را ثبت می‌کنید در همان لحظه در گوشی تکنسین‌ها آپدیت شود، می‌توانید آدرس URL و کلید Anon سرویس رایگان Supabase را در زیر وارد کنید.
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label htmlFor="supabase-url" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                 Supabase Project URL:
               </label>
               <input
+                id="supabase-url"
                 type="text"
                 placeholder="https://xyz.supabase.co"
                 value={supabaseUrl}
                 onChange={(e) => setSupabaseUrl(e.target.value)}
-                className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] font-mono text-left bg-[#FAF7F2]"
+                className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] font-mono text-left bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
                 dir="ltr"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label htmlFor="supabase-key" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                 Supabase Anon Public Key:
               </label>
               <input
+                id="supabase-key"
                 type="password"
                 placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
                 value={supabaseKey}
                 onChange={(e) => setSupabaseKey(e.target.value)}
-                className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] font-mono text-left bg-[#FAF7F2]"
+                className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] font-mono text-left bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
                 dir="ltr"
               />
             </div>
@@ -260,21 +317,21 @@ export const SettingsView: React.FC<Props> = ({
 
         <button
           type="submit"
-          className="w-full py-3.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm border border-[#C1A056]/30"
+          className="w-full py-3.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm border border-[#C1A056]/30 active:scale-[0.99] min-h-[48px]"
         >
-          <CheckCircle2 className="w-5 h-5 text-[#C1A056]" />
+          <CheckCircle2 className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
           ذخیره تمام تنظیمات
         </button>
       </form>
 
       {/* Section 4: Backup & Restore */}
-      <div className="bg-white rounded-3xl p-6 border border-[#E8E4DC] shadow-xs space-y-4">
-        <h3 className="font-bold text-sm text-[#212121] flex items-center gap-2">
-          <Download className="w-4 h-4 text-[#C1A056]" />
+      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
+        <h3 className="font-bold text-sm text-[#212121] dark:text-white flex items-center gap-2">
+          <Download className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
           پشتیبان‌گیری (Backup) و بازیابی اطلاعات
         </h3>
 
-        <p className="text-xs text-slate-500 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
           می‌توانید تمام پروژه‌های یک‌ماهه، لیست تکنسین‌ها، تیکت‌ها و ارزیابی‌های کیوسی را به عنوان فایل پشتیبان JSON دانلود کنید تا هیچ‌وقت اطلاعات شما از بین نرود.
         </p>
 
@@ -282,14 +339,14 @@ export const SettingsView: React.FC<Props> = ({
           <button
             type="button"
             onClick={handleExportBackup}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-full text-xs font-bold transition shadow-xs border border-[#C1A056]/30"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-full text-xs font-bold transition shadow-xs border border-[#C1A056]/30 active:scale-95 min-h-[44px]"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-4 h-4" aria-hidden="true" />
             دانلود فایل پشتیبان کامل (JSON Backup)
           </button>
 
-          <label className="flex items-center gap-2 px-5 py-2.5 border border-[#E8E4DC] hover:bg-[#FAF7F2] text-slate-700 rounded-full text-xs font-bold transition cursor-pointer">
-            <Upload className="w-4 h-4 text-[#C1A056]" />
+          <label className="flex items-center gap-2 px-5 py-2.5 border border-[#E8E4DC] dark:border-[#333333] hover:bg-[#FAF7F2] dark:hover:bg-[#242424] text-slate-700 dark:text-zinc-300 rounded-full text-xs font-bold transition cursor-pointer active:scale-95 min-h-[44px]">
+            <Upload className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
             <span>بازیابی از فایل پشتیبان</span>
             <input
               type="file"
@@ -302,9 +359,9 @@ export const SettingsView: React.FC<Props> = ({
           <button
             type="button"
             onClick={onResetData}
-            className="flex items-center gap-2 px-4 py-2.5 text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-full text-xs font-bold transition mr-auto"
+            className="flex items-center gap-2 px-4 py-2.5 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-full text-xs font-bold transition mr-auto active:scale-95 min-h-[44px]"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4" aria-hidden="true" />
             بازنشانی به داده‌های تستی اولیه
           </button>
         </div>

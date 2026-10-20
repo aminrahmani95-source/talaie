@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --brand-gold: #c1a056;
@@ -9,10 +11,23 @@
     --brand-linen: #f5efeb;
     --brand-border: #e8e4dc;
     --brand-copper: #d5733a;
+    color-scheme: light;
+  }
+
+  .dark {
+    color-scheme: dark;
   }
 
   * {
     font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
@@ -21,13 +36,32 @@
     margin: 0;
     padding: 0;
     min-height: 100vh;
+    touch-action: manipulation;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  .dark body {
+    background-color: #121212;
+    color: #f5efeb;
+  }
+
+  /* Accessible focus visible styles */
+  :focus-visible {
+    outline: 2px solid #c1a056;
+    outline-offset: 2px;
+  }
+
+  /* Prevent iOS zoom on input focus while maintaining clean sizing */
+  input, select, textarea {
+    font-size: 14px;
+    touch-action: manipulation;
   }
 }
 
 /* Elegant luxury scrollbar matching talaei.ir */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: #f5efeb;
@@ -37,6 +71,16 @@
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
+  background: #c1a056;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #181818;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #333333;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #c1a056;
 }
 
@@ -56,4 +100,9 @@
 
 .gold-accent-border {
   border-color: #c1a056;
+}
+
+/* Mobile safe area utility */
+.safe-bottom-padding {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.25rem);
 }

@@ -26,6 +26,28 @@ export const App: React.FC = () => {
   // Navigation tab for QC Manager
   const [activeTab, setActiveTab] = useState<string>('planner');
 
+  // Dark Mode state with persistence and system detection
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('talaie_theme');
+    if (saved) return saved === 'dark';
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('talaie_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('talaie_theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const handleToggleDarkMode = () => setIsDarkMode((prev) => !prev);
+
   // Modals
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
@@ -230,13 +252,23 @@ export const App: React.FC = () => {
   const isQcManager = currentUser.role === 'QC_MANAGER';
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2] text-[#212121] flex flex-col font-sans selection:bg-[#C1A056] selection:text-white">
+    <div className="min-h-screen bg-[#FAF7F2] dark:bg-[#121212] text-[#212121] dark:text-[#F5EFEB] flex flex-col font-sans selection:bg-[#C1A056] selection:text-white transition-colors duration-200">
+      {/* Skip to Content for Accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:right-3 focus:z-50 focus:px-4 focus:py-2.5 focus:bg-[#C1A056] focus:text-[#212121] focus:font-black focus:rounded-xl focus:shadow-xl focus:ring-2 focus:ring-[#212121]"
+      >
+        پرش به محتوای اصلی صفحه
+      </a>
+
       {/* App Header */}
       <Header
         currentUser={currentUser}
         settings={settings}
         openTicketCount={openTicketCount}
         pendingQcCount={pendingQcCount}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={handleToggleDarkMode}
         onOpenLogin={() => setIsLoginModalOpen(true)}
         onOpenQuickSwitch={() => setIsLoginModalOpen(true)}
         onResetData={handleResetData}
@@ -246,7 +278,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6">
+      <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
         {isQcManager ? (
           // ================= QC MANAGER VIEW =================
           <div>
@@ -293,6 +325,8 @@ export const App: React.FC = () => {
             {activeTab === 'settings' && (
               <SettingsView
                 settings={settings}
+                isDarkMode={isDarkMode}
+                onToggleDarkMode={handleToggleDarkMode}
                 onUpdateSettings={setSettings}
                 onResetData={handleResetData}
               />
