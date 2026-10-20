@@ -41,14 +41,14 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/90 backdrop-blur-md text-white">
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-900/80 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-3 bg-[#212121] border-b border-[#C1A056]/30">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600/30 text-blue-400 rounded-xl">
+          <div className="p-2 bg-white/10 text-[#C1A056] rounded-xl border border-white/10">
             <FileText className="w-5 h-5" />
           </div>
           <div>
             <h2 className="font-bold text-sm sm:text-base text-white">{current.title || 'برگه پروپوزال فروش'}</h2>
-            <p className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-md">{projectTitle}</p>
+            <p className="text-xs text-[#C1A056] truncate max-w-[200px] sm:max-w-md">{projectTitle}</p>
           </div>
         </div>
 

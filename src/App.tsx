@@ -180,7 +180,7 @@ export const App: React.FC = () => {
   const isQcManager = currentUser.role === 'QC_MANAGER';
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#FAF7F2] text-[#212121] flex flex-col font-sans selection:bg-[#C1A056] selection:text-white">
       {/* App Header */}
       <Header
         currentUser={currentUser}

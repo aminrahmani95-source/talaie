@@ -10,11 +10,9 @@ import {
   MapPin,
   Calendar,
   Clock,
-  UserCheck,
   FileText,
-  AlertCircle,
 } from 'lucide-react';
-import { getUpcomingDays, toPersianDigits } from '../../utils/jalali';
+import { getUpcomingDays } from '../../utils/jalali';
 
 interface Props {
   project?: Project | null;
@@ -71,10 +69,8 @@ export const ProjectFormModal: React.FC<Props> = ({
     project?.proposalImages || []
   );
 
-  // Toggle "فول ابزار"
   const handleToggleFullTools = () => {
     if (!isFullTools) {
-      // Turn on full tools -> select all
       setIsFullTools(true);
       setToolsRequired([...settings.defaultTools]);
     } else {
@@ -183,20 +179,20 @@ export const ProjectFormModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-100 overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 px-6 py-4 text-white flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-[#E8E4DC] overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150">
+        {/* Header in talaei.ir Obsidian & Gold */}
+        <div className="bg-[#212121] px-6 py-4 text-white flex items-center justify-between border-b-2 border-[#C1A056]">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-              <Plus className="w-5 h-5 text-white" />
+            <div className="p-2 bg-white/10 rounded-xl text-[#C1A056]">
+              <Plus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-lg">
-                {isEditing ? 'ویرایش مأموریت و پروژه' : 'ثبت و برنامه‌ریزی مأموریت جدید'}
+              <h3 className="font-black text-lg text-white">
+                {isEditing ? 'ویرایش مأموریت و پروژه' : 'ثبت مأموریت جدید گالری طلایی'}
               </h3>
-              <p className="text-xs text-blue-100">
-                مشخصات فنی شید و پرده، تخصیص اکیپ، چک‌لیست ابزار و تصویر پروپوزال فروش
+              <p className="text-xs text-[#E8E4DC]">
+                مشخصات فنی شید و پرده، تخصیص اکیپ، چک‌لیست ابزار و پیوست پروپوزال فروش
               </p>
             </div>
           </div>
@@ -211,10 +207,10 @@ export const ProjectFormModal: React.FC<Props> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[82vh] overflow-y-auto">
           {/* Section 1: Customer & Address */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-            <h4 className="text-xs font-bold text-blue-900 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-blue-600" />
-              اطلاعات پروژه و نشانی
+          <div className="bg-[#FAF7F2] border border-[#E8E4DC] rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-bold text-[#212121] flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-[#C1A056]" />
+              اطلاعات پروژه و نشانی کارفرما
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -228,7 +224,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="مثال: ویلای لواسان (آقای دکتر پیروز)"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white"
                 />
               </div>
 
@@ -241,21 +237,21 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="0912..."
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white font-mono text-left"
+                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white font-mono text-left"
                   dir="ltr"
                 />
               </div>
 
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  آدرس دقیق:
+                  آدرس دقیق محل نصب:
                 </label>
                 <textarea
                   rows={2}
                   placeholder="خیابان، کوچه، پلاک، طبقه و زنگ..."
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white"
                 />
               </div>
 
@@ -268,7 +264,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="https://nshn.ir/... یا https://maps.google.com/..."
                   value={locationUrl}
                   onChange={(e) => setLocationUrl(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white text-left font-mono"
+                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white text-left font-mono"
                   dir="ltr"
                 />
               </div>
@@ -276,9 +272,9 @@ export const ProjectFormModal: React.FC<Props> = ({
           </div>
 
           {/* Section 2: Technical Specifications */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-            <h4 className="text-xs font-bold text-blue-900 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-blue-600" />
+          <div className="bg-[#FAF7F2] border border-[#E8E4DC] rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-bold text-[#212121] flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#C1A056]" />
               مشخصات فنی پرده و شید
             </h4>
 
@@ -292,7 +288,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   min="0"
                   value={shadePanels}
                   onChange={(e) => setShadePanels(Number(e.target.value))}
-                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white text-center font-bold"
+                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white text-center font-bold"
                 />
               </div>
 
@@ -305,7 +301,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   min="0"
                   value={curtainPanels}
                   onChange={(e) => setCurtainPanels(Number(e.target.value))}
-                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white text-center font-bold"
+                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white text-center font-bold"
                 />
               </div>
 
@@ -318,7 +314,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="مثلاً موتور سامفی رادیویی + ریل برقی بی‌صدا"
                   value={mechanismType}
                   onChange={(e) => setMechanismType(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white"
                 />
               </div>
 
@@ -331,27 +327,27 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="نکات حساسیت مشتری، نوع سقف کاذب، زمان‌بندی ورود..."
                   value={specialNotes}
                   onChange={(e) => setSpecialNotes(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white"
                 />
               </div>
             </div>
           </div>
 
           {/* Section 3: Proposal Photos Attachment */}
-          <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-4 space-y-3">
+          <div className="bg-[#FAF7F2] border border-[#C1A056]/40 rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-amber-900 flex items-center gap-2">
-                <Camera className="w-4 h-4 text-amber-600" />
+              <h4 className="text-xs font-bold text-[#212121] flex items-center gap-2">
+                <Camera className="w-4 h-4 text-[#C1A056]" />
                 تصویر پروپوزال واحد فروش (برگه سفارش و نقشه)
               </h4>
-              <span className="text-[11px] text-amber-700">تکنسین‌ها سر پروژه می‌توانند زوم کنند</span>
+              <span className="text-[11px] text-[#A88738]">تکنسین‌ها سر پروژه می‌توانند زوم کنند</span>
             </div>
 
             <div className="flex flex-wrap gap-2 items-center">
               {proposalImages.map((img) => (
                 <div
                   key={img.id}
-                  className="relative w-20 h-24 rounded-xl overflow-hidden border border-amber-300 shadow-sm bg-white"
+                  className="relative w-20 h-24 rounded-xl overflow-hidden border border-[#C1A056] shadow-xs bg-white"
                 >
                   <img src={img.url} alt="" className="w-full h-full object-cover" />
                   <button
@@ -362,16 +358,16 @@ export const ProjectFormModal: React.FC<Props> = ({
                   >
                     <X className="w-3 h-3" />
                   </button>
-                  <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] truncate px-1 py-0.5 text-center">
+                  <div className="absolute bottom-0 inset-x-0 bg-black/70 text-white text-[9px] truncate px-1 py-0.5 text-center">
                     {img.title}
                   </div>
                 </div>
               ))}
 
-              <label className="flex flex-col items-center justify-center w-24 h-24 rounded-2xl border-2 border-dashed border-amber-300 hover:border-amber-500 bg-white cursor-pointer text-amber-700 transition">
-                <Camera className="w-6 h-6 mb-1 text-amber-500" />
+              <label className="flex flex-col items-center justify-center w-24 h-24 rounded-2xl border-2 border-dashed border-[#C1A056] hover:border-[#212121] bg-white cursor-pointer text-[#A88738] transition">
+                <Camera className="w-6 h-6 mb-1 text-[#C1A056]" />
                 <span className="text-[11px] font-bold">پیوست عکس</span>
-                <span className="text-[9px] text-amber-600/80">فروش / نقشه</span>
+                <span className="text-[9px] text-[#C1A056]/80">فروش / نقشه</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -384,9 +380,9 @@ export const ProjectFormModal: React.FC<Props> = ({
           </div>
 
           {/* Section 4: Date, Time & Technicians Assignment */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-            <h4 className="text-xs font-bold text-blue-900 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-blue-600" />
+          <div className="bg-[#FAF7F2] border border-[#E8E4DC] rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-bold text-[#212121] flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-[#C1A056]" />
               زمان‌بندی و تعیین اکیپ تکنسین‌ها
             </h4>
 
@@ -398,7 +394,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                 <select
                   value={scheduledDate}
                   onChange={(e) => setScheduledDate(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white"
                 >
                   {days.map((d) => (
                     <option key={d.dateKey} value={d.dateKey}>
@@ -418,7 +414,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                     type="time"
                     value={scheduledTime}
                     onChange={(e) => setScheduledTime(e.target.value)}
-                    className="w-full text-sm p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white text-center font-bold"
+                    className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white text-center font-bold"
                   />
                   <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
                 </div>
@@ -443,8 +439,8 @@ export const ProjectFormModal: React.FC<Props> = ({
                         onClick={() => handleTechnicianToggle(u.id)}
                         className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition select-none ${
                           isSelected
-                            ? 'border-blue-500 bg-blue-50/80 text-blue-950'
-                            : 'border-slate-200 bg-white hover:border-slate-300 text-slate-600'
+                            ? 'border-[#C1A056] bg-white text-[#212121] ring-1 ring-[#C1A056]/30 shadow-xs'
+                            : 'border-[#E8E4DC] bg-white/70 hover:border-[#C1A056]/50 text-slate-600'
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -452,7 +448,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                             type="checkbox"
                             checked={isSelected}
                             readOnly
-                            className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 pointer-events-none"
+                            className="rounded text-[#C1A056] focus:ring-[#C1A056] w-4 h-4 pointer-events-none accent-[#C1A056]"
                           />
                           <span className="text-sm font-bold">{u.name}</span>
                         </div>
@@ -464,10 +460,10 @@ export const ProjectFormModal: React.FC<Props> = ({
                               e.stopPropagation();
                               setLeadTechnicianId(u.id);
                             }}
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition ${
+                            className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold transition ${
                               isLead
-                                ? 'bg-amber-500 text-white shadow-xs'
-                                : 'bg-slate-200 text-slate-700 hover:bg-amber-100'
+                                ? 'bg-[#212121] text-[#C1A056] shadow-xs'
+                                : 'bg-[#EAE6DD] text-slate-700 hover:bg-[#C1A056]/20'
                             }`}
                           >
                             {isLead ? '⭐ سرپرست اکیپ' : 'تبدیل به سرپرست'}
@@ -480,22 +476,22 @@ export const ProjectFormModal: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Section 5: Smart Tools Checklist + Full Tools Button */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+          {/* Section 5: Smart Tools Checklist + Full Tools Button in Gold */}
+          <div className="bg-[#FAF7F2] border border-[#E8E4DC] rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-blue-900 flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-blue-600" />
+              <h4 className="text-xs font-bold text-[#212121] flex items-center gap-2">
+                <Wrench className="w-4 h-4 text-[#C1A056]" />
                 چک‌لیست ابزار و تجهیزات مورد نیاز
               </h4>
 
-              {/* Glowing Full Tools Button */}
+              {/* Glowing Full Tools Button in Gold Gradient */}
               <button
                 type="button"
                 onClick={handleToggleFullTools}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black transition ${
                   isFullTools
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-200 hover:bg-emerald-100 text-slate-700 hover:text-emerald-800'
+                    ? 'bg-gradient-to-r from-[#C1A056] to-[#A88738] text-white shadow-md'
+                    : 'bg-[#EAE6DD] hover:bg-[#C1A056]/20 text-slate-700 hover:text-[#A88738]'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
@@ -512,15 +508,15 @@ export const ProjectFormModal: React.FC<Props> = ({
                     key={tool}
                     className={`flex items-center gap-2 p-2 rounded-xl border text-xs cursor-pointer transition select-none ${
                       checked
-                        ? 'border-blue-400 bg-blue-50/50 text-blue-950 font-medium'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                        ? 'border-[#C1A056] bg-white text-[#212121] font-bold'
+                        : 'border-[#E8E4DC] bg-white/70 text-slate-600 hover:bg-white'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => handleToolCheckbox(tool)}
-                      className="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                      className="rounded text-[#C1A056] focus:ring-[#C1A056] w-3.5 h-3.5 accent-[#C1A056]"
                     />
                     <span>{tool}</span>
                   </label>
@@ -537,26 +533,26 @@ export const ProjectFormModal: React.FC<Props> = ({
                 placeholder="مثلاً: براکت دیواری تقویت‌شده ۵۰ سانتی، رولپلاک پروانه‌ای کناف بلند..."
                 value={customToolsNotes}
                 onChange={(e) => setCustomToolsNotes(e.target.value)}
-                className="w-full text-sm p-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full text-sm p-2 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white"
               />
             </div>
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-3 pt-4 border-t border-slate-200">
+          <div className="flex items-center gap-3 pt-4 border-t border-[#E8E4DC]">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition text-sm"
+              className="flex-1 py-3 px-4 rounded-xl border border-[#E8E4DC] text-slate-700 font-medium hover:bg-slate-50 transition text-sm"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition shadow-lg shadow-blue-600/20 text-sm flex items-center justify-center gap-2"
+              className="flex-1 py-3 px-4 rounded-xl bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold transition shadow-lg text-sm flex items-center justify-center gap-2 border border-[#C1A056]/30"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              {isEditing ? 'ذخیره تغییرات پروژه' : 'ثبت و ابلاغ مأموریت'}
+              <CheckCircle2 className="w-4 h-4 text-[#C1A056]" />
+              {isEditing ? 'ذخیره تغییرات مأموریت' : 'ثبت و ابلاغ مأموریت'}
             </button>
           </div>
         </form>

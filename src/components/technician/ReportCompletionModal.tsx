@@ -68,17 +68,17 @@ export const ReportCompletionModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-100 my-6 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#E8E4DC] my-6 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 text-white flex items-center justify-between">
+        <div className="bg-[#212121] px-6 py-4 text-white flex items-center justify-between border-b-2 border-[#C1A056]">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-              <CheckCircle2 className="w-6 h-6 text-white" />
+            <div className="p-2 bg-white/10 text-[#C1A056] rounded-xl border border-white/10">
+              <CheckCircle2 className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-black text-lg">ثبت گزارش اتمام نصب پرده و شید</h3>
-              <p className="text-xs text-emerald-100">{project.title}</p>
+              <h3 className="font-black text-lg text-white">ثبت گزارش اتمام نصب پرده و شید</h3>
+              <p className="text-xs text-[#E8E4DC]">{project.title}</p>
             </div>
           </div>
           <button
@@ -180,9 +180,9 @@ export const ReportCompletionModal: React.FC<Props> = ({
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2 border border-[#C1A056]/30"
             >
-              <CheckCircle2 className="w-4 h-4" />
+              <CheckCircle2 className="w-4 h-4 text-[#C1A056]" />
               ارسال نهایی گزارش به کیوسی
             </button>
           </div>

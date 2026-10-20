@@ -9,15 +9,8 @@ import {
   ChevronRight,
   ChevronLeft,
   Eye,
-  Sliders,
-  MapPin,
-  Sparkles,
-  Layers,
   Wrench,
   FileText,
-  UserCheck,
-  CheckCircle2,
-  ArrowRightLeft,
 } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits } from '../../utils/jalali';
 
@@ -41,7 +34,6 @@ export const MonthPlanner: React.FC<Props> = ({
   onNewProject,
   onEditProject,
   onDeleteProject,
-  onMoveProjectDate,
   onViewProposal,
 }) => {
   const days = getUpcomingDays(30);
@@ -56,7 +48,6 @@ export const MonthPlanner: React.FC<Props> = ({
     onUpdateSettings({ ...settings, visibilityWindowDays: val });
   };
 
-  // Determine which days to display in the grid
   const displayedDays =
     viewMode === '4DAYS'
       ? days.slice(startIndex, startIndex + 4)
@@ -69,49 +60,49 @@ export const MonthPlanner: React.FC<Props> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner: Visibility Window & Controls */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-4 sm:p-6 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Top Banner with talaei.ir Brand Aesthetics (Obsidian & Gold) */}
+      <div className="bg-[#212121] rounded-3xl p-5 sm:p-6 text-white shadow-xl relative overflow-hidden border border-[#C1A056]/30">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#C1A056]/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <span className="text-2xl">📅</span>
-              <h2 className="text-lg sm:text-xl font-black">
-                تقویم برنامه‌ریزی ماهانه مأموریت‌های نصب
+              <h2 className="text-lg sm:text-xl font-black text-white">
+                تقویم ماهانه و برنامه‌ریزی دیسپچ گالری طلایی
               </h2>
             </div>
-            <p className="text-xs text-blue-200 mt-1">
-              شما به عنوان مدیر کیوسی می‌توانید برنامه‌ریزی ۳۰ روز آینده را مدیریت کنید و مشخص کنید تکنسین‌ها تا چند روز آینده را ببینند.
+            <p className="text-xs text-[#E8E4DC] mt-1">
+              مدیریت زمان‌بندی ۳۰ روز آینده و تنظیم پنجره دید اختصاصی تکنسین‌های نصب
             </p>
           </div>
 
-          {/* Visibility Window Controller */}
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-4 w-full lg:w-auto shrink-0 space-y-2">
+          {/* Visibility Window Controller in Gold & Charcoal */}
+          <div className="bg-white/5 backdrop-blur-md border border-[#C1A056]/30 rounded-2xl p-3 sm:p-4 w-full lg:w-auto shrink-0 space-y-2">
             <div className="flex items-center justify-between gap-4 text-xs">
-              <div className="flex items-center gap-2 font-bold">
-                <Eye className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center gap-2 font-bold text-white">
+                <Eye className="w-4 h-4 text-[#C1A056]" />
                 <span>پنجره دید تکنسین‌ها:</span>
               </div>
-              <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full font-black font-mono">
+              <span className="bg-[#C1A056] text-[#212121] px-2.5 py-0.5 rounded-full font-black font-mono">
                 {toPersianDigits(settings.visibilityWindowDays)} روز آینده
               </span>
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-[10px] text-blue-200">۱ روز</span>
+              <span className="text-[10px] text-[#C1A056]">۱ روز</span>
               <input
                 type="range"
                 min="1"
                 max="14"
                 value={settings.visibilityWindowDays}
                 onChange={handleSliderChange}
-                className="w-full accent-amber-400 cursor-pointer h-2 bg-white/20 rounded-lg"
+                className="w-full accent-[#C1A056] cursor-pointer h-2 bg-white/20 rounded-lg"
               />
-              <span className="text-[10px] text-blue-200">۱۴ روز</span>
+              <span className="text-[10px] text-[#C1A056]">۱۴ روز</span>
             </div>
-            <div className="text-[10px] text-amber-200/90 text-center">
-              (پروژه‌های بعد از {toPersianDigits(settings.visibilityWindowDays)} روز برای تکنسین‌ها مخفی است)
+            <div className="text-[10px] text-[#E8E4DC]/80 text-center">
+              (پروژه‌های بعد از {toPersianDigits(settings.visibilityWindowDays)} روز برای تکنسین‌ها در حالت پیش‌نویس است)
             </div>
           </div>
         </div>
@@ -121,44 +112,44 @@ export const MonthPlanner: React.FC<Props> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setViewMode('4DAYS')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+              className={`px-4 py-2 rounded-full text-xs font-bold transition ${
                 viewMode === '4DAYS'
-                  ? 'bg-blue-600 text-white shadow'
+                  ? 'bg-[#C1A056] text-[#212121] shadow-xs'
                   : 'bg-white/10 text-white/80 hover:bg-white/20'
               }`}
             >
-              نمای ۴ ستونه (کانبان عملیاتی)
+              نمای ۴ ستونه عملیاتی
             </button>
             <button
               onClick={() => setViewMode('FULL_MONTH')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+              className={`px-4 py-2 rounded-full text-xs font-bold transition ${
                 viewMode === 'FULL_MONTH'
-                  ? 'bg-blue-600 text-white shadow'
+                  ? 'bg-[#C1A056] text-[#212121] shadow-xs'
                   : 'bg-white/10 text-white/80 hover:bg-white/20'
               }`}
             >
-              نمای کامل ۳۰ روز آینده
+              نمای کامل ۳۰ روزه
             </button>
           </div>
 
           <div className="flex items-center gap-2">
             {viewMode === '4DAYS' && (
-              <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1">
+              <div className="flex items-center gap-1 bg-white/10 rounded-full p-1 border border-white/10">
                 <button
                   disabled={startIndex === 0}
                   onClick={() => setStartIndex((i) => Math.max(0, i - 1))}
-                  className="p-1 hover:bg-white/20 rounded-lg disabled:opacity-30 transition"
+                  className="p-1 hover:bg-white/20 rounded-full disabled:opacity-30 transition"
                   title="روزهای قبلی"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
-                <span className="text-xs px-2 font-mono">
+                <span className="text-xs px-2 font-mono text-[#C1A056]">
                   روز {toPersianDigits(startIndex + 1)} تا {toPersianDigits(startIndex + 4)}
                 </span>
                 <button
                   disabled={startIndex + 4 >= days.length}
                   onClick={() => setStartIndex((i) => Math.min(days.length - 4, i + 1))}
-                  className="p-1 hover:bg-white/20 rounded-lg disabled:opacity-30 transition"
+                  className="p-1 hover:bg-white/20 rounded-full disabled:opacity-30 transition"
                   title="روزهای بعدی"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -168,16 +159,16 @@ export const MonthPlanner: React.FC<Props> = ({
 
             <button
               onClick={() => onNewProject()}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20 transition"
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#C1A056] to-[#A88738] hover:from-[#A88738] hover:to-[#8E712E] text-white rounded-full text-xs font-black shadow-md transition"
             >
               <Plus className="w-4 h-4" />
-              <span>ثبت پروژه و مأموریت جدید</span>
+              <span>ثبت مأموریت جدید</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Kanban / Calendar Columns Grid */}
+      {/* Columns Grid */}
       <div
         className={`grid gap-4 ${
           viewMode === '4DAYS'
@@ -194,20 +185,20 @@ export const MonthPlanner: React.FC<Props> = ({
               key={day.dateKey}
               className={`flex flex-col rounded-3xl border transition shadow-xs ${
                 day.isToday
-                  ? 'bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20'
+                  ? 'bg-white border-[#C1A056] ring-2 ring-[#C1A056]/30'
                   : isVisibleToTechnicians
-                  ? 'bg-white border-slate-200'
-                  : 'bg-slate-50/80 border-dashed border-slate-300 opacity-90'
+                  ? 'bg-white border-[#E8E4DC]'
+                  : 'bg-[#F5EFEB]/70 border-dashed border-[#D7D3CA] opacity-90'
               }`}
             >
               {/* Day Column Header */}
               <div
                 className={`p-3.5 rounded-t-3xl border-b ${
                   day.isToday
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-[#212121] text-[#C1A056] border-[#C1A056]'
                     : isVisibleToTechnicians
-                    ? 'bg-slate-100/80 text-slate-800'
-                    : 'bg-slate-200/80 text-slate-600'
+                    ? 'bg-[#FAF7F2] text-[#212121] border-[#E8E4DC]'
+                    : 'bg-[#EAE6DD] text-slate-600 border-[#D7D3CA]'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -215,7 +206,7 @@ export const MonthPlanner: React.FC<Props> = ({
                     <span className="font-black text-sm">
                       {day.isToday ? 'امروز' : day.dayOffset === 1 ? 'فردا' : day.persianDayName}
                     </span>
-                    <span className="text-xs opacity-90">
+                    <span className="text-xs opacity-80">
                       {day.persianDayNum} {day.persianMonthName}
                     </span>
                   </div>
@@ -225,15 +216,10 @@ export const MonthPlanner: React.FC<Props> = ({
                     className={`text-[9px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 ${
                       isVisibleToTechnicians
                         ? day.isToday
-                          ? 'bg-blue-800/80 text-white'
-                          : 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-[#C1A056] text-[#212121]'
+                          : 'bg-[#C1A056]/20 text-[#A88738]'
                         : 'bg-slate-300 text-slate-700'
                     }`}
-                    title={
-                      isVisibleToTechnicians
-                        ? 'تکنسین‌ها این روز را در گوشی خود می‌بینند'
-                        : 'این روز هنوز برای تکنسین‌ها باز نشده است'
-                    }
                   >
                     <Eye className="w-2.5 h-2.5" />
                     <span>{isVisibleToTechnicians ? 'دید تکنسین' : 'مخفی'}</span>
@@ -246,7 +232,7 @@ export const MonthPlanner: React.FC<Props> = ({
                   </span>
                   <button
                     onClick={() => onNewProject(day.dateKey)}
-                    className="p-1 hover:bg-black/10 rounded-lg transition"
+                    className="p-1 hover:bg-black/10 rounded-full transition"
                     title="افزودن مأموریت به این روز"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -254,17 +240,17 @@ export const MonthPlanner: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* Projects List in this Day */}
+              {/* Projects List */}
               <div className="p-3 space-y-3 flex-1 overflow-y-auto min-h-[160px]">
                 {dayProjects.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-slate-400 py-6 text-center">
-                    <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center mb-2">
-                      <Calendar className="w-5 h-5 text-slate-300" />
+                    <div className="w-10 h-10 rounded-2xl bg-[#FAF7F2] border border-[#E8E4DC] flex items-center justify-center mb-2">
+                      <Calendar className="w-5 h-5 text-[#C1A056]" />
                     </div>
-                    <span className="text-xs font-medium">مأموریتی نیست</span>
+                    <span className="text-xs font-medium text-slate-500">مأموریتی نیست</span>
                     <button
                       onClick={() => onNewProject(day.dateKey)}
-                      className="mt-2 text-[11px] text-blue-600 hover:text-blue-800 font-bold"
+                      className="mt-2 text-[11px] text-[#C1A056] hover:text-[#A88738] font-bold"
                     >
                       + افزودن مأموریت
                     </button>
@@ -277,22 +263,22 @@ export const MonthPlanner: React.FC<Props> = ({
                     return (
                       <div
                         key={proj.id}
-                        className="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-sm hover:shadow-md transition space-y-2.5 relative group"
+                        className="bg-white rounded-2xl p-3 border border-[#E8E4DC] shadow-xs hover:border-[#C1A056]/60 transition space-y-2.5 relative group"
                       >
                         {/* Status & Code */}
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-mono font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                          <span className="font-mono font-bold text-slate-600 bg-[#FAF7F2] border border-[#E8E4DC] px-1.5 py-0.5 rounded">
                             {proj.code}
                           </span>
                           <span
                             className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
                               proj.status === 'COMPLETED'
-                                ? 'bg-emerald-100 text-emerald-800'
+                                ? 'bg-[#194840]/15 text-[#194840]'
                                 : proj.status === 'IN_PROGRESS'
-                                ? 'bg-amber-100 text-amber-800 animate-pulse'
+                                ? 'bg-amber-100 text-amber-900 animate-pulse'
                                 : proj.status === 'EN_ROUTE'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-slate-100 text-slate-700'
+                                ? 'bg-blue-100 text-blue-900'
+                                : 'bg-[#FAF7F2] text-slate-700'
                             }`}
                           >
                             {proj.status === 'COMPLETED'
@@ -307,47 +293,47 @@ export const MonthPlanner: React.FC<Props> = ({
 
                         {/* Title & Customer */}
                         <div>
-                          <h4 className="font-bold text-xs text-slate-900 leading-tight">
+                          <h4 className="font-bold text-xs text-[#212121] leading-tight">
                             {proj.title}
                           </h4>
-                          <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-1">
-                            <Clock className="w-3 h-3 text-blue-500" />
+                          <div className="flex items-center gap-1 text-[11px] text-[#71717A] mt-1">
+                            <Clock className="w-3 h-3 text-[#C1A056]" />
                             <span>ساعت {toPersianDigits(proj.scheduledTime)}</span>
                           </div>
                         </div>
 
-                        {/* Technical Spec: Panels */}
+                        {/* Panels Specs */}
                         <div className="flex items-center gap-2 text-[10px] font-bold">
                           {proj.shadePanels > 0 && (
-                            <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200">
+                            <span className="px-2 py-0.5 rounded-md bg-[#FAF7F2] text-[#212121] border border-[#E8E4DC]">
                               {toPersianDigits(proj.shadePanels)} لت شید
                             </span>
                           )}
                           {proj.curtainPanels > 0 && (
-                            <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-800 border border-purple-200">
+                            <span className="px-2 py-0.5 rounded-md bg-[#FAF7F2] text-[#C1A056] border border-[#C1A056]/30">
                               {toPersianDigits(proj.curtainPanels)} لت پرده
                             </span>
                           )}
                         </div>
 
                         {/* Team & Lead */}
-                        <div className="bg-slate-50 rounded-xl p-2 border border-slate-100 text-[11px]">
+                        <div className="bg-[#FAF7F2] rounded-xl p-2 border border-[#E8E4DC] text-[11px]">
                           <div className="flex items-center justify-between text-slate-700">
                             <span className="font-semibold flex items-center gap-1">
-                              <span className="text-amber-500">⭐</span> {leadName || 'سرپرست'}
+                              <span className="text-[#C1A056]">⭐</span> {leadName || 'سرپرست'}
                             </span>
                             <span className="text-[10px] text-slate-500">
-                              ({toPersianDigits(teamCount)} نفر اکیپ)
+                              ({toPersianDigits(teamCount)} نفر)
                             </span>
                           </div>
                         </div>
 
-                        {/* Tools Pill */}
-                        <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-100">
+                        {/* Tools & Proposal */}
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-[#E8E4DC]">
                           <span className="flex items-center gap-1">
-                            <Wrench className="w-3 h-3 text-slate-400" />
+                            <Wrench className="w-3 h-3 text-[#C1A056]" />
                             {proj.isFullTools ? (
-                              <span className="text-emerald-700 font-bold">فول ابزار</span>
+                              <span className="text-[#A88738] font-bold">فول ابزار</span>
                             ) : (
                               <span>{toPersianDigits(proj.toolsRequired.length)} ابزار</span>
                             )}
@@ -356,7 +342,7 @@ export const MonthPlanner: React.FC<Props> = ({
                           {proj.proposalImages && proj.proposalImages.length > 0 && (
                             <button
                               onClick={() => onViewProposal(proj)}
-                              className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 text-[10px]"
+                              className="text-[#C1A056] hover:text-[#A88738] font-bold flex items-center gap-1 text-[10px]"
                             >
                               <FileText className="w-3 h-3" />
                               <span>پروپوزال</span>
@@ -364,11 +350,11 @@ export const MonthPlanner: React.FC<Props> = ({
                           )}
                         </div>
 
-                        {/* Action buttons on card hover */}
-                        <div className="flex items-center justify-end gap-1 pt-1 border-t border-slate-100">
+                        {/* Actions */}
+                        <div className="flex items-center justify-end gap-1 pt-1 border-t border-[#E8E4DC]">
                           <button
                             onClick={() => onEditProject(proj)}
-                            className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            className="p-1 text-slate-400 hover:text-[#C1A056] hover:bg-[#FAF7F2] rounded-lg transition"
                             title="ویرایش پروژه"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -379,7 +365,7 @@ export const MonthPlanner: React.FC<Props> = ({
                                 onDeleteProject(proj.id);
                               }
                             }}
-                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                             title="حذف پروژه"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

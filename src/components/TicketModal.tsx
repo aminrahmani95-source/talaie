@@ -74,17 +74,17 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl my-8 border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl my-8 border border-[#E8E4DC] animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-gradient-to-r from-rose-600 to-red-600 px-6 py-4 text-white flex items-center justify-between">
+        <div className="bg-[#212121] px-6 py-4 text-white flex items-center justify-between border-b-2 border-[#D5733A]">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-              <AlertTriangle className="w-6 h-6 text-white" />
+            <div className="p-2 bg-white/10 rounded-xl text-[#D5733A]">
+              <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-black text-lg">ثبت تیکت کسری / خرابی سر پروژه</h3>
-              <p className="text-xs text-rose-100">{project.title}</p>
+              <h3 className="font-black text-lg text-white">ثبت تیکت کسری / خرابی سر پروژه</h3>
+              <p className="text-xs text-[#E8E4DC]">{project.title}</p>
             </div>
           </div>
           <button

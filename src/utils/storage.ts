@@ -87,51 +87,56 @@ export const INITIAL_USERS: User[] = [
 
 export const INITIAL_SETTINGS: SystemSettings = {
   visibilityWindowDays: 4, // پیش‌فرض ۴ روز قابل مشاهده برای تکنسین‌ها
-  companyName: 'مجموعه تخصصی پرده و شید طلائیه',
+  companyName: 'گالری طلایی | طراحی، پرده و شید',
   defaultTools: DEFAULT_MASTER_TOOLS,
 };
 
-// Generates high quality mock SVG sales proposal for demonstration
+// Generates high quality mock SVG sales proposal in Talaei Gallery brand colors (#C1A056, #212121)
 function generateMockProposalSvg(code: string, title: string, details: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="850" viewBox="0 0 600 850" style="background:#fff;font-family:sans-serif;direction:rtl;">
-    <rect width="600" height="850" fill="#fcfcfc" stroke="#e2e8f0" stroke-width="3"/>
-    <rect x="0" y="0" width="600" height="90" fill="#1e3a8a"/>
-    <text x="560" y="52" fill="#fff" font-size="22" font-weight="bold" text-anchor="end">برگه سفارش و پروپوزال فنی فروش</text>
-    <text x="40" y="52" fill="#93c5fd" font-size="16" text-anchor="start">کد: ${code}</text>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="850" viewBox="0 0 600 850" style="background:#FAF7F2;font-family:sans-serif;direction:rtl;">
+    <rect width="600" height="850" fill="#FCFAF7" stroke="#E8E4DC" stroke-width="2"/>
+    <rect x="0" y="0" width="600" height="100" fill="#212121"/>
     
-    <rect x="30" y="115" width="540" height="110" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="545" y="145" fill="#334155" font-size="14" font-weight="bold" text-anchor="end">اطلاعات پروژه / کارفرما:</text>
-    <text x="545" y="175" fill="#0f172a" font-size="15" text-anchor="end">نام: ${title}</text>
-    <text x="545" y="202" fill="#475569" font-size="13" text-anchor="end">واحد فروش: سرکار خانم کاظمی | وضعیت تایید نقشه: تایید نهایی</text>
+    <!-- Gold accent line -->
+    <rect x="0" y="96" width="600" height="4" fill="#C1A056"/>
     
-    <rect x="30" y="245" width="540" height="230" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/>
-    <rect x="30" y="245" width="540" height="38" rx="8" fill="#f1f5f9"/>
-    <text x="545" y="270" fill="#1e293b" font-size="13" font-weight="bold" text-anchor="end">ردیف | نوع پرده / شید | ابعاد (عرض × ارتفاع) | موتور / زنجیر | جهت جمع‌شو</text>
+    <text x="560" y="46" fill="#C1A056" font-size="22" font-weight="bold" text-anchor="end">گالری طلایی | TALAEI GALLERY</text>
+    <text x="560" y="75" fill="#E8E4DC" font-size="14" text-anchor="end">برگه سفارش، نقشه فنی و پروپوزال واحد فروش</text>
+    <text x="40" y="58" fill="#C1A056" font-size="16" font-weight="bold" text-anchor="start">کد سفارش: ${code}</text>
     
-    <line x1="30" y1="283" x2="570" y2="283" stroke="#cbd5e1"/>
-    <text x="545" y="315" fill="#0f172a" font-size="13" text-anchor="end">۱. شید رول بلک‌اوت پذیرایی (۲۸۰ × ۳۱۰ cm) - موتور سامفی رادیویی - چپ</text>
-    <text x="545" y="350" fill="#0f172a" font-size="13" text-anchor="end">۲. حریر کالیفرنیا پلیسه دوبل (۵۲۰ × ۳۱۰ cm) - ریل برقی بی‌صدا - وسط‌بازشو</text>
-    <text x="545" y="385" fill="#0f172a" font-size="13" text-anchor="end">۳. زبرا دو مکانیزم اتاق خواب (۱۸۰ × ۲۴۰ cm) - زنجیر استیل - راست</text>
-    <text x="545" y="420" fill="#0f172a" font-size="13" text-anchor="end">۴. والان دکور مخمل ژاکارد (۱۲۰ × ۳۱۰ cm) - پایه مخفی - طرفین</text>
-    <text x="545" y="455" fill="#2563eb" font-size="12" font-weight="bold" text-anchor="end">نکته حیاتی: سقف کناف دارای قوطی‌کشی آهنی پشت لبه نورمخفی است.</text>
+    <rect x="30" y="125" width="540" height="105" rx="10" fill="#FAF7F2" stroke="#E8E4DC" stroke-width="1.5"/>
+    <text x="545" y="155" fill="#C1A056" font-size="14" font-weight="bold" text-anchor="end">اطلاعات پروژه / کارفرما:</text>
+    <text x="545" y="185" fill="#212121" font-size="16" font-weight="bold" text-anchor="end">نام کارفرما: ${title}</text>
+    <text x="545" y="212" fill="#71717A" font-size="13" text-anchor="end">مهندسی فروش: سرکار خانم کاظمی | سیستم اجرای پرده و شید دکوراتیو</text>
+    
+    <rect x="30" y="250" width="540" height="230" rx="10" fill="#FFFFFF" stroke="#E8E4DC" stroke-width="1.5"/>
+    <rect x="30" y="250" width="540" height="38" rx="10" fill="#212121"/>
+    <text x="545" y="275" fill="#C1A056" font-size="13" font-weight="bold" text-anchor="end">ردیف | نوع پرده / شید | ابعاد (عرض × ارتفاع) | مکانیزم / موتور | نحوه جمع‌شو</text>
+    
+    <line x1="30" y1="288" x2="570" y2="288" stroke="#E8E4DC"/>
+    <text x="545" y="322" fill="#212121" font-size="13" text-anchor="end">۱. شید رول بلک‌اوت پذیرایی (۲۸۰ × ۳۱۰ cm) - موتور سامفی رادیویی - چپ‌جمع‌شو</text>
+    <text x="545" y="358" fill="#212121" font-size="13" text-anchor="end">۲. حریر کالیفرنیا پلیسه دوبل (۵۲۰ × ۳۱۰ cm) - ریل برقی بی‌صدا طلایی - وسط‌بازشو</text>
+    <text x="545" y="394" fill="#212121" font-size="13" text-anchor="end">۳. زبرا دو مکانیزم اتاق خواب (۱۸۰ × ۲۴۰ cm) - زنجیر استیل طلایی - راست</text>
+    <text x="545" y="430" fill="#212121" font-size="13" text-anchor="end">۴. والان دکور مخمل ژاکارد لوکس (۱۲۰ × ۳۱۰ cm) - پایه مخفی - طرفین</text>
+    <text x="545" y="465" fill="#D5733A" font-size="12" font-weight="bold" text-anchor="end">نکته حیاتی: سقف کناف دارای قوطی‌کشی آهنی پشت لبه نورمخفی است.</text>
 
-    <rect x="30" y="495" width="540" height="150" rx="8" fill="#fffbeb" stroke="#fef3c7" stroke-width="2"/>
-    <text x="545" y="525" fill="#92400e" font-size="14" font-weight="bold" text-anchor="end">یادداشت‌های فنی سرپرست فروش:</text>
-    <text x="545" y="555" fill="#78350f" font-size="13" text-anchor="end">• ${details}</text>
-    <text x="545" y="585" fill="#78350f" font-size="13" text-anchor="end">• حتماً قبل از سوراخکاری سقف، کابل برق روشنایی چک شود.</text>
-    <text x="545" y="615" fill="#78350f" font-size="13" text-anchor="end">• کارفرما روی خط اتوی والان بسیار حساس است، بخاردهی الزامی است.</text>
+    <rect x="30" y="500" width="540" height="145" rx="10" fill="#FDFBF7" stroke="#C1A056" stroke-width="1.5"/>
+    <text x="545" y="530" fill="#C1A056" font-size="14" font-weight="bold" text-anchor="end">یادداشت‌های اختصاصی مهندسی فروش طلایی:</text>
+    <text x="545" y="560" fill="#4B5563" font-size="13" text-anchor="end">• ${details}</text>
+    <text x="545" y="590" fill="#4B5563" font-size="13" text-anchor="end">• تراز دقیق لبه پایینی شیدها با خط افق قرنیز الزامی است.</text>
+    <text x="545" y="620" fill="#4B5563" font-size="13" text-anchor="end">• کارفرما بر اتوکشی بدون چروک والان بسیار حساس است؛ اتوبخار ایستاده الزامی است.</text>
 
-    <rect x="30" y="665" width="250" height="90" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
-    <text x="260" y="695" fill="#64748b" font-size="12" text-anchor="end">مهر و امضای مهندسی فروش</text>
-    <circle cx="150" cy="715" r="22" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
-    <text x="150" y="720" fill="#1d4ed8" font-size="11" text-anchor="middle">تایید طراحی</text>
+    <rect x="30" y="665" width="250" height="90" rx="10" fill="#FFFFFF" stroke="#E8E4DC"/>
+    <text x="260" y="695" fill="#71717A" font-size="12" text-anchor="end">مهر و امضای مهندسی فروش</text>
+    <circle cx="150" cy="718" r="22" fill="#FAF7F2" stroke="#C1A056" stroke-width="2"/>
+    <text x="150" y="723" fill="#C1A056" font-size="11" font-weight="bold" text-anchor="middle">تایید طراحی</text>
 
-    <rect x="320" y="665" width="250" height="90" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
-    <text x="550" y="695" fill="#64748b" font-size="12" text-anchor="end">تاییدیه کنترل کیفیت (QC)</text>
-    <circle cx="440" cy="715" r="22" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
-    <text x="440" y="720" fill="#15803d" font-size="11" text-anchor="middle">QC APPROVED</text>
+    <rect x="320" y="665" width="250" height="90" rx="10" fill="#FFFFFF" stroke="#E8E4DC"/>
+    <text x="550" y="695" fill="#71717A" font-size="12" text-anchor="end">تاییدیه کنترل کیفیت (QC)</text>
+    <circle cx="440" cy="718" r="22" fill="#FAF7F2" stroke="#194840" stroke-width="2"/>
+    <text x="440" y="723" fill="#194840" font-size="11" font-weight="bold" text-anchor="middle">QC APPROVED</text>
 
-    <text x="300" y="810" fill="#94a3b8" font-size="12" text-anchor="middle">سیستم یکپارچه عملیات فنی و نصب طلائیه - سند غیرقابل استناد به غیر</text>
+    <text x="300" y="810" fill="#A1A1AA" font-size="12" text-anchor="middle">گالری طلایی (talaei.ir) - سامانه یکپارچه مدیریت فنی و کیوسی نصب</text>
   </svg>`;
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
 }
@@ -155,7 +160,7 @@ export function getInitialProjects(): Project[] {
       locationUrl: 'https://nshn.ir/maps',
       shadePanels: 6,
       curtainPanels: 4,
-      mechanismType: 'شید موتوری هوشمند سامفی + پرده برقی ریل بی‌صدا',
+      mechanismType: 'شید موتوری هوشمند سامفی + پرده برقی ریل بی‌صدا طلایی',
       approximateArea: 65,
       specialNotes: 'کلید و پریزهای هوشمند خانه به سیستم Control4 وصل است؛ با مسئول هوشمندسازی ساختمان آقای مهندس فلاح هماهنگ شود.',
       proposalImages: [
@@ -357,11 +362,11 @@ export const INITIAL_TICKETS: Ticket[] = [
 
 // Storage keys
 const STORAGE_KEYS = {
-  PROJECTS: 'talaie_projects_v1',
-  USERS: 'talaie_users_v1',
-  TICKETS: 'talaie_tickets_v1',
-  SETTINGS: 'talaie_settings_v1',
-  CURRENT_USER: 'talaie_current_user_v1',
+  PROJECTS: 'talaie_projects_v2',
+  USERS: 'talaie_users_v2',
+  TICKETS: 'talaie_tickets_v2',
+  SETTINGS: 'talaie_settings_v2',
+  CURRENT_USER: 'talaie_current_user_v2',
 };
 
 export const StorageService = {
@@ -455,7 +460,8 @@ export const StorageService = {
   // Export JSON backup for safe archiving
   exportBackup(): string {
     const backup = {
-      version: '1.0',
+      version: '2.0',
+      brand: 'گالری طلایی',
       exportedAt: new Date().toISOString(),
       projects: this.getProjects(),
       users: this.getUsers(),

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { ShieldCheck, UserCheck, KeyRound, Phone, Sparkles } from 'lucide-react';
+import { UserCheck, KeyRound, Phone, Sparkles } from 'lucide-react';
 
 interface Props {
   users: User[];
@@ -44,25 +44,29 @@ export const LoginModal: React.FC<Props> = ({ users, currentUserId, onSelectUser
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden my-6">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 px-6 py-6 text-white text-center relative">
-          <div className="w-14 h-14 bg-white/20 rounded-2xl backdrop-blur-md flex items-center justify-center mx-auto mb-3 text-2xl shadow-inner">
-            📐
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-[#E8E4DC] overflow-hidden my-6">
+        {/* Header with talaei.ir luxury palette */}
+        <div className="bg-[#212121] px-6 py-6 text-white text-center relative border-b-2 border-[#C1A056]">
+          <div className="flex justify-center mb-3">
+            <img
+              src="./logo.webp"
+              alt="گالری طلایی"
+              className="h-12 w-auto object-contain bg-white/10 p-2 rounded-2xl backdrop-blur-sm border border-white/10"
+            />
           </div>
-          <h2 className="text-xl font-black">ورود به سامانه عملیات و کیوسی نصب</h2>
-          <p className="text-xs text-blue-100 mt-1">
-            مجموعه تخصصی شید و پرده طلائیه
+          <h2 className="text-lg font-black text-white">سامانه عملیات و کیوسی نصب</h2>
+          <p className="text-xs text-[#C1A056] mt-0.5 font-bold">
+            گالری طلایی (TALAEI GALLERY)
           </p>
         </div>
 
         <div className="p-6 space-y-6">
           {/* Quick Switch (For Testing / Review) */}
-          <div className="bg-blue-50/80 border border-blue-200/60 rounded-2xl p-4">
-            <div className="flex items-center gap-1.5 text-blue-900 font-bold text-xs mb-2.5">
-              <Sparkles className="w-4 h-4 text-amber-500 fill-amber-400" />
-              ورود سریع تستی (یک کلیک بدون پسورد):
+          <div className="bg-[#FAF7F2] border border-[#E8E4DC] rounded-2xl p-4">
+            <div className="flex items-center gap-1.5 text-[#212121] font-bold text-xs mb-2.5">
+              <Sparkles className="w-4 h-4 text-[#C1A056] fill-[#C1A056]" />
+              <span>ورود سریع تستی (یک کلیک بدون پسورد):</span>
             </div>
             <div className="space-y-2">
               {users.map((u) => {
@@ -77,24 +81,24 @@ export const LoginModal: React.FC<Props> = ({ users, currentUserId, onSelectUser
                     onClick={() => handleQuickSwitch(u)}
                     className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-right transition ${
                       isSelected
-                        ? 'border-blue-600 bg-white ring-2 ring-blue-500/20 shadow-sm'
-                        : 'border-slate-200 bg-white/80 hover:bg-white hover:border-slate-300'
+                        ? 'border-[#C1A056] bg-white ring-2 ring-[#C1A056]/30 shadow-xs'
+                        : 'border-[#E8E4DC] bg-white/80 hover:bg-white hover:border-[#C1A056]/50'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="text-xl">{u.avatar || '👤'}</span>
                       <div>
-                        <div className="font-bold text-xs text-slate-800">{u.name}</div>
-                        <div className="text-[10px] text-slate-500">موبایل: {u.phone}</div>
+                        <div className="font-bold text-xs text-[#212121]">{u.name}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">موبایل: {u.phone}</div>
                       </div>
                     </div>
                     <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                      className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
                         isQc
-                          ? 'bg-purple-100 text-purple-800'
+                          ? 'bg-[#212121] text-[#C1A056]'
                           : isLead
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-[#C1A056]/20 text-[#A88738]'
+                          : 'bg-[#194840]/15 text-[#194840]'
                       }`}
                     >
                       {isQc ? 'مدیر کیوسی' : isLead ? 'سرپرست' : 'تکنسین'}
@@ -106,9 +110,9 @@ export const LoginModal: React.FC<Props> = ({ users, currentUserId, onSelectUser
           </div>
 
           <div className="relative flex py-1 items-center">
-            <div className="flex-grow border-t border-slate-200"></div>
+            <div className="flex-grow border-t border-[#E8E4DC]"></div>
             <span className="flex-shrink mx-3 text-slate-400 text-xs">یا ورود با شماره و رمز</span>
-            <div className="flex-grow border-t border-slate-200"></div>
+            <div className="flex-grow border-t border-[#E8E4DC]"></div>
           </div>
 
           {/* Form */}
@@ -130,7 +134,7 @@ export const LoginModal: React.FC<Props> = ({ users, currentUserId, onSelectUser
                   placeholder="0912..."
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-3 pr-10 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-left font-mono"
+                  className="w-full pl-3 pr-10 py-2.5 text-sm rounded-xl border border-[#E8E4DC] focus:outline-none focus:ring-2 focus:ring-[#C1A056] text-left font-mono bg-[#FAF7F2]"
                   dir="ltr"
                 />
                 <Phone className="w-4 h-4 text-slate-400 absolute right-3 top-3.5" />
@@ -148,7 +152,7 @@ export const LoginModal: React.FC<Props> = ({ users, currentUserId, onSelectUser
                   placeholder="رمز عبور (پیش‌فرض ۱۲۳)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-3 pr-10 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-left font-mono"
+                  className="w-full pl-3 pr-10 py-2.5 text-sm rounded-xl border border-[#E8E4DC] focus:outline-none focus:ring-2 focus:ring-[#C1A056] text-left font-mono bg-[#FAF7F2]"
                   dir="ltr"
                 />
                 <KeyRound className="w-4 h-4 text-slate-400 absolute right-3 top-3.5" />
@@ -157,10 +161,10 @@ export const LoginModal: React.FC<Props> = ({ users, currentUserId, onSelectUser
 
             <button
               type="submit"
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition flex items-center justify-center gap-2 text-sm"
+              className="w-full py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm border border-[#C1A056]/30"
             >
               <UserCheck className="w-4 h-4" />
-              ورود به سیستم
+              ورود به سیستم گالری طلایی
             </button>
           </form>
         </div>

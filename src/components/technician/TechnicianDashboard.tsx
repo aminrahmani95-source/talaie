@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Project, User, SystemSettings } from '../../types';
 import { ProjectCard } from './ProjectCard';
-import { Calendar, Clock, CheckCircle2, AlertCircle, Sparkles, Wrench } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits } from '../../utils/jalali';
 
 interface Props {
@@ -25,7 +25,6 @@ export const TechnicianDashboard: React.FC<Props> = ({
   onOpenCompletionModal,
   onUpdateStatus,
 }) => {
-  // Only show days within the QC Manager's configured Visibility Window
   const allDays = getUpcomingDays(30);
   const visibleDays = allDays.slice(0, settings.visibilityWindowDays);
 
@@ -33,7 +32,6 @@ export const TechnicianDashboard: React.FC<Props> = ({
     visibleDays[0]?.dateKey || ''
   );
 
-  // Projects assigned to this user on the selected date
   const assignedProjects = projects.filter(
     (p) =>
       p.scheduledDate === selectedDateKey &&
@@ -44,28 +42,28 @@ export const TechnicianDashboard: React.FC<Props> = ({
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto pb-12">
-      {/* Top Welcome Card */}
-      <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 rounded-3xl p-5 text-white shadow-lg relative overflow-hidden">
+      {/* Top Welcome Card with Brand Logo & Obsidian/Gold Style */}
+      <div className="bg-[#212121] rounded-3xl p-5 text-white shadow-xl relative overflow-hidden border border-[#C1A056]/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shadow-inner">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-2xl border border-white/10 shadow-inner">
               {currentUser.avatar || '🔧'}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="font-black text-base sm:text-lg">{currentUser.name}</h2>
+                <h2 className="font-black text-base sm:text-lg text-white">{currentUser.name}</h2>
               </div>
-              <p className="text-xs text-blue-200 mt-0.5">
+              <p className="text-xs text-[#C1A056] font-bold mt-0.5">
                 {currentUser.role === 'LEAD_TECHNICIAN'
-                  ? 'سرپرست اکیپ نصب پرده و شید'
-                  : 'تکنسین فنی و اجرای مأموریت'}
+                  ? 'سرپرست اکیپ نصب | گالری طلایی'
+                  : 'تکنسین فنی و اجرای مأموریت | گالری طلایی'}
               </p>
             </div>
           </div>
 
-          <div className="bg-white/10 px-3 py-1 rounded-xl text-center backdrop-blur-xs">
-            <span className="text-[10px] text-blue-200 block">پنجره مجاز</span>
-            <span className="font-bold text-xs font-mono">
+          <div className="bg-white/10 px-3 py-1.5 rounded-2xl text-center border border-white/10">
+            <span className="text-[10px] text-[#E8E4DC] block">پنجره مجاز</span>
+            <span className="font-bold text-xs text-[#C1A056] font-mono">
               {toPersianDigits(settings.visibilityWindowDays)} روز
             </span>
           </div>
@@ -74,7 +72,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
 
       {/* Horizontal Day Tabs (Restricted by Visibility Window) */}
       <div>
-        <div className="text-xs font-bold text-slate-700 mb-2 px-1 flex items-center justify-between">
+        <div className="text-xs font-bold text-[#212121] mb-2 px-1 flex items-center justify-between">
           <span>روزهای کاری مجاز:</span>
           <span className="text-[11px] text-slate-500">
             (برنامه‌ریزی {toPersianDigits(settings.visibilityWindowDays)} روز آینده)
@@ -94,10 +92,10 @@ export const TechnicianDashboard: React.FC<Props> = ({
               <button
                 key={day.dateKey}
                 onClick={() => setSelectedDateKey(day.dateKey)}
-                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[76px] py-2.5 px-3 rounded-2xl border transition text-center ${
+                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[78px] py-2.5 px-3 rounded-2xl border transition text-center ${
                   isSelected
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                    ? 'bg-[#212121] text-[#C1A056] border-[#C1A056] shadow-sm'
+                    : 'bg-white text-slate-700 border-[#E8E4DC] hover:border-[#C1A056]/50'
                 }`}
               >
                 <span className="text-[11px] font-bold">
@@ -112,8 +110,8 @@ export const TechnicianDashboard: React.FC<Props> = ({
                   <span
                     className={`mt-1 text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
                       isSelected
-                        ? 'bg-white text-blue-700'
-                        : 'bg-blue-100 text-blue-800'
+                        ? 'bg-[#C1A056] text-[#212121]'
+                        : 'bg-[#FAF7F2] text-[#A88738] border border-[#C1A056]/30'
                     }`}
                   >
                     {toPersianDigits(count)} مأموریت
@@ -128,24 +126,24 @@ export const TechnicianDashboard: React.FC<Props> = ({
       {/* Day Projects List */}
       <div className="space-y-4">
         <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-            <Calendar className="w-4 h-4 text-blue-600" />
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#212121]">
+            <Calendar className="w-4 h-4 text-[#C1A056]" />
             <span>
               مأموریت‌های {selectedDayInfo?.persianDayName} {selectedDayInfo?.persianDayNum}{' '}
               {selectedDayInfo?.persianMonthName}
             </span>
           </div>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-slate-500 font-mono">
             {toPersianDigits(assignedProjects.length)} مأموریت
           </span>
         </div>
 
         {assignedProjects.length === 0 ? (
-          <div className="bg-white rounded-3xl p-10 text-center border border-slate-200 shadow-xs space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+          <div className="bg-white rounded-3xl p-10 text-center border border-[#E8E4DC] shadow-xs space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-[#FAF7F2] border border-[#E8E4DC] flex items-center justify-center mx-auto text-[#C1A056]">
               <Calendar className="w-6 h-6" />
             </div>
-            <h4 className="font-bold text-sm text-slate-800">برای این روز مأموریتی ثبت نشده است</h4>
+            <h4 className="font-bold text-sm text-[#212121]">برای این روز مأموریتی ثبت نشده است</h4>
             <p className="text-xs text-slate-500">
               در حال حاضر برنامه‌ای برای شما تعریف نشده است یا مأموریت‌های روزهای بعد هنوز توسط مدیر کیوسی باز نشده‌اند.
             </p>

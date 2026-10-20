@@ -13,7 +13,6 @@ import {
   Play,
   Star,
   ShieldCheck,
-  ChevronRight,
 } from 'lucide-react';
 import { toPersianDigits } from '../../utils/jalali';
 
@@ -29,25 +28,22 @@ interface Props {
 
 export const ProjectCard: React.FC<Props> = ({
   project,
-  currentUser,
   onViewProposal,
   onOpenToolChecklist,
   onOpenTicketModal,
   onOpenCompletionModal,
   onUpdateStatus,
 }) => {
-  const isLead = project.leadTechnicianId === currentUser.id || currentUser.role === 'LEAD_TECHNICIAN';
-
   return (
-    <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-sm hover:shadow-md transition space-y-4">
+    <div className="bg-white rounded-3xl p-5 border border-[#E8E4DC] shadow-xs hover:border-[#C1A056]/50 transition space-y-4">
       {/* Top Bar: Time, Code, Status */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div className="flex items-center justify-between pb-3 border-b border-[#E8E4DC]">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-lg">
+          <span className="font-mono text-xs font-bold bg-[#FAF7F2] border border-[#E8E4DC] text-slate-700 px-2 py-0.5 rounded-lg">
             {project.code}
           </span>
-          <div className="flex items-center gap-1 text-xs font-bold text-blue-700">
-            <Clock className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-1 text-xs font-bold text-[#212121]">
+            <Clock className="w-3.5 h-3.5 text-[#C1A056]" />
             <span>ساعت {toPersianDigits(project.scheduledTime)}</span>
           </div>
         </div>
@@ -55,12 +51,12 @@ export const ProjectCard: React.FC<Props> = ({
         <span
           className={`text-[11px] px-3 py-1 rounded-full font-bold ${
             project.status === 'COMPLETED'
-              ? 'bg-emerald-100 text-emerald-800'
+              ? 'bg-[#194840]/15 text-[#194840]'
               : project.status === 'IN_PROGRESS'
-              ? 'bg-amber-100 text-amber-800 animate-pulse'
+              ? 'bg-amber-100 text-amber-900 animate-pulse'
               : project.status === 'EN_ROUTE'
-              ? 'bg-sky-100 text-sky-800'
-              : 'bg-slate-100 text-slate-700'
+              ? 'bg-blue-100 text-blue-900'
+              : 'bg-[#FAF7F2] text-slate-700 border border-[#E8E4DC]'
           }`}
         >
           {project.status === 'COMPLETED'
@@ -75,22 +71,22 @@ export const ProjectCard: React.FC<Props> = ({
 
       {/* Title & Customer */}
       <div>
-        <h3 className="font-black text-base text-slate-900 leading-snug">{project.title}</h3>
-        <p className="text-xs text-slate-500 mt-1">کارفرما: {project.customerName}</p>
+        <h3 className="font-black text-base text-[#212121] leading-snug">{project.title}</h3>
+        <p className="text-xs text-[#71717A] mt-1">کارفرما: {project.customerName}</p>
       </div>
 
       {/* Address & Quick Actions (Call & Route) */}
-      <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100 space-y-2.5">
+      <div className="bg-[#FAF7F2] rounded-2xl p-3.5 border border-[#E8E4DC] space-y-2.5">
         <div className="flex items-start gap-2 text-xs text-slate-700 leading-relaxed">
-          <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+          <MapPin className="w-4 h-4 text-[#C1A056] shrink-0 mt-0.5" />
           <span>{project.address || 'آدرس ثبت نشده است'}</span>
         </div>
 
-        <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60">
+        <div className="flex items-center gap-2 pt-1 border-t border-[#E8E4DC]">
           {project.customerPhone && (
             <a
               href={`tel:${project.customerPhone}`}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-xl text-xs font-bold shadow-xs transition border border-[#C1A056]/30"
             >
               <Phone className="w-3.5 h-3.5" />
               <span>تماس با مشتری</span>
@@ -102,9 +98,9 @@ export const ProjectCard: React.FC<Props> = ({
               href={project.locationUrl}
               target="_blank"
               rel="noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-white hover:bg-slate-50 text-[#212121] border border-[#E8E4DC] rounded-xl text-xs font-bold shadow-xs transition"
             >
-              <Navigation className="w-3.5 h-3.5" />
+              <Navigation className="w-3.5 h-3.5 text-[#C1A056]" />
               <span>مسیریابی نقشه</span>
             </a>
           ) : (
@@ -112,9 +108,9 @@ export const ProjectCard: React.FC<Props> = ({
               href={`https://nshn.ir/search/${encodeURIComponent(project.address)}`}
               target="_blank"
               rel="noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-white hover:bg-slate-50 text-[#212121] border border-[#E8E4DC] rounded-xl text-xs font-bold transition"
             >
-              <Navigation className="w-3.5 h-3.5" />
+              <Navigation className="w-3.5 h-3.5 text-[#C1A056]" />
               <span>مسیریابی نشان</span>
             </a>
           )}
@@ -123,15 +119,15 @@ export const ProjectCard: React.FC<Props> = ({
 
       {/* Technical Specifications: Panels */}
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-2.5 text-center">
-          <span className="text-[10px] text-blue-700 block">شید</span>
-          <span className="font-black text-sm text-blue-950 font-mono">
+        <div className="bg-[#FAF7F2] border border-[#E8E4DC] rounded-2xl p-2.5 text-center">
+          <span className="text-[10px] text-slate-500 block">شید</span>
+          <span className="font-black text-sm text-[#212121] font-mono">
             {toPersianDigits(project.shadePanels)} لت
           </span>
         </div>
-        <div className="bg-purple-50/70 border border-purple-200/80 rounded-2xl p-2.5 text-center">
-          <span className="text-[10px] text-purple-700 block">پرده</span>
-          <span className="font-black text-sm text-purple-950 font-mono">
+        <div className="bg-[#FAF7F2] border border-[#C1A056]/30 rounded-2xl p-2.5 text-center">
+          <span className="text-[10px] text-[#A88738] block">پرده</span>
+          <span className="font-black text-sm text-[#C1A056] font-mono">
             {toPersianDigits(project.curtainPanels)} لت
           </span>
         </div>
@@ -139,16 +135,16 @@ export const ProjectCard: React.FC<Props> = ({
 
       {/* Mechanism & Special Notes */}
       {(project.mechanismType || project.specialNotes) && (
-        <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100 text-xs text-slate-700 space-y-1">
+        <div className="bg-[#FAF7F2] rounded-2xl p-3 border border-[#E8E4DC] text-xs text-slate-700 space-y-1">
           {project.mechanismType && (
             <div>
-              <span className="font-bold text-slate-900">نوع مکانیزم: </span>
+              <span className="font-bold text-[#212121]">نوع مکانیزم: </span>
               <span>{project.mechanismType}</span>
             </div>
           )}
           {project.specialNotes && (
-            <div className="text-amber-900 bg-amber-50/60 p-2 rounded-xl mt-1 text-[11px] leading-relaxed">
-              <span className="font-bold">نکته فروش: </span>
+            <div className="text-[#A88738] bg-white p-2 rounded-xl mt-1 text-[11px] leading-relaxed border border-[#E8E4DC]">
+              <span className="font-bold text-[#212121]">نکته فروش: </span>
               {project.specialNotes}
             </div>
           )}
@@ -160,29 +156,29 @@ export const ProjectCard: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => onViewProposal(project)}
-          className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-2xl text-xs font-bold transition"
+          className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#FAF7F2] hover:bg-[#F5EFEB] border border-[#C1A056]/50 text-[#A88738] rounded-2xl text-xs font-bold transition"
         >
-          <FileText className="w-4 h-4 text-amber-600" />
+          <FileText className="w-4 h-4 text-[#C1A056]" />
           <span>عکس پروپوزال فروش</span>
         </button>
 
         <button
           type="button"
           onClick={() => onOpenToolChecklist(project)}
-          className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 rounded-2xl text-xs font-bold transition"
+          className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#FAF7F2] hover:bg-[#F5EFEB] border border-[#E8E4DC] text-[#212121] rounded-2xl text-xs font-bold transition"
         >
-          <Wrench className="w-4 h-4 text-blue-600" />
+          <Wrench className="w-4 h-4 text-[#C1A056]" />
           <span>چک‌لیست ابزار ({project.isFullTools ? 'فول' : toPersianDigits(project.toolsRequired.length)})</span>
         </button>
       </div>
 
-      {/* Workflow Progress Status Actions (for Lead / Technicians) */}
-      <div className="pt-2 border-t border-slate-100 space-y-2">
+      {/* Workflow Progress Status Actions */}
+      <div className="pt-2 border-t border-[#E8E4DC] space-y-2">
         {project.status === 'SCHEDULED' && (
           <button
             type="button"
             onClick={() => onUpdateStatus(project.id, 'EN_ROUTE')}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-2"
+            className="w-full py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-2xl text-xs font-bold shadow-md transition flex items-center justify-center gap-2 border border-[#C1A056]/30"
           >
             <Car className="w-4 h-4" />
             حرکت به سمت پروژه (اعلام شروع مسیر)
@@ -193,7 +189,7 @@ export const ProjectCard: React.FC<Props> = ({
           <button
             type="button"
             onClick={() => onUpdateStatus(project.id, 'IN_PROGRESS')}
-            className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-amber-500/20 transition flex items-center justify-center gap-2"
+            className="w-full py-3 bg-gradient-to-r from-[#C1A056] to-[#A88738] text-white rounded-2xl text-xs font-bold shadow-md transition flex items-center justify-center gap-2"
           >
             <Play className="w-4 h-4" />
             رسیدم سر پروژه / شروع نصب
@@ -204,16 +200,16 @@ export const ProjectCard: React.FC<Props> = ({
           <button
             type="button"
             onClick={() => onOpenCompletionModal(project)}
-            className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl text-xs font-black shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2"
+            className="w-full py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-2xl text-xs font-black shadow-lg transition flex items-center justify-center gap-2 border border-[#C1A056]/40"
           >
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle2 className="w-4 h-4 text-[#C1A056]" />
             ثبت اتمام نصب و ارسال عکس به کیوسی
           </button>
         )}
 
         {project.status === 'COMPLETED' && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-900 text-center font-bold flex items-center justify-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <div className="bg-[#FAF7F2] border border-[#C1A056]/40 rounded-2xl p-3 text-xs text-[#212121] text-center font-bold flex items-center justify-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#C1A056]" />
             گزارش اتمام نصب ثبت شد و در انتظار بررسی کیوسی است
           </div>
         )}
@@ -222,19 +218,19 @@ export const ProjectCard: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => onOpenTicketModal(project)}
-          className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-800 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5"
         >
           <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
           اعلام کسری قطعه، آسیب پارچه یا خرابی سر پروژه
         </button>
       </div>
 
-      {/* QC Evaluation Review Card (if QC has reviewed this project) */}
+      {/* QC Evaluation Review Card */}
       {project.qcStatus === 'APPROVED' && (
-        <div className="bg-purple-50 border border-purple-200 rounded-2xl p-3.5 space-y-1.5 text-xs">
+        <div className="bg-[#FAF7F2] border border-[#C1A056]/50 rounded-2xl p-3.5 space-y-1.5 text-xs">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-purple-900 flex items-center gap-1">
-              <ShieldCheck className="w-4 h-4 text-purple-600" />
+            <span className="font-bold text-[#212121] flex items-center gap-1">
+              <ShieldCheck className="w-4 h-4 text-[#C1A056]" />
               تاییدیه و امتیاز مسئول کیوسی:
             </span>
             <div className="flex items-center gap-0.5">
@@ -243,7 +239,7 @@ export const ProjectCard: React.FC<Props> = ({
                   key={s}
                   className={`w-3.5 h-3.5 ${
                     s <= (project.qcScore || 5)
-                      ? 'text-amber-400 fill-amber-400'
+                      ? 'text-[#C1A056] fill-[#C1A056]'
                       : 'text-slate-300'
                   }`}
                 />
@@ -251,7 +247,7 @@ export const ProjectCard: React.FC<Props> = ({
             </div>
           </div>
           {project.qcNotes && (
-            <p className="text-purple-950 text-[11px] leading-relaxed italic bg-white/70 p-2 rounded-xl">
+            <p className="text-slate-700 text-[11px] leading-relaxed italic bg-white p-2 rounded-xl border border-[#E8E4DC]">
               «{project.qcNotes}»
             </p>
           )}

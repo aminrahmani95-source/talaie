@@ -37,42 +37,42 @@ export const ToolChecklistDrawer: React.FC<Props> = ({ project, onClose }) => {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
       <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between shrink-0">
+        <div className="bg-[#212121] px-6 py-4 text-white flex items-center justify-between shrink-0 border-b border-[#C1A056]/30">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-600/30 text-blue-400 rounded-xl">
+            <div className="p-2 bg-white/10 text-[#C1A056] rounded-xl border border-white/10">
               <Wrench className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-black text-sm sm:text-base">چک‌لیست بارگیری ابزار از انبار</h3>
+                <h3 className="font-black text-sm sm:text-base text-white">چک‌لیست بارگیری ابزار از انبار</h3>
                 {project.isFullTools && (
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                  <span className="text-[10px] bg-[#C1A056]/20 text-[#C1A056] border border-[#C1A056]/40 px-2.5 py-0.5 rounded-full font-bold">
                     فول ابزار
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 truncate">{project.title}</p>
+              <p className="text-xs text-[#E8E4DC] truncate">{project.title}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition"
+            className="p-1 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Progress Bar */}
-        <div className="bg-slate-100 px-6 py-3 border-b border-slate-200 shrink-0">
-          <div className="flex items-center justify-between text-xs text-slate-700 font-bold mb-1.5">
+        <div className="bg-[#FAF7F2] px-6 py-3 border-b border-[#E8E4DC] shrink-0">
+          <div className="flex items-center justify-between text-xs text-[#212121] font-bold mb-1.5">
             <span>وضعیت بارگیری در خودرو:</span>
-            <span className="font-mono text-blue-700">
+            <span className="font-mono text-[#A88738]">
               {toPersianDigits(checkedTools.length)} از {toPersianDigits(project.toolsRequired.length)} قلم ({toPersianDigits(progress)}٪)
             </span>
           </div>
-          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+          <div className="w-full bg-[#E8E4DC] h-2 rounded-full overflow-hidden">
             <div
-              className="bg-emerald-500 h-full transition-all duration-300"
+              className="bg-[#C1A056] h-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -127,10 +127,10 @@ export const ToolChecklistDrawer: React.FC<Props> = ({ project, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 shrink-0">
+        <div className="p-4 bg-[#FAF7F2] border-t border-[#E8E4DC] shrink-0">
           <button
             onClick={onClose}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition"
+            className="w-full py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold rounded-xl text-sm transition border border-[#C1A056]/30"
           >
             تایید و بستن چک‌لیست
           </button>

@@ -1,13 +1,8 @@
 import React, { useState } from 'react';
-import { Ticket, TicketStatus } from '../../types';
+import { Ticket } from '../../types';
 import {
   AlertTriangle,
   CheckCircle2,
-  Clock,
-  MessageSquare,
-  Sparkles,
-  Camera,
-  X,
 } from 'lucide-react';
 import { toPersianDigits } from '../../utils/jalali';
 
@@ -64,40 +59,40 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
 
   return (
     <div className="space-y-6">
-      {/* Banner */}
-      <div className="bg-gradient-to-r from-rose-900 via-red-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+      {/* Banner in talaei.ir Dark Style */}
+      <div className="bg-[#212121] rounded-3xl p-6 text-white shadow-xl relative overflow-hidden border border-rose-500/30">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-6 h-6 text-rose-400" />
-              <h2 className="text-xl font-black">کارتابل تیکت‌های فوری و کسری‌های سر پروژه</h2>
+              <AlertTriangle className="w-6 h-6 text-[#D5733A]" />
+              <h2 className="text-xl font-black text-white">کارتابل تیکت‌های فوری و کسری‌های سر پروژه</h2>
             </div>
-            <p className="text-xs text-rose-200 mt-1">
-              پیام‌های اضطراری تکنسین‌ها از محل نصب (کسری یراق، پارچه معیوب، ایراد زیرسازی) برای اقدام فوری واحد کیوسی
+            <p className="text-xs text-[#E8E4DC] mt-1">
+              پیام‌های اضطراری تکنسین‌ها از محل نصب (کسری یراق، پارچه معیوب، ایراد زیرسازی) برای اقدام فوری واحد کیوسی گالری طلایی
             </p>
           </div>
 
-          <div className="flex items-center gap-2 bg-white/10 p-1 rounded-2xl">
+          <div className="flex items-center gap-2 bg-white/10 p-1 rounded-full border border-white/10">
             <button
               onClick={() => setFilter('OPEN')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                filter === 'OPEN' ? 'bg-rose-600 text-white' : 'text-rose-200 hover:bg-white/10'
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+                filter === 'OPEN' ? 'bg-[#D5733A] text-white' : 'text-white hover:text-[#C1A056]'
               }`}
             >
               تیکت‌های باز ({toPersianDigits(tickets.filter((t) => t.status === 'OPEN').length)})
             </button>
             <button
               onClick={() => setFilter('RESOLVED')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                filter === 'RESOLVED' ? 'bg-rose-600 text-white' : 'text-rose-200 hover:bg-white/10'
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+                filter === 'RESOLVED' ? 'bg-[#C1A056] text-[#212121]' : 'text-white hover:text-[#C1A056]'
               }`}
             >
               حل شده‌ها
             </button>
             <button
               onClick={() => setFilter('ALL')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                filter === 'ALL' ? 'bg-rose-600 text-white' : 'text-rose-200 hover:bg-white/10'
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+                filter === 'ALL' ? 'bg-[#C1A056] text-[#212121]' : 'text-white hover:text-[#C1A056]'
               }`}
             >
               همه تیکت‌ها
@@ -107,9 +102,9 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
       </div>
 
       {filteredTickets.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-sm max-w-lg mx-auto">
-          <CheckCircle2 className="w-16 h-16 text-emerald-400 mx-auto mb-3" />
-          <h3 className="font-bold text-slate-800 text-base">هیچ تیکت بازی وجود ندارد!</h3>
+        <div className="bg-white rounded-3xl p-12 text-center border border-[#E8E4DC] shadow-xs max-w-lg mx-auto">
+          <CheckCircle2 className="w-16 h-16 text-[#C1A056] mx-auto mb-3" />
+          <h3 className="font-bold text-[#212121] text-base">هیچ تیکت بازی وجود ندارد!</h3>
           <p className="text-xs text-slate-500 mt-1">
             همه موارد سر پروژه‌ها پیگیری شده یا هیچ موردی توسط تکنسین‌ها گزارش نشده است.
           </p>
@@ -119,21 +114,21 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
           {filteredTickets.map((t) => (
             <div
               key={t.id}
-              className={`bg-white rounded-3xl p-5 border shadow-sm space-y-4 ${
+              className={`bg-white rounded-3xl p-5 border shadow-xs space-y-4 ${
                 t.status === 'OPEN'
                   ? 'border-rose-300 ring-2 ring-rose-500/10'
-                  : 'border-slate-200 opacity-90'
+                  : 'border-[#E8E4DC] opacity-90'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700">
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-[#FAF7F2] text-[#212121] border border-[#E8E4DC]">
                   {getTicketTypeLabel(t.type)}
                 </span>
                 <span
                   className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
                     t.status === 'OPEN'
                       ? 'bg-rose-100 text-rose-800 animate-pulse'
-                      : 'bg-emerald-100 text-emerald-800'
+                      : 'bg-[#194840]/15 text-[#194840]'
                   }`}
                 >
                   {t.status === 'OPEN' ? 'نیازمند اقدام فوری' : 'حل شده'}
@@ -141,17 +136,17 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
               </div>
 
               <div>
-                <h4 className="font-bold text-sm text-slate-900 leading-tight">
+                <h4 className="font-bold text-sm text-[#212121] leading-tight">
                   {t.projectTitle} ({t.projectCode})
                 </h4>
-                <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
+                <div className="flex items-center gap-2 text-[11px] text-[#71717A] mt-1">
                   <span>فرستنده: {t.authorName}</span>
                   <span>•</span>
                   <span>{t.createdAt}</span>
                 </div>
               </div>
 
-              <p className="text-xs text-slate-700 bg-slate-50 p-3 rounded-2xl border border-slate-200/80 leading-relaxed">
+              <p className="text-xs text-slate-700 bg-[#FAF7F2] p-3 rounded-2xl border border-[#E8E4DC] leading-relaxed">
                 {t.description}
               </p>
 
@@ -164,7 +159,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
                       href={p}
                       target="_blank"
                       rel="noreferrer"
-                      className="w-16 h-16 rounded-xl overflow-hidden border border-slate-300 block"
+                      className="w-16 h-16 rounded-xl overflow-hidden border border-[#E8E4DC] block"
                     >
                       <img src={p} alt="" className="w-full h-full object-cover" />
                     </a>
@@ -174,18 +169,18 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
 
               {/* Resolution Info if Resolved */}
               {t.status === 'RESOLVED' && (
-                <div className="bg-emerald-50 rounded-2xl p-3 border border-emerald-200 text-xs text-emerald-900 space-y-1">
-                  <div className="font-bold flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <div className="bg-[#FAF7F2] rounded-2xl p-3 border border-[#C1A056]/40 text-xs text-[#212121] space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-[#A88738]">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#C1A056]" />
                     اقدام انجام شده توسط کیوسی:
                   </div>
-                  <p className="text-[11px] text-emerald-800">{t.resolutionNote}</p>
+                  <p className="text-[11px] text-slate-700">{t.resolutionNote}</p>
                 </div>
               )}
 
               {/* Action Form if Open */}
               {t.status === 'OPEN' && (
-                <div className="pt-2 border-t border-slate-100">
+                <div className="pt-2 border-t border-[#E8E4DC]">
                   {resolvingId === t.id ? (
                     <div className="space-y-2">
                       <textarea
@@ -193,19 +188,19 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
                         value={resolutionNote}
                         onChange={(e) => setResolutionNote(e.target.value)}
                         placeholder="اقدام انجام شده (مثلاً: قطعه یدک با پیک فرستاده شد یا با کارفرما هماهنگ گردید)..."
-                        className="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-rose-500 bg-white"
+                        className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] focus:ring-2 focus:ring-[#C1A056] bg-white"
                       />
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleResolve(t)}
-                          className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                          className="flex-1 py-2 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-[#C1A056]/30"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           ثبت حل مشکل
                         </button>
                         <button
                           onClick={() => setResolvingId(null)}
-                          className="px-3 py-2 border border-slate-300 text-slate-600 rounded-xl text-xs hover:bg-slate-50 transition"
+                          className="px-3 py-2 border border-[#E8E4DC] text-slate-600 rounded-xl text-xs hover:bg-[#FAF7F2] transition"
                         >
                           انصراف
                         </button>
@@ -214,7 +209,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
                   ) : (
                     <button
                       onClick={() => setResolvingId(t.id)}
-                      className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs border border-rose-200 transition flex items-center justify-center gap-2"
+                      className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold rounded-xl text-xs border border-rose-200 transition flex items-center justify-center gap-2"
                     >
                       <CheckCircle2 className="w-4 h-4" />
                       پاسخ و حل این مشکل
