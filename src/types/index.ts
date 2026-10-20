@@ -30,6 +30,13 @@ export interface ProposalImage {
   uploadedAt: string;
 }
 
+export interface HandoverChecklist {
+  remoteTested: boolean; // تست حرکت روان ریل، موتور و ریموت کنترل برقی
+  leveled: boolean; // بررسی تراز و شاقول بودن قاب و پایه‌ها
+  ironedPleated: boolean; // مرتب‌سازی چین‌ها و اتوکشی نهایی
+  cleaned: boolean; // نظافت کامل محیط و جمع‌آوری تمام ضایعات و گرد و خاک
+}
+
 export interface Project {
   id: string;
   code: string; // کد رهگیری یا شماره سفارش (مثلاً PRJ-104)
@@ -69,8 +76,15 @@ export interface Project {
   completionNotes?: string; // گزارش نهایی سرپرست/تکنسین
   completionPhotos: string[]; // عکس‌های ارسالی بعد از نصب
   
-  // رضایت و امضای مشتری
-  customerSignature?: string;
+  // عکس‌های قبل و بعد از نصب (Before & After)
+  beforePhotos?: string[]; // عکس‌های وضعیت پنجره و کناف قبل از شروع
+  afterPhotos?: string[]; // عکس‌های نهایی پرده و شید بعد از اتمام نصب
+
+  // چک‌لیست ۴ گانه تحویل استاندارد طلایی (White-Glove QC Checklist)
+  handoverChecklist?: HandoverChecklist;
+  
+  // رضایت و امضای دیجیتال کارفرما
+  customerSignature?: string; // امضای دیجیتال ثبت‌شده با انگشت
   customerSatisfaction?: number; // 1 تا 5 ستاره
   
   // بخش ویژه نظارت و کیوسی

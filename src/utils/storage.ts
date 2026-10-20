@@ -141,6 +141,54 @@ function generateMockProposalSvg(code: string, title: string, details: string): 
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
 }
 
+function generateMockSitePhoto(title: string, type: 'BEFORE' | 'AFTER'): string {
+  const isBefore = type === 'BEFORE';
+  const bgColor = isBefore ? '#ECE8E1' : '#212121';
+  const textColor = isBefore ? '#6B7280' : '#C1A056';
+  const bannerBg = isBefore ? '#D97706' : '#10B981';
+  const label = isBefore ? 'عکس قبل از نصب (پنجره و قاب خام)' : 'عکس بعد از اتمام نصب (پرده و شید لوکس)';
+  const desc = isBefore
+    ? 'بررسی زیرسازی کناف، عدم وجود قوطی فلزی و لوله‌کشی توکار'
+    : 'پرده‌ها و شیدهای برقی نصب‌شده با تراز شاقولی و اتوکشی نهایی';
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="450" viewBox="0 0 600 450" style="background:${bgColor};font-family:sans-serif;direction:rtl;">
+    <rect width="600" height="450" fill="${bgColor}"/>
+    <rect x="80" y="60" width="440" height="300" rx="8" fill="${isBefore ? '#F3F0EA' : '#151515'}" stroke="${isBefore ? '#C5BEB3' : '#C1A056'}" stroke-width="${isBefore ? '3' : '4'}"/>
+    ${isBefore ? `
+      <line x1="80" y1="210" x2="520" y2="210" stroke="#C5BEB3" stroke-width="2"/>
+      <line x1="300" y1="60" x2="300" y2="360" stroke="#C5BEB3" stroke-width="2"/>
+      <circle cx="300" cy="210" r="16" fill="none" stroke="#D97706" stroke-width="2" stroke-dasharray="4"/>
+      <text x="300" y="215" fill="#D97706" font-size="11" font-weight="bold" text-anchor="middle">محل اتصال پایه</text>
+    ` : `
+      <rect x="100" y="80" width="180" height="260" fill="#2E2E2E" stroke="#C1A056" stroke-width="1.5"/>
+      <rect x="320" y="80" width="180" height="260" fill="#2E2E2E" stroke="#C1A056" stroke-width="1.5"/>
+      <path d="M100 80 Q145 100 190 80 Q235 100 280 80 L280 340 Q235 320 190 340 Q145 320 100 340 Z" fill="#C1A056" fill-opacity="0.35"/>
+      <path d="M320 80 Q365 100 410 80 Q455 100 500 80 L500 340 Q455 320 410 340 Q365 320 320 340 Z" fill="#C1A056" fill-opacity="0.35"/>
+      <line x1="80" y1="76" x2="520" y2="76" stroke="#C1A056" stroke-width="6"/>
+      <circle cx="510" cy="76" r="6" fill="#10B981"/>
+    `}
+    <rect x="0" y="0" width="600" height="42" fill="${bannerBg}"/>
+    <text x="300" y="27" fill="#FFFFFF" font-size="15" font-weight="bold" text-anchor="middle">${label}</text>
+    <rect x="0" y="390" width="600" height="60" fill="#000000" fill-opacity="0.75"/>
+    <text x="560" y="415" fill="${textColor}" font-size="13" font-weight="bold" text-anchor="end">${title}</text>
+    <text x="560" y="435" fill="#E5E7EB" font-size="11" text-anchor="end">${desc}</text>
+    <text x="40" y="425" fill="#C1A056" font-size="11" font-weight="bold" text-anchor="start">TALAEI QC VERIFIED</text>
+  </svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+function generateMockSignatureSvg(): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="150" viewBox="0 0 400 150">
+    <path d="M50 90 Q 90 20, 140 70 T 220 80 Q 250 40, 290 85 T 350 75 Q 310 130, 200 120 T 90 105" 
+          fill="none" stroke="#C1A056" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M120 75 Q 160 50, 180 90" fill="none" stroke="#C1A056" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="170" cy="40" r="3" fill="#C1A056"/>
+    <circle cx="185" cy="42" r="3" fill="#C1A056"/>
+    <path d="M250 80 L 320 110" fill="none" stroke="#C1A056" stroke-width="2.5" stroke-linecap="round"/>
+  </svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
 export function getInitialProjects(): Project[] {
   const days = getUpcomingDays(15);
   const d0 = days[0]?.dateKey || '2026-10-20'; // امروز
@@ -178,8 +226,27 @@ export function getInitialProjects(): Project[] {
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
       customToolsNotes: 'رولپلاک فلزی مخصوص بتن مسلح به همراه ۴ عدد پایه ال کمکی اضافه شود',
-      status: 'IN_PROGRESS',
-      completionPhotos: [],
+      status: 'COMPLETED',
+      completionNotes: 'نصب پرده‌های برقی و شیدهای هوشمند با تراز لیزری ۳۶۰ درجه انجام شد. ریموت ۴ کاناله سامفی ست شد و به جناب مهندس سهرابی تحویل گردید.',
+      beforePhotos: [
+        generateMockSitePhoto('زعفرانیه - وضعیت دیوار و کناف قبل از نصب', 'BEFORE'),
+        generateMockSitePhoto('زعفرانیه - بررسی قوطی فلزی و اتصالات اولیه', 'BEFORE'),
+      ],
+      afterPhotos: [
+        generateMockSitePhoto('زعفرانیه - نمای پرده حریر و شید هوشمند نهایی', 'AFTER'),
+        generateMockSitePhoto('زعفرانیه - تست جمع‌شو و عملکرد موتور سامفی', 'AFTER'),
+      ],
+      completionPhotos: [
+        generateMockSitePhoto('زعفرانیه - نمای پرده حریر و شید هوشمند نهایی', 'AFTER'),
+      ],
+      handoverChecklist: {
+        remoteTested: true,
+        leveled: true,
+        ironedPleated: true,
+        cleaned: true,
+      },
+      customerSignature: generateMockSignatureSvg(),
+      customerSatisfaction: 5,
       qcStatus: 'PENDING',
       createdAt: '2026-10-18T10:00:00Z',
       updatedAt: '2026-10-20T08:00:00Z',
@@ -219,6 +286,9 @@ export function getInitialProjects(): Project[] {
         'متر ۵ متری لیزری و نواری',
       ],
       status: 'SCHEDULED',
+      beforePhotos: [
+        generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
+      ],
       completionPhotos: [],
       qcStatus: 'NOT_STARTED',
       createdAt: '2026-10-18T11:00:00Z',
@@ -252,6 +322,9 @@ export function getInitialProjects(): Project[] {
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
       status: 'SCHEDULED',
+      beforePhotos: [
+        generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
+      ],
       completionPhotos: [],
       qcStatus: 'NOT_STARTED',
       createdAt: '2026-10-19T14:00:00Z',
@@ -288,6 +361,9 @@ export function getInitialProjects(): Project[] {
         'ست پیچ و رولپلاک پروانه‌ای و حلزونی (کناف و گچ)',
       ],
       status: 'SCHEDULED',
+      beforePhotos: [
+        generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
+      ],
       completionPhotos: [],
       qcStatus: 'NOT_STARTED',
       createdAt: '2026-10-20T08:00:00Z',
@@ -312,6 +388,9 @@ export function getInitialProjects(): Project[] {
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
       status: 'SCHEDULED',
+      beforePhotos: [
+        generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
+      ],
       completionPhotos: [],
       qcStatus: 'NOT_STARTED',
       createdAt: '2026-10-20T09:00:00Z',
@@ -336,6 +415,9 @@ export function getInitialProjects(): Project[] {
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
       status: 'SCHEDULED',
+      beforePhotos: [
+        generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
+      ],
       completionPhotos: [],
       qcStatus: 'NOT_STARTED',
       createdAt: '2026-10-20T10:00:00Z',
@@ -362,11 +444,11 @@ export const INITIAL_TICKETS: Ticket[] = [
 
 // Storage keys
 const STORAGE_KEYS = {
-  PROJECTS: 'talaie_projects_v2',
-  USERS: 'talaie_users_v2',
-  TICKETS: 'talaie_tickets_v2',
-  SETTINGS: 'talaie_settings_v2',
-  CURRENT_USER: 'talaie_current_user_v2',
+  PROJECTS: 'talaie_projects_v3',
+  USERS: 'talaie_users_v3',
+  TICKETS: 'talaie_tickets_v3',
+  SETTINGS: 'talaie_settings_v3',
+  CURRENT_USER: 'talaie_current_user_v3',
 };
 
 export const StorageService = {

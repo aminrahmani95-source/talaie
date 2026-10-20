@@ -209,9 +209,22 @@ export const ProjectCard: React.FC<Props> = ({
         )}
 
         {project.status === 'COMPLETED' && (
-          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#C1A056]/40 rounded-2xl p-3 text-xs text-[#212121] dark:text-zinc-200 text-center font-bold flex items-center justify-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-            گزارش اتمام نصب ثبت شد و در انتظار بررسی کیوسی است
+          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#C1A056]/40 rounded-2xl p-3 text-xs text-[#212121] dark:text-zinc-200 text-center font-bold flex flex-col items-center justify-center gap-1.5">
+            <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+              <span>گزارش اتمام نصب ثبت شد و در انتظار بررسی کیوسی است</span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-zinc-400 font-normal">
+              {project.customerSignature && (
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">✍️ امضای کارفرما ثبت شد</span>
+              )}
+              {((project.afterPhotos?.length || 0) + (project.beforePhotos?.length || 0) > 0) && (
+                <span>📷 {toPersianDigits((project.afterPhotos?.length || 0) + (project.beforePhotos?.length || 0))} عکس</span>
+              )}
+              {project.handoverChecklist && Object.values(project.handoverChecklist).every(Boolean) && (
+                <span className="text-[#A88738] dark:text-[#C1A056] font-bold">🛡️ ۴ استاندارد طلایی ✓</span>
+              )}
+            </div>
           </div>
         )}
 

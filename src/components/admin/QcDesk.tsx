@@ -12,6 +12,12 @@ import {
   AlertCircle,
   Wrench,
   RotateCcw,
+  PenTool,
+  SlidersHorizontal,
+  Flame,
+  CheckSquare,
+  ZoomIn,
+  X,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toPersianDigits } from '../../utils/jalali';
@@ -36,6 +42,7 @@ export const QcDesk: React.FC<Props> = ({
   const [qcScore, setQcScore] = useState<number>(5);
   const [qcNotes, setQcNotes] = useState<string>('');
   const [isEditingApproved, setIsEditingApproved] = useState<boolean>(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Helper: check if project is strictly waiting for QC review
   const isAwaitingQc = (p: Project) => {
@@ -89,7 +96,7 @@ export const QcDesk: React.FC<Props> = ({
       status: 'COMPLETED',
       qcStatus: 'APPROVED',
       qcScore,
-      qcNotes: qcNotes.trim() || 'نصب با رعایت کامل استانداردها و تایید واحد کنترل کیفیت گالری طلایی انجام شد.',
+      qcNotes: qcNotes.trim() || 'نصب با رعایت کامل استانداردهای گالری طلایی انجام و تایید شد.',
       qcReviewedAt: new Date().toLocaleDateString('fa-IR'),
       qcReviewedBy: 'مدیر کیوسی',
     };
@@ -147,6 +154,11 @@ export const QcDesk: React.FC<Props> = ({
     return users.find((u) => u.id === id)?.name || '';
   };
 
+  const beforePhotos = selectedProject?.beforePhotos || [];
+  const afterPhotos =
+    selectedProject?.afterPhotos || selectedProject?.completionPhotos || [];
+  const checklist = selectedProject?.handoverChecklist;
+
   return (
     <div className="space-y-6">
       {/* Top Banner with talaei.ir Obsidian & Gold */}
@@ -158,7 +170,7 @@ export const QcDesk: React.FC<Props> = ({
               <h2 className="text-xl font-black text-white">میز کار نظارت و کنترل کیفیت (QC Desk)</h2>
             </div>
             <p className="text-xs text-[#E8E4DC] mt-1">
-              بررسی عکس‌های ارسالی تکنسین‌ها، تطبیق با پروپوزال فروش گالری طلایی و ثبت نمره کیفی
+              بررسی عکس‌های قبل و بعد، تطبیق با استانداردهای طلایی، استعلام امضای کارفرما و ثبت نمره کیفی
             </p>
           </div>
 
@@ -249,26 +261,20 @@ export const QcDesk: React.FC<Props> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Projects List on the Left Column */}
-          <div className="space-y-3 lg:col-span-1">
-            <div className="flex items-center justify-between px-1">
-              <h3 className="text-xs font-bold text-slate-600 dark:text-zinc-400">
-                لیست پروژه‌ها ({toPersianDigits(relevantProjects.length)} مورد):
-              </h3>
-              {filter === 'ALL' && (
-                <span className="text-[10px] text-[#A88738] dark:text-[#C1A056] font-bold">
-                  (در انتظار کیوسی در صدر لیست)
-                </span>
-              )}
-            </div>
+          {/* Project List Column */}
+          <div className="lg:col-span-1 space-y-3">
+            <h3 className="text-xs font-bold text-slate-500 dark:text-zinc-400 px-1">
+              لیست پروژه‌ها ({toPersianDigits(relevantProjects.length)} مورد):
+            </h3>
 
-            <div className="space-y-2 max-h-[72vh] overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-[750px] overflow-y-auto pr-1">
               {relevantProjects.map((p) => {
-                const isSelected = selectedProject?.id === p.id;
+                const isSelected = selectedProject && selectedProject.id === p.id;
                 const leadName = getUserName(p.leadTechnicianId);
                 const awaitingQc = isAwaitingQc(p);
                 const isApproved = p.qcStatus === 'APPROVED';
                 const isRejected = p.qcStatus === 'REJECTED';
+                const totalPhotos = (p.beforePhotos?.length || 0) + ((p.afterPhotos || p.completionPhotos)?.length || 0);
 
                 return (
                   <div
@@ -328,7 +334,31 @@ export const QcDesk: React.FC<Props> = ({
                     <h4 className="font-bold text-sm text-[#212121] dark:text-white leading-tight">{p.title}</h4>
                     <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 line-clamp-1">{p.address}</p>
 
-                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D] text-[11px] text-slate-600 dark:text-zinc-400">
+                    {/* QC Feature Badges (Photos, Signature, Checklist) */}
+                    <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                      {totalPhotos > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-slate-100 dark:bg-[#161616] text-slate-700 dark:text-zinc-300 px-2 py-0.5 rounded-md border border-slate-200 dark:border-zinc-800 font-mono">
+                          <Camera className="w-3 h-3 text-[#C1A056]" />
+                          <span>{toPersianDigits(totalPhotos)} عکس</span>
+                        </span>
+                      )}
+
+                      {p.customerSignature && (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800 font-bold">
+                          <PenTool className="w-3 h-3" />
+                          <span>امضا شده</span>
+                        </span>
+                      )}
+
+                      {p.handoverChecklist && Object.values(p.handoverChecklist).every(Boolean) && (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-[#C1A056]/15 text-[#8B6D20] dark:text-[#E2C37E] px-2 py-0.5 rounded-md border border-[#C1A056]/30 font-bold">
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>۴ استاندارد ✓</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D] text-[11px] text-slate-600 dark:text-zinc-400">
                       <span>سرپرست: {leadName}</span>
                       <span className="font-mono">
                         {toPersianDigits(p.shadePanels)} شید / {toPersianDigits(p.curtainPanels)} پرده
@@ -368,55 +398,200 @@ export const QcDesk: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* Technician Statement & Completion Report */}
-              <div className="bg-[#FAF7F2] dark:bg-[#202020] rounded-2xl p-4 border border-[#E8E4DC] dark:border-[#2D2D2D] space-y-3">
+              {/* PILLAR 1: BEFORE & AFTER PHOTO INSPECTION */}
+              <div className="bg-[#FAF7F2] dark:bg-[#202020] rounded-2xl p-5 border border-[#E8E4DC] dark:border-[#2D2D2D] space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-2">
+                  <h4 className="text-xs font-black text-[#212121] dark:text-white flex items-center gap-2">
                     <Camera className="w-4 h-4 text-[#C1A056]" />
-                    اظهارات و عکس‌های ارسالی تکنسین نصب:
+                    <span>آلبوم عکس‌های مقایسه‌ای «قبل از نصب» و «بعد از اتمام کار»:</span>
                   </h4>
                   <span className="text-[11px] text-slate-500 dark:text-zinc-400">
-                    وضعیت نصب:{' '}
-                    <span className="font-bold text-[#212121] dark:text-white">
-                      {selectedProject.status === 'COMPLETED'
-                        ? 'اتمام نصب'
-                        : selectedProject.status === 'IN_PROGRESS'
-                        ? 'در حال اجرا'
-                        : 'برنامه‌ریزی'}
-                    </span>
+                    {toPersianDigits(beforePhotos.length)} عکس قبل / {toPersianDigits(afterPhotos.length)} عکس بعد
                   </span>
                 </div>
 
+                {/* Technician note quote */}
                 {selectedProject.completionNotes ? (
                   <p className="text-xs text-slate-700 dark:text-zinc-200 bg-white dark:bg-[#161616] p-3 rounded-xl border border-[#E8E4DC] dark:border-[#2D2D2D] leading-relaxed">
+                    <span className="font-bold text-[#212121] dark:text-white block mb-0.5">اظهارات تکنسین نصب:</span>
                     «{selectedProject.completionNotes}»
                   </p>
                 ) : (
                   <p className="text-xs text-slate-400 italic">هنوز توضیحی توسط تکنسین نوشته نشده است.</p>
                 )}
 
-                {/* Completion Photos */}
-                <div>
-                  <div className="text-[11px] font-semibold text-slate-600 dark:text-zinc-300 mb-2">عکس‌های ثبت‌شده بعد از نصب:</div>
-                  {selectedProject.completionPhotos && selectedProject.completionPhotos.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedProject.completionPhotos.map((photo, i) => (
-                        <a
-                          key={i}
-                          href={photo}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block w-24 h-24 rounded-2xl overflow-hidden border border-[#E8E4DC] dark:border-[#333333] shadow-xs hover:opacity-90"
-                        >
-                          <img src={photo} alt="" className="w-full h-full object-cover" />
-                        </a>
-                      ))}
+                {/* Split Comparison Columns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  {/* Before Photos */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                      <span>عکس‌های قبل از نصب (پنجره خام و زیرسازی):</span>
+                    </div>
+
+                    {beforePhotos.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {beforePhotos.map((photo, i) => (
+                          <div
+                            key={i}
+                            onClick={() => setPreviewImage(photo)}
+                            className="relative h-28 rounded-xl overflow-hidden border border-amber-500/40 cursor-pointer shadow-2xs group"
+                          >
+                            <img src={photo} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
+                              <ZoomIn className="w-5 h-5" />
+                            </div>
+                            <span className="absolute bottom-1 right-1 bg-black/70 text-[9px] text-white px-1.5 py-0.5 rounded font-bold">
+                              قبل #{toPersianDigits(i + 1)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-400 dark:text-zinc-500 bg-white dark:bg-[#161616] p-3 rounded-xl border border-dashed border-slate-300 dark:border-zinc-800 text-center">
+                        عکسی از قبل از شروع ثبت نشده است.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* After Photos */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                      <span>عکس‌های بعد از نصب (پرده و شید نهایی):</span>
+                    </div>
+
+                    {afterPhotos.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {afterPhotos.map((photo, i) => (
+                          <div
+                            key={i}
+                            onClick={() => setPreviewImage(photo)}
+                            className="relative h-28 rounded-xl overflow-hidden border border-emerald-500/40 cursor-pointer shadow-2xs group"
+                          >
+                            <img src={photo} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
+                              <ZoomIn className="w-5 h-5" />
+                            </div>
+                            <span className="absolute bottom-1 right-1 bg-black/70 text-[9px] text-white px-1.5 py-0.5 rounded font-bold">
+                              بعد #{toPersianDigits(i + 1)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-[#A88738] dark:text-[#C1A056] bg-white dark:bg-[#161616] p-3 rounded-xl border border-dashed border-[#C1A056]/30 text-center">
+                        هنوز عکس اتمام کار آپلود نشده است.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* PILLAR 2: CUSTOMER DIGITAL SIGNATURE & PILLAR 3: HANDOVER CHECKLIST */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Customer Signature Certificate Card */}
+                <div className="bg-[#FAF7F2] dark:bg-[#202020] rounded-2xl p-4 border border-[#E8E4DC] dark:border-[#2D2D2D] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-1.5">
+                      <PenTool className="w-4 h-4 text-[#C1A056]" />
+                      <span>امضای دیجیتال و رضایت کارفرما:</span>
+                    </h4>
+                    {selectedProject.customerSignature ? (
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                        ✓ تایید رسمی در محل
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-800">
+                        در انتظار امضا
+                      </span>
+                    )}
+                  </div>
+
+                  {selectedProject.customerSignature ? (
+                    <div className="bg-white dark:bg-[#161616] p-3.5 rounded-xl border border-[#C1A056]/30 space-y-2 shadow-2xs">
+                      <div className="h-24 bg-[#FAF7F2] dark:bg-[#121212] rounded-lg border border-dashed border-[#C1A056]/40 p-2 flex items-center justify-center">
+                        <img
+                          src={selectedProject.customerSignature}
+                          alt="امضای کارفرما"
+                          className="max-h-full max-w-full object-contain filter dark:invert"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] pt-1">
+                        <span className="font-bold text-[#212121] dark:text-white">
+                          {selectedProject.customerName}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`w-3.5 h-3.5 ${
+                                s <= (selectedProject.customerSatisfaction || 5)
+                                  ? 'text-[#C1A056] fill-[#C1A056]'
+                                  : 'text-slate-300 dark:text-zinc-600'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <div className="text-xs text-[#A88738] dark:text-[#C1A056] bg-[#FAF7F2] dark:bg-[#181818] p-3 rounded-xl border border-[#C1A056]/30">
-                      تکنسین هنوز عکسی از اتمام کار آپلود نکرده است.
+                    <div className="text-xs text-slate-500 dark:text-zinc-400 bg-white dark:bg-[#161616] p-4 rounded-xl border border-dashed border-slate-300 dark:border-zinc-800 text-center">
+                      امضای کارفرما برای این پروژه هنوز ثبت نشده است.
                     </div>
                   )}
+                </div>
+
+                {/* White-Glove Handover Checklist Card */}
+                <div className="bg-[#FAF7F2] dark:bg-[#202020] rounded-2xl p-4 border border-[#E8E4DC] dark:border-[#2D2D2D] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-1.5">
+                      <CheckSquare className="w-4 h-4 text-[#C1A056]" />
+                      <span>چک‌لیست استانداردهای طلایی تحویل:</span>
+                    </h4>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#161616] border border-[#E8E4DC] dark:border-zinc-800 text-[11px]">
+                      <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+                        <span>تست حرکت ریل، موتور و ریموت</span>
+                      </span>
+                      <span className={`font-bold ${checklist?.remoteTested !== false ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {checklist?.remoteTested !== false ? '✓ تایید' : '—'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#161616] border border-[#E8E4DC] dark:border-zinc-800 text-[11px]">
+                      <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
+                        <Sparkles className="w-3.5 h-3.5 text-slate-400" />
+                        <span>تراز و شاقول بودن قاب و پایه‌ها</span>
+                      </span>
+                      <span className={`font-bold ${checklist?.leveled !== false ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {checklist?.leveled !== false ? '✓ تایید' : '—'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#161616] border border-[#E8E4DC] dark:border-zinc-800 text-[11px]">
+                      <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
+                        <Flame className="w-3.5 h-3.5 text-slate-400" />
+                        <span>اتوکشی و فرم‌دهی پلیسه‌ها</span>
+                      </span>
+                      <span className={`font-bold ${checklist?.ironedPleated !== false ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {checklist?.ironedPleated !== false ? '✓ تایید' : '—'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#161616] border border-[#E8E4DC] dark:border-zinc-800 text-[11px]">
+                      <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+                        <span>نظافت کامل محل و جمع‌آوری ضایعات</span>
+                      </span>
+                      <span className={`font-bold ${checklist?.cleaned !== false ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {checklist?.cleaned !== false ? '✓ تایید' : '—'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -558,6 +733,31 @@ export const QcDesk: React.FC<Props> = ({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Full-Screen Image Lightbox Modal */}
+      {previewImage && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute -top-12 left-0 text-white hover:text-red-400 p-2 rounded-full bg-white/10"
+              aria-label="بستن"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={previewImage}
+              alt="بزرگ‌نمایی عکس کیوسی"
+              className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain bg-black"
+            />
+          </div>
         </div>
       )}
     </div>

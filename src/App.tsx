@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Project, User, Ticket, SystemSettings } from './types';
+import { Project, User, Ticket, SystemSettings, HandoverChecklist } from './types';
 import { StorageService } from './utils/storage';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
@@ -170,7 +170,11 @@ export const App: React.FC = () => {
   // Completion report from field
   const handleReportCompletion = (completionData: {
     completionNotes: string;
+    beforePhotos: string[];
+    afterPhotos: string[];
     completionPhotos: string[];
+    handoverChecklist: HandoverChecklist;
+    customerSignature?: string;
     customerSatisfaction?: number;
   }) => {
     if (!completionModalProject) return;
@@ -183,7 +187,11 @@ export const App: React.FC = () => {
               status: 'COMPLETED',
               qcStatus: 'PENDING',
               completionNotes: completionData.completionNotes,
+              beforePhotos: completionData.beforePhotos,
+              afterPhotos: completionData.afterPhotos,
               completionPhotos: completionData.completionPhotos,
+              handoverChecklist: completionData.handoverChecklist,
+              customerSignature: completionData.customerSignature,
               customerSatisfaction: completionData.customerSatisfaction,
               completedAt: new Date().toISOString(),
             }
