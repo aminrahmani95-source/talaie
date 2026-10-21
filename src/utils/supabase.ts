@@ -8,17 +8,19 @@ let activeChannel: ReturnType<SupabaseClient['channel']> | null = null;
 
 export const SupabaseSyncService = {
   getClient(url?: string, anonKey?: string): SupabaseClient | null {
-    if (!url || !anonKey) return null;
-    if (supabaseInstance && currentUrl === url && currentKey === anonKey) {
+    const finalUrl = url || import.meta.env.VITE_SUPABASE_URL;
+    const finalKey = anonKey || import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!finalUrl || !finalKey) return null;
+    if (supabaseInstance && currentUrl === finalUrl && currentKey === finalKey) {
       return supabaseInstance;
     }
 
     try {
-      supabaseInstance = createClient(url, anonKey, {
+      supabaseInstance = createClient(finalUrl, finalKey, {
         auth: { persistSession: false },
       });
-      currentUrl = url;
-      currentKey = anonKey;
+      currentUrl = finalUrl;
+      currentKey = finalKey;
       return supabaseInstance;
     } catch (err) {
       console.warn('Failed to initialize Supabase client:', err);

@@ -89,6 +89,8 @@ export const INITIAL_SETTINGS: SystemSettings = {
   visibilityWindowDays: 4, // پیش‌فرض 4 روز قابل مشاهده برای تکنسین‌ها
   companyName: 'گالری طلایی | طراحی، پرده و شید',
   defaultTools: DEFAULT_MASTER_TOOLS,
+  supabaseUrl: 'https://jlrjiiyobukeeralxkpb.supabase.co',
+  supabaseAnonKey: 'sb_publishable_qVjiN5u3V0QMU-ji0pvrcw_GzAIYk0S',
 };
 
 // Generates high quality mock SVG sales proposal in Talaei Gallery brand colors (#C1A056, #212121)
@@ -519,7 +521,14 @@ export const StorageService = {
       return INITIAL_SETTINGS;
     }
     try {
-      return { ...INITIAL_SETTINGS, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      const merged: SystemSettings = {
+        ...INITIAL_SETTINGS,
+        ...parsed,
+        supabaseUrl: parsed.supabaseUrl || INITIAL_SETTINGS.supabaseUrl,
+        supabaseAnonKey: parsed.supabaseAnonKey || INITIAL_SETTINGS.supabaseAnonKey,
+      };
+      return merged;
     } catch {
       return INITIAL_SETTINGS;
     }
