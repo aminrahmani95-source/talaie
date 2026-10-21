@@ -22,9 +22,9 @@ export const DEFAULT_MASTER_TOOLS = [
 export const INITIAL_USERS: User[] = [
   {
     id: 'u-admin',
-    name: 'مهندس رضایی (مدیر کیوسی)',
-    phone: '09121111111',
-    password: '123',
+    name: 'امین رحمانی (مسئول QC)',
+    phone: '09124339038',
+    password: '91243390380',
     role: 'QC_MANAGER',
     avatar: '👔',
     active: true,
@@ -468,7 +468,24 @@ export const StorageService = {
       return INITIAL_USERS;
     }
     try {
-      return JSON.parse(raw);
+      const parsed: User[] = JSON.parse(raw);
+      const adminIdx = parsed.findIndex((u) => u.id === 'u-admin' || u.role === 'QC_MANAGER');
+      if (adminIdx !== -1) {
+        if (
+          parsed[adminIdx].phone !== INITIAL_USERS[0].phone ||
+          parsed[adminIdx].password !== INITIAL_USERS[0].password ||
+          parsed[adminIdx].name !== INITIAL_USERS[0].name
+        ) {
+          parsed[adminIdx].name = INITIAL_USERS[0].name;
+          parsed[adminIdx].phone = INITIAL_USERS[0].phone;
+          parsed[adminIdx].password = INITIAL_USERS[0].password;
+          this.saveUsers(parsed);
+        }
+      } else {
+        parsed.unshift(INITIAL_USERS[0]);
+        this.saveUsers(parsed);
+      }
+      return parsed;
     } catch {
       return INITIAL_USERS;
     }
