@@ -261,7 +261,7 @@ export const TechniciansManager: React.FC<Props> = ({
                   id="tech-phone"
                   type="tel"
                   required
-                  placeholder="0912..."
+                  placeholder="09......"
                   autoComplete="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}

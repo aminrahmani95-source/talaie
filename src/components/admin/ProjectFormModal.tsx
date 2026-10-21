@@ -247,7 +247,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                 <input
                   id="customer-phone"
                   type="tel"
-                  placeholder="0912..."
+                  placeholder="09......"
                   autoComplete="tel"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}

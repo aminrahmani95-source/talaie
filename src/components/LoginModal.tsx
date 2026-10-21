@@ -143,7 +143,7 @@ export const LoginModal: React.FC<Props> = ({
                   type="tel"
                   autoComplete="tel"
                   required
-                  placeholder="0912..."
+                  placeholder="09......"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full pl-3 pr-11 py-3 text-sm rounded-xl border border-[#383838] focus:border-[#C1A056] focus:outline-none focus:ring-2 focus:ring-[#C1A056]/30 text-left font-mono bg-[#141414] text-white placeholder-zinc-500 transition"
