@@ -512,22 +512,24 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   },
 
-  getCurrentUser(): User {
+  getCurrentUser(): User | null {
     const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     if (!raw) {
-      const defaultUser = INITIAL_USERS[0]; // Admin by default
-      this.setCurrentUser(defaultUser);
-      return defaultUser;
+      return null;
     }
     try {
       return JSON.parse(raw);
     } catch {
-      return INITIAL_USERS[0];
+      return null;
     }
   },
 
-  setCurrentUser(user: User) {
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+  setCurrentUser(user: User | null) {
+    if (user) {
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    }
   },
 
   // Export JSON backup for safe archiving

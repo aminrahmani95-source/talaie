@@ -20,8 +20,7 @@ interface Props {
   pendingQcCount: number;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
-  onOpenLogin: () => void;
-  onOpenQuickSwitch: () => void;
+  onLogout: () => void;
   onResetData?: () => void;
   onOpenSettings?: () => void;
   activeTab?: string;
@@ -35,8 +34,7 @@ export const Header: React.FC<Props> = ({
   pendingQcCount,
   isDarkMode = false,
   onToggleDarkMode,
-  onOpenLogin,
-  onOpenQuickSwitch,
+  onLogout,
   onOpenSettings,
   activeTab,
   setActiveTab,
@@ -145,14 +143,11 @@ export const Header: React.FC<Props> = ({
               </div>
             )}
 
-            {/* User Profile Pill & Switcher */}
+            {/* User Profile Pill & Logout */}
             <div className="flex items-center bg-[#FAF7F2] dark:bg-[#242424] border border-[#E8E4DC] dark:border-[#333333] rounded-full p-1 gap-1.5 shadow-2xs">
-              <button
-                type="button"
-                onClick={onOpenQuickSwitch}
-                className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-white dark:hover:bg-[#1E1E1E] active:scale-95 transition text-right"
-                title="تعویض نقش / ورود با کاربر دیگر"
-                aria-label={`کاربر جاری: ${currentUser.name}. کلیک برای تعویض نقش`}
+              <div
+                className="flex items-center gap-2 px-3 py-1 rounded-full text-right"
+                aria-label={`کاربر جاری: ${currentUser.name}`}
               >
                 <div className="w-8 h-8 rounded-full bg-[#212121] dark:bg-[#1A1A1A] border border-[#C1A056]/50 flex items-center justify-center text-xs font-bold text-[#C1A056]">
                   {currentUser.role === 'QC_MANAGER' ? 'QC' : currentUser.name.slice(0, 2)}
@@ -169,16 +164,17 @@ export const Header: React.FC<Props> = ({
                       : 'تکنسین'}
                   </div>
                 </div>
-              </button>
+              </div>
 
               <button
                 type="button"
-                onClick={onOpenLogin}
-                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-[#212121] dark:hover:text-[#F5EFEB] hover:bg-white dark:hover:bg-[#1E1E1E] rounded-full active:scale-95 transition"
-                title="خروج یا ورود به حساب دیگر"
-                aria-label="خروج یا ورود با حساب کاربری دیگر"
+                onClick={onLogout}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-full active:scale-95 transition cursor-pointer"
+                title="خروج از حساب کاربری"
+                aria-label="خروج از حساب کاربری"
               >
-                <LogOut className="w-4 h-4" aria-hidden="true" />
+                <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">خروج</span>
               </button>
             </div>
           </div>

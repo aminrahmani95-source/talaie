@@ -19,7 +19,7 @@ import { HandoverCertificateModal } from './components/HandoverCertificateModal'
 
 export const App: React.FC = () => {
   // Load state from StorageService
-  const [currentUser, setCurrentUser] = useState<User>(() => StorageService.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<User | null>(() => StorageService.getCurrentUser());
   const [users, setUsers] = useState<User[]>(() => StorageService.getUsers());
   const [projects, setProjects] = useState<Project[]>(() => StorageService.getProjects());
   const [tickets, setTickets] = useState<Ticket[]>(() => StorageService.getTickets());
@@ -287,6 +287,26 @@ export const App: React.FC = () => {
     setIsProjectFormOpen(true);
   };
 
+  const handleLogout = () => {
+    setCurrentUser(null);
+    StorageService.setCurrentUser(null);
+  };
+
+  // If no user is authenticated, render the dedicated secure login page
+  if (!currentUser) {
+    return (
+      <LoginModal
+        users={users}
+        isOpen={true}
+        isStandalone={true}
+        onSelectUser={(u) => {
+          setCurrentUser(u);
+          StorageService.setCurrentUser(u);
+        }}
+      />
+    );
+  }
+
   // Counters for alerts with synchronized QC status logic
   const openTicketCount = tickets.filter((t) => t.status === 'OPEN').length;
   const isAwaitingQc = (p: Project) =>
@@ -315,8 +335,7 @@ export const App: React.FC = () => {
         pendingQcCount={pendingQcCount}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
-        onOpenLogin={() => setIsLoginModalOpen(true)}
-        onOpenQuickSwitch={() => setIsLoginModalOpen(true)}
+        onLogout={handleLogout}
         onResetData={handleResetData}
         onOpenSettings={() => setActiveTab('settings')}
         activeTab={activeTab}
@@ -396,19 +415,6 @@ export const App: React.FC = () => {
       </main>
 
       {/* Modals */}
-      {isLoginModalOpen && (
-        <LoginModal
-          users={users}
-          currentUserId={currentUser.id}
-          isOpen={isLoginModalOpen}
-          onSelectUser={(u) => {
-            setCurrentUser(u);
-            setIsLoginModalOpen(false);
-          }}
-          onClose={() => setIsLoginModalOpen(false)}
-        />
-      )}
-
       {isProjectFormOpen && (
         <ProjectFormModal
           project={
