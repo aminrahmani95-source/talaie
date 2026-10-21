@@ -247,6 +247,8 @@ export function getInitialProjects(): Project[] {
       },
       customerSignature: generateMockSignatureSvg(),
       customerSatisfaction: 5,
+      startedAt: '2026-10-20T09:30:00Z',
+      completedAt: '2026-10-20T12:05:00Z',
       qcStatus: 'PENDING',
       createdAt: '2026-10-18T10:00:00Z',
       updatedAt: '2026-10-20T08:00:00Z',
@@ -285,7 +287,8 @@ export function getInitialProjects(): Project[] {
         'ست پیچ و رولپلاک پروانه‌ای و حلزونی (کناف و گچ)',
         'متر ۵ متری لیزری و نواری',
       ],
-      status: 'SCHEDULED',
+      status: 'IN_PROGRESS',
+      startedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
       beforePhotos: [
         generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
       ],
@@ -321,7 +324,8 @@ export function getInitialProjects(): Project[] {
       assignedTechnicianIds: ['u-lead-1', 'u-tech-1', 'u-tech-4'],
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
-      status: 'SCHEDULED',
+      status: 'IN_PROGRESS',
+      startedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
       beforePhotos: [
         generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
       ],
@@ -360,7 +364,8 @@ export function getInitialProjects(): Project[] {
         'تراز لیزری ۳۶۰ درجه و خطی',
         'ست پیچ و رولپلاک پروانه‌ای و حلزونی (کناف و گچ)',
       ],
-      status: 'SCHEDULED',
+      status: 'IN_PROGRESS',
+      startedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
       beforePhotos: [
         generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
       ],
@@ -387,7 +392,8 @@ export function getInitialProjects(): Project[] {
       assignedTechnicianIds: ['u-lead-1', 'u-tech-3'],
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
-      status: 'SCHEDULED',
+      status: 'IN_PROGRESS',
+      startedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
       beforePhotos: [
         generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
       ],
@@ -414,7 +420,8 @@ export function getInitialProjects(): Project[] {
       assignedTechnicianIds: ['u-lead-2', 'u-tech-1', 'u-tech-2'],
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
-      status: 'SCHEDULED',
+      status: 'IN_PROGRESS',
+      startedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
       beforePhotos: [
         generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
       ],
@@ -444,11 +451,11 @@ export const INITIAL_TICKETS: Ticket[] = [
 
 // Storage keys
 const STORAGE_KEYS = {
-  PROJECTS: 'talaie_projects_v3',
-  USERS: 'talaie_users_v3',
-  TICKETS: 'talaie_tickets_v3',
-  SETTINGS: 'talaie_settings_v3',
-  CURRENT_USER: 'talaie_current_user_v3',
+  PROJECTS: 'talaie_projects_v4',
+  USERS: 'talaie_users_v4',
+  TICKETS: 'talaie_tickets_v4',
+  SETTINGS: 'talaie_settings_v4',
+  CURRENT_USER: 'talaie_current_user_v4',
 };
 
 export const StorageService = {

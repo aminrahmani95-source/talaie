@@ -18,15 +18,18 @@ import {
   CheckSquare,
   ZoomIn,
   X,
+  Printer,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toPersianDigits } from '../../utils/jalali';
+import { ActiveJobTimer } from '../ActiveJobTimer';
 
 interface Props {
   projects: Project[];
   users: User[];
   onUpdateProject: (project: Project) => void;
   onViewProposal: (project: Project) => void;
+  onOpenCertificate?: (project: Project) => void;
 }
 
 export const QcDesk: React.FC<Props> = ({
@@ -34,6 +37,7 @@ export const QcDesk: React.FC<Props> = ({
   users,
   onUpdateProject,
   onViewProposal,
+  onOpenCertificate,
 }) => {
   const [filter, setFilter] = useState<'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL'>('PENDING');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -385,7 +389,17 @@ export const QcDesk: React.FC<Props> = ({
                   <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">{selectedProject.address}</p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {onOpenCertificate && (
+                    <button
+                      onClick={() => onOpenCertificate(selectedProject)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#212121] dark:bg-[#C1A056] border border-[#C1A056] text-[#C1A056] dark:text-[#212121] hover:bg-[#333333] dark:hover:bg-[#a88738] font-bold text-xs transition self-start shadow-xs active:scale-95"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>شناسنامه و چاپ PDF</span>
+                    </button>
+                  )}
+
                   {selectedProject.proposalImages && selectedProject.proposalImages.length > 0 && (
                     <button
                       onClick={() => onViewProposal(selectedProject)}
@@ -397,6 +411,13 @@ export const QcDesk: React.FC<Props> = ({
                   )}
                 </div>
               </div>
+
+              {/* On-Site Job Timer & Duration Card */}
+              <ActiveJobTimer
+                status={selectedProject.status}
+                startedAt={selectedProject.startedAt}
+                completedAt={selectedProject.completedAt}
+              />
 
               {/* PILLAR 1: BEFORE & AFTER PHOTO INSPECTION */}
               <div className="bg-[#FAF7F2] dark:bg-[#202020] rounded-2xl p-5 border border-[#E8E4DC] dark:border-[#2D2D2D] space-y-4">

@@ -14,6 +14,7 @@ import { SettingsView } from './components/admin/SettingsView';
 import { TechnicianDashboard } from './components/technician/TechnicianDashboard';
 import { ToolChecklistDrawer } from './components/technician/ToolChecklistDrawer';
 import { ReportCompletionModal } from './components/technician/ReportCompletionModal';
+import { HandoverCertificateModal } from './components/HandoverCertificateModal';
 
 export const App: React.FC = () => {
   // Load state from StorageService
@@ -59,6 +60,7 @@ export const App: React.FC = () => {
   const [toolChecklistProject, setToolChecklistProject] = useState<Project | null>(null);
   const [ticketModalProject, setTicketModalProject] = useState<Project | null>(null);
   const [completionModalProject, setCompletionModalProject] = useState<Project | null>(null);
+  const [certificateModalProject, setCertificateModalProject] = useState<Project | null>(null);
 
   // Cross-tab and real-time synchronization
   useEffect(() => {
@@ -312,6 +314,7 @@ export const App: React.FC = () => {
                   setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
                 }}
                 onViewProposal={(p) => setProposalModalProject(p)}
+                onOpenCertificate={(p) => setCertificateModalProject(p)}
               />
             )}
 
@@ -351,6 +354,7 @@ export const App: React.FC = () => {
             onOpenTicketModal={(p) => setTicketModalProject(p)}
             onOpenCompletionModal={(p) => setCompletionModalProject(p)}
             onUpdateStatus={handleUpdateStatus}
+            onOpenCertificate={(p) => setCertificateModalProject(p)}
           />
         )}
       </main>
@@ -416,6 +420,14 @@ export const App: React.FC = () => {
           project={completionModalProject}
           onClose={() => setCompletionModalProject(null)}
           onSubmit={handleReportCompletion}
+        />
+      )}
+
+      {certificateModalProject && (
+        <HandoverCertificateModal
+          project={certificateModalProject}
+          users={users}
+          onClose={() => setCertificateModalProject(null)}
         />
       )}
     </div>

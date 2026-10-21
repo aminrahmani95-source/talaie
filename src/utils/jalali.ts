@@ -130,3 +130,33 @@ export function toPersianDigits(n: number | string): string {
   const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
   return n.toString().replace(/[0-9]/g, (w) => farsiDigits[+w]);
 }
+
+// Calculate duration between two ISO date strings in human readable Persian
+export function formatDuration(startedAt?: string, completedAt?: string): string {
+  if (!startedAt) return '';
+  const start = new Date(startedAt).getTime();
+  const end = completedAt ? new Date(completedAt).getTime() : Date.now();
+  if (isNaN(start) || isNaN(end) || end < start) return '';
+
+  const totalMinutes = Math.floor((end - start) / (1000 * 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${toPersianDigits(Math.max(1, minutes))} دقیقه`;
+  }
+  if (minutes === 0) {
+    return `${toPersianDigits(hours)} ساعت`;
+  }
+  return `${toPersianDigits(hours)} ساعت و ${toPersianDigits(minutes)} دقیقه`;
+}
+
+// Format time only (e.g. 09:30 -> ۰۹:۳۰) from ISO timestamp
+export function formatTimeOnly(isoOrDate?: string | Date): string {
+  if (!isoOrDate) return '';
+  const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;
+  if (isNaN(d.getTime())) return '';
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return toPersianDigits(`${h}:${m}`);
+}

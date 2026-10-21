@@ -13,8 +13,10 @@ import {
   Play,
   Star,
   ShieldCheck,
+  Printer,
 } from 'lucide-react';
 import { toPersianDigits } from '../../utils/jalali';
+import { ActiveJobTimer } from '../ActiveJobTimer';
 
 interface Props {
   project: Project;
@@ -24,15 +26,18 @@ interface Props {
   onOpenTicketModal: (project: Project) => void;
   onOpenCompletionModal: (project: Project) => void;
   onUpdateStatus: (projectId: string, newStatus: Project['status']) => void;
+  onOpenCertificate?: (project: Project) => void;
 }
 
 export const ProjectCard: React.FC<Props> = ({
   project,
+  currentUser,
   onViewProposal,
   onOpenToolChecklist,
   onOpenTicketModal,
   onOpenCompletionModal,
   onUpdateStatus,
+  onOpenCertificate,
 }) => {
   return (
     <div className="bg-white dark:bg-[#1C1C1C] rounded-3xl p-5 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs hover:border-[#C1A056]/50 dark:hover:border-[#C1A056]/50 transition space-y-4">
@@ -68,6 +73,13 @@ export const ProjectCard: React.FC<Props> = ({
             : 'برنامه‌ریزی شده'}
         </span>
       </div>
+
+      {/* On-Site Active Job Timer / Completion Duration */}
+      <ActiveJobTimer
+        status={project.status}
+        startedAt={project.startedAt}
+        completedAt={project.completedAt}
+      />
 
       {/* Title & Customer */}
       <div>
@@ -225,6 +237,17 @@ export const ProjectCard: React.FC<Props> = ({
                 <span className="text-[#A88738] dark:text-[#C1A056] font-bold">🛡️ ۴ استاندارد طلایی ✓</span>
               )}
             </div>
+
+            {onOpenCertificate && (
+              <button
+                type="button"
+                onClick={() => onOpenCertificate(project)}
+                className="w-full mt-1 py-2 px-3 bg-white dark:bg-[#161616] hover:bg-[#FAF7F2] dark:hover:bg-[#202020] border border-[#C1A056]/50 text-[#C1A056] rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-2xs active:scale-95"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>مشاهده شناسنامه تحویل و چاپ PDF</span>
+              </button>
+            )}
           </div>
         )}
 
