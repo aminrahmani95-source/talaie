@@ -14,8 +14,11 @@ import {
   Sun,
   Moon,
   Sparkles,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { StorageService } from '../../utils/storage';
+import { SupabaseSyncService } from '../../utils/supabase';
 import { toPersianDigits } from '../../utils/jalali';
 
 interface Props {
@@ -41,6 +44,13 @@ export const SettingsView: React.FC<Props> = ({
   // Supabase states
   const [supabaseUrl, setSupabaseUrl] = useState(settings.supabaseUrl || '');
   const [supabaseKey, setSupabaseKey] = useState(settings.supabaseAnonKey || '');
+  const [copiedSql, setCopiedSql] = useState(false);
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SupabaseSyncService.getSetupSqlScript());
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 3000);
+  };
 
   const handleAddTool = () => {
     if (!newTool.trim()) return;
@@ -270,16 +280,48 @@ export const SettingsView: React.FC<Props> = ({
 
         {/* Section 3: Supabase Cloud Sync */}
         <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
-          <div className="flex items-center gap-2">
-            <Cloud className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
-            <h3 className="font-bold text-sm text-[#212121] dark:text-white">
-              اتصال ابری همگام‌سازی لحظه‌ای بین چند دستگاه (Supabase Free Sync)
-            </h3>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Cloud className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
+              <h3 className="font-bold text-sm text-[#212121] dark:text-white">
+                اتصال ابری همگام‌سازی لحظه‌ای بین چند دستگاه (Supabase Free Sync)
+              </h3>
+            </div>
+            {supabaseUrl && supabaseKey ? (
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>دیتابیس ابری متصل است</span>
+              </span>
+            ) : (
+              <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700">
+                حالت ذخیره‌سازی محلی (آفلاین)
+              </span>
+            )}
           </div>
 
-          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#C1A056]/30 rounded-2xl p-4 text-xs text-slate-800 dark:text-zinc-200 leading-relaxed">
-            <p className="font-bold mb-1 text-[#212121] dark:text-[#C1A056]">همگام‌سازی رایگان و آنلاین:</p>
-            سایت شما روی GitHub Pages به صورت رایگان بالا می‌آید. برای اینکه وقتی شما برنامه‌ای را ثبت می‌کنید در همان لحظه در گوشی تکنسین‌ها آپدیت شود، می‌توانید آدرس URL و کلید Anon سرویس رایگان Supabase را در زیر وارد کنید.
+          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#C1A056]/30 rounded-2xl p-4 text-xs text-slate-800 dark:text-zinc-200 leading-relaxed space-y-2">
+            <p className="font-bold text-[#212121] dark:text-[#C1A056]">همگام‌سازی رایگان و ۱۰۰٪ آنلاین بین تمام گوشی‌ها:</p>
+            <p>
+              سایت شما با گیت‌هاب پیجز رایگان اجرا می‌شود. با اتصال به سرویس ابری رایگان Supabase، هر اطلاعاتی که هر کاربری وارد کند (پروژه، عکس، امضا یا تیکت) در کسری از ثانیه روی تمام گوشی‌های سرپرستان و مدیران آپدیت می‌شود.
+            </p>
+            <div className="pt-2 flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleCopySql}
+                className="px-3 py-1.5 bg-[#212121] hover:bg-[#333333] dark:bg-[#C1A056] dark:hover:bg-[#a88738] text-[#C1A056] dark:text-[#212121] rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 active:scale-95 shadow-xs"
+              >
+                {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedSql ? 'دستورات SQL کپی شد!' : 'کپی دستورات SQL ساخت جدول در سوپابیس'}</span>
+              </button>
+              <a
+                href="https://supabase.com/dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-[#A88738] dark:text-[#C1A056] font-bold underline hover:opacity-80"
+              >
+                ورود به پنل رایگان Supabase ↗
+              </a>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

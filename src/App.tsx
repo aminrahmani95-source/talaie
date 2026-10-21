@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Project, User, Ticket, SystemSettings, HandoverChecklist } from './types';
 import { StorageService } from './utils/storage';
+import { SupabaseSyncService } from './utils/supabase';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
 import { ProposalViewerModal } from './components/ProposalViewerModal';
@@ -106,25 +107,60 @@ export const App: React.FC = () => {
     } catch {}
   };
 
-  // Sync state changes with StorageService
+  // Cloud sync via Supabase
+  useEffect(() => {
+    if (!settings.supabaseUrl || !settings.supabaseAnonKey) return;
+
+    let unsubscribe: (() => void) | undefined;
+    SupabaseSyncService.subscribe(
+      settings.supabaseUrl,
+      settings.supabaseAnonKey,
+      {
+        onProjectsSync: (cloudProjects) => setProjects(cloudProjects),
+        onTicketsSync: (cloudTickets) => setTickets(cloudTickets),
+        onUsersSync: (cloudUsers) => setUsers(cloudUsers),
+        onSettingsSync: (cloudSettings) => setSettings((prev) => ({ ...prev, ...cloudSettings })),
+      }
+    ).then((unsub) => {
+      unsubscribe = unsub;
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [settings.supabaseUrl, settings.supabaseAnonKey]);
+
+  // Sync state changes with StorageService & Supabase Cloud
   useEffect(() => {
     StorageService.saveProjects(projects);
     broadcastSync();
+    if (settings.supabaseUrl && settings.supabaseAnonKey) {
+      SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'projects', projects);
+    }
   }, [projects]);
 
   useEffect(() => {
     StorageService.saveUsers(users);
     broadcastSync();
+    if (settings.supabaseUrl && settings.supabaseAnonKey) {
+      SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'users', users);
+    }
   }, [users]);
 
   useEffect(() => {
     StorageService.saveTickets(tickets);
     broadcastSync();
+    if (settings.supabaseUrl && settings.supabaseAnonKey) {
+      SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'tickets', tickets);
+    }
   }, [tickets]);
 
   useEffect(() => {
     StorageService.saveSettings(settings);
     broadcastSync();
+    if (settings.supabaseUrl && settings.supabaseAnonKey) {
+      SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'settings', settings);
+    }
   }, [settings]);
 
   useEffect(() => {
