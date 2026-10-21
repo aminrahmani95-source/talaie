@@ -111,7 +111,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
     if (afterPhotos.length === 0) {
       if (
         !confirm(
-          'آیا مایلید بدون عکس اتمام کار گزارش را ثبت کنید؟ (ثبت عکس بعد از نصب برای تایید کیوسی الزامی است)'
+          'آیا مایلید بدون عکس اتمام کار گزارش را ثبت کنید؟ (ثبت عکس بعد از نصب برای تایید QC الزامی است)'
         )
       ) {
         return;
@@ -156,7 +156,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
             </div>
             <div>
               <h3 id="report-modal-title" className="font-black text-base sm:text-lg text-white">
-                ثبت برگه پایان نصب و تحویل کیوسی
+                ثبت برگه پایان نصب و تحویل QC
               </h3>
               <p className="text-xs text-[#C1A056] line-clamp-1">{project.title}</p>
             </div>
@@ -234,7 +234,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     <span>عکس‌های بعد از نصب (پرده و شید نهایی و آماده تحویل):</span>
                   </label>
                   <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                    الزامی جهت تایید کیوسی
+                    الزامی جهت تایید QC
                   </span>
                 </div>
 
@@ -572,7 +572,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
               className="flex-1 py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-black rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2 border border-[#C1A056]/30 active:scale-98 min-h-[44px]"
             >
               <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-              ارسال رسمی گزارش به کیوسی
+              ارسال رسمی گزارش به QC
             </button>
           </div>
         </form>

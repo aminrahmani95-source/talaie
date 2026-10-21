@@ -65,7 +65,7 @@ export const TechniciansManager: React.FC<Props> = ({
         ? 'سرپرست'
         : role === 'TECHNICIAN'
         ? 'تکنسین'
-        : 'مدیر کیوسی';
+        : 'مدیر QC';
 
     const updatedUser: User = {
       id: editingUser ? editingUser.id : `u-${Date.now()}`,

@@ -216,7 +216,7 @@ export const ProjectCard: React.FC<Props> = ({
             className="w-full py-3.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-2xl text-xs font-black shadow-lg transition flex items-center justify-center gap-2 border border-[#C1A056]/40 active:scale-98 min-h-[48px]"
           >
             <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-            ثبت اتمام نصب و ارسال عکس به کیوسی
+            ثبت اتمام نصب و ارسال عکس به QC
           </button>
         )}
 
@@ -224,7 +224,7 @@ export const ProjectCard: React.FC<Props> = ({
           <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#C1A056]/40 rounded-2xl p-3 text-xs text-[#212121] dark:text-zinc-200 text-center font-bold flex flex-col items-center justify-center gap-1.5">
             <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
-              <span>گزارش اتمام نصب ثبت شد و در انتظار بررسی کیوسی است</span>
+              <span>گزارش اتمام نصب ثبت شد و در انتظار بررسی QC است</span>
             </div>
             <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-zinc-400 font-normal">
               {project.customerSignature && (
@@ -268,7 +268,7 @@ export const ProjectCard: React.FC<Props> = ({
           <div className="flex items-center justify-between">
             <span className="font-bold text-[#212121] dark:text-white flex items-center gap-1">
               <ShieldCheck className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-              تاییدیه و امتیاز مسئول کیوسی:
+              تاییدیه و امتیاز مسئول QC:
             </span>
             <div className="flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map((s) => (

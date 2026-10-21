@@ -374,7 +374,7 @@ export const SettingsView: React.FC<Props> = ({
         </h3>
 
         <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
-          می‌توانید تمام پروژه‌های یک‌ماهه، لیست تکنسین‌ها، تیکت‌ها و ارزیابی‌های کیوسی را به عنوان فایل پشتیبان JSON دانلود کنید تا هیچ‌وقت اطلاعات شما از بین نرود.
+          می‌توانید تمام پروژه‌های یک‌ماهه، لیست تکنسین‌ها، تیکت‌ها و ارزیابی‌های QC را به عنوان فایل پشتیبان JSON دانلود کنید تا هیچ‌وقت اطلاعات شما از بین نرود.
         </p>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">

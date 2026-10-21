@@ -102,7 +102,7 @@ export const QcDesk: React.FC<Props> = ({
       qcScore,
       qcNotes: qcNotes.trim() || 'نصب با رعایت کامل استانداردهای گالری طلایی انجام و تایید شد.',
       qcReviewedAt: new Date().toLocaleDateString('fa-IR'),
-      qcReviewedBy: 'مدیر کیوسی',
+      qcReviewedBy: 'مدیر QC',
     };
 
     onUpdateProject(updated);
@@ -133,7 +133,7 @@ export const QcDesk: React.FC<Props> = ({
       qcStatus: 'REJECTED',
       qcNotes: reason,
       qcReviewedAt: new Date().toLocaleDateString('fa-IR'),
-      qcReviewedBy: 'مدیر کیوسی',
+      qcReviewedBy: 'مدیر QC',
     };
 
     onUpdateProject(updated);
@@ -146,11 +146,11 @@ export const QcDesk: React.FC<Props> = ({
       ...p,
       status: 'COMPLETED',
       qcStatus: 'PENDING',
-      completionNotes: p.completionNotes || 'تکمیل نصب تایید شده توسط مدیر کیوسی جهت بررسی نهایی.',
+      completionNotes: p.completionNotes || 'تکمیل نصب تایید شده توسط مدیر QC جهت بررسی نهایی.',
     };
     onUpdateProject(updated);
     handleSelectProject(updated);
-    alert(`پروژه ${p.title} به وضعیت «اتمام نصب / در انتظار کیوسی» منتقل شد و هم‌اکنون آماده ارزیابی است.`);
+    alert(`پروژه ${p.title} به وضعیت «اتمام نصب / در انتظار QC» منتقل شد و هم‌اکنون آماده ارزیابی است.`);
   };
 
   const getUserName = (id?: string) => {
@@ -186,7 +186,7 @@ export const QcDesk: React.FC<Props> = ({
                 filter === 'PENDING' ? 'bg-[#C1A056] text-[#212121] shadow-xs' : 'text-white hover:text-[#C1A056]'
               }`}
             >
-              <span>در انتظار تایید کیوسی</span>
+              <span>در انتظار تایید QC</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                 filter === 'PENDING' ? 'bg-[#212121] text-[#C1A056]' : 'bg-[#C1A056] text-[#212121]'
               }`}>
@@ -244,14 +244,14 @@ export const QcDesk: React.FC<Props> = ({
           <ShieldCheck className="w-16 h-16 text-[#C1A056]/50 mx-auto mb-3" />
           <h3 className="font-bold text-[#212121] dark:text-white text-base">
             {filter === 'PENDING'
-              ? 'هیچ پروژه‌ای در انتظار تایید کیوسی نیست'
+              ? 'هیچ پروژه‌ای در انتظار تایید QC نیست'
               : filter === 'APPROVED'
               ? 'هنوز پروژه‌ای تایید کیفی نشده است'
               : 'پروژه‌ای در این بخش وجود ندارد'}
           </h3>
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
             {filter === 'PENDING'
-              ? 'پروژه‌هایی که تکنسین‌ها نصب آن‌ها را تمام کنند در این بخش قرار می‌گیرند. همچنین در تب «همه پروژه‌ها» می‌توانید هر پروژه‌ای را مستقیماً به بررسی کیوسی ارسال کنید.'
+              ? 'پروژه‌هایی که تکنسین‌ها نصب آن‌ها را تمام کنند در این بخش قرار می‌گیرند. همچنین در تب «همه پروژه‌ها» می‌توانید هر پروژه‌ای را مستقیماً به بررسی QC ارسال کنید.'
               : 'از تب‌های بالا می‌توانید وضعیت‌های دیگر را بررسی کنید.'}
           </p>
           {filter === 'PENDING' && (
@@ -322,11 +322,11 @@ export const QcDesk: React.FC<Props> = ({
                         }`}
                       >
                         {isApproved
-                          ? '✓ تایید کیوسی'
+                          ? '✓ تایید QC'
                           : isRejected
                           ? '⚠️ نیاز به اصلاح'
                           : awaitingQc
-                          ? '⏳ در انتظار تایید کیوسی'
+                          ? '⏳ در انتظار تایید QC'
                           : p.status === 'IN_PROGRESS'
                           ? '⚙️ در حال نصب'
                           : p.status === 'EN_ROUTE'
@@ -624,14 +624,14 @@ export const QcDesk: React.FC<Props> = ({
                       این پروژه هنوز به عنوان «اتمام نصب» اعلام نشده است
                     </div>
                     <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5">
-                      برای فعال‌شدن ارزیابی کیفی، می‌توانید مستقیماً آن را به وضعیت اتمام نصب و آماده کیوسی ببرید.
+                      برای فعال‌شدن ارزیابی کیفی، می‌توانید مستقیماً آن را به وضعیت اتمام نصب و آماده QC ببرید.
                     </p>
                   </div>
                   <button
                     onClick={() => handleMarkAsReadyForQc(selectedProject)}
                     className="px-4 py-2 bg-[#212121] text-[#C1A056] rounded-xl text-xs font-bold hover:bg-[#333333] transition shrink-0 border border-[#C1A056]/30"
                   >
-                    ⚡ تایید اتمام کار و باز کردن بررسی کیوسی
+                    ⚡ تایید اتمام کار و باز کردن بررسی QC
                   </button>
                 </div>
               )}
@@ -670,13 +670,13 @@ export const QcDesk: React.FC<Props> = ({
 
                   {selectedProject.qcNotes && (
                     <div className="bg-white dark:bg-[#161616] p-3 rounded-xl border border-[#E8E4DC] dark:border-[#2D2D2D] text-xs text-slate-800 dark:text-zinc-200 leading-relaxed">
-                      <span className="font-bold text-[#212121] dark:text-white block mb-1">اظهارنظر مسئول کیوسی:</span>
+                      <span className="font-bold text-[#212121] dark:text-white block mb-1">اظهارنظر مسئول QC:</span>
                       «{selectedProject.qcNotes}»
                     </div>
                   )}
 
                   <div className="text-[10px] text-slate-500 dark:text-zinc-400">
-                    تایید شده توسط {selectedProject.qcReviewedBy || 'مدیر کیوسی'} در تاریخ {selectedProject.qcReviewedAt}
+                    تایید شده توسط {selectedProject.qcReviewedBy || 'مدیر QC'} در تاریخ {selectedProject.qcReviewedAt}
                   </div>
                 </div>
               )}
@@ -686,7 +686,7 @@ export const QcDesk: React.FC<Props> = ({
                 <form onSubmit={handleApprove} className="bg-[#FAF7F2] dark:bg-[#202020] rounded-2xl p-5 border border-[#C1A056]/40 space-y-4">
                   <h4 className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-[#C1A056]" />
-                    ارزیابی و نظر مسئول کیوسی (QC):
+                    ارزیابی و نظر مسئول QC:
                   </h4>
 
                   {/* Star rating in authentic Gold */}
@@ -720,7 +720,7 @@ export const QcDesk: React.FC<Props> = ({
                   {/* QC Notes */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                      نظر نهایی مسئول کیوسی اضافه بر اظهارات نصاب:
+                      نظر نهایی مسئول QC اضافه بر اظهارات نصاب:
                     </label>
                     <textarea
                       rows={3}
@@ -775,7 +775,7 @@ export const QcDesk: React.FC<Props> = ({
             </button>
             <img
               src={previewImage}
-              alt="بزرگ‌نمایی عکس کیوسی"
+              alt="بزرگ‌نمایی عکس QC"
               className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain bg-black"
             />
           </div>

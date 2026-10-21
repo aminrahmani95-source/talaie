@@ -244,7 +244,7 @@ export const App: React.FC = () => {
   const handleCreateTicket = (newTicket: Ticket) => {
     setTickets((prev) => [newTicket, ...prev]);
     setTicketModalProject(null);
-    alert('تیکت اضطراری با موفقیت ثبت شد و به اطلاع مدیر کیوسی رسید.');
+    alert('تیکت اضطراری با موفقیت ثبت شد و به اطلاع مدیر QC رسید.');
   };
 
   const handleUpdateTicket = (updatedTicket: Ticket) => {

@@ -138,7 +138,7 @@ function generateMockProposalSvg(code: string, title: string, details: string): 
     <circle cx="440" cy="718" r="22" fill="#FAF7F2" stroke="#194840" stroke-width="2"/>
     <text x="440" y="723" fill="#194840" font-size="11" font-weight="bold" text-anchor="middle">QC APPROVED</text>
 
-    <text x="300" y="810" fill="#A1A1AA" font-size="12" text-anchor="middle">گالری طلایی (talaei.ir) - سامانه یکپارچه مدیریت فنی و کیوسی نصب</text>
+    <text x="300" y="810" fill="#A1A1AA" font-size="12" text-anchor="middle">گالری طلایی (talaei.ir) - سامانه یکپارچه مدیریت فنی و QC نصب</text>
   </svg>`;
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
 }

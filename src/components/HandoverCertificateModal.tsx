@@ -316,7 +316,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
               </div>
 
               <div className="text-[10px] text-slate-500">
-                مسئول کنترل کیفیت: {project.qcReviewedBy || 'مدیر کیوسی'} ({toPersianDigits(project.qcReviewedAt || project.scheduledDate)})
+                مسئول کنترل کیفیت: {project.qcReviewedBy || 'مدیر QC'} ({toPersianDigits(project.qcReviewedAt || project.scheduledDate)})
               </div>
             </div>
           </div>

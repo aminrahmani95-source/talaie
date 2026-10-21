@@ -286,9 +286,9 @@ export const MonthPlanner: React.FC<Props> = ({
                             }`}
                           >
                             {proj.qcStatus === 'APPROVED'
-                              ? '✓ تایید کیوسی'
+                              ? '✓ تایید QC'
                               : (proj.status === 'COMPLETED' || proj.qcStatus === 'PENDING') && proj.qcStatus !== 'REJECTED'
-                              ? '⏳ در انتظار کیوسی'
+                              ? '⏳ در انتظار QC'
                               : proj.qcStatus === 'REJECTED'
                               ? '⚠️ نیاز به اصلاح'
                               : proj.status === 'IN_PROGRESS'

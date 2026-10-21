@@ -70,7 +70,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
               <h2 className="text-xl font-black text-white">کارتابل تیکت‌های فوری و کسری‌های سر پروژه</h2>
             </div>
             <p className="text-xs text-[#E8E4DC] mt-1">
-              پیام‌های اضطراری تکنسین‌ها از محل نصب (کسری یراق، پارچه معیوب، ایراد زیرسازی) برای اقدام فوری واحد کیوسی گالری طلایی
+              پیام‌های اضطراری تکنسین‌ها از محل نصب (کسری یراق، پارچه معیوب، ایراد زیرسازی) برای اقدام فوری واحد QC گالری طلایی
             </p>
           </div>
 
@@ -178,7 +178,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
                 <div className="bg-[#FAF7F2] dark:bg-[#202020] rounded-2xl p-3 border border-[#C1A056]/40 text-xs text-[#212121] dark:text-zinc-200 space-y-1">
                   <div className="font-bold flex items-center gap-1.5 text-[#A88738] dark:text-[#C1A056]">
                     <CheckCircle2 className="w-3.5 h-3.5 text-[#C1A056]" aria-hidden="true" />
-                    اقدام انجام شده توسط کیوسی:
+                    اقدام انجام شده توسط QC:
                   </div>
                   <p className="text-[11px] text-slate-700 dark:text-zinc-300">{t.resolutionNote}</p>
                 </div>

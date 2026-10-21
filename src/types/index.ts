@@ -19,7 +19,7 @@ export type ProjectStatus =
 
 export type QCStatus = 
   | 'NOT_STARTED'  // هنوز نصب نشده
-  | 'PENDING'      // در انتظار بررسی کیوسی
+  | 'PENDING'      // در انتظار بررسی QC
   | 'APPROVED'     // تایید کیفی شده
   | 'REJECTED';    // عدم تایید کیفی / نیاز به اصلاح
 
@@ -87,10 +87,10 @@ export interface Project {
   customerSignature?: string; // امضای دیجیتال ثبت‌شده با انگشت
   customerSatisfaction?: number; // 1 تا 5 ستاره
   
-  // بخش ویژه نظارت و کیوسی
+  // بخش ویژه نظارت و QC
   qcStatus: QCStatus;
   qcScore?: number; // امتیاز کیفی 1 تا 5
-  qcNotes?: string; // نظر تخصصی مسئول کیوسی
+  qcNotes?: string; // نظر تخصصی مسئول QC
   qcReviewedAt?: string;
   qcReviewedBy?: string;
   

@@ -66,7 +66,7 @@ export const Header: React.FC<Props> = ({
                   {settings.companyName || 'گالری طلایی'}
                 </span>
                 <span className="hidden sm:inline-block text-[10px] bg-[#FAF7F2] dark:bg-[#242424] text-[#C1A056] px-2.5 py-0.5 rounded-full font-bold border border-[#C1A056]/30">
-                  عملیات و کیوسی نصب
+                  عملیات و QC نصب
                 </span>
               </div>
               <p className="text-[11px] text-[#71717A] dark:text-[#A1A1AA] hidden sm:block">
@@ -132,12 +132,12 @@ export const Header: React.FC<Props> = ({
                     type="button"
                     onClick={() => setActiveTab && setActiveTab('qc')}
                     className="flex items-center gap-1 px-3 py-1.5 min-h-[38px] bg-[#FAF7F2] dark:bg-[#242424] hover:bg-[#F5EFEB] dark:hover:bg-[#2C2C2C] border border-[#C1A056] text-[#212121] dark:text-[#F5EFEB] rounded-full text-xs font-bold active:scale-95 transition"
-                    title={`${pendingQcCount} پروژه آماده تایید کیوسی`}
-                    aria-label={`${pendingQcCount} پروژه آماده بررسی کیوسی`}
+                    title={`${pendingQcCount} پروژه آماده تایید QC`}
+                    aria-label={`${pendingQcCount} پروژه آماده بررسی QC`}
                   >
                     <ShieldCheck className="w-3.5 h-3.5 text-[#C1A056]" aria-hidden="true" />
                     <span className="text-[#C1A056] font-black">{toPersianDigits(pendingQcCount)}</span>
-                    <span>کیوسی</span>
+                    <span>QC</span>
                   </button>
                 )}
               </div>
@@ -158,7 +158,7 @@ export const Header: React.FC<Props> = ({
                   </div>
                   <div className="text-[10px] text-[#C1A056] font-bold">
                     {currentUser.role === 'QC_MANAGER'
-                      ? 'مدیر کیوسی'
+                      ? 'مدیر QC'
                       : currentUser.role === 'LEAD_TECHNICIAN'
                       ? 'سرپرست نصب'
                       : 'تکنسین'}
@@ -212,7 +212,7 @@ export const Header: React.FC<Props> = ({
               }`}
             >
               <ShieldCheck className="w-4 h-4" aria-hidden="true" />
-              <span>میز کار کیوسی (تایید کیفیت)</span>
+              <span>میز کار QC (تایید کیفیت)</span>
               {pendingQcCount > 0 && (
                 <span className="bg-[#C1A056] text-white dark:bg-[#212121] dark:text-[#C1A056] text-[10px] px-1.5 py-0.2 rounded-full font-black">
                   {toPersianDigits(pendingQcCount)}

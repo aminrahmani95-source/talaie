@@ -53,7 +53,7 @@ export const LoginModal: React.FC<Props> = ({
     }
 
     if (user.active === false) {
-      setError('حساب کاربری شما غیرفعال شده است. با مدیر کیوسی تماس بگیرید.');
+      setError('حساب کاربری شما غیرفعال شده است. با مدیر QC تماس بگیرید.');
       return;
     }
 
@@ -104,7 +104,7 @@ export const LoginModal: React.FC<Props> = ({
             </div>
           </div>
           <h2 id="login-modal-title" className="text-xl font-black text-white tracking-tight">
-            سامانه فنی، عملیات و کیوسی
+            سامانه فنی، عملیات و QC
           </h2>
           <p className="text-xs text-[#C1A056] mt-1.5 font-bold tracking-widest uppercase">
             گالری طلایی | TALAEI GALLERY
@@ -197,7 +197,7 @@ export const LoginModal: React.FC<Props> = ({
 
           <div className="pt-2 border-t border-[#2D2D2D] text-center">
             <p className="text-[11px] text-zinc-400 leading-relaxed">
-              جهت دریافت شماره و رمز عبور اختصاصی یا تغییر دسترسی، با مدیریت کیوسی گالری طلایی تماس بگیرید.
+              جهت دریافت شماره و رمز عبور اختصاصی یا تغییر دسترسی، با مدیریت QC گالری طلایی تماس بگیرید.
             </p>
           </div>
         </div>

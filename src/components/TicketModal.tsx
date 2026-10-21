@@ -199,7 +199,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
           {/* Description */}
           <div>
             <label htmlFor="ticket-description" className="block text-xs font-bold text-slate-700 dark:text-[#E8E4DC] mb-1.5">
-              توضیح دقیق مشکل (ویژه مدیر کیوسی و بازرسی):
+              توضیح دقیق مشکل (ویژه مدیر QC و بازرسی):
             </label>
             <textarea
               id="ticket-description"
@@ -269,7 +269,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
               className="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl bg-[#D5733A] hover:bg-[#b85e2b] text-white font-black transition shadow-lg shadow-[#D5733A]/25 text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
             >
               <CheckCircle2 className="w-4 h-4" />
-              ارسال فوری تیکت به کیوسی
+              ارسال فوری تیکت به QC
             </button>
           </div>
         </form>

@@ -153,7 +153,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
             </div>
             <h4 className="font-bold text-sm text-[#212121] dark:text-white">برای این روز مأموریتی ثبت نشده است</h4>
             <p className="text-xs text-slate-500 dark:text-zinc-400">
-              در حال حاضر برنامه‌ای برای شما تعریف نشده است یا مأموریت‌های روزهای بعد هنوز توسط مدیر کیوسی باز نشده‌اند.
+              در حال حاضر برنامه‌ای برای شما تعریف نشده است یا مأموریت‌های روزهای بعد هنوز توسط مدیر QC باز نشده‌اند.
             </p>
           </div>
         ) : (

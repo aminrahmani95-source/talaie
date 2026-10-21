@@ -596,7 +596,7 @@ export const ProjectFormModal: React.FC<Props> = ({
 
               <div>
                 <label htmlFor="qc-status" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  وضعیت نظارت و بررسی کیوسی (QC):
+                  وضعیت نظارت و بررسی QC:
                 </label>
                 <select
                   id="qc-status"
@@ -605,8 +605,8 @@ export const ProjectFormModal: React.FC<Props> = ({
                   className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white font-bold"
                 >
                   <option value="NOT_STARTED">هنوز نصب نشده</option>
-                  <option value="PENDING">در انتظار بررسی و تایید کیوسی</option>
-                  <option value="APPROVED">تایید رسمی کیوسی</option>
+                  <option value="PENDING">در انتظار بررسی و تایید QC</option>
+                  <option value="APPROVED">تایید رسمی QC</option>
                   <option value="REJECTED">عدم تایید / نیاز به اصلاح</option>
                 </select>
               </div>
