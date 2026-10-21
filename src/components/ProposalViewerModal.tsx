@@ -104,7 +104,7 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
             onClick={handleResetZoom}
             className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition active:scale-95"
             aria-label="اندازه عادی تصویر"
-            title="اندازه عادی (۱۰۰٪)"
+            title="اندازه عادی (100%)"
           >
             <RotateCcw className="w-4 h-4" />
           </button>

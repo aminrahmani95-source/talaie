@@ -234,7 +234,7 @@ export const ProjectCard: React.FC<Props> = ({
                 <span>📷 {toPersianDigits((project.afterPhotos?.length || 0) + (project.beforePhotos?.length || 0))} عکس</span>
               )}
               {project.handoverChecklist && Object.values(project.handoverChecklist).every(Boolean) && (
-                <span className="text-[#A88738] dark:text-[#C1A056] font-bold">🛡️ ۴ استاندارد طلایی ✓</span>
+                <span className="text-[#A88738] dark:text-[#C1A056] font-bold">🛡️ 4 استاندارد طلایی ✓</span>
               )}
             </div>
 

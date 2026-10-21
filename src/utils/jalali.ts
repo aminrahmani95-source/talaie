@@ -124,12 +124,18 @@ export function getUpcomingDays(count = 30): DayInfo[] {
   return days;
 }
 
-// Convert English numbers to Persian digits for UI display
+// Standard English numbers formatting throughout the project
 export function toPersianDigits(n: number | string): string {
   if (n === null || n === undefined) return '';
   const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-  return n.toString().replace(/[0-9]/g, (w) => farsiDigits[+w]);
+  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  return n
+    .toString()
+    .replace(/[۰-۹]/g, (d) => farsiDigits.indexOf(d).toString())
+    .replace(/[٠-٩]/g, (d) => arabicDigits.indexOf(d).toString());
 }
+
+export const toEnglishDigits = toPersianDigits;
 
 // Calculate duration between two ISO date strings in human readable Persian
 export function formatDuration(startedAt?: string, completedAt?: string): string {

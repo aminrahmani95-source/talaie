@@ -205,7 +205,7 @@ export const TechniciansManager: React.FC<Props> = ({
                     رمز عبور:
                   </span>
                   <span className="font-mono font-bold text-[#212121] dark:text-white" dir="ltr">
-                    {u.password || '۱۲۳'}
+                    {u.password || '123'}
                   </span>
                 </div>
               </div>

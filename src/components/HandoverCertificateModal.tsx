@@ -294,7 +294,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                   />
                 ))}
                 <span className="text-[10px] font-bold text-slate-600 mr-1">
-                  رضایت: {toPersianDigits(project.customerSatisfaction || 5)} از ۵
+                  رضایت: {toPersianDigits(project.customerSatisfaction || 5)} از 5
                 </span>
               </div>
             </div>
@@ -310,7 +310,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                 <div className="border-2 border-[#194840] rounded-xl px-4 py-2 bg-[#194840]/5 rotate-[-2deg]">
                   <div className="text-xs font-black text-[#194840] tracking-wider">TALAEI QC APPROVED</div>
                   <div className="text-[10px] text-emerald-700 font-bold mt-0.5">
-                    امتیاز کیفی: {toPersianDigits(project.qcScore || 5)} از ۵ ستاره
+                    امتیاز کیفی: {toPersianDigits(project.qcScore || 5)} از 5 ستاره
                   </div>
                 </div>
               </div>
@@ -323,7 +323,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
 
           {/* Footer watermark & contact */}
           <div className="text-center text-[10px] text-slate-400 pt-3 border-t border-slate-100">
-            گالری طلایی | نشانی وب‌سایت: talaei.ir | پشتیبانی فنی و خدمات پس از فروش: ۰۲۱-۸۸۸۸۸۸۸۸
+            گالری طلایی | نشانی وب‌سایت: talaei.ir | پشتیبانی فنی و خدمات پس از فروش: 021-88888888
           </div>
         </div>
       </div>

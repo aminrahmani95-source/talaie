@@ -183,7 +183,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
             }`}
           >
             <Camera className="w-4 h-4" />
-            <span>۱. عکس قبل و بعد</span>
+            <span>1. عکس قبل و بعد</span>
             {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
               <span className="bg-[#C1A056] text-[#212121] text-[10px] w-4 h-4 rounded-full inline-flex items-center justify-center font-mono">
                 {toPersianDigits(beforePhotos.length + afterPhotos.length)}
@@ -201,7 +201,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
             }`}
           >
             <CheckSquare className="w-4 h-4" />
-            <span>۲. چک‌لیست تحویل استاندارد</span>
+            <span>2. چک‌لیست تحویل استاندارد</span>
             {Object.values(checklist).every(Boolean) && (
               <span className="text-emerald-500 font-bold">✓</span>
             )}
@@ -217,7 +217,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
             }`}
           >
             <PenTool className="w-4 h-4" />
-            <span>۳. امضای کارفرما</span>
+            <span>3. امضای کارفرما</span>
             {signature && <span className="text-emerald-500 font-bold">✓</span>}
           </button>
         </div>
@@ -355,7 +355,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     چک‌لیست استانداردهای طلایی تحویل پرده و شید:
                   </h4>
                   <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                    تکنسین موظف است قبل از ترک محل، هر ۴ مورد زیر را بررسی و تایید نماید.
+                    تکنسین موظف است قبل از ترک محل، هر 4 مورد زیر را بررسی و تایید نماید.
                   </p>
                 </div>
                 <button
@@ -508,7 +508,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                       type="button"
                       onClick={() => setSatisfaction(s)}
                       className="w-10 h-10 flex items-center justify-center rounded-xl hover:scale-110 active:scale-95 transition"
-                      aria-label={`${s} ستاره از ۵ ستاره`}
+                      aria-label={`${s} ستاره از 5 ستاره`}
                     >
                       <Star
                         className={`w-6 h-6 ${
@@ -521,7 +521,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     </button>
                   ))}
                   <span className="text-xs font-bold text-[#212121] dark:text-white mr-2">
-                    {toPersianDigits(satisfaction)} از ۵ ستاره
+                    {toPersianDigits(satisfaction)} از 5 ستاره
                   </span>
                 </div>
               </div>

@@ -198,7 +198,7 @@ export const LoginModal: React.FC<Props> = ({ users, currentUserId, onSelectUser
                   type="password"
                   autoComplete="current-password"
                   required
-                  placeholder="رمز عبور (پیش‌فرض ۱۲۳)"
+                  placeholder="رمز عبور (پیش‌فرض 123)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-3 pr-10 py-2.5 text-sm rounded-xl border border-[#E8E4DC] dark:border-[#383838] focus:outline-none focus:ring-2 focus:ring-[#C1A056] text-left font-mono bg-[#FAF7F2] dark:bg-[#222222] text-[#212121] dark:text-white"

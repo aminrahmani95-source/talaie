@@ -207,7 +207,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="مثال: پارچه شید لت سوم دارای پارگی ۵ سانتی‌متری است یا ریل پرده برای قاب سمت راست ۱۵ سانتی‌متر کوتاه است..."
+              placeholder="مثال: پارچه شید لت سوم دارای پارگی 5 سانتی‌متری است یا ریل پرده برای قاب سمت راست 15 سانتی‌متر کوتاه است..."
               className="w-full text-sm p-3.5 rounded-2xl border border-slate-300 dark:border-[#333333] bg-white dark:bg-[#222222] text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#D5733A] focus:border-[#D5733A] transition"
             />
           </div>

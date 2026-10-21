@@ -73,7 +73,7 @@ export const MonthPlanner: React.FC<Props> = ({
               </h2>
             </div>
             <p className="text-xs text-[#E8E4DC] mt-1">
-              مدیریت زمان‌بندی ۳۰ روز آینده و تنظیم پنجره دید اختصاصی تکنسین‌های نصب
+              مدیریت زمان‌بندی 30 روز آینده و تنظیم پنجره دید اختصاصی تکنسین‌های نصب
             </p>
           </div>
 
@@ -90,7 +90,7 @@ export const MonthPlanner: React.FC<Props> = ({
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-[10px] text-[#C1A056]">۱ روز</span>
+              <span className="text-[10px] text-[#C1A056]">1 روز</span>
               <input
                 type="range"
                 min="1"
@@ -99,7 +99,7 @@ export const MonthPlanner: React.FC<Props> = ({
                 onChange={handleSliderChange}
                 className="w-full accent-[#C1A056] cursor-pointer h-2 bg-white/20 rounded-lg"
               />
-              <span className="text-[10px] text-[#C1A056]">۱۴ روز</span>
+              <span className="text-[10px] text-[#C1A056]">14 روز</span>
             </div>
             <div className="text-[10px] text-[#E8E4DC]/80 text-center">
               (پروژه‌های بعد از {toPersianDigits(settings.visibilityWindowDays)} روز برای تکنسین‌ها در حالت پیش‌نویس است)
@@ -118,7 +118,7 @@ export const MonthPlanner: React.FC<Props> = ({
                   : 'bg-white/10 text-white/80 hover:bg-white/20'
               }`}
             >
-              نمای ۴ ستونه عملیاتی
+              نمای 4 ستونه عملیاتی
             </button>
             <button
               onClick={() => setViewMode('FULL_MONTH')}
@@ -128,7 +128,7 @@ export const MonthPlanner: React.FC<Props> = ({
                   : 'bg-white/10 text-white/80 hover:bg-white/20'
               }`}
             >
-              نمای کامل ۳۰ روزه
+              نمای کامل 30 روزه
             </button>
           </div>
 

@@ -410,7 +410,7 @@ export const ProjectFormModal: React.FC<Props> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="scheduled-date" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  تاریخ اجرا (انتخاب از تقویم ۳۰ روزه):
+                  تاریخ اجرا (انتخاب از تقویم 30 روزه):
                 </label>
                 <select
                   id="scheduled-date"
@@ -555,7 +555,7 @@ export const ProjectFormModal: React.FC<Props> = ({
               <input
                 id="custom-tools-notes"
                 type="text"
-                placeholder="مثلاً: براکت دیواری تقویت‌شده ۵۰ سانتی، رولپلاک پروانه‌ای کناف بلند..."
+                placeholder="مثلاً: براکت دیواری تقویت‌شده 50 سانتی، رولپلاک پروانه‌ای کناف بلند..."
                 value={customToolsNotes}
                 onChange={(e) => setCustomToolsNotes(e.target.value)}
                 className="w-full text-sm p-2 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500"

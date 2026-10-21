@@ -3,9 +3,9 @@ import { getUpcomingDays } from './jalali';
 
 export const DEFAULT_MASTER_TOOLS = [
   'دریل بتن‌کن و چکشی',
-  'نردبان ۳ متری تلسکوپی',
-  'نردبان ۵ متری دوطرفه استاندارد',
-  'تراز لیزری ۳۶۰ درجه و خطی',
+  'نردبان 3 متری تلسکوپی',
+  'نردبان 5 متری دوطرفه استاندارد',
+  'تراز لیزری 360 درجه و خطی',
   'جعبه ابزار دستی (آچار، پیچ‌گوشتی، انبردست، سیم‌چین)',
   'ست پیچ و رولپلاک پروانه‌ای و حلزونی (کناف و گچ)',
   'ترانس برق و تستر فاز / مولتی‌متر',
@@ -14,7 +14,7 @@ export const DEFAULT_MASTER_TOOLS = [
   'پایه‌های سقفی و دیواری یدک شید و پرده',
   'ریل‌کش فلزی و روان‌کننده سیلیکونی ریل',
   'اتو بخار پرده ایستاده (جهت فرم‌دهی نهایی)',
-  'متر ۵ متری لیزری و نواری',
+  'متر 5 متری لیزری و نواری',
   'تفنگ چسب حرارتی و چسب آهن فوری',
   'کاور محافظ کف و کاور پرده ضدگردوغبار',
 ];
@@ -31,7 +31,7 @@ export const INITIAL_USERS: User[] = [
   },
   {
     id: 'u-lead-1',
-    name: 'رضا محمدی (سرپرست اکیپ ۱)',
+    name: 'رضا محمدی (سرپرست اکیپ 1)',
     phone: '09122222222',
     password: '123',
     role: 'LEAD_TECHNICIAN',
@@ -49,7 +49,7 @@ export const INITIAL_USERS: User[] = [
   },
   {
     id: 'u-lead-2',
-    name: 'مهدی احمدی (سرپرست اکیپ ۲)',
+    name: 'مهدی احمدی (سرپرست اکیپ 2)',
     phone: '09124444444',
     password: '123',
     role: 'LEAD_TECHNICIAN',
@@ -86,7 +86,7 @@ export const INITIAL_USERS: User[] = [
 ];
 
 export const INITIAL_SETTINGS: SystemSettings = {
-  visibilityWindowDays: 4, // پیش‌فرض ۴ روز قابل مشاهده برای تکنسین‌ها
+  visibilityWindowDays: 4, // پیش‌فرض 4 روز قابل مشاهده برای تکنسین‌ها
   companyName: 'گالری طلایی | طراحی، پرده و شید',
   defaultTools: DEFAULT_MASTER_TOOLS,
 };
@@ -114,10 +114,10 @@ function generateMockProposalSvg(code: string, title: string, details: string): 
     <text x="545" y="275" fill="#C1A056" font-size="13" font-weight="bold" text-anchor="end">ردیف | نوع پرده / شید | ابعاد (عرض × ارتفاع) | مکانیزم / موتور | نحوه جمع‌شو</text>
     
     <line x1="30" y1="288" x2="570" y2="288" stroke="#E8E4DC"/>
-    <text x="545" y="322" fill="#212121" font-size="13" text-anchor="end">۱. شید رول بلک‌اوت پذیرایی (۲۸۰ × ۳۱۰ cm) - موتور سامفی رادیویی - چپ‌جمع‌شو</text>
-    <text x="545" y="358" fill="#212121" font-size="13" text-anchor="end">۲. حریر کالیفرنیا پلیسه دوبل (۵۲۰ × ۳۱۰ cm) - ریل برقی بی‌صدا طلایی - وسط‌بازشو</text>
-    <text x="545" y="394" fill="#212121" font-size="13" text-anchor="end">۳. زبرا دو مکانیزم اتاق خواب (۱۸۰ × ۲۴۰ cm) - زنجیر استیل طلایی - راست</text>
-    <text x="545" y="430" fill="#212121" font-size="13" text-anchor="end">۴. والان دکور مخمل ژاکارد لوکس (۱۲۰ × ۳۱۰ cm) - پایه مخفی - طرفین</text>
+    <text x="545" y="322" fill="#212121" font-size="13" text-anchor="end">1. شید رول بلک‌اوت پذیرایی (280 × 310 cm) - موتور سامفی رادیویی - چپ‌جمع‌شو</text>
+    <text x="545" y="358" fill="#212121" font-size="13" text-anchor="end">2. حریر کالیفرنیا پلیسه دوبل (520 × 310 cm) - ریل برقی بی‌صدا طلایی - وسط‌بازشو</text>
+    <text x="545" y="394" fill="#212121" font-size="13" text-anchor="end">3. زبرا دو مکانیزم اتاق خواب (180 × 240 cm) - زنجیر استیل طلایی - راست</text>
+    <text x="545" y="430" fill="#212121" font-size="13" text-anchor="end">4. والان دکور مخمل ژاکارد لوکس (120 × 310 cm) - پایه مخفی - طرفین</text>
     <text x="545" y="465" fill="#D5733A" font-size="12" font-weight="bold" text-anchor="end">نکته حیاتی: سقف کناف دارای قوطی‌کشی آهنی پشت لبه نورمخفی است.</text>
 
     <rect x="30" y="500" width="540" height="145" rx="10" fill="#FDFBF7" stroke="#C1A056" stroke-width="1.5"/>
@@ -194,7 +194,7 @@ export function getInitialProjects(): Project[] {
   const d0 = days[0]?.dateKey || '2026-10-20'; // امروز
   const d1 = days[1]?.dateKey || '2026-10-21'; // فردا
   const d2 = days[2]?.dateKey || '2026-10-22'; // پس‌فردا
-  const d3 = days[3]?.dateKey || '2026-10-23'; // روز ۴
+  const d3 = days[3]?.dateKey || '2026-10-23'; // روز 4
   const d5 = days[5]?.dateKey || '2026-10-25'; // هفته آینده
 
   return [
@@ -204,7 +204,7 @@ export function getInitialProjects(): Project[] {
       title: 'پروژه پنت‌هاوس زعفرانیه (مهندس سهرابی)',
       customerName: 'مهندس نوید سهرابی',
       customerPhone: '09129876543',
-      address: 'زعفرانیه، خیابان آصف، کوچه بهار، پلاک ۱۲، زنگ ۹',
+      address: 'زعفرانیه، خیابان آصف، کوچه بهار، پلاک 12، زنگ 9',
       locationUrl: 'https://nshn.ir/maps',
       shadePanels: 6,
       curtainPanels: 4,
@@ -215,7 +215,7 @@ export function getInitialProjects(): Project[] {
         {
           id: 'img-1',
           title: 'برگه مشخصات فنی و نقشه‌های اجرایی زعفرانیه',
-          url: generateMockProposalSvg('PRJ-101', 'پنت‌هاوس زعفرانیه - سهرابی', 'شید بلک‌اوت پشت پنجره قدی بالکن با ریموت ۴ کانال ست شود'),
+          url: generateMockProposalSvg('PRJ-101', 'پنت‌هاوس زعفرانیه - سهرابی', 'شید بلک‌اوت پشت پنجره قدی بالکن با ریموت 4 کانال ست شود'),
           uploadedAt: '1405/07/20',
         },
       ],
@@ -225,9 +225,9 @@ export function getInitialProjects(): Project[] {
       assignedTechnicianIds: ['u-lead-1', 'u-tech-1'],
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
-      customToolsNotes: 'رولپلاک فلزی مخصوص بتن مسلح به همراه ۴ عدد پایه ال کمکی اضافه شود',
+      customToolsNotes: 'رولپلاک فلزی مخصوص بتن مسلح به همراه 4 عدد پایه ال کمکی اضافه شود',
       status: 'COMPLETED',
-      completionNotes: 'نصب پرده‌های برقی و شیدهای هوشمند با تراز لیزری ۳۶۰ درجه انجام شد. ریموت ۴ کاناله سامفی ست شد و به جناب مهندس سهرابی تحویل گردید.',
+      completionNotes: 'نصب پرده‌های برقی و شیدهای هوشمند با تراز لیزری 360 درجه انجام شد. ریموت 4 کاناله سامفی ست شد و به جناب مهندس سهرابی تحویل گردید.',
       beforePhotos: [
         generateMockSitePhoto('زعفرانیه - وضعیت دیوار و کناف قبل از نصب', 'BEFORE'),
         generateMockSitePhoto('زعفرانیه - بررسی قوطی فلزی و اتصالات اولیه', 'BEFORE'),
@@ -259,18 +259,18 @@ export function getInitialProjects(): Project[] {
       title: 'دفتر مرکزی هلدینگ پارس (برج میلینیوم)',
       customerName: 'آقای شایگان (مدیر تدارکات)',
       customerPhone: '09121234567',
-      address: 'سعادت‌آباد، بلوار شهرداری، برج میلینیوم، طبقه ۱۴',
+      address: 'سعادت‌آباد، بلوار شهرداری، برج میلینیوم، طبقه 14',
       locationUrl: 'https://balad.ir/maps',
       shadePanels: 14,
       curtainPanels: 0,
-      mechanismType: 'شید اسکرین ۳ درصد سان‌اسکرین با گیربکس صنعتی',
+      mechanismType: 'شید اسکرین 3 درصد سان‌اسکرین با گیربکس صنعتی',
       approximateArea: 110,
-      specialNotes: 'نصب فقط تا قبل از ساعت اداری (تا ۱۲ ظهر) باید تمام شود.',
+      specialNotes: 'نصب فقط تا قبل از ساعت اداری (تا 12 ظهر) باید تمام شود.',
       proposalImages: [
         {
           id: 'img-2',
           title: 'نقشه لت‌های اداری برج میلینیوم',
-          url: generateMockProposalSvg('PRJ-102', 'هلدینگ پارس - سعادت‌آباد', '۱۴ عدد شید با گیربکس زنجیر استیل مقاوم، پایه دوبل در ستون‌های میانی'),
+          url: generateMockProposalSvg('PRJ-102', 'هلدینگ پارس - سعادت‌آباد', '14 عدد شید با گیربکس زنجیر استیل مقاوم، پایه دوبل در ستون‌های میانی'),
           uploadedAt: '1405/07/20',
         },
       ],
@@ -281,11 +281,11 @@ export function getInitialProjects(): Project[] {
       isFullTools: false,
       toolsRequired: [
         'دریل بتن‌کن و چکشی',
-        'نردبان ۵ متری دوطرفه استاندارد',
-        'تراز لیزری ۳۶۰ درجه و خطی',
+        'نردبان 5 متری دوطرفه استاندارد',
+        'تراز لیزری 360 درجه و خطی',
         'جعبه ابزار دستی (آچار، پیچ‌گوشتی، انبردست، سیم‌چین)',
         'ست پیچ و رولپلاک پروانه‌ای و حلزونی (کناف و گچ)',
-        'متر ۵ متری لیزری و نواری',
+        'متر 5 متری لیزری و نواری',
       ],
       status: 'IN_PROGRESS',
       startedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
@@ -309,7 +309,7 @@ export function getInitialProjects(): Project[] {
       curtainPanels: 6,
       mechanismType: 'شید زبرا اتاق خواب‌ها + حریر و والان پذیرایی دوبلکس',
       approximateArea: 95,
-      specialNotes: 'ارتفاع سقف دوبلکس ۴ متر و نیم است؛ حتماً نردبان ۵ متری لازم است.',
+      specialNotes: 'ارتفاع سقف دوبلکس 4 متر و نیم است؛ حتماً نردبان 5 متری لازم است.',
       proposalImages: [
         {
           id: 'img-3',
@@ -324,11 +324,7 @@ export function getInitialProjects(): Project[] {
       assignedTechnicianIds: ['u-lead-1', 'u-tech-1', 'u-tech-4'],
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
-      status: 'IN_PROGRESS',
-      startedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
-      beforePhotos: [
-        generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
-      ],
+      status: 'SCHEDULED',
       completionPhotos: [],
       qcStatus: 'NOT_STARTED',
       createdAt: '2026-10-19T14:00:00Z',
@@ -340,7 +336,7 @@ export function getInitialProjects(): Project[] {
       title: 'آپارتمان نیاوران (آقای مظفری)',
       customerName: 'آقای مظفری',
       customerPhone: '09123334455',
-      address: 'نیاوران، خ بوکان، کوچه مرجان، پلاک ۴',
+      address: 'نیاوران، خ بوکان، کوچه مرجان، پلاک 4',
       shadePanels: 3,
       curtainPanels: 2,
       mechanismType: 'شید رول ساده + توری شید',
@@ -349,7 +345,7 @@ export function getInitialProjects(): Project[] {
         {
           id: 'img-4',
           title: 'پروپوزال فروش نیاوران',
-          url: generateMockProposalSvg('PRJ-104', 'آپارتمان نیاوران - مظفری', 'نصب سریع ۳ لت شید با پایه سقفی استاندارد'),
+          url: generateMockProposalSvg('PRJ-104', 'آپارتمان نیاوران - مظفری', 'نصب سریع 3 لت شید با پایه سقفی استاندارد'),
           uploadedAt: '1405/07/20',
         },
       ],
@@ -360,15 +356,11 @@ export function getInitialProjects(): Project[] {
       isFullTools: false,
       toolsRequired: [
         'دریل بتن‌کن و چکشی',
-        'نردبان ۳ متری تلسکوپی',
-        'تراز لیزری ۳۶۰ درجه و خطی',
+        'نردبان 3 متری تلسکوپی',
+        'تراز لیزری 360 درجه و خطی',
         'ست پیچ و رولپلاک پروانه‌ای و حلزونی (کناف و گچ)',
       ],
-      status: 'IN_PROGRESS',
-      startedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
-      beforePhotos: [
-        generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
-      ],
+      status: 'SCHEDULED',
       completionPhotos: [],
       qcStatus: 'NOT_STARTED',
       createdAt: '2026-10-20T08:00:00Z',
@@ -380,7 +372,7 @@ export function getInitialProjects(): Project[] {
       title: 'کلینیک پوست و مو تجریش',
       customerName: 'دکتر صبوری',
       customerPhone: '09125556677',
-      address: 'میدان تجریش، خیابان فناخسرو، پلاک ۳۳، ساختمان پزشکان',
+      address: 'میدان تجریش، خیابان فناخسرو، پلاک 33، ساختمان پزشکان',
       shadePanels: 10,
       curtainPanels: 0,
       mechanismType: 'شید آنتی‌باکتریال با روکش قابل شستشو',
@@ -392,11 +384,7 @@ export function getInitialProjects(): Project[] {
       assignedTechnicianIds: ['u-lead-1', 'u-tech-3'],
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
-      status: 'IN_PROGRESS',
-      startedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
-      beforePhotos: [
-        generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
-      ],
+      status: 'SCHEDULED',
       completionPhotos: [],
       qcStatus: 'NOT_STARTED',
       createdAt: '2026-10-20T09:00:00Z',
@@ -411,7 +399,7 @@ export function getInitialProjects(): Project[] {
       address: 'فرمانیه شرقی، خیابان عسگری، کوچه گلها، برج باغ آریا',
       shadePanels: 12,
       curtainPanels: 8,
-      mechanismType: 'مجموعه کامل شید و والان اتوماتیک با ریموت ۱۵ کانال',
+      mechanismType: 'مجموعه کامل شید و والان اتوماتیک با ریموت 15 کانال',
       approximateArea: 140,
       proposalImages: [],
       scheduledDate: d5,
@@ -420,11 +408,7 @@ export function getInitialProjects(): Project[] {
       assignedTechnicianIds: ['u-lead-2', 'u-tech-1', 'u-tech-2'],
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
-      status: 'IN_PROGRESS',
-      startedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
-      beforePhotos: [
-        generateMockSitePhoto('برج میلینیوم - پنجره‌های اداری قبل از نصب شید', 'BEFORE'),
-      ],
+      status: 'SCHEDULED',
       completionPhotos: [],
       qcStatus: 'NOT_STARTED',
       createdAt: '2026-10-20T10:00:00Z',
@@ -442,7 +426,7 @@ export const INITIAL_TICKETS: Ticket[] = [
     authorId: 'u-lead-1',
     authorName: 'رضا محمدی (سرپرست)',
     type: 'WALL_ISSUE',
-    description: 'در لبه غربی کناف، زیرسازی قوطی آهن وجود ندارد و فقط گچ‌برگ است. برای نصب ۲ لت آخر شید موتوری نیاز به مهاربندی با براکت دیواری تقویت‌شده داریم.',
+    description: 'در لبه غربی کناف، زیرسازی قوطی آهن وجود ندارد و فقط گچ‌برگ است. برای نصب 2 لت آخر شید موتوری نیاز به مهاربندی با براکت دیواری تقویت‌شده داریم.',
     photos: [],
     status: 'OPEN',
     createdAt: '1405/07/20 - 10:15',
@@ -451,11 +435,11 @@ export const INITIAL_TICKETS: Ticket[] = [
 
 // Storage keys
 const STORAGE_KEYS = {
-  PROJECTS: 'talaie_projects_v4',
-  USERS: 'talaie_users_v4',
-  TICKETS: 'talaie_tickets_v4',
-  SETTINGS: 'talaie_settings_v4',
-  CURRENT_USER: 'talaie_current_user_v4',
+  PROJECTS: 'talaie_projects_v5',
+  USERS: 'talaie_users_v5',
+  TICKETS: 'talaie_tickets_v5',
+  SETTINGS: 'talaie_settings_v5',
+  CURRENT_USER: 'talaie_current_user_v5',
 };
 
 export const StorageService = {

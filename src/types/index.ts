@@ -80,7 +80,7 @@ export interface Project {
   beforePhotos?: string[]; // عکس‌های وضعیت پنجره و کناف قبل از شروع
   afterPhotos?: string[]; // عکس‌های نهایی پرده و شید بعد از اتمام نصب
 
-  // چک‌لیست ۴ گانه تحویل استاندارد طلایی (White-Glove QC Checklist)
+  // چک‌لیست 4 گانه تحویل استاندارد طلایی (White-Glove QC Checklist)
   handoverChecklist?: HandoverChecklist;
   
   // رضایت و امضای دیجیتال کارفرما
@@ -125,7 +125,7 @@ export interface Ticket {
 }
 
 export interface SystemSettings {
-  visibilityWindowDays: number; // تعداد روزهای قابل مشاهده برای تکنسین‌ها (پیش‌فرض ۴ روز)
+  visibilityWindowDays: number; // تعداد روزهای قابل مشاهده برای تکنسین‌ها (پیش‌فرض 4 روز)
   companyName: string;
   defaultTools: string[];
   supabaseUrl?: string;

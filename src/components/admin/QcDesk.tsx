@@ -357,7 +357,7 @@ export const QcDesk: React.FC<Props> = ({
                       {p.handoverChecklist && Object.values(p.handoverChecklist).every(Boolean) && (
                         <span className="inline-flex items-center gap-1 text-[10px] bg-[#C1A056]/15 text-[#8B6D20] dark:text-[#E2C37E] px-2 py-0.5 rounded-md border border-[#C1A056]/30 font-bold">
                           <ShieldCheck className="w-3 h-3" />
-                          <span>۴ استاندارد ✓</span>
+                          <span>4 استاندارد ✓</span>
                         </span>
                       )}
                     </div>
@@ -664,7 +664,7 @@ export const QcDesk: React.FC<Props> = ({
                       />
                     ))}
                     <span className="text-xs font-bold text-[#212121] dark:text-white mr-2">
-                      امتیاز کیفی: {toPersianDigits(selectedProject.qcScore || 5)} از ۵
+                      امتیاز کیفی: {toPersianDigits(selectedProject.qcScore || 5)} از 5
                     </span>
                   </div>
 
@@ -692,7 +692,7 @@ export const QcDesk: React.FC<Props> = ({
                   {/* Star rating in authentic Gold */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
-                      امتیاز کیفی به عملکرد تکنسین‌ها (از ۱ تا ۵ ستاره):
+                      امتیاز کیفی به عملکرد تکنسین‌ها (از 1 تا 5 ستاره):
                     </label>
                     <div className="flex items-center gap-2">
                       {[1, 2, 3, 4, 5].map((star) => (
@@ -712,7 +712,7 @@ export const QcDesk: React.FC<Props> = ({
                         </button>
                       ))}
                       <span className="text-xs font-bold text-[#212121] dark:text-white mr-2">
-                        {toPersianDigits(qcScore)} از ۵ ستاره
+                        {toPersianDigits(qcScore)} از 5 ستاره
                       </span>
                     </div>
                   </div>
