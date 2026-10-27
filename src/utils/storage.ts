@@ -20,8 +20,9 @@ export const DEFAULT_MASTER_TOOLS = [
 ];
 
 export const INITIAL_USERS: User[] = [
+  // 1. مسئولین فنی و QC و برنامه‌ریزی
   {
-    id: 'u-admin',
+    id: 'u-admin-1',
     name: 'امین رحمانی (مسئول QC)',
     phone: '09124339038',
     password: '91243390380',
@@ -30,8 +31,37 @@ export const INITIAL_USERS: User[] = [
     active: true,
   },
   {
+    id: 'u-admin-2',
+    name: 'امین زهری (سرپرست فنی و QC)',
+    phone: '09120000002',
+    password: '123',
+    role: 'QC_MANAGER',
+    avatar: '👔',
+    active: true,
+  },
+  {
+    id: 'u-planner',
+    name: 'اردلان حیدری (برنامه‌ریزی و کنترل پروژه)',
+    phone: '09120000003',
+    password: '123',
+    role: 'QC_MANAGER',
+    avatar: '📋',
+    active: true,
+  },
+
+  // 2. سرپرستان اجرایی / سرپرستان نصب (4 سرپرست اکیپ)
+  {
     id: 'u-lead-1',
-    name: 'رضا محمدی (سرپرست اکیپ 1)',
+    name: 'فرخ نقدعلیان (سرپرست اکیپ 1)',
+    phone: '09122222221',
+    password: '123',
+    role: 'LEAD_TECHNICIAN',
+    avatar: '🧢',
+    active: true,
+  },
+  {
+    id: 'u-lead-2',
+    name: 'امین اسکندری (سرپرست اکیپ 2)',
     phone: '09122222222',
     password: '123',
     role: 'LEAD_TECHNICIAN',
@@ -39,27 +69,38 @@ export const INITIAL_USERS: User[] = [
     active: true,
   },
   {
-    id: 'u-tech-1',
-    name: 'علی قاسمی (تکنسین)',
-    phone: '09123333333',
-    password: '123',
-    role: 'TECHNICIAN',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-lead-2',
-    name: 'مهدی احمدی (سرپرست اکیپ 2)',
-    phone: '09124444444',
+    id: 'u-lead-3',
+    name: 'سجاد رحمتی (سرپرست اکیپ 3)',
+    phone: '09122222223',
     password: '123',
     role: 'LEAD_TECHNICIAN',
     avatar: '🧢',
     active: true,
   },
   {
+    id: 'u-lead-4',
+    name: 'حمیدرضا ترکمنی (سرپرست اکیپ 4)',
+    phone: '09122222224',
+    password: '123',
+    role: 'LEAD_TECHNICIAN',
+    avatar: '🧢',
+    active: true,
+  },
+
+  // 3. اعضای تیم نصب (تکنسین‌های اجرایی)
+  {
+    id: 'u-tech-1',
+    name: 'علیرضا خزایی (تکنسین نصب)',
+    phone: '09123333331',
+    password: '123',
+    role: 'TECHNICIAN',
+    avatar: '🔧',
+    active: true,
+  },
+  {
     id: 'u-tech-2',
-    name: 'حسین اکبری (تکنسین)',
-    phone: '09125555555',
+    name: 'دانیال کبیری (تکنسین نصب)',
+    phone: '09123333332',
     password: '123',
     role: 'TECHNICIAN',
     avatar: '🔧',
@@ -67,8 +108,8 @@ export const INITIAL_USERS: User[] = [
   },
   {
     id: 'u-tech-3',
-    name: 'سعید نوری (تکنسین)',
-    phone: '09126666666',
+    name: 'محمد جهان (تکنسین نصب)',
+    phone: '09123333333',
     password: '123',
     role: 'TECHNICIAN',
     avatar: '🔧',
@@ -76,11 +117,58 @@ export const INITIAL_USERS: User[] = [
   },
   {
     id: 'u-tech-4',
-    name: 'کامران صفری (تکنسین)',
-    phone: '09127777777',
+    name: 'رضا آتاکیشی‌نژاد (تکنسین نصب)',
+    phone: '09123333334',
     password: '123',
     role: 'TECHNICIAN',
     avatar: '🔧',
+    active: true,
+  },
+  {
+    id: 'u-tech-5',
+    name: 'فرهاد نقدعلیان (تکنسین نصب)',
+    phone: '09123333335',
+    password: '123',
+    role: 'TECHNICIAN',
+    avatar: '🔧',
+    active: true,
+  },
+  {
+    id: 'u-tech-6',
+    name: 'امیرعلی دهقان (تکنسین نصب)',
+    phone: '09123333336',
+    password: '123',
+    role: 'TECHNICIAN',
+    avatar: '🔧',
+    active: true,
+  },
+  {
+    id: 'u-tech-7',
+    name: 'محسن آبروان (تکنسین نصب)',
+    phone: '09123333337',
+    password: '123',
+    role: 'TECHNICIAN',
+    avatar: '🔧',
+    active: true,
+  },
+
+  // 4. کارشناسان فنی (تیم اندازه‌گیری و اصلاحات فضا)
+  {
+    id: 'u-tech-8',
+    name: 'محمدرضا عابدی (تیم اندازه‌گیری و اصلاحات)',
+    phone: '09124444441',
+    password: '123',
+    role: 'TECHNICIAN',
+    avatar: '📐',
+    active: true,
+  },
+  {
+    id: 'u-tech-9',
+    name: 'متین علیمحمدی (تیم اندازه‌گیری و اصلاحات)',
+    phone: '09124444442',
+    password: '123',
+    role: 'TECHNICIAN',
+    avatar: '📐',
     active: true,
   },
 ];
@@ -471,20 +559,44 @@ export const StorageService = {
     }
     try {
       const parsed: User[] = JSON.parse(raw);
-      const adminIdx = parsed.findIndex((u) => u.id === 'u-admin' || u.role === 'QC_MANAGER');
-      if (adminIdx !== -1) {
-        if (
-          parsed[adminIdx].phone !== INITIAL_USERS[0].phone ||
-          parsed[adminIdx].password !== INITIAL_USERS[0].password ||
-          parsed[adminIdx].name !== INITIAL_USERS[0].name
-        ) {
-          parsed[adminIdx].name = INITIAL_USERS[0].name;
-          parsed[adminIdx].phone = INITIAL_USERS[0].phone;
-          parsed[adminIdx].password = INITIAL_USERS[0].password;
-          this.saveUsers(parsed);
+      let modified = false;
+
+      // Ensure all official staff from INITIAL_USERS exist in the database
+      INITIAL_USERS.forEach((initUser) => {
+        const idx = parsed.findIndex(
+          (u) =>
+            u.id === initUser.id ||
+            u.phone === initUser.phone ||
+            (initUser.phone === '09124339038' && (u.id === 'u-admin' || u.phone === '09124339038'))
+        );
+
+        if (idx === -1) {
+          parsed.push(initUser);
+          modified = true;
+        } else {
+          // Keep primary official details up to date
+          if (initUser.phone === '09124339038') {
+            parsed[idx].name = initUser.name;
+            parsed[idx].phone = initUser.phone;
+            parsed[idx].password = initUser.password;
+            parsed[idx].role = 'QC_MANAGER';
+            modified = true;
+          } else if (
+            parsed[idx].name.includes('رضا محمدی') ||
+            parsed[idx].name.includes('مهدی احمدی') ||
+            parsed[idx].name.includes('علی قاسمی') ||
+            parsed[idx].name.includes('حسین اکبری')
+          ) {
+            // Replace old demo mock names with official team members
+            parsed[idx].name = initUser.name;
+            parsed[idx].phone = initUser.phone;
+            parsed[idx].role = initUser.role;
+            modified = true;
+          }
         }
-      } else {
-        parsed.unshift(INITIAL_USERS[0]);
+      });
+
+      if (modified) {
         this.saveUsers(parsed);
       }
       return parsed;
