@@ -267,36 +267,36 @@ export const MonthPlanner: React.FC<Props> = ({
                     return (
                       <div
                         key={proj.id}
-                        className="bg-white dark:bg-[#222222] rounded-2xl p-3 border border-[#E8E4DC] dark:border-[#333333] shadow-xs hover:border-[#C1A056]/60 dark:hover:border-[#C1A056]/60 transition space-y-2.5 relative group"
+                        className="luxury-card p-3.5 space-y-2.5 transition-all duration-200 border border-[#E8E4DC] dark:border-[#2A2A2A] hover:border-[#C1A056]/60 shadow-2xs group relative"
                       >
                         {/* Status & Code */}
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-mono font-bold text-slate-600 dark:text-zinc-300 bg-[#FAF7F2] dark:bg-[#181818] border border-[#E8E4DC] dark:border-[#333333] px-1.5 py-0.5 rounded">
+                          <span className="font-mono font-black text-xs bg-[#1E1E1E] text-[#C1A056] px-2 py-0.5 rounded-lg shadow-2xs">
                             {proj.code}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                            className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
                               proj.status === 'STUCK'
-                                ? 'bg-rose-600 text-white animate-pulse shadow-sm font-black'
+                                ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30 animate-pulse font-black'
                                 : proj.status === 'MEASUREMENT_PENDING'
-                                ? 'bg-purple-100 text-purple-900 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-300'
+                                ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30'
                                 : proj.qcStatus === 'APPROVED'
-                                ? 'bg-[#194840]/15 text-[#194840] dark:bg-[#194840]/30 dark:text-emerald-400'
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                                 : (proj.status === 'COMPLETED' || proj.qcStatus === 'PENDING') && proj.qcStatus !== 'REJECTED'
-                                ? 'bg-[#C1A056] text-[#212121] shadow-2xs font-black'
+                                ? 'bg-[#C1A056]/20 text-[#A88738] dark:text-[#C1A056] border border-[#C1A056]/40 font-black'
                                 : proj.qcStatus === 'REJECTED'
                                 ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300'
                                 : proj.status === 'IN_PROGRESS'
-                                ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300 animate-pulse'
+                                ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30 animate-pulse'
                                 : proj.status === 'EN_ROUTE'
-                                ? 'bg-blue-100 text-blue-900 dark:bg-blue-950/50 dark:text-blue-300'
+                                ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
                                 : 'bg-[#FAF7F2] text-slate-700 dark:bg-[#181818] dark:text-zinc-300'
                             }`}
                           >
                             {proj.status === 'STUCK'
                               ? '⚠️ استاک (<72h)'
                               : proj.status === 'MEASUREMENT_PENDING'
-                              ? '📐 در انتظار کارشناسی/متراژ'
+                              ? '📐 کارشناسی و متراژ'
                               : proj.qcStatus === 'APPROVED'
                               ? '✓ تایید QC'
                               : (proj.status === 'COMPLETED' || proj.qcStatus === 'PENDING') && proj.qcStatus !== 'REJECTED'
@@ -313,113 +313,92 @@ export const MonthPlanner: React.FC<Props> = ({
 
                         {/* Title & Customer */}
                         <div>
-                          <h4 className="font-bold text-xs text-[#212121] dark:text-white leading-tight">
+                          <h4 className="font-bold text-xs text-[#1E1E1E] dark:text-white leading-snug">
                             {proj.title}
                           </h4>
-                          <div className="flex items-center gap-1 text-[11px] text-[#71717A] dark:text-zinc-400 mt-1">
+                          <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                            {proj.customerName}
+                          </p>
+                        </div>
+
+                        {/* Summary Pill Row: Time + Panels + Team Lead */}
+                        <div className="flex items-center gap-2 text-[10px] text-slate-600 dark:text-zinc-300 bg-[#FAF7F2] dark:bg-[#181818] p-1.5 px-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#2D2D2D] flex-wrap justify-between">
+                          <div className="flex items-center gap-1 font-mono font-bold">
                             <Clock className="w-3 h-3 text-[#C1A056]" />
-                            <span>ساعت {toPersianDigits(proj.scheduledTime)}</span>
+                            <span>{toPersianDigits(proj.scheduledTime)}</span>
                           </div>
-                        </div>
-
-                        {/* Panels Specs */}
-                        <div className="flex items-center gap-2 text-[10px] font-bold">
-                          {proj.shadePanels > 0 && (
-                            <span className="px-2 py-0.5 rounded-md bg-[#FAF7F2] dark:bg-[#181818] text-[#212121] dark:text-zinc-200 border border-[#E8E4DC] dark:border-[#333333]">
-                              {toPersianDigits(proj.shadePanels)} لت شید
-                            </span>
-                          )}
-                          {proj.curtainPanels > 0 && (
-                            <span className="px-2 py-0.5 rounded-md bg-[#FAF7F2] dark:bg-[#181818] text-[#C1A056] border border-[#C1A056]/30">
-                              {toPersianDigits(proj.curtainPanels)} لت پرده
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Team & Lead */}
-                        <div className="bg-[#FAF7F2] dark:bg-[#181818] rounded-xl p-2 border border-[#E8E4DC] dark:border-[#333333] text-[11px]">
-                          <div className="flex items-center justify-between text-slate-700 dark:text-zinc-200">
-                            <span className="font-semibold flex items-center gap-1">
-                              <span className="text-[#C1A056]">⭐</span> {leadName || 'سرپرست'}
-                            </span>
-                            <span className="text-[10px] text-slate-500 dark:text-zinc-400">
-                              ({toPersianDigits(teamCount)} نفر)
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Tools & Proposal */}
-                        <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-zinc-400 pt-1 border-t border-[#E8E4DC] dark:border-[#333333]">
-                          <span className="flex items-center gap-1">
-                            <Wrench className="w-3 h-3 text-[#C1A056]" />
-                            {proj.isFullTools ? (
-                              <span className="text-[#A88738] dark:text-[#C1A056] font-bold">فول ابزار</span>
-                            ) : (
-                              <span>{toPersianDigits(proj.toolsRequired.length)} ابزار</span>
-                            )}
+                          <span>•</span>
+                          <span className="font-bold text-[#A88738] dark:text-[#C1A056]">
+                            {toPersianDigits(proj.shadePanels + proj.curtainPanels)} لت
                           </span>
-
-                          {proj.proposalImages && proj.proposalImages.length > 0 && (
-                            <button
-                              onClick={() => onViewProposal(proj)}
-                              className="text-[#C1A056] hover:text-[#A88738] font-bold flex items-center gap-1 text-[10px]"
-                            >
-                              <FileText className="w-3 h-3" />
-                              <span>پروپوزال</span>
-                            </button>
-                          )}
+                          <span>•</span>
+                          <span className="truncate max-w-[85px]">{leadName || 'سرپرست'}</span>
                         </div>
 
                         {/* Pre-Installation Inspection (2nd Measurement / Site space) */}
                         {onOpenPreInspection && (
-                          <div className="pt-1 border-t border-[#E8E4DC] dark:border-[#333333]">
+                          <div>
                             {proj.preInspection ? (
                               <button
                                 onClick={() => onOpenPreInspection(proj)}
-                                className={`w-full py-1.5 px-2 rounded-xl text-[10px] font-bold flex items-center justify-between transition ${
+                                className={`w-full py-1.5 px-2.5 rounded-xl text-[10px] font-bold flex items-center justify-between transition cursor-pointer ${
                                   proj.preInspection.status === 'APPROVED'
-                                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                                    : 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/30'
                                 }`}
                               >
                                 <span className="flex items-center gap-1">
                                   <Ruler className="w-3 h-3 text-[#C1A056]" />
-                                  <span>{proj.preInspection.status === 'APPROVED' ? '✓ کارشناسی فضا تایید شد' : '⚠️ بستر فضا نیازمند اصلاح'}</span>
+                                  <span>{proj.preInspection.status === 'APPROVED' ? '✓ بستر فضا تایید شد' : '⚠️ بستر نیازمند اصلاح'}</span>
                                 </span>
                                 <span className="text-[9px] underline">مشاهده</span>
                               </button>
                             ) : (
                               <button
                                 onClick={() => onOpenPreInspection(proj)}
-                                className="w-full py-1.5 px-2 rounded-xl text-[10px] font-bold bg-[#FAF7F2] dark:bg-[#181818] hover:bg-[#F2ECE1] dark:hover:bg-[#252525] text-[#A88738] dark:text-[#C1A056] border border-dashed border-[#C1A056]/50 flex items-center justify-center gap-1 transition"
+                                className="w-full py-1.5 px-2.5 rounded-xl text-[10px] font-bold bg-[#FAF7F2] dark:bg-[#181818] hover:bg-[#F2ECE1] dark:hover:bg-[#252525] text-[#A88738] dark:text-[#C1A056] border border-dashed border-[#C1A056]/50 flex items-center justify-center gap-1 transition cursor-pointer"
                               >
                                 <Ruler className="w-3 h-3 text-[#C1A056]" />
-                                <span>ثبت کارشناسی و اندازه‌گیری دوم فضا</span>
+                                <span>کارشناسی فضا و متراژ دوم</span>
                               </button>
                             )}
                           </div>
                         )}
 
-                        {/* Actions */}
-                        <div className="flex items-center justify-end gap-1 pt-1 border-t border-[#E8E4DC] dark:border-[#333333]">
-                          <button
-                            onClick={() => onEditProject(proj)}
-                            className="p-1 text-slate-400 dark:text-zinc-400 hover:text-[#C1A056] hover:bg-[#FAF7F2] dark:hover:bg-[#2A2A2A] rounded-lg transition"
-                            title="ویرایش پروژه"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm(`آیا از حذف مأموریت ${proj.title} اطمینان دارید؟`)) {
-                                onDeleteProject(proj.id);
-                              }
-                            }}
-                            className="p-1 text-slate-400 dark:text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
-                            title="حذف پروژه"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                        {/* Card Footer Actions */}
+                        <div className="flex items-center justify-between pt-1 border-t border-[#E8E4DC] dark:border-[#2D2D2D] text-[11px]">
+                          {proj.proposalImages && proj.proposalImages.length > 0 ? (
+                            <button
+                              onClick={() => onViewProposal(proj)}
+                              className="text-[#C1A056] hover:text-[#A88738] font-bold flex items-center gap-1 text-[10px] cursor-pointer"
+                            >
+                              <FileText className="w-3 h-3" />
+                              <span>پروپوزال</span>
+                            </button>
+                          ) : (
+                            <span />
+                          )}
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => onEditProject(proj)}
+                              className="p-1.5 text-zinc-400 hover:text-[#C1A056] hover:bg-[#FAF7F2] dark:hover:bg-[#2A2A2A] rounded-lg transition cursor-pointer"
+                              title="ویرایش مأموریت"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`آیا از حذف مأموریت ${proj.title} اطمینان دارید؟`)) {
+                                  onDeleteProject(proj.id);
+                                }
+                              }}
+                              className="p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                              title="حذف مأموریت"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );

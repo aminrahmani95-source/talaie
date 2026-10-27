@@ -421,6 +421,11 @@ export const App: React.FC = () => {
       {/* App Header */}
       <Header
         currentUser={currentUser}
+        users={users}
+        onSwitchUser={(u) => {
+          setCurrentUser(u);
+          StorageService.setCurrentUser(u);
+        }}
         settings={settings}
         openTicketCount={openTicketCount}
         openStuckCount={openStuckCount}

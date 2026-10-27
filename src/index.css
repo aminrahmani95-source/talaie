@@ -1,3 +1,4 @@
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
 @import "tailwindcss";
 
 @variant dark (&:where(.dark, .dark *));
@@ -6,10 +7,13 @@
   :root {
     --brand-gold: #c1a056;
     --brand-gold-hover: #a8883b;
-    --brand-charcoal: #212121;
+    --brand-gold-light: #f7eed8;
+    --brand-charcoal: #1e1e1e;
+    --brand-obsidian: #121212;
     --brand-cream: #faf7f2;
     --brand-linen: #f5efeb;
     --brand-border: #e8e4dc;
+    --brand-border-dark: #2a2a2a;
     --brand-copper: #d5733a;
     color-scheme: light;
   }
@@ -32,7 +36,7 @@
 
   body {
     background-color: #faf7f2;
-    color: #212121;
+    color: #1e1e1e;
     margin: 0;
     padding: 0;
     min-height: 100vh;
@@ -41,7 +45,7 @@
   }
 
   .dark body {
-    background-color: #121212;
+    background-color: #0f0f0f;
     color: #f5efeb;
   }
 
@@ -56,6 +60,68 @@
     font-size: 14px;
     touch-action: manipulation;
   }
+}
+
+/* Luxury UI Glass & Elevation Utilities */
+.luxury-glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(232, 228, 220, 0.8);
+}
+
+.dark .luxury-glass {
+  background: rgba(24, 24, 24, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.luxury-card {
+  background: #ffffff;
+  border: 1px solid #e8e4dc;
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 20px -2px rgba(33, 33, 33, 0.03), 0 2px 6px -1px rgba(33, 33, 33, 0.02);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .luxury-card {
+  background: #181818;
+  border: 1px solid #282828;
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.luxury-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(193, 160, 86, 0.5);
+  box-shadow: 0 12px 30px -4px rgba(193, 160, 86, 0.12), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+}
+
+.dark .luxury-card-hover:hover {
+  border-color: rgba(193, 160, 86, 0.4);
+  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(193, 160, 86, 0.3);
+}
+
+.gold-glow {
+  box-shadow: 0 0 25px -4px rgba(193, 160, 86, 0.35);
+}
+
+.gold-gradient-btn {
+  background: linear-gradient(135deg, #c1a056 0%, #a8883b 100%);
+  color: #121212;
+  font-weight: 800;
+  box-shadow: 0 4px 14px -1px rgba(193, 160, 86, 0.3);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gold-gradient-btn:hover {
+  background: linear-gradient(135deg, #d4b46a 0%, #b8984b 100%);
+  box-shadow: 0 6px 20px -2px rgba(193, 160, 86, 0.45);
+  transform: translateY(-1px);
+}
+
+.gold-gradient-btn:active {
+  transform: scale(0.98);
 }
 
 /* Elegant luxury scrollbar matching talaei.ir */
@@ -75,36 +141,18 @@
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #181818;
+  background: #141414;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #333333;
+  background: #2e2e2e;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #c1a056;
 }
 
-/* Gold shimmer animation */
-@keyframes gold-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.gold-gradient-bg {
-  background: linear-gradient(135deg, #262626 0%, #171717 100%);
-}
-
-.gold-accent-text {
-  color: #c1a056;
-}
-
-.gold-accent-border {
-  border-color: #c1a056;
-}
-
 /* Mobile safe area utility */
 .safe-bottom-padding {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.25rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2rem);
 }
 
 /* Print optimization for official certificates & handover sheets */
