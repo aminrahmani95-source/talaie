@@ -11,6 +11,8 @@ import {
   Eye,
   Wrench,
   FileText,
+  Ruler,
+  AlertOctagon,
 } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits } from '../../utils/jalali';
 
@@ -24,6 +26,7 @@ interface Props {
   onDeleteProject: (projectId: string) => void;
   onMoveProjectDate: (projectId: string, newDateKey: string) => void;
   onViewProposal: (project: Project) => void;
+  onOpenPreInspection?: (project: Project) => void;
 }
 
 export const MonthPlanner: React.FC<Props> = ({
@@ -35,6 +38,7 @@ export const MonthPlanner: React.FC<Props> = ({
   onEditProject,
   onDeleteProject,
   onViewProposal,
+  onOpenPreInspection,
 }) => {
   const days = getUpcomingDays(30);
 
@@ -272,7 +276,11 @@ export const MonthPlanner: React.FC<Props> = ({
                           </span>
                           <span
                             className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                              proj.qcStatus === 'APPROVED'
+                              proj.status === 'STUCK'
+                                ? 'bg-rose-600 text-white animate-pulse shadow-sm font-black'
+                                : proj.status === 'MEASUREMENT_PENDING'
+                                ? 'bg-purple-100 text-purple-900 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-300'
+                                : proj.qcStatus === 'APPROVED'
                                 ? 'bg-[#194840]/15 text-[#194840] dark:bg-[#194840]/30 dark:text-emerald-400'
                                 : (proj.status === 'COMPLETED' || proj.qcStatus === 'PENDING') && proj.qcStatus !== 'REJECTED'
                                 ? 'bg-[#C1A056] text-[#212121] shadow-2xs font-black'
@@ -285,7 +293,11 @@ export const MonthPlanner: React.FC<Props> = ({
                                 : 'bg-[#FAF7F2] text-slate-700 dark:bg-[#181818] dark:text-zinc-300'
                             }`}
                           >
-                            {proj.qcStatus === 'APPROVED'
+                            {proj.status === 'STUCK'
+                              ? '⚠️ استاک (<72h)'
+                              : proj.status === 'MEASUREMENT_PENDING'
+                              ? '📐 در انتظار کارشناسی/متراژ'
+                              : proj.qcStatus === 'APPROVED'
                               ? '✓ تایید QC'
                               : (proj.status === 'COMPLETED' || proj.qcStatus === 'PENDING') && proj.qcStatus !== 'REJECTED'
                               ? '⏳ در انتظار QC'
@@ -357,6 +369,36 @@ export const MonthPlanner: React.FC<Props> = ({
                             </button>
                           )}
                         </div>
+
+                        {/* Pre-Installation Inspection (2nd Measurement / Site space) */}
+                        {onOpenPreInspection && (
+                          <div className="pt-1 border-t border-[#E8E4DC] dark:border-[#333333]">
+                            {proj.preInspection ? (
+                              <button
+                                onClick={() => onOpenPreInspection(proj)}
+                                className={`w-full py-1.5 px-2 rounded-xl text-[10px] font-bold flex items-center justify-between transition ${
+                                  proj.preInspection.status === 'APPROVED'
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                                    : 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                                }`}
+                              >
+                                <span className="flex items-center gap-1">
+                                  <Ruler className="w-3 h-3 text-[#C1A056]" />
+                                  <span>{proj.preInspection.status === 'APPROVED' ? '✓ کارشناسی فضا تایید شد' : '⚠️ بستر فضا نیازمند اصلاح'}</span>
+                                </span>
+                                <span className="text-[9px] underline">مشاهده</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => onOpenPreInspection(proj)}
+                                className="w-full py-1.5 px-2 rounded-xl text-[10px] font-bold bg-[#FAF7F2] dark:bg-[#181818] hover:bg-[#F2ECE1] dark:hover:bg-[#252525] text-[#A88738] dark:text-[#C1A056] border border-dashed border-[#C1A056]/50 flex items-center justify-center gap-1 transition"
+                              >
+                                <Ruler className="w-3 h-3 text-[#C1A056]" />
+                                <span>ثبت کارشناسی و اندازه‌گیری دوم فضا</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
 
                         {/* Actions */}
                         <div className="flex items-center justify-end gap-1 pt-1 border-t border-[#E8E4DC] dark:border-[#333333]">

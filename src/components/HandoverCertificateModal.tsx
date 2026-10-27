@@ -214,24 +214,32 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             <div className="bg-white p-3.5 rounded-2xl border border-[#E8E4DC] space-y-2 text-xs">
               <div className="font-bold text-slate-800 text-[11px] pb-1 border-b border-slate-100 flex items-center gap-1">
                 <ShieldCheck className="w-4 h-4 text-[#C1A056]" />
-                <span>بررسی استانداردهای چهارگانه تحویل طلایی:</span>
+                <span>بررسی استانداردهای تحویل لوکس طلایی:</span>
               </div>
               <div className="space-y-1.5 text-[11px]">
                 <div className="flex items-center justify-between text-slate-700">
+                  <span>• استفاده از پارچه و کاور محافظ کف:</span>
+                  <span className="font-bold text-emerald-600">{checklist?.floorProtectiveClothUsed !== false ? '✓ تایید' : '—'}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-700">
+                  <span>• جمع‌آوری و تحویل پایه‌های کریدل شید:</span>
+                  <span className="font-bold text-emerald-600">{checklist?.cradleBracketsSecured !== false ? '✓ تایید' : '—'}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-700">
                   <span>• تست حرکت روان موتور، ریل و ریموت کنترل:</span>
-                  <span className="font-bold text-emerald-600">✓ تایید</span>
+                  <span className="font-bold text-emerald-600">{checklist?.remoteTested !== false ? '✓ تایید' : '—'}</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-700">
                   <span>• تراز و شاقول بودن قاب و پایه‌ها:</span>
-                  <span className="font-bold text-emerald-600">✓ تایید</span>
+                  <span className="font-bold text-emerald-600">{checklist?.leveled !== false ? '✓ تایید' : '—'}</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-700">
                   <span>• اتوکشی، رفع چروک و فرم‌دهی پلیسه‌ها:</span>
-                  <span className="font-bold text-emerald-600">✓ تایید</span>
+                  <span className="font-bold text-emerald-600">{checklist?.ironedPleated !== false ? '✓ تایید' : '—'}</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-700">
                   <span>• نظافت کامل محیط و جمع‌آوری ضایعات:</span>
-                  <span className="font-bold text-emerald-600">✓ تایید</span>
+                  <span className="font-bold text-emerald-600">{checklist?.cleaned !== false ? '✓ تایید' : '—'}</span>
                 </div>
               </div>
             </div>

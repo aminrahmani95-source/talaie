@@ -330,6 +330,8 @@ export function getInitialProjects(): Project[] {
         generateMockSitePhoto('زعفرانیه - نمای پرده حریر و شید هوشمند نهایی', 'AFTER'),
       ],
       handoverChecklist: {
+        floorProtectiveClothUsed: true,
+        cradleBracketsSecured: true,
         remoteTested: true,
         leveled: true,
         ironedPleated: true,
@@ -340,6 +342,20 @@ export function getInitialProjects(): Project[] {
       startedAt: '2026-10-20T09:30:00Z',
       completedAt: '2026-10-20T12:05:00Z',
       qcStatus: 'PENDING',
+      evaluations: [
+        {
+          id: 'eval-1',
+          userId: 'u-lead-1',
+          userName: 'فرخ نقدعلیان (سرپرست اکیپ 1)',
+          role: 'LEAD_TECHNICIAN',
+          technicalScore: 5,
+          behavioralScore: 5,
+          cleanlinessScore: 5,
+          criticalIncidentNote: 'دقت بسیار بالا در تراز لیزری ۳۶۰ درجه و رعایت کامل پوشش کف و جمع‌آوری پایه‌های کریدل.',
+          evaluatedBy: 'امین رحمانی (مسئول QC)',
+          evaluatedAt: '1405/07/20',
+        },
+      ],
       createdAt: '2026-10-18T10:00:00Z',
       updatedAt: '2026-10-20T08:00:00Z',
     },
@@ -414,7 +430,17 @@ export function getInitialProjects(): Project[] {
       assignedTechnicianIds: ['u-lead-1', 'u-tech-1', 'u-tech-4'],
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
-      status: 'SCHEDULED',
+      status: 'STUCK',
+      stuckIncident: {
+        id: 'stuck-103',
+        stuckAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
+        category: 'HARDWARE_SHORTAGE',
+        description: 'کسری ۲ عدد پایه دوبل سقفی تقویتی برای لت‌های ۴ متری دوبلکس و عدم سیم‌کشی برق کناف در لت شرقی',
+        reportedBy: 'فرخ نقدعلیان (سرپرست اکیپ 1)',
+        photos: [],
+        targetMaxHours: 72,
+        resolutionStatus: 'OPEN',
+      },
       completionPhotos: [],
       qcStatus: 'NOT_STARTED',
       createdAt: '2026-10-19T14:00:00Z',
@@ -491,6 +517,7 @@ export function getInitialProjects(): Project[] {
       curtainPanels: 8,
       mechanismType: 'مجموعه کامل شید و والان اتوماتیک با ریموت 15 کانال',
       approximateArea: 140,
+      specialNotes: 'نیازمند کارشناسی فضا و اندازه‌گیری دوم (بررسی کناف و سیم‌کشی موتور سامفی) پیش از اعزام تیم نصب',
       proposalImages: [],
       scheduledDate: d5,
       scheduledTime: '10:00',
@@ -498,7 +525,7 @@ export function getInitialProjects(): Project[] {
       assignedTechnicianIds: ['u-lead-2', 'u-tech-1', 'u-tech-2'],
       isFullTools: true,
       toolsRequired: DEFAULT_MASTER_TOOLS,
-      status: 'SCHEDULED',
+      status: 'MEASUREMENT_PENDING',
       completionPhotos: [],
       qcStatus: 'NOT_STARTED',
       createdAt: '2026-10-20T10:00:00Z',
@@ -541,7 +568,44 @@ export const StorageService = {
       return initial;
     }
     try {
-      return JSON.parse(raw);
+      const parsed: Project[] = JSON.parse(raw);
+      let modified = false;
+
+      // Auto-reconcile stuck demo case
+      const hasStuck = parsed.some((p) => p.status === 'STUCK' || p.stuckIncident);
+      if (!hasStuck) {
+        const p3 = parsed.find((p) => p.code === 'PRJ-103' || p.id === 'p-3');
+        if (p3) {
+          p3.status = 'STUCK';
+          p3.stuckIncident = {
+            id: 'stuck-103',
+            stuckAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
+            category: 'HARDWARE_SHORTAGE',
+            description: 'کسری ۲ عدد پایه دوبل سقفی تقویتی برای لت‌های ۴ متری دوبلکس و عدم سیم‌کشی برق کناف در لت شرقی',
+            reportedBy: 'فرخ نقدعلیان (سرپرست اکیپ 1)',
+            photos: [],
+            targetMaxHours: 72,
+            resolutionStatus: 'OPEN',
+          };
+          modified = true;
+        }
+      }
+
+      // Auto-reconcile pre-inspection measurement demo case
+      const hasMeasurement = parsed.some((p) => p.status === 'MEASUREMENT_PENDING');
+      if (!hasMeasurement) {
+        const p6 = parsed.find((p) => p.code === 'PRJ-106' || p.id === 'p-6');
+        if (p6) {
+          p6.status = 'MEASUREMENT_PENDING';
+          p6.specialNotes = 'نیازمند کارشناسی فضا و اندازه‌گیری دوم (بررسی کناف و سیم‌کشی موتور سامفی) پیش از اعزام تیم نصب';
+          modified = true;
+        }
+      }
+
+      if (modified) {
+        this.saveProjects(parsed);
+      }
+      return parsed;
     } catch {
       return getInitialProjects();
     }

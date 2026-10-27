@@ -14,6 +14,7 @@ import {
   Star,
   ShieldCheck,
   Printer,
+  AlertOctagon,
 } from 'lucide-react';
 import { toPersianDigits } from '../../utils/jalali';
 import { ActiveJobTimer } from '../ActiveJobTimer';
@@ -27,6 +28,7 @@ interface Props {
   onOpenCompletionModal: (project: Project) => void;
   onUpdateStatus: (projectId: string, newStatus: Project['status']) => void;
   onOpenCertificate?: (project: Project) => void;
+  onReportStuck?: (project: Project) => void;
 }
 
 export const ProjectCard: React.FC<Props> = ({
@@ -38,6 +40,7 @@ export const ProjectCard: React.FC<Props> = ({
   onOpenCompletionModal,
   onUpdateStatus,
   onOpenCertificate,
+  onReportStuck,
 }) => {
   return (
     <div className="bg-white dark:bg-[#1C1C1C] rounded-3xl p-5 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs hover:border-[#C1A056]/50 dark:hover:border-[#C1A056]/50 transition space-y-4">
@@ -55,7 +58,11 @@ export const ProjectCard: React.FC<Props> = ({
 
         <span
           className={`text-[11px] px-3 py-1 rounded-full font-bold ${
-            project.status === 'COMPLETED'
+            project.status === 'STUCK'
+              ? 'bg-rose-600 text-white animate-pulse shadow-sm font-black'
+              : project.status === 'MEASUREMENT_PENDING'
+              ? 'bg-purple-100 text-purple-900 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-300'
+              : project.status === 'COMPLETED'
               ? 'bg-[#194840]/15 text-[#194840] dark:bg-[#194840]/30 dark:text-emerald-400'
               : project.status === 'IN_PROGRESS'
               ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300 animate-pulse'
@@ -64,7 +71,11 @@ export const ProjectCard: React.FC<Props> = ({
               : 'bg-[#FAF7F2] dark:bg-[#252525] text-slate-700 dark:text-zinc-300 border border-[#E8E4DC] dark:border-[#333333]'
           }`}
         >
-          {project.status === 'COMPLETED'
+          {project.status === 'STUCK'
+            ? '⚠️ وضعیت استاک (<72h)'
+            : project.status === 'MEASUREMENT_PENDING'
+            ? '📐 کارشناسی و اندازه‌گیری دوم'
+            : project.status === 'COMPLETED'
             ? '✓ نصب پایان یافته'
             : project.status === 'IN_PROGRESS'
             ? 'در حال نصب در محل'
@@ -218,6 +229,37 @@ export const ProjectCard: React.FC<Props> = ({
             <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
             ثبت اتمام نصب و ارسال عکس به QC
           </button>
+        )}
+
+        {project.status === 'IN_PROGRESS' && onReportStuck && (
+          <button
+            type="button"
+            onClick={() => onReportStuck(project)}
+            className="w-full py-3 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-98 min-h-[44px]"
+          >
+            <AlertOctagon className="w-3.5 h-3.5 text-rose-600" />
+            <span>اعلام توقف کار و کسری حاد (ثبت پرونده استاک &lt;72h)</span>
+          </button>
+        )}
+
+        {project.status === 'STUCK' && (
+          <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-900/60 rounded-2xl p-4 text-xs space-y-2">
+            <div className="flex items-center justify-between text-rose-800 dark:text-rose-200 font-black">
+              <span className="flex items-center gap-1.5">
+                <AlertOctagon className="w-4 h-4 text-rose-600" />
+                <span>کار روی این پروژه متوقف شده است (استاک)</span>
+              </span>
+              <span className="text-[10px] bg-rose-600 text-white px-2 py-0.5 rounded-full font-mono">
+                KPI &lt; 72h
+              </span>
+            </div>
+            <p className="text-[11px] text-rose-700 dark:text-rose-300 leading-relaxed">
+              دلیل توقف: {project.stuckIncident?.description || 'کسری قطعه، آسیب پارچه یا عدم آمادگی بستر'}
+            </p>
+            <div className="text-[10px] text-slate-500 dark:text-zinc-400 pt-1 border-t border-rose-200 dark:border-rose-900/40">
+              پرونده در دسک رفع استاک تحت پیگیری مسئولین فنی (امین رحمانی / امین زهری) قرار دارد.
+            </div>
+          </div>
         )}
 
         {project.status === 'COMPLETED' && (

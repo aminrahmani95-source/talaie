@@ -19,6 +19,7 @@ import {
   ZoomIn,
   X,
   Printer,
+  Award,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toPersianDigits } from '../../utils/jalali';
@@ -30,6 +31,7 @@ interface Props {
   onUpdateProject: (project: Project) => void;
   onViewProposal: (project: Project) => void;
   onOpenCertificate?: (project: Project) => void;
+  onOpenEvaluation?: (project: Project) => void;
 }
 
 export const QcDesk: React.FC<Props> = ({
@@ -38,6 +40,7 @@ export const QcDesk: React.FC<Props> = ({
   onUpdateProject,
   onViewProposal,
   onOpenCertificate,
+  onOpenEvaluation,
 }) => {
   const [filter, setFilter] = useState<'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL'>('PENDING');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -390,6 +393,21 @@ export const QcDesk: React.FC<Props> = ({
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  {onOpenEvaluation && (
+                    <button
+                      onClick={() => onOpenEvaluation(selectedProject)}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#FAF7F2] dark:bg-[#222222] border border-[#C1A056] text-[#A88738] dark:text-[#C1A056] hover:bg-[#F5EFEB] dark:hover:bg-[#2A2A2A] font-bold text-xs transition self-start shadow-2xs active:scale-95"
+                    >
+                      <Award className="w-4 h-4 text-[#C1A056]" />
+                      <span>ارزیابی ۳۶۰ درجه نصاب</span>
+                      {selectedProject.evaluations && selectedProject.evaluations.length > 0 && (
+                        <span className="bg-[#C1A056] text-white text-[10px] px-1.5 py-0.2 rounded-full font-black">
+                          {toPersianDigits(selectedProject.evaluations.length)}
+                        </span>
+                      )}
+                    </button>
+                  )}
+
                   {onOpenCertificate && (
                     <button
                       onClick={() => onOpenCertificate(selectedProject)}
@@ -615,6 +633,54 @@ export const QcDesk: React.FC<Props> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Personnel 360 Evaluations Section (if any) */}
+              {selectedProject.evaluations && selectedProject.evaluations.length > 0 && (
+                <div className="bg-[#FAF7F2] dark:bg-[#202020] rounded-2xl p-4 border border-[#C1A056]/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-1.5">
+                      <Award className="w-4 h-4 text-[#C1A056]" />
+                      <span>سوابق ارزیابی ۳۶۰ درجه پرسنل برای این پروژه:</span>
+                    </h4>
+                    <span className="text-[10px] text-slate-500 font-bold">
+                      {toPersianDigits(selectedProject.evaluations.length)} ارزیابی ثبت شده
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {selectedProject.evaluations.map((ev) => (
+                      <div
+                        key={ev.id}
+                        className="p-3 bg-white dark:bg-[#161616] rounded-xl border border-[#E8E4DC] dark:border-zinc-800 space-y-1.5 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-[#212121] dark:text-white">{ev.userName}</span>
+                          <span className="text-[10px] text-slate-400">{ev.evaluatedAt}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 text-[10px] text-center pt-1 border-t border-slate-100 dark:border-zinc-800">
+                          <div>
+                            <span className="text-slate-400 block">فنی</span>
+                            <span className="font-bold text-[#C1A056]">⭐ {toPersianDigits(ev.technicalScore)}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">رفتاری</span>
+                            <span className="font-bold text-[#C1A056]">⭐ {toPersianDigits(ev.behavioralScore)}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">نظافت</span>
+                            <span className="font-bold text-[#C1A056]">⭐ {toPersianDigits(ev.cleanlinessScore)}</span>
+                          </div>
+                        </div>
+                        {ev.criticalIncidentNote && (
+                          <div className="text-[10px] text-slate-600 dark:text-zinc-400 bg-[#FAF7F2] dark:bg-[#202020] p-1.5 rounded mt-1 italic">
+                            «{ev.criticalIncidentNote}»
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Action 1: If project is NOT yet completed, provide quick action for QC Manager */}
               {!isAwaitingQc(selectedProject) && selectedProject.qcStatus !== 'APPROVED' && (

@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Project, User, Ticket, SystemSettings, HandoverChecklist } from './types';
+import {
+  Project,
+  User,
+  Ticket,
+  SystemSettings,
+  HandoverChecklist,
+  PreInstallationInspection,
+  PersonnelEvaluation,
+  StuckIncident,
+} from './types';
 import { StorageService } from './utils/storage';
 import { SupabaseSyncService } from './utils/supabase';
 import { Header } from './components/Header';
@@ -12,6 +21,9 @@ import { QcDesk } from './components/admin/QcDesk';
 import { TicketCenter } from './components/admin/TicketCenter';
 import { TechniciansManager } from './components/admin/TechniciansManager';
 import { SettingsView } from './components/admin/SettingsView';
+import { StuckProjectsDesk } from './components/admin/StuckProjectsDesk';
+import { PreInstallationModal } from './components/admin/PreInstallationModal';
+import { PersonnelEvaluationModal } from './components/admin/PersonnelEvaluationModal';
 import { TechnicianDashboard } from './components/technician/TechnicianDashboard';
 import { ToolChecklistDrawer } from './components/technician/ToolChecklistDrawer';
 import { ReportCompletionModal } from './components/technician/ReportCompletionModal';
@@ -62,6 +74,8 @@ export const App: React.FC = () => {
   const [ticketModalProject, setTicketModalProject] = useState<Project | null>(null);
   const [completionModalProject, setCompletionModalProject] = useState<Project | null>(null);
   const [certificateModalProject, setCertificateModalProject] = useState<Project | null>(null);
+  const [preInspectionProject, setPreInspectionProject] = useState<Project | null>(null);
+  const [evaluationProject, setEvaluationProject] = useState<Project | null>(null);
 
   // Cross-tab and real-time synchronization
   useEffect(() => {
@@ -240,6 +254,79 @@ export const App: React.FC = () => {
     setCompletionModalProject(null);
   };
 
+  // Pre-Installation inspection & 2nd measurement handler
+  const handleSavePreInspection = (
+    inspection: PreInstallationInspection,
+    newScheduledDate?: string
+  ) => {
+    if (!preInspectionProject) return;
+
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === preInspectionProject.id
+          ? {
+              ...p,
+              status: inspection.status === 'APPROVED' ? 'SCHEDULED' : 'MEASUREMENT_PENDING',
+              scheduledDate: newScheduledDate || p.scheduledDate,
+              preInspection: inspection,
+              updatedAt: new Date().toISOString(),
+            }
+          : p
+      )
+    );
+    setPreInspectionProject(null);
+    alert('گزارش کارشناسی فضا و اندازه‌گیری دوم با موفقیت در سامانه ثبت شد.');
+  };
+
+  // 360-degree Personnel evaluation handler
+  const handleSaveEvaluation = (evaluation: PersonnelEvaluation) => {
+    if (!evaluationProject) return;
+
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === evaluationProject.id
+          ? {
+              ...p,
+              evaluations: [...(p.evaluations || []), evaluation],
+              updatedAt: new Date().toISOString(),
+            }
+          : p
+      )
+    );
+    setEvaluationProject(null);
+  };
+
+  // On-site acute stoppage / Stuck report handler (<72h KPI)
+  const handleReportStuck = (project: Project) => {
+    const reason = prompt('لطفاً دلیل توقف کار، نوع کسری یا آسیب حاد (پرونده استاک) را وارد فرمایید:');
+    if (!reason || !reason.trim()) return;
+
+    const newIncident: StuckIncident = {
+      id: `stuck-${Date.now()}`,
+      stuckAt: new Date().toISOString(),
+      category: 'HARDWARE_SHORTAGE',
+      description: reason.trim(),
+      reportedBy: currentUser?.name || 'تکنسین نصب',
+      photos: [],
+      targetMaxHours: 72,
+      resolutionStatus: 'OPEN',
+    };
+
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === project.id
+          ? {
+              ...p,
+              status: 'STUCK',
+              stuckIncident: newIncident,
+              updatedAt: new Date().toISOString(),
+            }
+          : p
+      )
+    );
+    alert('پروژه به کارتابل رفع استاک (<72h) ارسال شد و بلافاصله به اطلاع مسئولین فنی (امین رحمانی / امین زهری) رسید.');
+  };
+
   // Ticket handlers
   const handleCreateTicket = (newTicket: Ticket) => {
     setTickets((prev) => [newTicket, ...prev]);
@@ -309,6 +396,10 @@ export const App: React.FC = () => {
 
   // Counters for alerts with synchronized QC status logic
   const openTicketCount = tickets.filter((t) => t.status === 'OPEN').length;
+  const isStuckOpen = (p: Project) =>
+    p.status === 'STUCK' ||
+    (p.stuckIncident && p.stuckIncident.resolutionStatus !== 'RESOLVED');
+  const openStuckCount = projects.filter(isStuckOpen).length;
   const isAwaitingQc = (p: Project) =>
     (p.status === 'COMPLETED' || p.qcStatus === 'PENDING') &&
     p.qcStatus !== 'APPROVED' &&
@@ -332,6 +423,7 @@ export const App: React.FC = () => {
         currentUser={currentUser}
         settings={settings}
         openTicketCount={openTicketCount}
+        openStuckCount={openStuckCount}
         pendingQcCount={pendingQcCount}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
@@ -358,6 +450,7 @@ export const App: React.FC = () => {
                 onDeleteProject={handleDeleteProject}
                 onMoveProjectDate={handleMoveProjectDate}
                 onViewProposal={(p) => setProposalModalProject(p)}
+                onOpenPreInspection={(p) => setPreInspectionProject(p)}
               />
             )}
 
@@ -370,6 +463,14 @@ export const App: React.FC = () => {
                 }}
                 onViewProposal={(p) => setProposalModalProject(p)}
                 onOpenCertificate={(p) => setCertificateModalProject(p)}
+                onOpenEvaluation={(p) => setEvaluationProject(p)}
+              />
+            )}
+
+            {activeTab === 'stuck' && (
+              <StuckProjectsDesk
+                projects={projects}
+                onUpdateProject={handleSaveProject}
               />
             )}
 
@@ -410,6 +511,7 @@ export const App: React.FC = () => {
             onOpenCompletionModal={(p) => setCompletionModalProject(p)}
             onUpdateStatus={handleUpdateStatus}
             onOpenCertificate={(p) => setCertificateModalProject(p)}
+            onReportStuck={handleReportStuck}
           />
         )}
       </main>
@@ -470,6 +572,25 @@ export const App: React.FC = () => {
           project={certificateModalProject}
           users={users}
           onClose={() => setCertificateModalProject(null)}
+        />
+      )}
+
+      {preInspectionProject && (
+        <PreInstallationModal
+          project={preInspectionProject}
+          isOpen={!!preInspectionProject}
+          onClose={() => setPreInspectionProject(null)}
+          onSaveInspection={handleSavePreInspection}
+        />
+      )}
+
+      {evaluationProject && (
+        <PersonnelEvaluationModal
+          project={evaluationProject}
+          users={users}
+          isOpen={!!evaluationProject}
+          onClose={() => setEvaluationProject(null)}
+          onSaveEvaluation={handleSaveEvaluation}
         />
       )}
     </div>

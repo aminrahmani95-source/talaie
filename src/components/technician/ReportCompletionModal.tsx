@@ -46,6 +46,8 @@ export const ReportCompletionModal: React.FC<Props> = ({
   // Handover checklist states
   const [checklist, setChecklist] = useState<HandoverChecklist>(
     project.handoverChecklist || {
+      floorProtectiveClothUsed: true,
+      cradleBracketsSecured: true,
       remoteTested: true,
       leveled: true,
       ironedPleated: true,
@@ -98,6 +100,8 @@ export const ReportCompletionModal: React.FC<Props> = ({
 
   const selectAllChecklist = () => {
     setChecklist({
+      floorProtectiveClothUsed: true,
+      cradleBracketsSecured: true,
       remoteTested: true,
       leveled: true,
       ironedPleated: true,
@@ -368,7 +372,59 @@ export const ReportCompletionModal: React.FC<Props> = ({
               </div>
 
               <div className="space-y-2.5">
-                {/* 1. Remote & Motor test */}
+                {/* 1. Floor protective cloth */}
+                <div
+                  onClick={() => toggleChecklistItem('floorProtectiveClothUsed')}
+                  className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition min-h-[52px] select-none ${
+                    checklist.floorProtectiveClothUsed
+                      ? 'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#212121] dark:text-white'
+                      : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161616] text-slate-500'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checklist.floorProtectiveClothUsed}
+                    onChange={() => {}}
+                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                  />
+                  <div>
+                    <div className="text-xs font-bold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>پهن کردن آستری محافظ زیر جعبه‌ابزار و نردبان (استاندارد لوکس طلایی)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                      آستری پهن شد تا هیچ‌گونه خط و خش روی پارکت یا سنگ لوکس مشتری ایجاد نشود.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Cradle brackets secured */}
+                <div
+                  onClick={() => toggleChecklistItem('cradleBracketsSecured')}
+                  className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition min-h-[52px] select-none ${
+                    checklist.cradleBracketsSecured
+                      ? 'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#212121] dark:text-white'
+                      : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161616] text-slate-500'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checklist.cradleBracketsSecured}
+                    onChange={() => {}}
+                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                  />
+                  <div>
+                    <div className="text-xs font-bold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>مهاربندی کرپی‌های شید و عودت کرپی‌های خالی به وانت لجستیک</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                      شیدها با سلامت از کرپی خارج شده و لوازم باربند جمع‌آوری و به راننده تحویل شد.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. Remote & Motor test */}
                 <div
                   onClick={() => toggleChecklistItem('remoteTested')}
                   className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition min-h-[52px] select-none ${

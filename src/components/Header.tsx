@@ -8,6 +8,7 @@ import {
   Eye,
   LogOut,
   AlertTriangle,
+  AlertOctagon,
   Moon,
   Sun,
 } from 'lucide-react';
@@ -17,6 +18,7 @@ interface Props {
   currentUser: User;
   settings: SystemSettings;
   openTicketCount: number;
+  openStuckCount?: number;
   pendingQcCount: number;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
@@ -31,6 +33,7 @@ export const Header: React.FC<Props> = ({
   currentUser,
   settings,
   openTicketCount,
+  openStuckCount = 0,
   pendingQcCount,
   isDarkMode = false,
   onToggleDarkMode,
@@ -114,6 +117,19 @@ export const Header: React.FC<Props> = ({
             {/* Quick Ticket & QC Alerts */}
             {isQcManager && (
               <div className="flex items-center gap-1.5">
+                {openStuckCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab && setActiveTab('stuck')}
+                    className="flex items-center gap-1 px-3 py-1.5 min-h-[38px] bg-red-500/10 dark:bg-rose-950/60 hover:bg-red-500/20 border border-red-500 text-rose-600 dark:text-rose-300 rounded-full text-xs font-bold active:scale-95 transition animate-pulse"
+                    title={`${openStuckCount} پروژه در وضعیت استاک زیر 72 ساعت`}
+                    aria-label={`${openStuckCount} پروژه استاک`}
+                  >
+                    <AlertOctagon className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" aria-hidden="true" />
+                    <span>{toPersianDigits(openStuckCount)} استاک</span>
+                  </button>
+                )}
+
                 {openTicketCount > 0 && (
                   <button
                     type="button"
@@ -216,6 +232,25 @@ export const Header: React.FC<Props> = ({
               {pendingQcCount > 0 && (
                 <span className="bg-[#C1A056] text-white dark:bg-[#212121] dark:text-[#C1A056] text-[10px] px-1.5 py-0.2 rounded-full font-black">
                   {toPersianDigits(pendingQcCount)}
+                </span>
+              )}
+            </button>
+
+            <button
+              role="tab"
+              aria-selected={activeTab === 'stuck'}
+              onClick={() => setActiveTab('stuck')}
+              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full transition shrink-0 relative active:scale-95 ${
+                activeTab === 'stuck'
+                  ? 'bg-[#212121] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#121212] shadow-sm font-bold'
+                  : 'text-[#212121] dark:text-[#E8E4DC] hover:text-[#C1A056] dark:hover:text-[#C1A056] hover:bg-[#FAF7F2] dark:hover:bg-[#242424]'
+              }`}
+            >
+              <AlertOctagon className="w-4 h-4 text-rose-500" aria-hidden="true" />
+              <span>کارتابل رفع استاک (&lt;72h)</span>
+              {openStuckCount > 0 && (
+                <span className="bg-rose-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
+                  {toPersianDigits(openStuckCount)}
                 </span>
               )}
             </button>

@@ -14,6 +14,7 @@ interface Props {
   onOpenCompletionModal: (project: Project) => void;
   onUpdateStatus: (projectId: string, newStatus: Project['status']) => void;
   onOpenCertificate?: (project: Project) => void;
+  onReportStuck?: (project: Project) => void;
 }
 
 export const TechnicianDashboard: React.FC<Props> = ({
@@ -26,6 +27,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
   onOpenCompletionModal,
   onUpdateStatus,
   onOpenCertificate,
+  onReportStuck,
 }) => {
   const allDays = getUpcomingDays(30);
   const visibleDays = allDays.slice(0, settings.visibilityWindowDays);
@@ -168,6 +170,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               onOpenCompletionModal={onOpenCompletionModal}
               onUpdateStatus={onUpdateStatus}
               onOpenCertificate={onOpenCertificate}
+              onReportStuck={onReportStuck}
             />
           ))
         )}
