@@ -262,7 +262,7 @@ export const MonthPlanner: React.FC<Props> = ({
                 ) : (
                   dayProjects.map((proj) => {
                     const leadName = getUserName(proj.leadTechnicianId);
-                    const teamCount = proj.assignedTechnicianIds.length;
+                    const teamCount = (proj.assignedTechnicianIds || []).length;
 
                     return (
                       <div

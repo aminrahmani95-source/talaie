@@ -14,7 +14,7 @@ import {
   ShieldCheck,
   Ruler,
 } from 'lucide-react';
-import { toPersianDigits } from '../../utils/jalali';
+import { toPersianDigits, toEnglishDigits } from '../../utils/jalali';
 
 interface Props {
   users: User[];
@@ -74,8 +74,8 @@ export const TechniciansManager: React.FC<Props> = ({
     const updatedUser: User = {
       id: editingUser ? editingUser.id : `u-${Date.now()}`,
       name: `${name.trim()} (${roleTitle})`,
-      phone: phone.trim().replace(/\s+/g, ''),
-      password: password.trim() || '123',
+      phone: toEnglishDigits(phone.trim().replace(/\s+/g, '')),
+      password: toEnglishDigits(password.trim()) || '123',
       role,
       active: true,
     };

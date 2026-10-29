@@ -12,7 +12,7 @@ import {
   Clock,
   FileText,
 } from 'lucide-react';
-import { getUpcomingDays } from '../../utils/jalali';
+import { getUpcomingDays, getTodayPersianString } from '../../utils/jalali';
 
 interface Props {
   project?: Project | null;
@@ -125,7 +125,7 @@ export const ProjectFormModal: React.FC<Props> = ({
             id: `prop-${Date.now()}-${index}`,
             title: file.name || `برگه پروپوزال ${proposalImages.length + 1}`,
             url: event.target!.result as string,
-            uploadedAt: new Date().toLocaleDateString('fa-IR'),
+            uploadedAt: getTodayPersianString(),
           };
           setProposalImages((prev) => [...prev, newImg]);
         }
@@ -152,6 +152,7 @@ export const ProjectFormModal: React.FC<Props> = ({
     }
 
     const newProject: Project = {
+      ...(project || {}),
       id: project?.id || `p-${Date.now()}`,
       code: project?.code || `PRJ-${Math.floor(100 + Math.random() * 900)}`,
       title: title.trim(),
@@ -173,8 +174,23 @@ export const ProjectFormModal: React.FC<Props> = ({
       toolsRequired,
       customToolsNotes: customToolsNotes.trim(),
       status,
+      beforePhotos: project?.beforePhotos || [],
+      afterPhotos: project?.afterPhotos || [],
       completionPhotos: project?.completionPhotos || [],
+      completionNotes: project?.completionNotes || '',
+      handoverChecklist: project?.handoverChecklist,
+      customerSignature: project?.customerSignature,
+      customerSatisfaction: project?.customerSatisfaction,
+      startedAt: project?.startedAt,
+      completedAt: project?.completedAt,
       qcStatus: status === 'COMPLETED' && qcStatus === 'NOT_STARTED' ? 'PENDING' : qcStatus,
+      qcScore: project?.qcScore,
+      qcNotes: project?.qcNotes,
+      qcReviewedAt: project?.qcReviewedAt,
+      qcReviewedBy: project?.qcReviewedBy,
+      stuckIncident: project?.stuckIncident,
+      preInspection: project?.preInspection,
+      evaluations: project?.evaluations || [],
       createdAt: project?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

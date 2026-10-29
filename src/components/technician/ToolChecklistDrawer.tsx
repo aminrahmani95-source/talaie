@@ -9,6 +9,7 @@ interface Props {
 }
 
 export const ToolChecklistDrawer: React.FC<Props> = ({ project, onClose }) => {
+  const tools = project.toolsRequired || [];
   // Local state for checking items off when loading the vehicle
   const [checkedTools, setCheckedTools] = useState<string[]>([]);
 
@@ -21,16 +22,16 @@ export const ToolChecklistDrawer: React.FC<Props> = ({ project, onClose }) => {
   };
 
   const handleSelectAll = () => {
-    if (checkedTools.length === project.toolsRequired.length) {
+    if (checkedTools.length === tools.length) {
       setCheckedTools([]);
     } else {
-      setCheckedTools([...project.toolsRequired]);
+      setCheckedTools([...tools]);
     }
   };
 
   const progress =
-    project.toolsRequired.length > 0
-      ? Math.round((checkedTools.length / project.toolsRequired.length) * 100)
+    tools.length > 0
+      ? Math.round((checkedTools.length / tools.length) * 100)
       : 100;
 
   return (
@@ -76,7 +77,7 @@ export const ToolChecklistDrawer: React.FC<Props> = ({ project, onClose }) => {
           <div className="flex items-center justify-between text-xs text-[#212121] dark:text-white font-bold mb-1.5">
             <span>وضعیت بارگیری در خودرو:</span>
             <span className="font-mono text-[#A88738] dark:text-[#C1A056]">
-              {toPersianDigits(checkedTools.length)} از {toPersianDigits(project.toolsRequired.length)} قلم ({toPersianDigits(progress)}٪)
+              {toPersianDigits(checkedTools.length)} از {toPersianDigits(tools.length)} قلم ({toPersianDigits(progress)}٪)
             </span>
           </div>
           <div className="w-full bg-[#E8E4DC] dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
@@ -96,7 +97,7 @@ export const ToolChecklistDrawer: React.FC<Props> = ({ project, onClose }) => {
               onClick={handleSelectAll}
               className="text-xs text-[#C1A056] hover:text-[#A88738] font-bold py-1 px-2 rounded-lg"
             >
-              {checkedTools.length === project.toolsRequired.length
+              {checkedTools.length === tools.length
                 ? 'لغو انتخاب همه'
                 : 'تیک زدن همه اقلام'}
             </button>

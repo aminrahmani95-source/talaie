@@ -22,8 +22,9 @@ import {
   Award,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { toPersianDigits } from '../../utils/jalali';
+import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 import { ActiveJobTimer } from '../ActiveJobTimer';
+import { QcRejectModal } from './QcRejectModal';
 
 interface Props {
   projects: Project[];
@@ -50,6 +51,7 @@ export const QcDesk: React.FC<Props> = ({
   const [qcNotes, setQcNotes] = useState<string>('');
   const [isEditingApproved, setIsEditingApproved] = useState<boolean>(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState<boolean>(false);
 
   // Helper: check if project is strictly waiting for QC review
   const isAwaitingQc = (p: Project) => {
@@ -104,7 +106,7 @@ export const QcDesk: React.FC<Props> = ({
       qcStatus: 'APPROVED',
       qcScore,
       qcNotes: qcNotes.trim() || 'نصب با رعایت کامل استانداردهای گالری طلایی انجام و تایید شد.',
-      qcReviewedAt: new Date().toLocaleDateString('fa-IR'),
+      qcReviewedAt: getTodayPersianString(),
       qcReviewedBy: 'مدیر QC',
     };
 
@@ -121,26 +123,27 @@ export const QcDesk: React.FC<Props> = ({
     } catch {
       // Ignore
     }
-
-    alert('تاییدیه کنترل کیفیت با موفقیت ثبت شد و نمره کیفی تکنسین‌ها منظور گردید.');
   };
 
-  const handleReject = () => {
+  const handleOpenReject = () => {
     if (!selectedProject) return;
-    const reason = prompt('لطفاً دلیل عدم تایید یا دستور اصلاح را برای تکنسین بنویسید:');
-    if (!reason) return;
+    setIsRejectModalOpen(true);
+  };
+
+  const handleRejectSubmit = (reason: string) => {
+    if (!selectedProject) return;
 
     const updated: Project = {
       ...selectedProject,
       status: 'IN_PROGRESS', // Send back to in progress so technician can fix
       qcStatus: 'REJECTED',
       qcNotes: reason,
-      qcReviewedAt: new Date().toLocaleDateString('fa-IR'),
+      qcReviewedAt: getTodayPersianString(),
       qcReviewedBy: 'مدیر QC',
     };
 
     onUpdateProject(updated);
-    alert('وضعیت به "عدم تایید کیفی / نیاز به اصلاح" تغییر یافت.');
+    setIsRejectModalOpen(false);
   };
 
   // Shortcut for QC manager to mark project as completed & ready for QC directly
@@ -809,8 +812,8 @@ export const QcDesk: React.FC<Props> = ({
 
                     <button
                       type="button"
-                      onClick={handleReject}
-                      className="py-3 px-4 rounded-xl bg-white dark:bg-[#181818] hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-700 dark:text-rose-400 font-bold border border-rose-200 dark:border-rose-900/50 transition text-xs flex items-center gap-1.5"
+                      onClick={handleOpenReject}
+                      className="py-3 px-4 rounded-xl bg-white dark:bg-[#181818] hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-700 dark:text-rose-400 font-bold border border-rose-200 dark:border-rose-900/50 transition text-xs flex items-center gap-1.5 cursor-pointer"
                     >
                       <XCircle className="w-4 h-4" />
                       عدم تایید / نیاز به اصلاح
@@ -821,6 +824,16 @@ export const QcDesk: React.FC<Props> = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* QC Rejection Modal */}
+      {selectedProject && (
+        <QcRejectModal
+          project={selectedProject}
+          isOpen={isRejectModalOpen}
+          onClose={() => setIsRejectModalOpen(false)}
+          onSubmit={handleRejectSubmit}
+        />
       )}
 
       {/* Full-Screen Image Lightbox Modal */}

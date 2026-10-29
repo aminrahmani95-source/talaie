@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Project, User, SystemSettings } from '../../types';
 import { ProjectCard } from './ProjectCard';
-import { Calendar } from 'lucide-react';
+import { Calendar, Users, ArrowLeft, Sparkles } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits } from '../../utils/jalali';
 
 interface Props {
@@ -29,20 +29,40 @@ export const TechnicianDashboard: React.FC<Props> = ({
   onOpenCertificate,
   onReportStuck,
 }) => {
+  const isLead = currentUser.role === 'LEAD_TECHNICIAN';
   const allDays = getUpcomingDays(30);
   const visibleDays = allDays.slice(0, settings.visibilityWindowDays);
 
-  const [selectedDateKey, setSelectedDateKey] = useState<string>(
-    visibleDays[0]?.dateKey || ''
-  );
+  const [viewScope, setViewScope] = useState<'MY_JOBS' | 'ALL_DAY_JOBS'>('MY_JOBS');
 
-  const assignedProjects = projects.filter(
-    (p) =>
-      p.scheduledDate === selectedDateKey &&
-      p.assignedTechnicianIds.includes(currentUser.id)
-  );
+  // Helper to check if a project belongs to current user
+  const isProjectAssignedToMe = (p: Project) => {
+    const techIds = p.assignedTechnicianIds || [];
+    return techIds.includes(currentUser.id) || p.leadTechnicianId === currentUser.id;
+  };
+
+  // Find the first day with assigned jobs or fallback to first visible day
+  const defaultDayKey =
+    visibleDays.find((day) =>
+      projects.some((p) => p.scheduledDate === day.dateKey && isProjectAssignedToMe(p))
+    )?.dateKey || visibleDays[0]?.dateKey || '';
+
+  const [selectedDateKey, setSelectedDateKey] = useState<string>(defaultDayKey);
+
+  const filteredProjects = projects.filter((p) => {
+    if (p.scheduledDate !== selectedDateKey) return false;
+    if (isLead && viewScope === 'ALL_DAY_JOBS') return true;
+    return isProjectAssignedToMe(p);
+  });
 
   const selectedDayInfo = visibleDays.find((d) => d.dateKey === selectedDateKey);
+
+  // Find other days that have projects assigned to me
+  const otherDayWithProjects = visibleDays.find(
+    (d) =>
+      d.dateKey !== selectedDateKey &&
+      projects.some((p) => p.scheduledDate === d.dateKey && isProjectAssignedToMe(p))
+  );
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto safe-bottom-padding">
@@ -70,12 +90,46 @@ export const TechnicianDashboard: React.FC<Props> = ({
           </div>
 
           <div className="bg-white/10 px-3 py-1.5 rounded-2xl text-center border border-white/10">
-            <span className="text-[10px] text-[#E8E4DC] block">پنجره مجاز</span>
+            <span className="text-[10px] text-[#E8E4DC] block">پنجره دید مجاز</span>
             <span className="font-bold text-xs text-[#C1A056] font-mono">
               {toPersianDigits(settings.visibilityWindowDays)} روز
             </span>
           </div>
         </div>
+
+        {/* Lead Technician Scope Switcher */}
+        {isLead && (
+          <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs">
+            <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-[#C1A056]" />
+              <span>دامنه دید سرپرست:</span>
+            </span>
+            <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl border border-white/10">
+              <button
+                type="button"
+                onClick={() => setViewScope('MY_JOBS')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                  viewScope === 'MY_JOBS'
+                    ? 'bg-[#C1A056] text-[#212121]'
+                    : 'text-zinc-300 hover:text-white'
+                }`}
+              >
+                مأموریت‌های اکیپ من
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewScope('ALL_DAY_JOBS')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                  viewScope === 'ALL_DAY_JOBS'
+                    ? 'bg-[#C1A056] text-[#212121]'
+                    : 'text-zinc-300 hover:text-white'
+                }`}
+              >
+                کل پروژه‌های روز
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Horizontal Day Tabs (Restricted by Visibility Window) */}
@@ -93,7 +147,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
             const count = projects.filter(
               (p) =>
                 p.scheduledDate === day.dateKey &&
-                p.assignedTechnicianIds.includes(currentUser.id)
+                (viewScope === 'ALL_DAY_JOBS' && isLead ? true : isProjectAssignedToMe(p))
             ).length;
 
             return (
@@ -102,7 +156,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setSelectedDateKey(day.dateKey)}
-                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[80px] min-h-[72px] py-2.5 px-3 rounded-2xl border transition text-center active:scale-95 ${
+                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[80px] min-h-[72px] py-2.5 px-3 rounded-2xl border transition text-center active:scale-95 cursor-pointer ${
                   isSelected
                     ? 'bg-[#212121] dark:bg-[#C1A056] text-[#C1A056] dark:text-[#121212] border-[#C1A056] shadow-sm font-bold'
                     : 'bg-white dark:bg-[#1C1C1C] text-slate-700 dark:text-zinc-300 border-[#E8E4DC] dark:border-[#2D2D2D] hover:border-[#C1A056]/50'
@@ -143,23 +197,34 @@ export const TechnicianDashboard: React.FC<Props> = ({
               {selectedDayInfo?.persianMonthName}
             </span>
           </div>
-          <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
-            {toPersianDigits(assignedProjects.length)} مأموریت
+          <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono font-bold">
+            {toPersianDigits(filteredProjects.length)} مأموریت
           </span>
         </div>
 
-        {assignedProjects.length === 0 ? (
-          <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-10 text-center border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-2">
+        {filteredProjects.length === 0 ? (
+          <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-8 text-center border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-[#FAF7F2] dark:bg-[#222222] border border-[#E8E4DC] dark:border-[#333333] flex items-center justify-center mx-auto text-[#C1A056]">
               <Calendar className="w-6 h-6" aria-hidden="true" />
             </div>
             <h4 className="font-bold text-sm text-[#212121] dark:text-white">برای این روز مأموریتی ثبت نشده است</h4>
-            <p className="text-xs text-slate-500 dark:text-zinc-400">
-              در حال حاضر برنامه‌ای برای شما تعریف نشده است یا مأموریت‌های روزهای بعد هنوز توسط مدیر QC باز نشده‌اند.
+            <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-sm mx-auto">
+              در حال حاضر پروژه‌ای برای این تاریخ در کارتابل شما نیست.
             </p>
+
+            {otherDayWithProjects && (
+              <button
+                type="button"
+                onClick={() => setSelectedDateKey(otherDayWithProjects.dateKey)}
+                className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 bg-[#FAF7F2] dark:bg-[#252525] hover:bg-[#F2ECE1] text-[#A88738] dark:text-[#C1A056] border border-[#C1A056]/40 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                <span>مشاهده مأموریت‌های {otherDayWithProjects.isToday ? 'امروز' : otherDayWithProjects.dayOffset === 1 ? 'فردا' : otherDayWithProjects.persianDayName}</span>
+                <ArrowLeft className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         ) : (
-          assignedProjects.map((proj) => (
+          filteredProjects.map((proj) => (
             <ProjectCard
               key={proj.id}
               project={proj}

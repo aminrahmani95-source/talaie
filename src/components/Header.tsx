@@ -194,7 +194,13 @@ export const Header: React.FC<Props> = ({
 
               {/* Quick Persona Switcher Dropdown Menu */}
               {isSwitcherOpen && (
-                <div className="absolute left-0 top-12 mt-2 w-72 bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-2xl border border-[#E8E4DC] dark:border-[#2E2E2E] p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsSwitcherOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <div className="absolute left-0 top-12 mt-2 w-72 bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-2xl border border-[#E8E4DC] dark:border-[#2E2E2E] p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between pb-2 border-b border-[#E8E4DC] dark:border-[#2A2A2A] px-2 text-xs font-bold text-[#1E1E1E] dark:text-white">
                     <span className="flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-[#C1A056]" />
@@ -253,7 +259,8 @@ export const Header: React.FC<Props> = ({
                     </button>
                   </div>
                 </div>
-              )}
+              </>
+            )}
             </div>
           </div>
         </div>

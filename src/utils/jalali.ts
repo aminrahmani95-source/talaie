@@ -70,12 +70,16 @@ export const PERSIAN_WEEK_DAYS = [
 ];
 
 // Helper to format ISO date string "YYYY-MM-DD"
-export function formatToPersianDateString(date: Date): string {
+export function formatToPersianDateString(date: Date = new Date()): string {
   const gy = date.getFullYear();
   const gm = date.getMonth() + 1;
   const gd = date.getDate();
   const { jy, jm, jd } = gregorianToJalali(gy, gm, gd);
   return `${jy}/${String(jm).padStart(2, '0')}/${String(jd).padStart(2, '0')}`;
+}
+
+export function getTodayPersianString(): string {
+  return formatToPersianDateString(new Date());
 }
 
 export function getPersianDayName(date: Date): string {

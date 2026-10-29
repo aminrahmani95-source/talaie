@@ -568,8 +568,46 @@ export const StorageService = {
       return initial;
     }
     try {
-      const parsed: Project[] = JSON.parse(raw);
+      let parsed: Project[] = JSON.parse(raw);
       let modified = false;
+
+      // Defensive: Ensure all array properties are always defined to prevent runtime crashes
+      parsed = parsed.map((p) => {
+        const safeP = {
+          ...p,
+          assignedTechnicianIds: Array.isArray(p.assignedTechnicianIds) ? p.assignedTechnicianIds : [],
+          toolsRequired: Array.isArray(p.toolsRequired) ? p.toolsRequired : DEFAULT_MASTER_TOOLS,
+          proposalImages: Array.isArray(p.proposalImages) ? p.proposalImages : [],
+          beforePhotos: Array.isArray(p.beforePhotos) ? p.beforePhotos : [],
+          afterPhotos: Array.isArray(p.afterPhotos) ? p.afterPhotos : [],
+          completionPhotos: Array.isArray(p.completionPhotos) ? p.completionPhotos : [],
+          evaluations: Array.isArray(p.evaluations) ? p.evaluations : [],
+        };
+        return safeP;
+      });
+
+      // Date Re-anchoring: If all stored projects are in the past (before today),
+      // re-anchor them so that today and upcoming days always have active testable projects
+      const days = getUpcomingDays(15);
+      const todayKey = days[0]?.dateKey;
+      const hasUpcomingProjects = parsed.some((p) => p.scheduledDate >= todayKey);
+
+      if (!hasUpcomingProjects && parsed.length > 0 && todayKey) {
+        const d0 = days[0]?.dateKey;
+        const d1 = days[1]?.dateKey;
+        const d2 = days[2]?.dateKey;
+        const d3 = days[3]?.dateKey;
+        const d5 = days[5]?.dateKey;
+
+        parsed.forEach((p, idx) => {
+          if (idx === 0 || idx === 1) p.scheduledDate = d0;
+          else if (idx === 2 || idx === 3) p.scheduledDate = d1;
+          else if (idx === 4) p.scheduledDate = d2;
+          else if (idx === 5) p.scheduledDate = d3;
+          else p.scheduledDate = d5 || d0;
+        });
+        modified = true;
+      }
 
       // Auto-reconcile stuck demo case
       const hasStuck = parsed.some((p) => p.status === 'STUCK' || p.stuckIncident);

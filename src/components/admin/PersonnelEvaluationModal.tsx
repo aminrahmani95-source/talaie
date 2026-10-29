@@ -10,7 +10,7 @@ import {
   Sparkles,
   FileText,
 } from 'lucide-react';
-import { toPersianDigits } from '../../utils/jalali';
+import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 
 interface Props {
   project: Project;
@@ -29,9 +29,10 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
 }) => {
   // Find project crew
   const leadUser = users.find((u) => u.id === project.leadTechnicianId);
+  const assignedIds = project.assignedTechnicianIds || [];
   const crewUsers = users.filter(
     (u) =>
-      project.assignedTechnicianIds.includes(u.id) ||
+      assignedIds.includes(u.id) ||
       u.id === project.leadTechnicianId
   );
 
@@ -61,7 +62,7 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
       cleanlinessScore,
       criticalIncidentNote: criticalIncidentNote.trim(),
       evaluatedBy: 'امین رحمانی (مسئول QC)',
-      evaluatedAt: new Date().toLocaleDateString('fa-IR'),
+      evaluatedAt: getTodayPersianString(),
     };
 
     onSaveEvaluation(evaluation);

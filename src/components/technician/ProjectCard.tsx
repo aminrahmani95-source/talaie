@@ -222,7 +222,7 @@ export const ProjectCard: React.FC<Props> = ({
         >
           <Wrench className="w-4 h-4 text-[#C1A056] mb-1" />
           <span className="text-[10px] font-bold">
-            {project.isFullTools ? 'فول ابزار' : `ابزار (${toPersianDigits(project.toolsRequired.length)})`}
+            {project.isFullTools ? 'فول ابزار' : `ابزار (${toPersianDigits((project.toolsRequired || []).length)})`}
           </span>
         </button>
       </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { UserCheck, KeyRound, Phone, ShieldCheck, Eye, EyeOff, Lock, X, Sparkles, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { toEnglishDigits } from '../utils/jalali';
 
 interface Props {
   users: User[];
@@ -76,8 +77,8 @@ export const LoginModal: React.FC<Props> = ({
     e.preventDefault();
     setError('');
 
-    const trimmedPhone = phone.trim().replace(/\s+/g, '');
-    const trimmedPassword = password.trim();
+    const trimmedPhone = toEnglishDigits(phone.trim().replace(/\s+/g, ''));
+    const trimmedPassword = toEnglishDigits(password.trim());
 
     if (!trimmedPhone || !trimmedPassword) {
       setError('لطفاً شماره موبایل و رمز عبور را وارد کنید.');
@@ -85,7 +86,9 @@ export const LoginModal: React.FC<Props> = ({
     }
 
     const user = users.find(
-      (u) => u.phone.replace(/\s+/g, '') === trimmedPhone || u.phone === trimmedPhone
+      (u) =>
+        toEnglishDigits(u.phone.replace(/\s+/g, '')) === trimmedPhone ||
+        toEnglishDigits(u.phone) === trimmedPhone
     );
 
     if (!user) {
@@ -93,7 +96,7 @@ export const LoginModal: React.FC<Props> = ({
       return;
     }
 
-    if (user.password && user.password !== trimmedPassword) {
+    if (user.password && toEnglishDigits(user.password) !== trimmedPassword) {
       setError('رمز عبور وارد شده نادرست است.');
       return;
     }

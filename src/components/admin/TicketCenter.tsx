@@ -6,7 +6,7 @@ import {
   Clock,
   User,
 } from 'lucide-react';
-import { toPersianDigits } from '../../utils/jalali';
+import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 
 interface Props {
   tickets: Ticket[];
@@ -34,7 +34,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
       ...ticket,
       status: 'RESOLVED',
       resolutionNote: resolutionNote.trim(),
-      resolvedAt: new Date().toLocaleDateString('fa-IR'),
+      resolvedAt: getTodayPersianString(),
     };
 
     onUpdateTicket(updated);

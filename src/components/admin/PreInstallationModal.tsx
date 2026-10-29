@@ -11,7 +11,7 @@ import {
   Calendar,
   FileCheck,
 } from 'lucide-react';
-import { toPersianDigits } from '../../utils/jalali';
+import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 
 interface Props {
   project: Project;
@@ -59,7 +59,7 @@ export const PreInstallationModal: React.FC<Props> = ({
       status,
       notes: notes.trim(),
       inspectedBy: 'تیم اندازه‌گیری و اصلاحات (عابدی / علیمحمدی)',
-      inspectedAt: new Date().toLocaleDateString('fa-IR'),
+      inspectedAt: getTodayPersianString(),
     };
 
     onSaveInspection(inspection, status === 'SPACE_NOT_READY' ? postponeDate : undefined);

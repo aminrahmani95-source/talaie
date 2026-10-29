@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Project,
   User,
@@ -28,6 +28,8 @@ import { TechnicianDashboard } from './components/technician/TechnicianDashboard
 import { ToolChecklistDrawer } from './components/technician/ToolChecklistDrawer';
 import { ReportCompletionModal } from './components/technician/ReportCompletionModal';
 import { HandoverCertificateModal } from './components/HandoverCertificateModal';
+import { ReportStuckModal } from './components/technician/ReportStuckModal';
+import { Toast, ToastMessage } from './components/Toast';
 
 export const App: React.FC = () => {
   // Load state from StorageService
@@ -76,6 +78,16 @@ export const App: React.FC = () => {
   const [certificateModalProject, setCertificateModalProject] = useState<Project | null>(null);
   const [preInspectionProject, setPreInspectionProject] = useState<Project | null>(null);
   const [evaluationProject, setEvaluationProject] = useState<Project | null>(null);
+  const [stuckModalProject, setStuckModalProject] = useState<Project | null>(null);
+
+  // Modern Toast notification system
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const showToast = (type: ToastMessage['type'], message: string) => {
+    setToast({ type, message });
+  };
+
+  // Flag to avoid loopbacks when cloud updates state
+  const isRemoteSyncRef = useRef(false);
 
   // Cross-tab and real-time synchronization
   useEffect(() => {
@@ -130,10 +142,34 @@ export const App: React.FC = () => {
       settings.supabaseUrl,
       settings.supabaseAnonKey,
       {
-        onProjectsSync: (cloudProjects) => setProjects(cloudProjects),
-        onTicketsSync: (cloudTickets) => setTickets(cloudTickets),
-        onUsersSync: (cloudUsers) => setUsers(cloudUsers),
-        onSettingsSync: (cloudSettings) => setSettings((prev) => ({ ...prev, ...cloudSettings })),
+        onProjectsSync: (cloudProjects) => {
+          if (Array.isArray(cloudProjects) && cloudProjects.length > 0) {
+            isRemoteSyncRef.current = true;
+            setProjects(cloudProjects);
+            setTimeout(() => { isRemoteSyncRef.current = false; }, 800);
+          }
+        },
+        onTicketsSync: (cloudTickets) => {
+          if (Array.isArray(cloudTickets) && cloudTickets.length > 0) {
+            isRemoteSyncRef.current = true;
+            setTickets(cloudTickets);
+            setTimeout(() => { isRemoteSyncRef.current = false; }, 800);
+          }
+        },
+        onUsersSync: (cloudUsers) => {
+          if (Array.isArray(cloudUsers) && cloudUsers.length > 0) {
+            isRemoteSyncRef.current = true;
+            setUsers(cloudUsers);
+            setTimeout(() => { isRemoteSyncRef.current = false; }, 800);
+          }
+        },
+        onSettingsSync: (cloudSettings) => {
+          if (cloudSettings && typeof cloudSettings === 'object') {
+            isRemoteSyncRef.current = true;
+            setSettings((prev) => ({ ...prev, ...cloudSettings }));
+            setTimeout(() => { isRemoteSyncRef.current = false; }, 800);
+          }
+        },
       }
     ).then((unsub) => {
       unsubscribe = unsub;
@@ -144,36 +180,48 @@ export const App: React.FC = () => {
     };
   }, [settings.supabaseUrl, settings.supabaseAnonKey]);
 
-  // Sync state changes with StorageService & Supabase Cloud
+  // Sync state changes with StorageService & Supabase Cloud (debounced and guarded)
   useEffect(() => {
     StorageService.saveProjects(projects);
     broadcastSync();
-    if (settings.supabaseUrl && settings.supabaseAnonKey) {
-      SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'projects', projects);
+    if (!isRemoteSyncRef.current && settings.supabaseUrl && settings.supabaseAnonKey) {
+      const timer = setTimeout(() => {
+        SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'projects', projects);
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [projects]);
 
   useEffect(() => {
     StorageService.saveUsers(users);
     broadcastSync();
-    if (settings.supabaseUrl && settings.supabaseAnonKey) {
-      SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'users', users);
+    if (!isRemoteSyncRef.current && settings.supabaseUrl && settings.supabaseAnonKey) {
+      const timer = setTimeout(() => {
+        SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'users', users);
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [users]);
 
   useEffect(() => {
     StorageService.saveTickets(tickets);
     broadcastSync();
-    if (settings.supabaseUrl && settings.supabaseAnonKey) {
-      SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'tickets', tickets);
+    if (!isRemoteSyncRef.current && settings.supabaseUrl && settings.supabaseAnonKey) {
+      const timer = setTimeout(() => {
+        SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'tickets', tickets);
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [tickets]);
 
   useEffect(() => {
     StorageService.saveSettings(settings);
     broadcastSync();
-    if (settings.supabaseUrl && settings.supabaseAnonKey) {
-      SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'settings', settings);
+    if (!isRemoteSyncRef.current && settings.supabaseUrl && settings.supabaseAnonKey) {
+      const timer = setTimeout(() => {
+        SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'settings', settings);
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [settings]);
 
@@ -275,7 +323,7 @@ export const App: React.FC = () => {
       )
     );
     setPreInspectionProject(null);
-    alert('گزارش کارشناسی فضا و اندازه‌گیری دوم با موفقیت در سامانه ثبت شد.');
+    showToast('success', 'گزارش کارشناسی فضا و اندازه‌گیری دوم با موفقیت در سامانه ثبت شد.');
   };
 
   // 360-degree Personnel evaluation handler
@@ -294,44 +342,38 @@ export const App: React.FC = () => {
       )
     );
     setEvaluationProject(null);
+    showToast('success', `ارزیابی عملکرد ${evaluation.userName} با موفقیت ثبت گردید.`);
   };
 
   // On-site acute stoppage / Stuck report handler (<72h KPI)
   const handleReportStuck = (project: Project) => {
-    const reason = prompt('لطفاً دلیل توقف کار، نوع کسری یا آسیب حاد (پرونده استاک) را وارد فرمایید:');
-    if (!reason || !reason.trim()) return;
+    setStuckModalProject(project);
+  };
 
-    const newIncident: StuckIncident = {
-      id: `stuck-${Date.now()}`,
-      stuckAt: new Date().toISOString(),
-      category: 'HARDWARE_SHORTAGE',
-      description: reason.trim(),
-      reportedBy: currentUser?.name || 'تکنسین نصب',
-      photos: [],
-      targetMaxHours: 72,
-      resolutionStatus: 'OPEN',
-    };
+  const handleConfirmReportStuck = (incident: StuckIncident) => {
+    if (!stuckModalProject) return;
 
     setProjects((prev) =>
       prev.map((p) =>
-        p.id === project.id
+        p.id === stuckModalProject.id
           ? {
               ...p,
               status: 'STUCK',
-              stuckIncident: newIncident,
+              stuckIncident: incident,
               updatedAt: new Date().toISOString(),
             }
           : p
       )
     );
-    alert('پروژه به کارتابل رفع استاک (<72h) ارسال شد و بلافاصله به اطلاع مسئولین فنی (امین رحمانی / امین زهری) رسید.');
+    setStuckModalProject(null);
+    showToast('warning', 'پروژه به دسک رفع استاک (<72h) ارسال شد و بلافاصله به مسئولین فنی ارجاع یافت.');
   };
 
   // Ticket handlers
   const handleCreateTicket = (newTicket: Ticket) => {
     setTickets((prev) => [newTicket, ...prev]);
     setTicketModalProject(null);
-    alert('تیکت اضطراری با موفقیت ثبت شد و به اطلاع مدیر QC رسید.');
+    showToast('warning', 'تیکت اضطراری با موفقیت ثبت شد و به اطلاع مدیر QC رسید.');
   };
 
   const handleUpdateTicket = (updatedTicket: Ticket) => {
@@ -598,6 +640,19 @@ export const App: React.FC = () => {
           onSaveEvaluation={handleSaveEvaluation}
         />
       )}
+
+      {stuckModalProject && (
+        <ReportStuckModal
+          project={stuckModalProject}
+          isOpen={!!stuckModalProject}
+          reporterName={currentUser.name}
+          onClose={() => setStuckModalProject(null)}
+          onSubmit={handleConfirmReportStuck}
+        />
+      )}
+
+      {/* Floating System Toast */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 };
