@@ -706,9 +706,9 @@ export const App: React.FC = () => {
     setUsers((prev) => prev.filter((u) => u.id !== userId));
   };
 
-  // Reset to demo data
+  // Clear local device cache & reload from cloud
   const handleResetData = () => {
-    if (confirm('آیا مایلید تمام داده‌ها به حالت نمونه تستی اولیه بازنشانی شوند؟')) {
+    if (confirm('آیا مایلید حافظه محلی (کش) این مرورگر پاک‌سازی شود و داده‌ها مجدداً از سرور ابری دریافت شوند؟')) {
       StorageService.resetAll();
       window.location.reload();
     }
@@ -809,13 +809,6 @@ export const App: React.FC = () => {
       <Header
         currentUser={currentUser}
         users={users}
-        onSwitchUser={
-          import.meta.env.DEV
-            ? (u) => {
-                setCurrentUser(u);
-              }
-            : undefined
-        }
         settings={settings}
         openTicketCount={openTicketCount}
         openStuckCount={openStuckCount}

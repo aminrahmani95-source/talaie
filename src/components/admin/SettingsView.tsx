@@ -486,7 +486,7 @@ export const SettingsView: React.FC<Props> = ({
             className="flex items-center gap-2 px-4 py-2.5 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-full text-xs font-bold transition mr-auto active:scale-95 min-h-[44px] cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" aria-hidden="true" />
-            بازنشانی به داده‌های تستی اولیه
+            پاک‌سازی کش محلی و بارگذاری مجدد
           </button>
         </div>
       </div>

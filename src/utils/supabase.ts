@@ -430,11 +430,13 @@ export const SupabaseSyncService = {
     }
 
     if (Array.isArray(data) && data.length > 0) {
-      return data.map((row: any) => ({
-        ...row.data,
-        id: row.id,
-        updatedAt: row.data.updatedAt || row.updated_at,
-      }));
+      return data
+        .filter((row: any) => !['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6'].includes(row.id))
+        .map((row: any) => ({
+          ...row.data,
+          id: row.id,
+          updatedAt: row.data.updatedAt || row.updated_at,
+        }));
     }
 
     // Fallback: Check legacy talaie_sync ONLY when projects table returned 0 rows without error
@@ -449,7 +451,9 @@ export const SupabaseSyncService = {
     }
 
     if (syncData && Array.isArray(syncData.value)) {
-      return syncData.value as Project[];
+      return (syncData.value as Project[]).filter(
+        (p) => !['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6'].includes(p.id)
+      );
     }
 
     return [];
@@ -710,10 +714,12 @@ export const SupabaseSyncService = {
     }
 
     if (Array.isArray(data) && data.length > 0) {
-      return data.map((row: any) => ({
-        ...row.data,
-        id: row.id,
-      }));
+      return data
+        .filter((row: any) => row.id !== 't-1')
+        .map((row: any) => ({
+          ...row.data,
+          id: row.id,
+        }));
     }
 
     // Fallback: Check legacy talaie_sync ONLY when tickets table returned 0 rows without error
@@ -728,7 +734,7 @@ export const SupabaseSyncService = {
     }
 
     if (syncData && Array.isArray(syncData.value)) {
-      return syncData.value as Ticket[];
+      return (syncData.value as Ticket[]).filter((t) => t.id !== 't-1');
     }
 
     return [];

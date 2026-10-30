@@ -14,14 +14,12 @@ import {
   UserCheck,
   ChevronDown,
   X,
-  Sparkles,
 } from 'lucide-react';
 import { toPersianDigits } from '../utils/jalali';
 
 interface Props {
   currentUser: User;
   users?: User[];
-  onSwitchUser?: (user: User) => void;
   settings: SystemSettings;
   openTicketCount: number;
   openStuckCount?: number;
@@ -41,7 +39,6 @@ interface Props {
 export const Header: React.FC<Props> = ({
   currentUser,
   users = [],
-  onSwitchUser,
   settings,
   openTicketCount,
   openStuckCount = 0,
@@ -57,7 +54,6 @@ export const Header: React.FC<Props> = ({
   setActiveTab,
 }) => {
   const isQcManager = currentUser.role === 'QC_MANAGER';
-  const isDev = Boolean(import.meta.env.DEV);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
 
   return (
@@ -261,46 +257,7 @@ export const Header: React.FC<Props> = ({
                       </button>
                     </div>
 
-                    {/* Quick Persona Switcher: DEV ONLY */}
-                    {isDev && onSwitchUser && (
-                      <div className="py-2 space-y-1 max-h-52 overflow-y-auto border-b border-[#E8E4DC] dark:border-[#2A2A2A] my-2">
-                        <div className="text-[10px] text-zinc-400 px-2 pb-1 font-bold flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-[#C1A056]" />
-                          <span>تغییر سریع نقش (محیط تست Dev)</span>
-                        </div>
-                        {users.map((u) => {
-                          const isCurrent = u.id === currentUser.id;
-                          return (
-                            <button
-                              key={u.id}
-                              type="button"
-                              onClick={() => {
-                                onSwitchUser(u);
-                                setIsSwitcherOpen(false);
-                              }}
-                              className={`w-full p-2 rounded-xl text-right flex items-center justify-between text-xs transition cursor-pointer ${
-                                isCurrent
-                                  ? 'bg-[#C1A056]/15 text-[#C1A056] font-black'
-                                  : 'text-slate-700 dark:text-zinc-300 hover:bg-[#FAF7F2] dark:hover:bg-[#252525]'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm">{u.avatar || '👤'}</span>
-                                <div>
-                                  <div className="font-bold leading-tight">{u.name.split(' (')[0]}</div>
-                                  <div className="text-[10px] text-zinc-400">
-                                    {u.role === 'QC_MANAGER' ? 'مدیر QC' : u.role === 'LEAD_TECHNICIAN' ? 'سرپرست اکیپ' : 'تکنسین نصب'}
-                                  </div>
-                                </div>
-                              </div>
-                              {isCurrent && <span className="text-[10px] font-bold text-[#C1A056]">فعال</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    <div className="pt-2">
+                    <div className="pt-3">
                       <button
                         type="button"
                         onClick={() => {
