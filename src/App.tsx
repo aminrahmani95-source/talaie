@@ -286,7 +286,6 @@ export const App: React.FC = () => {
   const handleToggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
   // Modals
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [presetDateKey, setPresetDateKey] = useState<string | undefined>(undefined);
