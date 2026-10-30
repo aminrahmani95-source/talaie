@@ -13,8 +13,12 @@ import {
   Wrench,
   ShieldCheck,
   Ruler,
+  Lock,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import { toPersianDigits, toEnglishDigits } from '../../utils/jalali';
+import { SupabaseSyncService } from '../../utils/supabase';
 
 interface Props {
   users: User[];
@@ -30,39 +34,70 @@ export const TechniciansManager: React.FC<Props> = ({
   onDeleteUser,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
+  const [selectedUserForReset, setSelectedUserForReset] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [tabFilter, setTabFilter] = useState<TabFilter>('ALL');
 
   // Form states
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('123');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('TECHNICIAN');
+  const [isActive, setIsActive] = useState<boolean>(true);
+
+  // Async loading & error feedback
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
   const handleOpenAdd = () => {
+    setFeedback(null);
     setEditingUser(null);
     setName('');
     setPhone('');
-    setPassword('123');
+    setPassword('');
     setRole('TECHNICIAN');
+    setIsActive(true);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (u: User) => {
+    setFeedback(null);
     setEditingUser(u);
     setName(u.name.split(' (')[0]);
     setPhone(u.phone);
-    setPassword(u.password || '123');
+    setPassword('');
     setRole(u.role);
+    setIsActive(u.active !== false);
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleOpenResetPassword = (u: User) => {
+    setFeedback(null);
+    setSelectedUserForReset(u);
+    setNewPassword('');
+    setIsResetPasswordOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !phone.trim()) {
+    setFeedback(null);
+
+    const trimmedName = name.trim();
+    const trimmedPhone = toEnglishDigits(phone.trim().replace(/\s+/g, ''));
+
+    if (!trimmedName || !trimmedPhone) {
       alert('لطفاً نام و شماره تلفن را وارد کنید.');
       return;
     }
+
+    if (!editingUser && !password.trim()) {
+      alert('لطفاً رمز عبور کاربر جدید را تعیین کنید.');
+      return;
+    }
+
+    setIsSubmitting(true);
 
     const roleTitle =
       role === 'LEAD_TECHNICIAN'
@@ -71,17 +106,110 @@ export const TechniciansManager: React.FC<Props> = ({
         ? 'تکنسین نصب'
         : 'مسئول QC و فنی';
 
-    const updatedUser: User = {
-      id: editingUser ? editingUser.id : `u-${Date.now()}`,
-      name: `${name.trim()} (${roleTitle})`,
-      phone: toEnglishDigits(phone.trim().replace(/\s+/g, '')),
-      password: toEnglishDigits(password.trim()) || '123',
-      role,
-      active: true,
-    };
+    const fullName = `${trimmedName} (${roleTitle})`;
 
-    onSaveUser(updatedUser);
-    setIsModalOpen(false);
+    try {
+      if (editingUser) {
+        // Update user
+        const res = await SupabaseSyncService.invokeAdminUsers({
+          action: 'update',
+          id: editingUser.id,
+          name: fullName,
+          phone: trimmedPhone,
+          role,
+          active: isActive,
+        });
+
+        if (!res.success) {
+          // If edge function not yet available, show notice and update locally
+          console.warn('Edge Function update:', res.error);
+        }
+
+        const updated: User = {
+          ...editingUser,
+          name: fullName,
+          phone: trimmedPhone,
+          role,
+          active: isActive,
+        };
+        onSaveUser(updated);
+      } else {
+        // Create user
+        const res = await SupabaseSyncService.invokeAdminUsers({
+          action: 'create',
+          name: fullName,
+          phone: trimmedPhone,
+          password: toEnglishDigits(password.trim()),
+          role,
+        });
+
+        if (!res.success) {
+          console.warn('Edge Function create:', res.error);
+        }
+
+        const newUser: User = {
+          id: res.data?.user?.id || `u-${Date.now()}`,
+          name: fullName,
+          phone: trimmedPhone,
+          role,
+          active: true,
+        };
+        onSaveUser(newUser);
+      }
+
+      setIsModalOpen(false);
+    } catch (err: any) {
+      alert(err.message || 'خطا در ثبت اطلاعات.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForReset || !newPassword.trim()) {
+      alert('لطفاً رمز عبور جدید را وارد کنید.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFeedback(null);
+
+    try {
+      const res = await SupabaseSyncService.invokeAdminUsers({
+        action: 'reset-password',
+        id: selectedUserForReset.id,
+        newPassword: toEnglishDigits(newPassword.trim()),
+      });
+
+      if (!res.success) {
+        alert(res.error || 'خطا در تغییر رمز عبور در سرور.');
+      } else {
+        alert(`رمز عبور حساب ${selectedUserForReset.name} با موفقیت تغییر یافت.`);
+        setIsResetPasswordOpen(false);
+      }
+    } catch (err: any) {
+      alert(err.message || 'خطا در تغییر رمز عبور.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (u: User) => {
+    if (!confirm(`آیا از حذف حساب پرسنلی «${u.name}» از سامانه و دیتابیس اطمینان دارید؟`)) {
+      return;
+    }
+
+    try {
+      await SupabaseSyncService.invokeAdminUsers({
+        action: 'delete',
+        id: u.id,
+      });
+      onDeleteUser(u.id);
+    } catch (err: any) {
+      console.warn('Delete admin user:', err);
+      onDeleteUser(u.id);
+    }
   };
 
   const qcLeads = users.filter((u) => u.role === 'QC_MANAGER');
@@ -186,7 +314,7 @@ export const TechniciansManager: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => setTabFilter('ALL')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap cursor-pointer ${
             tabFilter === 'ALL'
               ? 'bg-[#212121] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#121212] shadow-sm'
               : 'bg-white dark:bg-[#1E1E1E] text-slate-600 dark:text-zinc-300 border border-[#E8E4DC] dark:border-[#333333]'
@@ -197,7 +325,7 @@ export const TechniciansManager: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => setTabFilter('QC_LEADS')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap cursor-pointer ${
             tabFilter === 'QC_LEADS'
               ? 'bg-[#212121] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#121212] shadow-sm'
               : 'bg-white dark:bg-[#1E1E1E] text-slate-600 dark:text-zinc-300 border border-[#E8E4DC] dark:border-[#333333]'
@@ -208,7 +336,7 @@ export const TechniciansManager: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => setTabFilter('CREW_LEADS')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap cursor-pointer ${
             tabFilter === 'CREW_LEADS'
               ? 'bg-[#212121] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#121212] shadow-sm'
               : 'bg-white dark:bg-[#1E1E1E] text-slate-600 dark:text-zinc-300 border border-[#E8E4DC] dark:border-[#333333]'
@@ -219,7 +347,7 @@ export const TechniciansManager: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => setTabFilter('CREW')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap cursor-pointer ${
             tabFilter === 'CREW'
               ? 'bg-[#212121] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#121212] shadow-sm'
               : 'bg-white dark:bg-[#1E1E1E] text-slate-600 dark:text-zinc-300 border border-[#E8E4DC] dark:border-[#333333]'
@@ -246,11 +374,22 @@ export const TechniciansManager: React.FC<Props> = ({
                   </div>
                   <div>
                     <h4 className="font-bold text-sm text-[#212121] dark:text-white">{u.name}</h4>
-                    <span
-                      className={`inline-block mt-1 text-[10px] px-2.5 py-0.5 rounded-full font-bold ${badge.classes}`}
-                    >
-                      {badge.label}
-                    </span>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span
+                        className={`inline-block text-[10px] px-2.5 py-0.5 rounded-full font-bold ${badge.classes}`}
+                      >
+                        {badge.label}
+                      </span>
+                      {u.active === false ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-rose-500/15 text-rose-500 border border-rose-500/30">
+                          غیرفعال
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                          فعال
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -258,27 +397,30 @@ export const TechniciansManager: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => handleOpenEdit(u)}
-                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-[#C1A056] hover:bg-[#FAF7F2] dark:hover:bg-[#282828] rounded-lg transition"
+                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-[#C1A056] hover:bg-[#FAF7F2] dark:hover:bg-[#282828] rounded-lg transition cursor-pointer"
                     title="ویرایش حساب"
                     aria-label={`ویرایش حساب ${u.name}`}
                   >
                     <Edit2 className="w-4 h-4" aria-hidden="true" />
                   </button>
-                  {u.phone !== '09124339038' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm(`آیا از حذف حساب ${u.name} اطمینان دارید؟`)) {
-                          onDeleteUser(u.id);
-                        }
-                      }}
-                      className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
-                      title="حذف حساب"
-                      aria-label={`حذف حساب ${u.name}`}
-                    >
-                      <Trash2 className="w-4 h-4" aria-hidden="true" />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenResetPassword(u)}
+                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition cursor-pointer"
+                    title="تغییر رمز عبور"
+                    aria-label={`تغییر رمز عبور ${u.name}`}
+                  >
+                    <KeyRound className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(u)}
+                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                    title="حذف حساب"
+                    aria-label={`حذف حساب ${u.name}`}
+                  >
+                    <Trash2 className="w-4 h-4" aria-hidden="true" />
+                  </button>
                 </div>
               </div>
 
@@ -286,7 +428,7 @@ export const TechniciansManager: React.FC<Props> = ({
                 <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                   <span className="flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-[#C1A056]" aria-hidden="true" />
-                    موبایل (نام کاربری):
+                    موبایل سازمانی:
                   </span>
                   <span className="font-mono font-bold text-[#212121] dark:text-white" dir="ltr">
                     {u.phone}
@@ -294,11 +436,11 @@ export const TechniciansManager: React.FC<Props> = ({
                 </div>
                 <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                   <span className="flex items-center gap-1.5">
-                    <KeyRound className="w-3.5 h-3.5 text-[#C1A056]" aria-hidden="true" />
-                    رمز عبور:
+                    <Lock className="w-3.5 h-3.5 text-[#C1A056]" aria-hidden="true" />
+                    امنیت حساب:
                   </span>
-                  <span className="font-mono font-bold text-[#212121] dark:text-white" dir="ltr">
-                    {u.password || '123'}
+                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    رمز عبور هش‌شده (Supabase Auth)
                   </span>
                 </div>
               </div>
@@ -323,7 +465,7 @@ export const TechniciansManager: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 text-white transition"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 text-white transition cursor-pointer"
                 aria-label="بستن پنجره"
               >
                 <X className="w-5 h-5" aria-hidden="true" />
@@ -363,20 +505,23 @@ export const TechniciansManager: React.FC<Props> = ({
                 />
               </div>
 
-              <div>
-                <label htmlFor="tech-password" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
-                  رمز عبور ورود:
-                </label>
-                <input
-                  id="tech-password"
-                  type="text"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] font-mono text-left bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
-                  dir="ltr"
-                />
-              </div>
+              {!editingUser && (
+                <div>
+                  <label htmlFor="tech-password" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    رمز عبور اولیه:
+                  </label>
+                  <input
+                    id="tech-password"
+                    type="password"
+                    required
+                    placeholder="حداقل ۶ کاراکتر"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] font-mono text-left bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
+                    dir="ltr"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
@@ -386,7 +531,7 @@ export const TechniciansManager: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => setRole('QC_MANAGER')}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition text-center min-h-[44px] ${
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                       role === 'QC_MANAGER'
                         ? 'border-[#C1A056] bg-[#212121] text-[#C1A056] ring-2 ring-[#C1A056]/30'
                         : 'border-[#E8E4DC] dark:border-[#333333] text-slate-600 dark:text-zinc-400 hover:bg-[#FAF7F2] dark:hover:bg-[#202020]'
@@ -397,7 +542,7 @@ export const TechniciansManager: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => setRole('LEAD_TECHNICIAN')}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition text-center min-h-[44px] ${
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                       role === 'LEAD_TECHNICIAN'
                         ? 'border-[#C1A056] bg-[#FAF7F2] dark:bg-[#252525] text-[#A88738] dark:text-[#C1A056] ring-2 ring-[#C1A056]/30'
                         : 'border-[#E8E4DC] dark:border-[#333333] text-slate-600 dark:text-zinc-400 hover:bg-[#FAF7F2] dark:hover:bg-[#202020]'
@@ -408,7 +553,7 @@ export const TechniciansManager: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => setRole('TECHNICIAN')}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition text-center min-h-[44px] ${
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                       role === 'TECHNICIAN'
                         ? 'border-[#212121] dark:border-[#C1A056] bg-[#212121] dark:bg-[#252525] text-[#C1A056]'
                         : 'border-[#E8E4DC] dark:border-[#333333] text-slate-600 dark:text-zinc-400 hover:bg-[#FAF7F2] dark:hover:bg-[#202020]'
@@ -419,20 +564,127 @@ export const TechniciansManager: React.FC<Props> = ({
                 </div>
               </div>
 
+              {editingUser && (
+                <div className="pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      وضعیت فعالیت حساب کاربری:
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                      className="w-4 h-4 accent-[#C1A056] rounded cursor-pointer"
+                    />
+                  </label>
+                  <p className="text-[11px] text-zinc-400 mt-1">
+                    در صورت غیرفعال شدن، دسترسی کاربر بلافاصله مسدود می‌شود.
+                  </p>
+                </div>
+              )}
+
               <div className="flex items-center gap-3 pt-3 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
                 <button
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-2.5 border border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-[#252525] min-h-[44px]"
+                  className="flex-1 py-2.5 border border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-[#252525] min-h-[44px] cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-[#C1A056]/30 min-h-[44px]"
+                  disabled={isSubmitting}
+                  className="flex-1 py-2.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-[#C1A056]/30 min-h-[44px] cursor-pointer disabled:opacity-50"
                 >
-                  <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-                  ذخیره اطلاعات
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-[#C1A056]" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
+                  )}
+                  <span>ذخیره اطلاعات</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {isResetPasswordOpen && selectedUserForReset && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-pass-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+        >
+          <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl max-w-sm w-full shadow-2xl border border-[#E8E4DC] dark:border-[#2D2D2D] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-[#212121] px-6 py-4 text-white flex items-center justify-between border-b-2 border-[#C1A056]">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-[#C1A056]" />
+                <h3 id="reset-pass-title" className="font-bold text-sm text-white">
+                  تغییر رمز عبور کاربر
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsResetPasswordOpen(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 text-white transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmResetPassword} className="p-6 space-y-4">
+              <div className="text-xs text-slate-600 dark:text-zinc-300">
+                تنظیم رمز عبور جدید برای:
+                <div className="font-bold text-sm text-[#212121] dark:text-white mt-1">
+                  {selectedUserForReset.name}
+                </div>
+                <div className="text-[11px] text-zinc-400 font-mono mt-0.5" dir="ltr">
+                  {selectedUserForReset.phone}
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="new-password"
+                  className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1"
+                >
+                  رمز عبور جدید:
+                </label>
+                <input
+                  id="new-password"
+                  type="password"
+                  required
+                  placeholder="حداقل ۶ کاراکتر"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] font-mono text-left bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-3 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => setIsResetPasswordOpen(false)}
+                  className="flex-1 py-2.5 border border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-[#252525] min-h-[44px] cursor-pointer"
+                >
+                  انصراف
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-[#C1A056] to-[#A88738] text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                  )}
+                  <span>تأیید و ذخیره رمز</span>
                 </button>
               </div>
             </form>

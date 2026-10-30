@@ -20,155 +20,29 @@ export const DEFAULT_MASTER_TOOLS = [
 ];
 
 export const INITIAL_USERS: User[] = [
-  // 1. مسئولین فنی و QC و برنامه‌ریزی
+  // اعضای اولیه برای حالت توسعه و آزمایشی (بدون رمز عبور و با شماره‌های مجازی)
   {
     id: 'u-admin-1',
     name: 'امین رحمانی (مسئول QC)',
-    phone: '09124339038',
-    password: '91243390380',
+    phone: '09120000001',
     role: 'QC_MANAGER',
     avatar: '👔',
     active: true,
   },
-  {
-    id: 'u-admin-2',
-    name: 'امین زهری (سرپرست فنی و QC)',
-    phone: '09120000002',
-    password: '123',
-    role: 'QC_MANAGER',
-    avatar: '👔',
-    active: true,
-  },
-  {
-    id: 'u-planner',
-    name: 'اردلان حیدری (برنامه‌ریزی و کنترل پروژه)',
-    phone: '09120000003',
-    password: '123',
-    role: 'QC_MANAGER',
-    avatar: '📋',
-    active: true,
-  },
-
-  // 2. سرپرستان اجرایی / سرپرستان نصب (4 سرپرست اکیپ)
   {
     id: 'u-lead-1',
-    name: 'فرخ نقدعلیان (سرپرست اکیپ 1)',
-    phone: '09122222221',
-    password: '123',
+    name: 'فرخ نقدعلیان (سرپرست اکیپ)',
+    phone: '09120000004',
     role: 'LEAD_TECHNICIAN',
     avatar: '🧢',
     active: true,
   },
-  {
-    id: 'u-lead-2',
-    name: 'امین اسکندری (سرپرست اکیپ 2)',
-    phone: '09122222222',
-    password: '123',
-    role: 'LEAD_TECHNICIAN',
-    avatar: '🧢',
-    active: true,
-  },
-  {
-    id: 'u-lead-3',
-    name: 'سجاد رحمتی (سرپرست اکیپ 3)',
-    phone: '09122222223',
-    password: '123',
-    role: 'LEAD_TECHNICIAN',
-    avatar: '🧢',
-    active: true,
-  },
-  {
-    id: 'u-lead-4',
-    name: 'حمیدرضا ترکمنی (سرپرست اکیپ 4)',
-    phone: '09122222224',
-    password: '123',
-    role: 'LEAD_TECHNICIAN',
-    avatar: '🧢',
-    active: true,
-  },
-
-  // 3. اعضای تیم نصب (تکنسین‌های اجرایی)
   {
     id: 'u-tech-1',
     name: 'علیرضا خزایی (تکنسین نصب)',
-    phone: '09123333331',
-    password: '123',
+    phone: '09120000005',
     role: 'TECHNICIAN',
     avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-tech-2',
-    name: 'دانیال کبیری (تکنسین نصب)',
-    phone: '09123333332',
-    password: '123',
-    role: 'TECHNICIAN',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-tech-3',
-    name: 'محمد جهان (تکنسین نصب)',
-    phone: '09123333333',
-    password: '123',
-    role: 'TECHNICIAN',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-tech-4',
-    name: 'رضا آتاکیشی‌نژاد (تکنسین نصب)',
-    phone: '09123333334',
-    password: '123',
-    role: 'TECHNICIAN',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-tech-5',
-    name: 'فرهاد نقدعلیان (تکنسین نصب)',
-    phone: '09123333335',
-    password: '123',
-    role: 'TECHNICIAN',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-tech-6',
-    name: 'امیرعلی دهقان (تکنسین نصب)',
-    phone: '09123333336',
-    password: '123',
-    role: 'TECHNICIAN',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-tech-7',
-    name: 'محسن آبروان (تکنسین نصب)',
-    phone: '09123333337',
-    password: '123',
-    role: 'TECHNICIAN',
-    avatar: '🔧',
-    active: true,
-  },
-
-  // 4. کارشناسان فنی (تیم اندازه‌گیری و اصلاحات فضا)
-  {
-    id: 'u-tech-8',
-    name: 'محمدرضا عابدی (تیم اندازه‌گیری و اصلاحات)',
-    phone: '09124444441',
-    password: '123',
-    role: 'TECHNICIAN',
-    avatar: '📐',
-    active: true,
-  },
-  {
-    id: 'u-tech-9',
-    name: 'متین علیمحمدی (تیم اندازه‌گیری و اصلاحات)',
-    phone: '09124444442',
-    password: '123',
-    role: 'TECHNICIAN',
-    avatar: '📐',
     active: true,
   },
 ];
@@ -177,8 +51,8 @@ export const INITIAL_SETTINGS: SystemSettings = {
   visibilityWindowDays: 4, // پیش‌فرض 4 روز قابل مشاهده برای تکنسین‌ها
   companyName: 'گالری طلایی | طراحی، پرده و شید',
   defaultTools: DEFAULT_MASTER_TOOLS,
-  supabaseUrl: 'https://jlrjiiyobukeeralxkpb.supabase.co',
-  supabaseAnonKey: 'sb_publishable_qVjiN5u3V0QMU-ji0pvrcw_GzAIYk0S',
+  supabaseUrl: import.meta.env.VITE_SUPABASE_URL || '',
+  supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
 };
 
 // Generates high quality mock SVG sales proposal in Talaei Gallery brand colors (#C1A056, #212121)
@@ -660,52 +534,10 @@ export const StorageService = {
   getUsers(): User[] {
     const raw = localStorage.getItem(STORAGE_KEYS.USERS);
     if (!raw) {
-      this.saveUsers(INITIAL_USERS);
       return INITIAL_USERS;
     }
     try {
-      const parsed: User[] = JSON.parse(raw);
-      let modified = false;
-
-      // Ensure all official staff from INITIAL_USERS exist in the database
-      INITIAL_USERS.forEach((initUser) => {
-        const idx = parsed.findIndex(
-          (u) =>
-            u.id === initUser.id ||
-            u.phone === initUser.phone ||
-            (initUser.phone === '09124339038' && (u.id === 'u-admin' || u.phone === '09124339038'))
-        );
-
-        if (idx === -1) {
-          parsed.push(initUser);
-          modified = true;
-        } else {
-          // Keep primary official details up to date
-          if (initUser.phone === '09124339038') {
-            parsed[idx].name = initUser.name;
-            parsed[idx].phone = initUser.phone;
-            parsed[idx].password = initUser.password;
-            parsed[idx].role = 'QC_MANAGER';
-            modified = true;
-          } else if (
-            parsed[idx].name.includes('رضا محمدی') ||
-            parsed[idx].name.includes('مهدی احمدی') ||
-            parsed[idx].name.includes('علی قاسمی') ||
-            parsed[idx].name.includes('حسین اکبری')
-          ) {
-            // Replace old demo mock names with official team members
-            parsed[idx].name = initUser.name;
-            parsed[idx].phone = initUser.phone;
-            parsed[idx].role = initUser.role;
-            modified = true;
-          }
-        }
-      });
-
-      if (modified) {
-        this.saveUsers(parsed);
-      }
-      return parsed;
+      return JSON.parse(raw);
     } catch {
       return INITIAL_USERS;
     }
@@ -751,8 +583,8 @@ export const StorageService = {
       const merged: SystemSettings = {
         ...INITIAL_SETTINGS,
         ...parsed,
-        supabaseUrl: parsed.supabaseUrl || INITIAL_SETTINGS.supabaseUrl,
-        supabaseAnonKey: parsed.supabaseAnonKey || INITIAL_SETTINGS.supabaseAnonKey,
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL || parsed.supabaseUrl || '',
+        supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || parsed.supabaseAnonKey || '',
       };
       return merged;
     } catch {
@@ -769,27 +601,14 @@ export const StorageService = {
   },
 
   getCurrentUser(): User | null {
-    const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    if (!raw) {
-      return null;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
+    // Current user is managed by Supabase Auth session, not localStorage
+    return null;
   },
 
-  setCurrentUser(user: User | null) {
+  setCurrentUser(_user: User | null) {
     try {
-      if (user) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-      }
-    } catch (e) {
-      console.warn('LocalStorage setCurrentUser failed:', e);
-    }
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    } catch {}
   },
 
   // Export JSON backup for safe archiving

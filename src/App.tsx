@@ -32,12 +32,62 @@ import { ReportStuckModal } from './components/technician/ReportStuckModal';
 import { Toast, ToastMessage } from './components/Toast';
 
 export const App: React.FC = () => {
-  // Load state from StorageService
-  const [currentUser, setCurrentUser] = useState<User | null>(() => StorageService.getCurrentUser());
+  // Session & Authentication via Supabase Auth
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authChecking, setAuthChecking] = useState<boolean>(true);
   const [users, setUsers] = useState<User[]>(() => StorageService.getUsers());
   const [projects, setProjects] = useState<Project[]>(() => StorageService.getProjects());
   const [tickets, setTickets] = useState<Ticket[]>(() => StorageService.getTickets());
   const [settings, setSettings] = useState<SystemSettings>(() => StorageService.getSettings());
+
+  // Check Supabase Auth session on initial load and listen to auth changes
+  useEffect(() => {
+    SupabaseSyncService.getCurrentSessionUser()
+      .then((user) => {
+        setCurrentUser(user);
+      })
+      .finally(() => {
+        setAuthChecking(false);
+      });
+
+    const unsubscribeAuth = SupabaseSyncService.onAuthStateChange((user) => {
+      setCurrentUser(user);
+    });
+
+    return () => {
+      unsubscribeAuth();
+    };
+  }, []);
+
+  // Fetch profiles from database and subscribe to real-time profile changes
+  useEffect(() => {
+    SupabaseSyncService.fetchProfiles().then((cloudUsers) => {
+      if (cloudUsers.length > 0) {
+        setUsers(cloudUsers);
+      }
+    });
+
+    const unsubscribeProfiles = SupabaseSyncService.subscribeProfiles((updatedProfiles) => {
+      if (updatedProfiles.length > 0) {
+        setUsers(updatedProfiles);
+
+        // Verify current session user is still active and update profile if changed
+        setCurrentUser((prevUser) => {
+          if (!prevUser) return null;
+          const currentProfile = updatedProfiles.find((p) => p.id === prevUser.id);
+          if (!currentProfile || !currentProfile.active) {
+            SupabaseSyncService.signOut();
+            return null;
+          }
+          return currentProfile;
+        });
+      }
+    });
+
+    return () => {
+      unsubscribeProfiles();
+    };
+  }, []);
 
   // Navigation tab for QC Manager
   const [activeTab, setActiveTab] = useState<string>('planner');
@@ -156,13 +206,6 @@ export const App: React.FC = () => {
             setTimeout(() => { isRemoteSyncRef.current = false; }, 800);
           }
         },
-        onUsersSync: (cloudUsers) => {
-          if (Array.isArray(cloudUsers) && cloudUsers.length > 0) {
-            isRemoteSyncRef.current = true;
-            setUsers(cloudUsers);
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 800);
-          }
-        },
         onSettingsSync: (cloudSettings) => {
           if (cloudSettings && typeof cloudSettings === 'object') {
             isRemoteSyncRef.current = true;
@@ -193,17 +236,6 @@ export const App: React.FC = () => {
   }, [projects]);
 
   useEffect(() => {
-    StorageService.saveUsers(users);
-    broadcastSync();
-    if (!isRemoteSyncRef.current && settings.supabaseUrl && settings.supabaseAnonKey) {
-      const timer = setTimeout(() => {
-        SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'users', users);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [users]);
-
-  useEffect(() => {
     StorageService.saveTickets(tickets);
     broadcastSync();
     if (!isRemoteSyncRef.current && settings.supabaseUrl && settings.supabaseAnonKey) {
@@ -224,10 +256,6 @@ export const App: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [settings]);
-
-  useEffect(() => {
-    StorageService.setCurrentUser(currentUser);
-  }, [currentUser]);
 
   // Project handlers
   const handleSaveProject = (project: Project) => {
@@ -416,10 +444,31 @@ export const App: React.FC = () => {
     setIsProjectFormOpen(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await SupabaseSyncService.signOut();
     setCurrentUser(null);
-    StorageService.setCurrentUser(null);
   };
+
+  // Splash screen while checking persistent session
+  if (authChecking) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#121212] text-[#C1A056] p-4">
+        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
+          <div className="w-16 h-16 rounded-3xl bg-[#1A1A1A] border-2 border-[#C1A056] flex items-center justify-center p-3 shadow-2xl">
+            <img
+              src="./talaei-lion-gold.png"
+              alt="نشان گالری طلایی"
+              className="w-full h-full object-contain animate-pulse"
+            />
+          </div>
+          <div className="text-center">
+            <div className="text-base font-black text-white">سامانه گالری طلایی</div>
+            <div className="text-xs text-[#C1A056] mt-1 font-mono">در حال بررسی نشست کاربری...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // If no user is authenticated, render the dedicated secure login page
   if (!currentUser) {
@@ -430,7 +479,6 @@ export const App: React.FC = () => {
         isStandalone={true}
         onSelectUser={(u) => {
           setCurrentUser(u);
-          StorageService.setCurrentUser(u);
         }}
       />
     );
@@ -464,10 +512,13 @@ export const App: React.FC = () => {
       <Header
         currentUser={currentUser}
         users={users}
-        onSwitchUser={(u) => {
-          setCurrentUser(u);
-          StorageService.setCurrentUser(u);
-        }}
+        onSwitchUser={
+          import.meta.env.DEV
+            ? (u) => {
+                setCurrentUser(u);
+              }
+            : undefined
+        }
         settings={settings}
         openTicketCount={openTicketCount}
         openStuckCount={openStuckCount}

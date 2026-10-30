@@ -51,6 +51,7 @@ export const Header: React.FC<Props> = ({
   setActiveTab,
 }) => {
   const isQcManager = currentUser.role === 'QC_MANAGER';
+  const isDev = Boolean(import.meta.env.DEV);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
 
   return (
@@ -192,7 +193,7 @@ export const Header: React.FC<Props> = ({
                 <ChevronDown className="w-3.5 h-3.5 text-zinc-400 pl-1" />
               </button>
 
-              {/* Quick Persona Switcher Dropdown Menu */}
+              {/* Profile & Session Dropdown Menu */}
               {isSwitcherOpen && (
                 <>
                   <div
@@ -200,67 +201,91 @@ export const Header: React.FC<Props> = ({
                     onClick={() => setIsSwitcherOpen(false)}
                     aria-hidden="true"
                   />
-                  <div className="absolute left-0 top-12 mt-2 w-72 bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-2xl border border-[#E8E4DC] dark:border-[#2E2E2E] p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between pb-2 border-b border-[#E8E4DC] dark:border-[#2A2A2A] px-2 text-xs font-bold text-[#1E1E1E] dark:text-white">
-                    <span className="flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-[#C1A056]" />
-                      <span>تغییر سریع نقش (۱ کلیک)</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setIsSwitcherOpen(false)}
-                      className="text-zinc-400 hover:text-zinc-600 p-1"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="py-2 space-y-1 max-h-60 overflow-y-auto">
-                    {users.map((u) => {
-                      const isCurrent = u.id === currentUser.id;
-                      return (
-                        <button
-                          key={u.id}
-                          type="button"
-                          onClick={() => {
-                            if (onSwitchUser) onSwitchUser(u);
-                            setIsSwitcherOpen(false);
-                          }}
-                          className={`w-full p-2 rounded-xl text-right flex items-center justify-between text-xs transition cursor-pointer ${
-                            isCurrent
-                              ? 'bg-[#C1A056]/15 text-[#C1A056] font-black'
-                              : 'text-slate-700 dark:text-zinc-300 hover:bg-[#FAF7F2] dark:hover:bg-[#252525]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">{u.avatar || '👤'}</span>
-                            <div>
-                              <div className="font-bold leading-tight">{u.name.split(' (')[0]}</div>
-                              <div className="text-[10px] text-zinc-400">{u.role === 'QC_MANAGER' ? 'مدیر QC' : u.role === 'LEAD_TECHNICIAN' ? 'سرپرست اکیپ' : 'تکنسین نصب'}</div>
-                            </div>
+                  <div className="absolute left-0 top-12 mt-2 w-72 bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-2xl border border-[#E8E4DC] dark:border-[#2E2E2E] p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between pb-3 border-b border-[#E8E4DC] dark:border-[#2A2A2A] text-xs font-bold text-[#1E1E1E] dark:text-white">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{currentUser.avatar || '👤'}</span>
+                        <div className="text-right">
+                          <div className="font-bold text-sm text-[#212121] dark:text-white leading-tight">
+                            {currentUser.name}
                           </div>
-                          {isCurrent && <span className="text-[10px] font-bold text-[#C1A056]">فعال</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
+                          <div className="text-[11px] text-[#C1A056] font-semibold mt-0.5">
+                            {currentUser.role === 'QC_MANAGER'
+                              ? 'مسئول فنی و کنترل کیفیت (QC)'
+                              : currentUser.role === 'LEAD_TECHNICIAN'
+                              ? 'سرپرست اکیپ نصب'
+                              : 'تکنسین اجرایی نصب'}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5" dir="ltr">
+                            {currentUser.phone}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsSwitcherOpen(false)}
+                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1"
+                        aria-label="بستن منو"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
 
-                  <div className="pt-2 border-t border-[#E8E4DC] dark:border-[#2A2A2A]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSwitcherOpen(false);
-                        onLogout();
-                      }}
-                      className="w-full py-2 px-3 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center gap-1.5 transition cursor-pointer"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span>خروج از حساب کاربری</span>
-                    </button>
+                    {/* Quick Persona Switcher: DEV ONLY */}
+                    {isDev && onSwitchUser && (
+                      <div className="py-2 space-y-1 max-h-52 overflow-y-auto border-b border-[#E8E4DC] dark:border-[#2A2A2A] my-2">
+                        <div className="text-[10px] text-zinc-400 px-2 pb-1 font-bold flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-[#C1A056]" />
+                          <span>تغییر سریع نقش (محیط تست Dev)</span>
+                        </div>
+                        {users.map((u) => {
+                          const isCurrent = u.id === currentUser.id;
+                          return (
+                            <button
+                              key={u.id}
+                              type="button"
+                              onClick={() => {
+                                onSwitchUser(u);
+                                setIsSwitcherOpen(false);
+                              }}
+                              className={`w-full p-2 rounded-xl text-right flex items-center justify-between text-xs transition cursor-pointer ${
+                                isCurrent
+                                  ? 'bg-[#C1A056]/15 text-[#C1A056] font-black'
+                                  : 'text-slate-700 dark:text-zinc-300 hover:bg-[#FAF7F2] dark:hover:bg-[#252525]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm">{u.avatar || '👤'}</span>
+                                <div>
+                                  <div className="font-bold leading-tight">{u.name.split(' (')[0]}</div>
+                                  <div className="text-[10px] text-zinc-400">
+                                    {u.role === 'QC_MANAGER' ? 'مدیر QC' : u.role === 'LEAD_TECHNICIAN' ? 'سرپرست اکیپ' : 'تکنسین نصب'}
+                                  </div>
+                                </div>
+                              </div>
+                              {isCurrent && <span className="text-[10px] font-bold text-[#C1A056]">فعال</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSwitcherOpen(false);
+                          onLogout();
+                        }}
+                        className="w-full py-2.5 px-3 rounded-2xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center gap-2 transition cursor-pointer border border-rose-200 dark:border-rose-900/40"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>خروج از حساب کاربری</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
             </div>
           </div>
         </div>

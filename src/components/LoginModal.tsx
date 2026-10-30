@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { UserCheck, KeyRound, Phone, ShieldCheck, Eye, EyeOff, Lock, X, Sparkles, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { UserCheck, KeyRound, Phone, Eye, EyeOff, Lock, X, Sparkles, ArrowLeft, Loader2 } from 'lucide-react';
 import { toEnglishDigits } from '../utils/jalali';
+import { SupabaseSyncService } from '../utils/supabase';
 
 interface Props {
   users: User[];
@@ -19,22 +20,24 @@ export const LoginModal: React.FC<Props> = ({
   isOpen,
   isStandalone = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'QUICK' | 'MANUAL'>('QUICK');
+  const isDev = Boolean(import.meta.env.DEV);
+  const [activeTab, setActiveTab] = useState<'QUICK' | 'MANUAL'>(isDev ? 'QUICK' : 'MANUAL');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  // Selected quick demo profiles for effortless testing and fast access
+  // Quick dev profiles for rapid local testing only (hidden in production)
   const quickProfiles = [
     {
       title: 'امین رحمانی',
       subTitle: 'مسئول QC و برنامه‌ریزی عملیات',
       role: 'QC_MANAGER',
       badge: 'دسترسی کامل مدیریتی',
-      phone: '09124339038',
+      phone: '09120000001',
       icon: '👔',
     },
     {
@@ -42,7 +45,7 @@ export const LoginModal: React.FC<Props> = ({
       subTitle: 'سرپرست اکیپ ۱ (لواسان و زعفرانیه)',
       role: 'LEAD_TECHNICIAN',
       badge: 'سرپرست اکیپ',
-      phone: '09122222221',
+      phone: '09120000004',
       icon: '🧢',
     },
     {
@@ -50,16 +53,8 @@ export const LoginModal: React.FC<Props> = ({
       subTitle: 'تکنسین فنی و اجرای مأموریت',
       role: 'TECHNICIAN',
       badge: 'تکنسین نصب',
-      phone: '09123333331',
+      phone: '09120000005',
       icon: '🔧',
-    },
-    {
-      title: 'محمدرضا عابدی',
-      subTitle: 'کارشناس اندازه‌گیری دوم و اصلاحات فضا',
-      role: 'TECHNICIAN',
-      badge: 'کارشناسی فضا',
-      phone: '09124444441',
-      icon: '📐',
     },
   ];
 
@@ -73,7 +68,7 @@ export const LoginModal: React.FC<Props> = ({
     }
   };
 
-  const handleManualLogin = (e: React.FormEvent) => {
+  const handleManualLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -85,29 +80,17 @@ export const LoginModal: React.FC<Props> = ({
       return;
     }
 
-    const user = users.find(
-      (u) =>
-        toEnglishDigits(u.phone.replace(/\s+/g, '')) === trimmedPhone ||
-        toEnglishDigits(u.phone) === trimmedPhone
-    );
+    setIsSubmitting(true);
 
-    if (!user) {
-      setError('شماره موبایل وارد شده در فهرست پرسنل گالری طلایی یافت نشد.');
-      return;
+    try {
+      const { user } = await SupabaseSyncService.signIn(trimmedPhone, trimmedPassword);
+      onSelectUser(user);
+      if (onClose) onClose();
+    } catch (err: any) {
+      setError(err.message || 'خطا در ورود به سامانه.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (user.password && toEnglishDigits(user.password) !== trimmedPassword) {
-      setError('رمز عبور وارد شده نادرست است.');
-      return;
-    }
-
-    if (user.active === false) {
-      setError('حساب کاربری شما غیرفعال است. با مدیر QC تماس بگیرید.');
-      return;
-    }
-
-    onSelectUser(user);
-    if (onClose) onClose();
   };
 
   const containerClasses = isStandalone
@@ -155,33 +138,35 @@ export const LoginModal: React.FC<Props> = ({
             TALAEI GALLERY | LUXURY CURTAIN & SMART SHADES
           </p>
 
-          {/* Mode Tabs */}
-          <div className="mt-5 p-1 bg-[#121212] rounded-2xl border border-[#2D2D2D] grid grid-cols-2 gap-1 text-xs font-bold">
-            <button
-              type="button"
-              onClick={() => setActiveTab('QUICK')}
-              className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 ${
-                activeTab === 'QUICK'
-                  ? 'bg-[#C1A056] text-[#121212] shadow-sm font-black'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>ورود سریع با ۱ کلیک</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('MANUAL')}
-              className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 ${
-                activeTab === 'MANUAL'
-                  ? 'bg-[#C1A056] text-[#121212] shadow-sm font-black'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>شماره موبایل و رمز</span>
-            </button>
-          </div>
+          {/* Mode Tabs: Visible only in local DEV mode */}
+          {isDev && (
+            <div className="mt-5 p-1 bg-[#121212] rounded-2xl border border-[#2D2D2D] grid grid-cols-2 gap-1 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setActiveTab('QUICK')}
+                className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 ${
+                  activeTab === 'QUICK'
+                    ? 'bg-[#C1A056] text-[#121212] shadow-sm font-black'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>ورود سریع آزمایشی (Dev)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('MANUAL')}
+                className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 ${
+                  activeTab === 'MANUAL'
+                    ? 'bg-[#C1A056] text-[#121212] shadow-sm font-black'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>ورود با رمز عبور</span>
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="p-6 space-y-5">
@@ -189,18 +174,18 @@ export const LoginModal: React.FC<Props> = ({
           {error && (
             <div
               role="alert"
-              className="p-3 bg-rose-950/70 border border-rose-500/60 text-rose-200 text-xs rounded-2xl font-medium flex items-center gap-2 animate-in fade-in duration-150"
+              className="p-3.5 bg-rose-950/70 border border-rose-500/60 text-rose-200 text-xs rounded-2xl font-medium flex items-center gap-2 animate-in fade-in duration-150"
             >
               <span className="font-bold shrink-0">⚠️ خطا:</span>
               <span>{error}</span>
             </div>
           )}
 
-          {/* TAB 1: QUICK 1-CLICK PERSONA SWITCHER */}
-          {activeTab === 'QUICK' && (
+          {/* TAB 1: QUICK DEV SWITCHER (DEV ONLY) */}
+          {isDev && activeTab === 'QUICK' && (
             <div className="space-y-3">
               <p className="text-[11px] text-zinc-400 text-center">
-                جهت بررسی آسان و آزمایش کامل امکانات، نقش مورد نظر خود را با یک لمس انتخاب کنید:
+                جهت آزمایش سریع در محیط توسعه (Local Dev)، نقش مورد نظر را انتخاب فرمایید:
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -230,7 +215,7 @@ export const LoginModal: React.FC<Props> = ({
                     </div>
 
                     <div className="pt-2 border-t border-[#2D2D2D] flex items-center justify-between text-[11px] text-[#C1A056] font-bold">
-                      <span>ورود مستقیم به پنل</span>
+                      <span>ورود مستقیم تستی</span>
                       <ArrowLeft className="w-3.5 h-3.5 transform group-hover:-translate-x-1 transition" />
                     </div>
                   </button>
@@ -239,15 +224,15 @@ export const LoginModal: React.FC<Props> = ({
             </div>
           )}
 
-          {/* TAB 2: MANUAL PHONE & PASSWORD FORM */}
-          {activeTab === 'MANUAL' && (
+          {/* TAB 2: MANUAL REAL SUPABASE AUTH LOGIN */}
+          {(!isDev || activeTab === 'MANUAL') && (
             <form onSubmit={handleManualLogin} className="space-y-4">
               <div>
                 <label
                   htmlFor="login-phone"
                   className="block text-xs font-bold text-[#E8E4DC] mb-2"
                 >
-                  شماره موبایل کاربری:
+                  شماره موبایل سازمانی:
                 </label>
                 <div className="relative">
                   <input
@@ -256,7 +241,8 @@ export const LoginModal: React.FC<Props> = ({
                     type="tel"
                     autoComplete="tel"
                     required
-                    placeholder="09......"
+                    disabled={isSubmitting}
+                    placeholder="مثال: 09124339038"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full pl-3 pr-11 py-3.5 text-sm rounded-xl border border-[#383838] focus:border-[#C1A056] focus:outline-none focus:ring-2 focus:ring-[#C1A056]/30 text-left font-mono bg-[#121212] text-white placeholder-zinc-500 transition"
@@ -271,7 +257,7 @@ export const LoginModal: React.FC<Props> = ({
                   htmlFor="login-password"
                   className="block text-xs font-bold text-[#E8E4DC] mb-2"
                 >
-                  رمز عبور:
+                  رمز عبور امن:
                 </label>
                 <div className="relative">
                   <input
@@ -280,6 +266,7 @@ export const LoginModal: React.FC<Props> = ({
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     required
+                    disabled={isSubmitting}
                     placeholder="رمز عبور خود را وارد کنید"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -290,7 +277,7 @@ export const LoginModal: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => setShowPassword((p) => !p)}
-                    className="absolute left-3 top-4 text-zinc-400 hover:text-white transition"
+                    className="absolute left-3 top-4 text-zinc-400 hover:text-white transition cursor-pointer"
                     tabIndex={-1}
                     aria-label={showPassword ? 'مخفی کردن رمز' : 'نمایش رمز'}
                   >
@@ -301,10 +288,20 @@ export const LoginModal: React.FC<Props> = ({
 
               <button
                 type="submit"
-                className="w-full min-h-[48px] py-3.5 mt-2 bg-gradient-to-r from-[#C1A056] to-[#A88738] hover:from-[#D4B369] hover:to-[#BFA051] text-[#121212] font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm active:scale-[0.98] cursor-pointer"
+                disabled={isSubmitting}
+                className="w-full min-h-[48px] py-3.5 mt-2 bg-gradient-to-r from-[#C1A056] to-[#A88738] hover:from-[#D4B369] hover:to-[#BFA051] text-[#121212] font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <UserCheck className="w-4 h-4 text-[#121212]" />
-                <span>ورود به سامانه</span>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-[#121212]" />
+                    <span>در حال بررسی اعتبار...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="w-4 h-4 text-[#121212]" />
+                    <span>ورود به سامانه</span>
+                  </>
+                )}
               </button>
             </form>
           )}
