@@ -146,11 +146,11 @@ export const SupabaseSyncService = {
 
   /**
    * Converts an 11-digit Iranian mobile number to internal Supabase Auth email.
-   * e.g. "09124339038" -> "09124339038@talaie.local"
+   * Uses @talaie.ir to comply with standard ICANN TLD validation in Supabase GoTrue.
    */
   phoneToEmail(phone: string): string {
     const digits = toEnglishDigits(phone.replace(/\D/g, ''));
-    return `${digits}@talaie.local`;
+    return `${digits}@talaie.ir`;
   },
 
   /**
@@ -162,20 +162,39 @@ export const SupabaseSyncService = {
       throw new Error('تنظیمات اتصال به سرور Supabase یافت نشد.');
     }
 
-    const email = this.phoneToEmail(phone);
-    const { data: authData, error: authError } = await client.auth.signInWithPassword({
-      email,
-      password: toEnglishDigits(password),
+    const digits = toEnglishDigits(phone.replace(/\D/g, ''));
+    const cleanPassword = toEnglishDigits(password);
+
+    // Try @talaie.ir first, fallback to legacy @talaie.local
+    let authRes = await client.auth.signInWithPassword({
+      email: `${digits}@talaie.ir`,
+      password: cleanPassword,
     });
 
-    if (authError || !authData.user) {
+    if (authRes.error && authRes.error.message.toLowerCase().includes('invalid login credentials')) {
+      const fallbackRes = await client.auth.signInWithPassword({
+        email: `${digits}@talaie.local`,
+        password: cleanPassword,
+      });
+      if (!fallbackRes.error && fallbackRes.data.user) {
+        authRes = fallbackRes;
+      }
+    }
+
+    if (authRes.error || !authRes.data.user) {
+      const msg = authRes.error?.message || '';
+      if (msg.toLowerCase().includes('email not confirmed')) {
+        throw new Error('حساب کاربری شما در دیتابیس تایید نشده است. لطفاً کوئری تایید را در پنل SQL اجرا فرمایید.');
+      }
       throw new Error('شماره موبایل یا رمز عبور وارد شده نادرست است.');
     }
+
+    const authUser = authRes.data.user;
 
     // Fetch user profile from profiles table
     let profile: User | null = null;
     try {
-      profile = await this.fetchProfileById(authData.user.id);
+      profile = await this.fetchProfileById(authUser.id);
     } catch {
       profile = getCachedProfile();
     }
@@ -193,7 +212,7 @@ export const SupabaseSyncService = {
     }
 
     saveCachedProfile(profile);
-    return { user: profile, authUser: authData.user };
+    return { user: profile, authUser };
   },
 
   async signOut(): Promise<void> {
