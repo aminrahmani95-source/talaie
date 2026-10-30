@@ -410,12 +410,68 @@ export const SupabaseSyncService = {
     }
 
     try {
+      // 1. Direct PostgreSQL RPC (Migration 005)
+      if (payload.action === 'create') {
+        const { data, error } = await client.rpc('admin_create_personnel', {
+          new_name: payload.name,
+          new_phone: payload.phone,
+          new_password: payload.password,
+          new_role: payload.role,
+        });
+
+        if (!error && data) {
+          return { success: true, data };
+        }
+        if (error && error.message && !error.message.includes('could not find') && !error.message.includes('function admin_create_personnel')) {
+          return { success: false, error: error.message };
+        }
+      } else if (payload.action === 'update') {
+        const { data, error } = await client.rpc('admin_update_personnel', {
+          target_id: payload.id,
+          new_name: payload.name,
+          new_phone: payload.phone,
+          new_role: payload.role,
+          new_active: payload.active ?? true,
+        });
+
+        if (!error) {
+          return { success: true, data };
+        }
+        if (error && error.message && !error.message.includes('could not find') && !error.message.includes('function admin_update_personnel')) {
+          return { success: false, error: error.message };
+        }
+      } else if (payload.action === 'reset-password') {
+        const { data, error } = await client.rpc('admin_reset_personnel_password', {
+          target_id: payload.id,
+          new_password: payload.newPassword,
+        });
+
+        if (!error) {
+          return { success: true, data };
+        }
+        if (error && error.message && !error.message.includes('could not find') && !error.message.includes('function admin_reset_personnel_password')) {
+          return { success: false, error: error.message };
+        }
+      } else if (payload.action === 'delete') {
+        const { data, error } = await client.rpc('admin_delete_personnel', {
+          target_id: payload.id,
+        });
+
+        if (!error) {
+          return { success: true, data };
+        }
+        if (error && error.message && !error.message.includes('could not find') && !error.message.includes('function admin_delete_personnel')) {
+          return { success: false, error: error.message };
+        }
+      }
+
+      // 2. Fallback to Supabase Edge Function if deployed
       const { data, error } = await client.functions.invoke('admin-users', {
         body: payload,
       });
 
       if (error) {
-        return { success: false, error: error.message || 'خطا در اجرای عملیات سرور' };
+        return { success: false, error: error.message || 'خطا در ثبت پرسنل در پایگاه داده.' };
       }
       if (data && data.error) {
         return { success: false, error: data.error };

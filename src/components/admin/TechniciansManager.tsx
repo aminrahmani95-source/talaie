@@ -121,8 +121,8 @@ export const TechniciansManager: React.FC<Props> = ({
         });
 
         if (!res.success) {
-          // If edge function not yet available, show notice and update locally
-          console.warn('Edge Function update:', res.error);
+          alert(res.error || 'خطا در ویرایش اطلاعات پرسنل در دیتابیس.');
+          return;
         }
 
         const updated: User = {
@@ -144,7 +144,8 @@ export const TechniciansManager: React.FC<Props> = ({
         });
 
         if (!res.success) {
-          console.warn('Edge Function create:', res.error);
+          alert(res.error || 'خطا در ثبت پرسنل در دیتابیس.');
+          return;
         }
 
         const newUser: User = {
@@ -201,14 +202,17 @@ export const TechniciansManager: React.FC<Props> = ({
     }
 
     try {
-      await SupabaseSyncService.invokeAdminUsers({
+      const res = await SupabaseSyncService.invokeAdminUsers({
         action: 'delete',
         id: u.id,
       });
+      if (!res.success) {
+        alert(res.error || 'خطا در حذف پرسنل از دیتابیس.');
+        return;
+      }
       onDeleteUser(u.id);
     } catch (err: any) {
-      console.warn('Delete admin user:', err);
-      onDeleteUser(u.id);
+      alert(err.message || 'خطا در حذف پرسنل.');
     }
   };
 

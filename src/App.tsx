@@ -699,10 +699,15 @@ export const App: React.FC = () => {
       updated = [...users, user];
     }
     setUsers(updated);
+    StorageService.saveUsers(updated);
   };
 
   const handleDeleteUser = (userId: string) => {
-    setUsers((prev) => prev.filter((u) => u.id !== userId));
+    setUsers((prev) => {
+      const filtered = prev.filter((u) => u.id !== userId);
+      StorageService.saveUsers(filtered);
+      return filtered;
+    });
   };
 
   // Clear local device cache & reload from cloud
