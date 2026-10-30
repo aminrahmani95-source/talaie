@@ -170,3 +170,11 @@ export function formatTimeOnly(isoOrDate?: string | Date): string {
   const m = String(d.getMinutes()).padStart(2, '0');
   return toPersianDigits(`${h}:${m}`);
 }
+
+// Format full Jalali date and time (e.g. ۱۴۰۵/۰۸/۰۸ ۰۹:۳۰)
+export function formatJalaliDateTime(isoOrDate?: string | Date): string {
+  if (!isoOrDate) return '';
+  const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;
+  if (isNaN(d.getTime())) return '';
+  return `${formatToPersianDateString(d)} ${formatTimeOnly(d)}`;
+}

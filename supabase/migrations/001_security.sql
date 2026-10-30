@@ -107,12 +107,16 @@ revoke all on public.talaie_sync from anon;
 revoke all on public.profiles from anon;
 
 -- سیاست‌های جدید talaie_sync
--- خواندن داده‌ها: فقط کاربران احراز هویت شده و فعال
+-- خواندن داده‌ها: فقط کاربران احراز هویت شده و فعال (کلید users_backup فقط برای مدیر QC قابل خواندن است)
 create policy "Active users read sync"
   on public.talaie_sync
   for select
   to authenticated
-  using (public.is_active_user());
+  using (
+    public.is_active_user() and (
+      key != 'users_backup' or public.is_qc_manager()
+    )
+  );
 
 -- ثبت پروژه‌ها و تیکت‌ها: تمام کاربران فعال
 create policy "Active users write projects and tickets"
@@ -150,8 +154,11 @@ create policy "QC Managers delete sync"
   to authenticated
   using (public.is_qc_manager());
 
--- ۵. پاک‌سازی ردیف اطلاعات قدیمی کاربران از talaie_sync (از این پس فقط در جدول profiles)
-delete from public.talaie_sync where key = 'users';
+-- ۵. تغییر کلید داده‌های کاربران قدیمی به users_backup با حذف رمزعبور جهت استفاده در مهاجرت شناسه‌ها
+update public.talaie_sync
+set key = 'users_backup',
+    value = (select jsonb_agg(e - 'password') from jsonb_array_elements(value) e)
+where key = 'users';
 
 -- ۶. فعال‌سازی همگام‌سازی زنده (Supabase Realtime) برای جداول
 do $$

@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient, User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { Project, Ticket, User, SystemSettings } from '../types';
 import { toEnglishDigits } from './jalali';
-import { OfflineQueue, OfflineOperation } from './offlineQueue';
+import { OfflineQueue, OfflineOperation, PendingUpload } from './offlineQueue';
 
 export type RealtimeConnectionStatus = 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED';
 
@@ -277,27 +277,28 @@ export const SupabaseSyncService = {
 
   async fetchProfiles(): Promise<User[]> {
     const client = this.getClient();
-    if (!client) return [];
-
-    try {
-      const { data, error } = await client
-        .from('profiles')
-        .select('id, name, phone, role, avatar, active')
-        .order('name');
-
-      if (error || !data) return [];
-      return data.map((d: any) => ({
-        id: d.id,
-        name: d.name,
-        phone: d.phone,
-        role: d.role,
-        avatar: d.avatar || undefined,
-        active: Boolean(d.active),
-      }));
-    } catch (err) {
-      console.warn('Failed to fetch profiles:', err);
-      return [];
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
+
+    const { data, error } = await client
+      .from('profiles')
+      .select('id, name, phone, role, avatar, active')
+      .order('name');
+
+    if (error) {
+      console.warn('Failed to fetch profiles:', error);
+      throw error;
+    }
+
+    return (data || []).map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      phone: d.phone,
+      role: d.role,
+      avatar: d.avatar || undefined,
+      active: Boolean(d.active),
+    }));
   },
 
   subscribeProfiles(onUpdate: (profiles: User[]) => void): (() => void) {
@@ -364,38 +365,81 @@ export const SupabaseSyncService = {
 
   async fetchProjects(): Promise<Project[]> {
     const client = this.getClient();
-    if (!client) return [];
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
 
-    try {
-      // First try fetching from dedicated 'projects' table (Migration 002)
-      const { data, error } = await client
-        .from('projects')
-        .select('id, data, updated_at')
-        .order('updated_at', { ascending: false });
+    // First try fetching from dedicated 'projects' table (Migration 002)
+    const { data, error } = await client
+      .from('projects')
+      .select('id, data, updated_at')
+      .order('updated_at', { ascending: false });
 
-      if (!error && Array.isArray(data) && data.length > 0) {
-        return data.map((row: any) => ({
-          ...row.data,
-          id: row.id,
-          updatedAt: row.data.updatedAt || row.updated_at,
-        }));
-      }
+    if (error) {
+      console.warn('Failed to fetch projects from cloud:', error);
+      throw error;
+    }
 
-      // Fallback: Check legacy talaie_sync if projects table is empty
-      const { data: syncData, error: syncError } = await client
-        .from('talaie_sync')
-        .select('value')
-        .eq('key', 'projects')
-        .maybeSingle();
+    if (Array.isArray(data) && data.length > 0) {
+      return data.map((row: any) => ({
+        ...row.data,
+        id: row.id,
+        updatedAt: row.data.updatedAt || row.updated_at,
+      }));
+    }
 
-      if (!syncError && syncData && Array.isArray(syncData.value)) {
-        return syncData.value as Project[];
-      }
+    // Fallback: Check legacy talaie_sync ONLY when projects table returned 0 rows without error
+    const { data: syncData, error: syncError } = await client
+      .from('talaie_sync')
+      .select('value')
+      .eq('key', 'projects')
+      .maybeSingle();
 
-      return [];
-    } catch (err) {
-      console.warn('Failed to fetch projects from cloud:', err);
-      return [];
+    if (syncError) {
+      throw syncError;
+    }
+
+    if (syncData && Array.isArray(syncData.value)) {
+      return syncData.value as Project[];
+    }
+
+    return [];
+  },
+
+  async patchProject(projectId: string, patch: Record<string, any>): Promise<void> {
+    const client = this.getClient();
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
+
+    if (patch.customerSignature === '') {
+      throw new Error('امضای کارفرما رشته خالی است و قابل ذخیره در سرور نیست.');
+    }
+    if (Array.isArray(patch.beforePhotos) && patch.beforePhotos.some((ph: any) => ph === '')) {
+      throw new Error('آرایه عکس‌های قبل از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+    }
+    if (Array.isArray(patch.afterPhotos) && patch.afterPhotos.some((ph: any) => ph === '')) {
+      throw new Error('آرایه عکس‌های بعد از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+    }
+    if (Array.isArray(patch.completionPhotos) && patch.completionPhotos.some((ph: any) => ph === '')) {
+      throw new Error('آرایه عکس‌های اتمام کار حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+    }
+    if (Array.isArray(patch.proposalImages) && patch.proposalImages.some((img: any) => img.url === '')) {
+      throw new Error('تصاویر پروپوزال حاوی آدرس خالی است و قابل ذخیره در سرور نیست.');
+    }
+
+    const cleanPatch = { ...patch };
+    delete (cleanPatch as any).__fromCache;
+    cleanPatch.updatedAt = cleanPatch.updatedAt || new Date().toISOString();
+
+    const { error } = await client.rpc('patch_project', {
+      id: projectId,
+      patch: cleanPatch,
+    });
+
+    if (error) {
+      console.warn(`Failed to patch project ${projectId}:`, error);
+      throw error;
     }
   },
 
@@ -545,38 +589,44 @@ export const SupabaseSyncService = {
 
   async fetchTickets(): Promise<Ticket[]> {
     const client = this.getClient();
-    if (!client) return [];
-
-    try {
-      // First try dedicated tickets table
-      const { data, error } = await client
-        .from('tickets')
-        .select('id, data, updated_at')
-        .order('updated_at', { ascending: false });
-
-      if (!error && Array.isArray(data) && data.length > 0) {
-        return data.map((row: any) => ({
-          ...row.data,
-          id: row.id,
-        }));
-      }
-
-      // Fallback: Check legacy talaie_sync
-      const { data: syncData, error: syncError } = await client
-        .from('talaie_sync')
-        .select('value')
-        .eq('key', 'tickets')
-        .maybeSingle();
-
-      if (!syncError && syncData && Array.isArray(syncData.value)) {
-        return syncData.value as Ticket[];
-      }
-
-      return [];
-    } catch (err) {
-      console.warn('Failed to fetch tickets from cloud:', err);
-      return [];
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
+
+    // First try dedicated tickets table
+    const { data, error } = await client
+      .from('tickets')
+      .select('id, data, updated_at')
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.warn('Failed to fetch tickets from cloud:', error);
+      throw error;
+    }
+
+    if (Array.isArray(data) && data.length > 0) {
+      return data.map((row: any) => ({
+        ...row.data,
+        id: row.id,
+      }));
+    }
+
+    // Fallback: Check legacy talaie_sync ONLY when tickets table returned 0 rows without error
+    const { data: syncData, error: syncError } = await client
+      .from('talaie_sync')
+      .select('value')
+      .eq('key', 'tickets')
+      .maybeSingle();
+
+    if (syncError) {
+      throw syncError;
+    }
+
+    if (syncData && Array.isArray(syncData.value)) {
+      return syncData.value as Ticket[];
+    }
+
+    return [];
   },
 
   async upsertTicket(ticket: Ticket): Promise<void> {
@@ -676,23 +726,25 @@ export const SupabaseSyncService = {
 
   async fetchSettings(): Promise<SystemSettings | null> {
     const client = this.getClient();
-    if (!client) return null;
-
-    try {
-      const { data, error } = await client
-        .from('talaie_sync')
-        .select('value')
-        .eq('key', 'settings')
-        .maybeSingle();
-
-      if (!error && data && data.value && typeof data.value === 'object') {
-        return data.value as SystemSettings;
-      }
-      return null;
-    } catch (err) {
-      console.warn('Failed to fetch settings:', err);
-      return null;
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
+
+    const { data, error } = await client
+      .from('talaie_sync')
+      .select('value')
+      .eq('key', 'settings')
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Failed to fetch settings:', error);
+      throw error;
+    }
+
+    if (data && data.value && typeof data.value === 'object') {
+      return data.value as SystemSettings;
+    }
+    return null;
   },
 
   async upsertSettings(settings: SystemSettings): Promise<void> {
@@ -715,35 +767,59 @@ export const SupabaseSyncService = {
     }
   },
 
-  async executeOfflineOperation(op: OfflineOperation): Promise<boolean> {
-    try {
-      switch (op.type) {
-        case 'UPSERT_PROJECT':
-          await this.upsertProject(op.payload);
-          return true;
-        case 'DELETE_PROJECT':
-          await this.deleteProject(op.payload);
-          return true;
-        case 'UPSERT_TICKET':
-          await this.upsertTicket(op.payload);
-          return true;
-        case 'DELETE_TICKET':
-          await this.deleteTicket(op.payload);
-          return true;
-        case 'UPSERT_SETTINGS':
-          await this.upsertSettings(op.payload);
-          return true;
-        default:
-          return true;
+  async executeOfflineOperation(op: OfflineOperation): Promise<void> {
+    switch (op.type) {
+      case 'PATCH_PROJECT': {
+        const projectId = op.projectId || op.payload?.id;
+        if (!projectId) {
+          throw new Error('شناسه پروژه برای عملیات به‌روزرسانی تکه‌ای (patch) یافت نشد.');
+        }
+        await this.patchProject(projectId, op.payload);
+        break;
       }
-    } catch (err) {
-      console.warn(`Execution of offline op ${op.type} failed:`, err);
-      return false;
+      case 'UPSERT_PROJECT':
+        await this.upsertProject(op.payload);
+        break;
+      case 'DELETE_PROJECT':
+        await this.deleteProject(typeof op.payload === 'string' ? op.payload : op.payload.id);
+        break;
+      case 'UPSERT_TICKET':
+        await this.upsertTicket(op.payload);
+        break;
+      case 'DELETE_TICKET':
+        await this.deleteTicket(typeof op.payload === 'string' ? op.payload : op.payload.id);
+        break;
+      case 'UPSERT_SETTINGS':
+        await this.upsertSettings(op.payload);
+        break;
+      default:
+        break;
     }
   },
 
   processOfflineQueue(): Promise<void> {
-    return OfflineQueue.processQueue((op) => this.executeOfflineOperation(op));
+    const client = this.getClient();
+    if (!client) return Promise.resolve();
+
+    return OfflineQueue.processQueue({
+      uploadBlob: async (upload: PendingUpload) => {
+        const storagePath = `projects/${upload.projectId}/${upload.fileName}`;
+        const { error } = await client.storage
+          .from('talaie-photos')
+          .upload(storagePath, upload.blob, {
+            contentType: upload.mimeType,
+            upsert: true,
+          });
+
+        if (error) {
+          throw new Error(`Upload error on ${storagePath}: ${error.message}`);
+        }
+        return storagePath;
+      },
+      executeOp: async (op: OfflineOperation) => {
+        await this.executeOfflineOperation(op);
+      },
+    });
   },
 
   subscribeSettings(onUpdate: (settings: SystemSettings) => void): (() => void) {
@@ -824,6 +900,49 @@ export const SupabaseSyncService = {
 
     if (error) {
       throw new Error(`خطا در آپلود عکس به فضای ابری: ${error.message}`);
+    }
+
+    return storagePath;
+  },
+
+  /**
+   * Uploads customer signature (base64 data URL or Blob) to Supabase Storage.
+   * Stored at path: projects/<projectId>/signature-<uuid>.png
+   * Returns storage relative path (e.g. 'projects/p-101/signature-1730000000-abc1234.png').
+   */
+  async uploadProjectSignature(
+    projectId: string,
+    fileOrBlobOrBase64: File | Blob | string
+  ): Promise<string> {
+    const client = this.getClient();
+    if (!client) {
+      throw new Error('عدم اتصال به سرویس ذخیره‌سازی ابری Supabase.');
+    }
+
+    let blob: Blob;
+    if (typeof fileOrBlobOrBase64 === 'string') {
+      if (fileOrBlobOrBase64.startsWith('data:')) {
+        const res = await fetch(fileOrBlobOrBase64);
+        blob = await res.blob();
+      } else {
+        return fileOrBlobOrBase64;
+      }
+    } else {
+      blob = fileOrBlobOrBase64;
+    }
+
+    const uuid = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const storagePath = `projects/${projectId}/signature-${uuid}.png`;
+
+    const { error } = await client.storage
+      .from('talaie-photos')
+      .upload(storagePath, blob, {
+        contentType: 'image/png',
+        upsert: true,
+      });
+
+    if (error) {
+      throw new Error(`خطا در آپلود امضای کارفرما به فضای ابری: ${error.message}`);
     }
 
     return storagePath;

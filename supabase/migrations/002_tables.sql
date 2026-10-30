@@ -211,3 +211,36 @@ create policy "QC Managers delete photos"
   on storage.objects for delete
   to authenticated
   using (bucket_id = 'talaie-photos' and public.is_qc_manager());
+
+-- ۱۰. تابع به‌روزرسانی تکه‌ای (patch) پروژه برای جلوگیری از هم‌پوشانی و بازنویسی تغییرات هم‌زمان
+create or replace function public.patch_project(id text, patch jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated_data jsonb;
+begin
+  if not public.is_active_user() then
+    raise exception 'Unauthorized: user is not active';
+  end if;
+
+  update public.projects
+  set data = data || patch,
+      updated_at = now(),
+      updated_by = auth.uid()
+  where public.projects.id = patch_project.id
+  returning data into updated_data;
+
+  if not found then
+    raise exception 'Project % not found', patch_project.id;
+  end if;
+
+  return updated_data;
+end;
+$$;
+
+revoke execute on function public.patch_project(text, jsonb) from anon, public;
+grant execute on function public.patch_project(text, jsonb) to authenticated;
+

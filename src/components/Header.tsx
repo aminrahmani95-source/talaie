@@ -27,6 +27,8 @@ interface Props {
   openStuckCount?: number;
   pendingQcCount: number;
   pendingQueueCount?: number;
+  failedQueueCount?: number;
+  onOpenFailedOperations?: () => void;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
   onLogout: () => void;
@@ -45,6 +47,8 @@ export const Header: React.FC<Props> = ({
   openStuckCount = 0,
   pendingQcCount,
   pendingQueueCount = 0,
+  failedQueueCount = 0,
+  onOpenFailedOperations,
   isDarkMode = false,
   onToggleDarkMode,
   onLogout,
@@ -101,6 +105,19 @@ export const Header: React.FC<Props> = ({
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
                 <span>{toPersianDigits(pendingQueueCount)} تغییر ارسال‌نشده</span>
               </div>
+            )}
+
+            {/* Failed offline operations button for QC Manager */}
+            {isQcManager && failedQueueCount > 0 && (
+              <button
+                type="button"
+                onClick={onOpenFailedOperations}
+                className="flex items-center gap-1.5 px-3 py-1.5 min-h-[38px] bg-rose-500/15 dark:bg-rose-950/60 border border-rose-500/50 text-rose-700 dark:text-rose-300 rounded-2xl text-xs font-bold transition hover:bg-rose-500/25 active:scale-95 cursor-pointer animate-pulse"
+                title="مشاهده و مدیریت ارسال‌های ناموفق به سرور"
+              >
+                <AlertOctagon className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                <span>{toPersianDigits(failedQueueCount)} ارسال ناموفق</span>
+              </button>
             )}
 
             {/* Dark Mode Toggle Button */}

@@ -13,6 +13,7 @@ import { StorageService } from './utils/storage';
 import { SupabaseSyncService } from './utils/supabase';
 import { OfflineQueue } from './utils/offlineQueue';
 import { Header } from './components/Header';
+import { FailedOperationsModal } from './components/admin/FailedOperationsModal';
 import { LoginModal } from './components/LoginModal';
 import { ProposalViewerModal } from './components/ProposalViewerModal';
 import { TicketModal } from './components/TicketModal';
@@ -37,7 +38,10 @@ export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authChecking, setAuthChecking] = useState<boolean>(true);
   const [isSyncedWithServer, setIsSyncedWithServer] = useState<boolean>(false);
+  const [isOfflineMode, setIsOfflineMode] = useState<boolean>(false);
   const [pendingQueueCount, setPendingQueueCount] = useState<number>(0);
+  const [failedQueueCount, setFailedQueueCount] = useState<number>(0);
+  const [isFailedOpsModalOpen, setIsFailedOpsModalOpen] = useState<boolean>(false);
 
   const [users, setUsers] = useState<User[]>(() => StorageService.getUsers());
   const [projects, setProjects] = useState<Project[]>(() => StorageService.getProjects());
@@ -50,13 +54,17 @@ export const App: React.FC = () => {
     projectsRef.current = projects;
   }, [projects]);
 
-  // Subscribe to offline operations queue count
+  // Subscribe to offline operations queue counts
   useEffect(() => {
-    const unsubQueue = OfflineQueue.subscribePendingCount((count) => {
+    const unsubPending = OfflineQueue.subscribePendingCount((count) => {
       setPendingQueueCount(count);
     });
+    const unsubFailed = OfflineQueue.subscribeFailedCount((count) => {
+      setFailedQueueCount(count);
+    });
     return () => {
-      unsubQueue();
+      unsubPending();
+      unsubFailed();
     };
   }, []);
 
@@ -81,26 +89,29 @@ export const App: React.FC = () => {
 
   // Fetch data & subscriptions strictly tied to currentUser?.id (runs after login, disconnects on logout)
   useEffect(() => {
+    // Never run or clear cache while checking initial auth session
+    if (authChecking) {
+      return;
+    }
+
     if (!currentUser?.id) {
-      setProjects([]);
-      projectsRef.current = [];
-      setTickets([]);
       setIsSyncedWithServer(false);
-      StorageService.saveProjects([]);
-      StorageService.saveTickets([]);
+      setIsOfflineMode(false);
       return;
     }
 
     setIsSyncedWithServer(false);
 
-    // 1. Fetch initial server data after login (replaces cache completely, even if empty)
-    Promise.all([
-      SupabaseSyncService.fetchProjects(),
-      SupabaseSyncService.fetchTickets(),
-      SupabaseSyncService.fetchProfiles(),
-      SupabaseSyncService.fetchSettings(),
-    ])
-      .then(([cloudProjects, cloudTickets, cloudUsers, cloudSettings]) => {
+    // 1. Fetch initial server data after login
+    const loadCloudData = async () => {
+      try {
+        const [cloudProjects, cloudTickets, cloudUsers, cloudSettings] = await Promise.all([
+          SupabaseSyncService.fetchProjects(),
+          SupabaseSyncService.fetchTickets(),
+          SupabaseSyncService.fetchProfiles(),
+          SupabaseSyncService.fetchSettings(),
+        ]);
+
         setProjects(cloudProjects);
         projectsRef.current = cloudProjects;
         setTickets(cloudTickets);
@@ -111,14 +122,32 @@ export const App: React.FC = () => {
           setSettings((prev) => ({ ...prev, ...cloudSettings }));
         }
         setIsSyncedWithServer(true);
+        setIsOfflineMode(false);
 
         // Attempt processing any pending offline operations
         SupabaseSyncService.processOfflineQueue();
-      })
-      .catch((err) => {
-        console.warn('Initial cloud fetch error after login:', err);
-        setIsSyncedWithServer(true);
-      });
+      } catch (err) {
+        console.warn('Initial cloud fetch error (running in offline mode with cached data):', err);
+        // Retain existing cached projects & tickets in state
+        setIsSyncedWithServer(false);
+        setIsOfflineMode(true);
+      }
+    };
+
+    loadCloudData();
+
+    // Re-try fetching cloud data on online event and periodic 30s timer
+    const handleOnline = () => {
+      loadCloudData();
+      SupabaseSyncService.processOfflineQueue();
+    };
+    window.addEventListener('online', handleOnline);
+
+    const intervalId = setInterval(() => {
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        loadCloudData();
+      }
+    }, 30000);
 
     // 2. Realtime row-by-row subscriptions
     const unsubProjects = SupabaseSyncService.subscribeProjects({
@@ -193,12 +222,14 @@ export const App: React.FC = () => {
     });
 
     return () => {
+      window.removeEventListener('online', handleOnline);
+      clearInterval(intervalId);
       unsubProjects();
       unsubTickets();
       unsubSettings();
       unsubProfiles();
     };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, authChecking]);
 
   // Navigation tab for QC Manager
   const [activeTab, setActiveTab] = useState<string>('planner');
@@ -356,58 +387,46 @@ export const App: React.FC = () => {
   };
 
   const handleMoveProjectDate = async (projectId: string, newDateKey: string) => {
-    if (!isSyncedWithServer) {
-      showToast('warning', 'اطلاعات در حال همگام‌سازی است.');
-      return;
-    }
-
     const current = projectsRef.current.find((p) => p.id === projectId);
     if (!current) return;
 
-    const updatedProject: Project = {
-      ...current,
+    const patch = {
       scheduledDate: newDateKey,
       updatedAt: new Date().toISOString(),
     };
 
-    const nextProjects = projectsRef.current.map((p) => (p.id === projectId ? updatedProject : p));
+    const nextProjects = projectsRef.current.map((p) => (p.id === projectId ? { ...p, ...patch } : p));
     setProjects(nextProjects);
     projectsRef.current = nextProjects;
 
     try {
-      await SupabaseSyncService.upsertProject(updatedProject);
+      await SupabaseSyncService.patchProject(projectId, patch);
     } catch (err) {
       console.warn('Move project cloud error:', err);
-      await OfflineQueue.enqueue('UPSERT_PROJECT', updatedProject);
+      await OfflineQueue.enqueue('PATCH_PROJECT', { id: projectId, ...patch }, projectId);
       showToast('warning', 'تغییر تاریخ در صف ارسال آفلاین قرار گرفت.');
     }
   };
 
   const handleUpdateStatus = async (projectId: string, newStatus: Project['status']) => {
-    if (!isSyncedWithServer) {
-      showToast('warning', 'اطلاعات در حال همگام‌سازی است.');
-      return;
-    }
-
     const current = projectsRef.current.find((p) => p.id === projectId);
     if (!current) return;
 
-    const updatedProject: Project = {
-      ...current,
+    const patch = {
       status: newStatus,
       startedAt: newStatus === 'IN_PROGRESS' && !current.startedAt ? new Date().toISOString() : current.startedAt,
       updatedAt: new Date().toISOString(),
     };
 
-    const nextProjects = projectsRef.current.map((p) => (p.id === projectId ? updatedProject : p));
+    const nextProjects = projectsRef.current.map((p) => (p.id === projectId ? { ...p, ...patch } : p));
     setProjects(nextProjects);
     projectsRef.current = nextProjects;
 
     try {
-      await SupabaseSyncService.upsertProject(updatedProject);
+      await SupabaseSyncService.patchProject(projectId, patch);
     } catch (err) {
       console.warn('Update status cloud error:', err);
-      await OfflineQueue.enqueue('UPSERT_PROJECT', updatedProject);
+      await OfflineQueue.enqueue('PATCH_PROJECT', { id: projectId, ...patch }, projectId);
       showToast('warning', 'تغییر وضعیت در صف ارسال آفلاین ثبت شد.');
     }
   };
@@ -423,18 +442,13 @@ export const App: React.FC = () => {
     customerSatisfaction?: number;
   }) => {
     if (!completionModalProject) return;
-    if (!isSyncedWithServer) {
-      showToast('warning', 'اطلاعات در حال همگام‌سازی با سرور است.');
-      return;
-    }
 
     const current = projectsRef.current.find((p) => p.id === completionModalProject.id);
     if (!current) return;
 
-    const updatedProject: Project = {
-      ...current,
-      status: 'COMPLETED',
-      qcStatus: 'PENDING',
+    const patch = {
+      status: 'COMPLETED' as const,
+      qcStatus: 'PENDING' as const,
       completionNotes: completionData.completionNotes,
       beforePhotos: completionData.beforePhotos,
       afterPhotos: completionData.afterPhotos,
@@ -446,17 +460,22 @@ export const App: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
 
+    const updatedProject: Project = {
+      ...current,
+      ...patch,
+    };
+
     const nextProjects = projectsRef.current.map((p) => (p.id === updatedProject.id ? updatedProject : p));
     setProjects(nextProjects);
     projectsRef.current = nextProjects;
     setCompletionModalProject(null);
 
     try {
-      await SupabaseSyncService.upsertProject(updatedProject);
+      await SupabaseSyncService.patchProject(completionModalProject.id, patch);
       showToast('success', 'گزارش اتمام کار با موفقیت در سرور ثبت شد و به دسک QC ارسال گردید.');
     } catch (err) {
       console.warn('Report completion cloud error:', err);
-      await OfflineQueue.enqueue('UPSERT_PROJECT', updatedProject);
+      await OfflineQueue.enqueue('PATCH_PROJECT', { id: completionModalProject.id, ...patch }, completionModalProject.id);
       showToast('warning', 'گزارش اتمام کار در صف ارسال آفلاین ذخیره شد و پس از پایداری اینترنت ارسال می‌گردد.');
     }
   };
@@ -467,20 +486,20 @@ export const App: React.FC = () => {
     newScheduledDate?: string
   ) => {
     if (!preInspectionProject) return;
-    if (!isSyncedWithServer) {
-      showToast('warning', 'اطلاعات در حال همگام‌سازی با سرور است.');
-      return;
-    }
 
     const current = projectsRef.current.find((p) => p.id === preInspectionProject.id);
     if (!current) return;
 
-    const updatedProject: Project = {
-      ...current,
-      status: inspection.status === 'APPROVED' ? 'SCHEDULED' : 'MEASUREMENT_PENDING',
+    const patch = {
+      status: (inspection.status === 'APPROVED' ? 'SCHEDULED' : 'MEASUREMENT_PENDING') as Project['status'],
       scheduledDate: newScheduledDate || current.scheduledDate,
       preInspection: inspection,
       updatedAt: new Date().toISOString(),
+    };
+
+    const updatedProject: Project = {
+      ...current,
+      ...patch,
     };
 
     const nextProjects = projectsRef.current.map((p) => (p.id === updatedProject.id ? updatedProject : p));
@@ -489,11 +508,11 @@ export const App: React.FC = () => {
     setPreInspectionProject(null);
 
     try {
-      await SupabaseSyncService.upsertProject(updatedProject);
+      await SupabaseSyncService.patchProject(preInspectionProject.id, patch);
       showToast('success', 'گزارش کارشناسی فضا و اندازه‌گیری دوم با موفقیت در سرور ثبت شد.');
     } catch (err) {
       console.warn('Save pre-inspection cloud error:', err);
-      await OfflineQueue.enqueue('UPSERT_PROJECT', updatedProject);
+      await OfflineQueue.enqueue('PATCH_PROJECT', { id: preInspectionProject.id, ...patch }, preInspectionProject.id);
       showToast('warning', 'گزارش کارشناسی در صف ارسال آفلاین ثبت شد.');
     }
   };
@@ -501,18 +520,18 @@ export const App: React.FC = () => {
   // 360-degree Personnel evaluation handler
   const handleSaveEvaluation = async (evaluation: PersonnelEvaluation) => {
     if (!evaluationProject) return;
-    if (!isSyncedWithServer) {
-      showToast('warning', 'اطلاعات در حال همگام‌سازی با سرور است.');
-      return;
-    }
 
     const current = projectsRef.current.find((p) => p.id === evaluationProject.id);
     if (!current) return;
 
-    const updatedProject: Project = {
-      ...current,
+    const patch = {
       evaluations: [...(current.evaluations || []), evaluation],
       updatedAt: new Date().toISOString(),
+    };
+
+    const updatedProject: Project = {
+      ...current,
+      ...patch,
     };
 
     const nextProjects = projectsRef.current.map((p) => (p.id === updatedProject.id ? updatedProject : p));
@@ -521,11 +540,11 @@ export const App: React.FC = () => {
     setEvaluationProject(null);
 
     try {
-      await SupabaseSyncService.upsertProject(updatedProject);
+      await SupabaseSyncService.patchProject(evaluationProject.id, patch);
       showToast('success', `ارزیابی عملکرد ${evaluation.userName} با موفقیت در سرور ثبت گردید.`);
     } catch (err) {
       console.warn('Save evaluation cloud error:', err);
-      await OfflineQueue.enqueue('UPSERT_PROJECT', updatedProject);
+      await OfflineQueue.enqueue('PATCH_PROJECT', { id: evaluationProject.id, ...patch }, evaluationProject.id);
       showToast('warning', 'ارزیابی در صف ارسال آفلاین ثبت شد.');
     }
   };
@@ -537,19 +556,19 @@ export const App: React.FC = () => {
 
   const handleConfirmReportStuck = async (incident: StuckIncident) => {
     if (!stuckModalProject) return;
-    if (!isSyncedWithServer) {
-      showToast('warning', 'اطلاعات در حال همگام‌سازی با سرور است.');
-      return;
-    }
 
     const current = projectsRef.current.find((p) => p.id === stuckModalProject.id);
     if (!current) return;
 
-    const updatedProject: Project = {
-      ...current,
-      status: 'STUCK',
+    const patch = {
+      status: 'STUCK' as const,
       stuckIncident: incident,
       updatedAt: new Date().toISOString(),
+    };
+
+    const updatedProject: Project = {
+      ...current,
+      ...patch,
     };
 
     const nextProjects = projectsRef.current.map((p) => (p.id === updatedProject.id ? updatedProject : p));
@@ -558,11 +577,11 @@ export const App: React.FC = () => {
     setStuckModalProject(null);
 
     try {
-      await SupabaseSyncService.upsertProject(updatedProject);
+      await SupabaseSyncService.patchProject(stuckModalProject.id, patch);
       showToast('warning', 'پروژه به دسک رفع استاک (<72h) ارسال شد و بلافاصله به مسئولین فنی ارجاع یافت.');
     } catch (err) {
       console.warn('Report stuck cloud error:', err);
-      await OfflineQueue.enqueue('UPSERT_PROJECT', updatedProject);
+      await OfflineQueue.enqueue('PATCH_PROJECT', { id: stuckModalProject.id, ...patch }, stuckModalProject.id);
       showToast('warning', 'گزارش استاک در صف ارسال آفلاین ثبت شد.');
     }
   };
@@ -733,6 +752,8 @@ export const App: React.FC = () => {
         openStuckCount={openStuckCount}
         pendingQcCount={pendingQcCount}
         pendingQueueCount={pendingQueueCount}
+        failedQueueCount={failedQueueCount}
+        onOpenFailedOperations={() => setIsFailedOpsModalOpen(true)}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         onLogout={handleLogout}
@@ -742,13 +763,18 @@ export const App: React.FC = () => {
         setActiveTab={setActiveTab}
       />
 
-      {/* Realtime sync state banner if syncing */}
-      {!isSyncedWithServer && (
+      {/* Offline state or syncing banner */}
+      {isOfflineMode ? (
+        <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs py-2 px-4 text-center font-bold flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-amber-500" />
+          <span>حالت آفلاین — اطلاعات ممکن است قدیمی باشد. تغییرات تکنسین‌ها در صف ذخیره شده و پس از برقراری اینترنت به سرور ارسال خواهد شد.</span>
+        </div>
+      ) : !isSyncedWithServer ? (
         <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs py-2 px-4 text-center font-bold flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-          <span>در حال دریافت و همگام‌سازی اطلاعات با سرور ابری... انجام ویرایش پس از همگام‌سازی کامل فعال می‌گردد.</span>
+          <span>در حال دریافت و همگام‌سازی اطلاعات با سرور ابری... انجام ویرایش کلی پروژه‌ها پس از همگام‌سازی کامل فعال می‌گردد.</span>
         </div>
-      )}
+      ) : null}
 
       {/* Main Body */}
       <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
@@ -922,6 +948,16 @@ export const App: React.FC = () => {
           onSubmit={handleConfirmReportStuck}
         />
       )}
+
+      {/* Failed Operations Modal for QC Manager */}
+      <FailedOperationsModal
+        isOpen={isFailedOpsModalOpen}
+        onClose={() => setIsFailedOpsModalOpen(false)}
+        onActionComplete={() => {
+          OfflineQueue.getFailedCount().then(setFailedQueueCount);
+          OfflineQueue.getPendingCount().then(setPendingQueueCount);
+        }}
+      />
 
       {/* Floating System Toast */}
       <Toast toast={toast} onClose={() => setToast(null)} />
