@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { PostgrestError } from '@supabase/supabase-js';
 import {
   Outbox,
   OutboxMutation,
@@ -10,6 +11,7 @@ import {
   computeProjectDiff,
   resetProcessingStateForTesting,
   openDb,
+  PermanentError,
 } from '../offlineQueue';
 import { Project, Ticket } from '../../types';
 
@@ -71,7 +73,7 @@ describe('Talaei Outbox Writing Layer & Sync Tests', () => {
   it('2. permanent failure blocks only its own key, while other ordering keys continue', async () => {
     const executedOps: string[] = [];
 
-    // Op 1 (will permanently fail) on key A
+    // Op 1 (will permanently fail with PostgrestError without status) on key A
     await Outbox.commit(
       {
         type: 'PATCH_PROJECT',
@@ -108,10 +110,13 @@ describe('Talaei Outbox Writing Layer & Sync Tests', () => {
       uploadBlob: async () => 'https://storage/mock.jpg',
       executeMutation: async (op) => {
         if (op.orderingKey === 'project:key-a') {
-          // Permanent validation or RLS error
-          const err: any = new Error('Schema constraint violation');
-          err.status = 400;
-          throw err;
+          // Realistic PostgrestError without status property
+          throw new PostgrestError({
+            message: 'Check constraint violation on column notes',
+            code: '23514',
+            details: 'Value violates check constraint "projects_notes_check"',
+            hint: '',
+          });
         }
         executedOps.push(op.orderingKey);
       },
@@ -124,6 +129,7 @@ describe('Talaei Outbox Writing Layer & Sync Tests', () => {
     const failedOps = await Outbox.getFailedOperations();
     expect(failedOps.length).toBe(1);
     expect(failedOps[0].orderingKey).toBe('project:key-a');
+    expect(failedOps[0].errorReason).toContain('Check constraint violation');
 
     const pendingOps = await Outbox.getPendingOperations();
     expect(pendingOps.length).toBe(1);
@@ -206,9 +212,6 @@ describe('Talaei Outbox Writing Layer & Sync Tests', () => {
       'user-1'
     );
 
-    // Small delay to guarantee different createdAt
-    await new Promise((r) => setTimeout(r, 10));
-
     await Outbox.commit(
       {
         type: 'PATCH_PROJECT',
@@ -230,31 +233,107 @@ describe('Talaei Outbox Writing Layer & Sync Tests', () => {
   });
 
   // --------------------------------------------------------------------------
-  // Scenario 5: Network error after 10 retries stays in pending with backoff
+  // Scenario 5: Network error classification & backoff vs permanent errors
   // --------------------------------------------------------------------------
-  it('5. transient network errors stay in pending queue with backoff and are never sent to failed list', async () => {
-    // Test transient error classifier
-    expect(isTransientError({ status: 0 })).toBe(true);
+  it('5. classifies real-world PostgrestError, PermanentError, and TypeError correctly', async () => {
+    // 1. PermanentError instances must ALWAYS be permanent
+    expect(isTransientError(new PermanentError('Client validation: empty signature'))).toBe(false);
+    expect(isPermanentError(new PermanentError('Client validation: data URL rejected'))).toBe(true);
+
+    // 2. PostgrestError without status property
+    // P0001 (raise exception from PL/pgSQL like patch_project rejection)
+    const p0001Err = new PostgrestError({
+      message: 'Patch cannot contain base64 data URLs',
+      code: 'P0001',
+      details: '',
+      hint: '',
+    });
+    expect(isTransientError(p0001Err)).toBe(false);
+    expect(isPermanentError(p0001Err)).toBe(true);
+
+    // 23505 (unique_violation)
+    const uniqueErr = new PostgrestError({
+      message: 'duplicate key value violates unique constraint',
+      code: '23505',
+      details: 'Key (id)=(proj-1) already exists.',
+      hint: '',
+    });
+    expect(isTransientError(uniqueErr)).toBe(false);
+
+    // 22P02 (invalid_text_representation)
+    const syntaxErr = new PostgrestError({
+      message: 'invalid input syntax for type integer',
+      code: '22P02',
+      details: '',
+      hint: '',
+    });
+    expect(isTransientError(syntaxErr)).toBe(false);
+
+    // PGRST116 (JSON query resulted in 0 rows)
+    const notFoundErr = new PostgrestError({
+      message: 'The result contains 0 rows',
+      code: 'PGRST116',
+      details: '',
+      hint: '',
+    });
+    expect(isTransientError(notFoundErr)).toBe(false);
+
+    // 42501 (RLS violation) with session -> Permanent
+    const rlsWithSession = new PostgrestError({
+      message: 'new row violates row-level security policy',
+      code: '42501',
+      details: '',
+      hint: '',
+    });
+    expect(isTransientError(rlsWithSession, true)).toBe(false);
+
+    // 42501 (RLS violation) without session -> Transient (can refresh session)
+    const rlsWithoutSession = new PostgrestError({
+      message: 'new row violates row-level security policy',
+      code: '42501',
+      details: '',
+      hint: '',
+    });
+    expect(isTransientError(rlsWithoutSession, false)).toBe(true);
+
+    // Transient Postgrest codes
+    const pgrst000 = new PostgrestError({ message: 'could not connect', code: 'PGRST000', details: '', hint: '' });
+    const pgrst001 = new PostgrestError({ message: 'schema cache reload', code: 'PGRST001', details: '', hint: '' });
+    const pgrst002 = new PostgrestError({ message: 'timeout connecting', code: 'PGRST002', details: '', hint: '' });
+    const pgrst301 = new PostgrestError({ message: 'JWT expired', code: 'PGRST301', details: '', hint: '' });
+    expect(isTransientError(pgrst000)).toBe(true);
+    expect(isTransientError(pgrst001)).toBe(true);
+    expect(isTransientError(pgrst002)).toBe(true);
+    expect(isTransientError(pgrst301)).toBe(true);
+
+    // 3. TypeError and AbortError
+    expect(isTransientError(new TypeError('Failed to fetch'))).toBe(true);
+    const abortErr = new Error('The user aborted a request.');
+    abortErr.name = 'AbortError';
+    expect(isTransientError(abortErr)).toBe(true);
+
+    // 4. HTTP status codes
     expect(isTransientError({ status: 408 })).toBe(true);
     expect(isTransientError({ status: 429 })).toBe(true);
+    expect(isTransientError({ status: 500 })).toBe(true);
     expect(isTransientError({ status: 502 })).toBe(true);
     expect(isTransientError({ status: 503 })).toBe(true);
-    expect(isTransientError(new Error('TypeError: Failed to fetch'))).toBe(true);
-    expect(isTransientError(new Error('NetworkError when attempting to fetch resource.'))).toBe(true);
-    expect(isTransientError({ code: 'PGRST000' })).toBe(true);
-
-    // Permanent errors must return false
+    expect(isTransientError({ status: 401 })).toBe(true);
     expect(isTransientError({ status: 400 })).toBe(false);
     expect(isTransientError({ status: 422 })).toBe(false);
 
-    // Backoff formula check
+    // 5. status 0 ONLY when error is NOT a PostgrestError or PermanentError
+    expect(isTransientError({ status: 0 })).toBe(true);
+    expect(isTransientError({ status: 0, code: 'P0001', name: 'PostgrestError' })).toBe(false);
+
+    // 6. Backoff formula check
     expect(getNextBackoffDelay(0)).toBe(15000);
     expect(getNextBackoffDelay(1)).toBe(30000);
     expect(getNextBackoffDelay(2)).toBe(60000);
     expect(getNextBackoffDelay(3)).toBe(120000);
     expect(getNextBackoffDelay(10)).toBe(900000); // capped at 15 mins
 
-    // Commit operation
+    // 7. Verify transient network error stays in pending queue with backoff and is never sent to failed
     await Outbox.commit(
       {
         type: 'PATCH_PROJECT',
@@ -264,9 +343,7 @@ describe('Talaei Outbox Writing Layer & Sync Tests', () => {
       'user-1'
     );
 
-    // Simulate 10 transient failures
-    for (let i = 0; i < 10; i++) {
-      // Force nextRetryAt to past so it attempts in test
+    for (let i = 0; i < 5; i++) {
       const ops = await Outbox.getPendingOperations();
       if (ops.length > 0) {
         ops[0].nextRetryAt = 0;
@@ -282,17 +359,14 @@ describe('Talaei Outbox Writing Layer & Sync Tests', () => {
         currentUserId: 'user-1',
         uploadBlob: async () => 'https://storage/mock.jpg',
         executeMutation: async () => {
-          const networkErr: any = new Error('Failed to fetch');
-          networkErr.status = 0;
-          throw networkErr;
+          throw new TypeError('Failed to fetch');
         },
       });
     }
 
-    // Must still be in pending queue, never moved to failed!
     const pendingOps = await Outbox.getPendingOperations();
     expect(pendingOps.length).toBe(1);
-    expect(pendingOps[0].retryCount).toBe(10);
+    expect(pendingOps[0].retryCount).toBe(5);
     expect(pendingOps[0].nextRetryAt).toBeGreaterThan(Date.now());
 
     const failedOps = await Outbox.getFailedOperations();
@@ -414,5 +488,48 @@ describe('Talaei Outbox Writing Layer & Sync Tests', () => {
     expect(merged[0].status).toBe('IN_PROGRESS');
     expect(merged[0].evaluations?.length).toBe(1);
     expect(merged[0].evaluations?.[0].technicalScore).toBe(5);
+  });
+
+  // --------------------------------------------------------------------------
+  // Scenario 8: End-to-end rejection by patch_project with P0001 moves to failed_operations
+  // --------------------------------------------------------------------------
+  it('8. end-to-end: patch_project rejected by database with P0001 moves to failed_operations', async () => {
+    await Outbox.commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: 'project:p-p0001',
+        payload: {
+          id: 'p-p0001',
+          patch: { completionNotes: 'Invalid update rejected by SQL' },
+        },
+      },
+      'user-tech-1'
+    );
+
+    expect(await Outbox.getPendingCount()).toBe(1);
+    expect(await Outbox.getFailedCount()).toBe(0);
+
+    // Simulate executeMutation executing Supabase rpc which throws PostgrestError with code P0001 and NO status
+    await Outbox.processQueue({
+      currentUserId: 'user-tech-1',
+      uploadBlob: async () => 'https://storage/mock.jpg',
+      executeMutation: async () => {
+        throw new PostgrestError({
+          message: 'Patch cannot contain base64 data URLs',
+          code: 'P0001',
+          details: 'Failing constraint inside patch_project PL/pgSQL function',
+          hint: 'Ensure all images are uploaded first',
+        });
+      },
+    });
+
+    // Operation must be in failed_operations, removed from pending_operations
+    expect(await Outbox.getPendingCount()).toBe(0);
+    expect(await Outbox.getFailedCount()).toBe(1);
+
+    const failedOps = await Outbox.getFailedOperations();
+    expect(failedOps.length).toBe(1);
+    expect(failedOps[0].orderingKey).toBe('project:p-p0001');
+    expect(failedOps[0].errorReason).toContain('Patch cannot contain base64 data URLs');
   });
 });

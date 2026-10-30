@@ -1,7 +1,9 @@
 import { createClient, SupabaseClient, User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { Project, Ticket, User, SystemSettings, PersonnelEvaluation } from '../types';
 import { toEnglishDigits } from './jalali';
-import { Outbox, OutboxOperation, PendingUpload } from './offlineQueue';
+import { Outbox, OutboxOperation, PendingUpload, PermanentError } from './offlineQueue';
+
+export { PermanentError };
 
 export type RealtimeConnectionStatus = 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED';
 
@@ -326,12 +328,13 @@ export const SupabaseSyncService = {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
-    const { data, error } = await client
+    const { data, error, status } = await client
       .from('profiles')
       .select('id, name, phone, role, avatar, active')
       .order('name');
 
     if (error) {
+      (error as any).status = status;
       console.warn('Failed to fetch profiles:', error);
       throw error;
     }
@@ -415,12 +418,13 @@ export const SupabaseSyncService = {
     }
 
     // First try fetching from dedicated 'projects' table (Migration 002)
-    const { data, error } = await client
+    const { data, error, status } = await client
       .from('projects')
       .select('id, data, updated_at')
       .order('updated_at', { ascending: false });
 
     if (error) {
+      (error as any).status = status;
       console.warn('Failed to fetch projects from cloud:', error);
       throw error;
     }
@@ -458,35 +462,36 @@ export const SupabaseSyncService = {
     }
 
     if (patch.customerSignature === '') {
-      throw new Error('امضای کارفرما رشته خالی است و قابل ذخیره در سرور نیست.');
+      throw new PermanentError('امضای کارفرما رشته خالی است و قابل ذخیره در سرور نیست.');
     }
     if (Array.isArray(patch.beforePhotos) && patch.beforePhotos.some((ph: any) => ph === '')) {
-      throw new Error('آرایه عکس‌های قبل از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+      throw new PermanentError('آرایه عکس‌های قبل از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
     }
     if (Array.isArray(patch.afterPhotos) && patch.afterPhotos.some((ph: any) => ph === '')) {
-      throw new Error('آرایه عکس‌های بعد از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+      throw new PermanentError('آرایه عکس‌های بعد از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
     }
     if (Array.isArray(patch.completionPhotos) && patch.completionPhotos.some((ph: any) => ph === '')) {
-      throw new Error('آرایه عکس‌های اتمام کار حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+      throw new PermanentError('آرایه عکس‌های اتمام کار حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
     }
     if (Array.isArray(patch.proposalImages) && patch.proposalImages.some((img: any) => img.url === '')) {
-      throw new Error('تصاویر پروپوزال حاوی آدرس خالی است و قابل ذخیره در سرور نیست.');
+      throw new PermanentError('تصاویر پروپوزال حاوی آدرس خالی است و قابل ذخیره در سرور نیست.');
     }
 
     const cleanPatch = { ...patch };
     delete (cleanPatch as any).__fromCache;
     cleanPatch.updatedAt = cleanPatch.updatedAt || new Date().toISOString();
 
-    if (JSON.stringify(cleanPatch).includes('"data:')) {
-      throw new Error('تغییرات پروژه حاوی داده base64 است و قبل از ارسال باید تصاویر آپلود شوند.');
+    if (JSON.stringify(cleanPatch).includes('"data:image/')) {
+      throw new PermanentError('تغییرات پروژه حاوی داده base64 است و قبل از ارسال باید تصاویر آپلود شوند.');
     }
 
-    const { error } = await client.rpc('patch_project', {
+    const { error, status } = await client.rpc('patch_project', {
       id: projectId,
       patch: cleanPatch,
     });
 
     if (error) {
+      (error as any).status = status;
       console.warn(`Failed to patch project ${projectId}:`, error);
       throw error;
     }
@@ -498,21 +503,22 @@ export const SupabaseSyncService = {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
-    if (JSON.stringify(project).includes('"data:')) {
-      throw new Error('پروژه جدید حاوی داده base64 است و قبل از ثبت باید تصاویر آپلود شوند.');
+    if (JSON.stringify(project).includes('"data:image/')) {
+      throw new PermanentError('پروژه جدید حاوی داده base64 است و قبل از ثبت باید تصاویر آپلود شوند.');
     }
 
     const cleanProject = { ...project };
     delete (cleanProject as any).__fromCache;
     const updatedAt = cleanProject.updatedAt || new Date().toISOString();
 
-    const { error } = await client.from('projects').insert({
+    const { error, status } = await client.from('projects').insert({
       id: cleanProject.id,
       data: { ...cleanProject, updatedAt },
       updated_at: updatedAt,
     });
 
     if (error) {
+      (error as any).status = status;
       console.warn(`Failed to insert project ${project.id}:`, error);
       throw error;
     }
@@ -524,12 +530,13 @@ export const SupabaseSyncService = {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
-    const { error } = await client.rpc('append_project_evaluation', {
+    const { error, status } = await client.rpc('append_project_evaluation', {
       id: projectId,
       item: evaluation,
     });
 
     if (error) {
+      (error as any).status = status;
       console.warn(`Failed to append evaluation to project ${projectId}:`, error);
       throw error;
     }
@@ -543,26 +550,29 @@ export const SupabaseSyncService = {
 
     // بررسی ممانعت از ذخیره فیلدهای عکس یا امضای خالی در دیتابیس
     if (project.customerSignature === '') {
-      throw new Error('امضای کارفرما رشته خالی است و قابل ذخیره در سرور نیست.');
+      throw new PermanentError('امضای کارفرما رشته خالی است و قابل ذخیره در سرور نیست.');
     }
     if (project.beforePhotos?.some((ph) => ph === '')) {
-      throw new Error('آرایه عکس‌های قبل از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+      throw new PermanentError('آرایه عکس‌های قبل از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
     }
     if (project.afterPhotos?.some((ph) => ph === '')) {
-      throw new Error('آرایه عکس‌های بعد از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+      throw new PermanentError('آرایه عکس‌های بعد از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
     }
     if (project.completionPhotos?.some((ph) => ph === '')) {
-      throw new Error('آرایه عکس‌های اتمام کار حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+      throw new PermanentError('آرایه عکس‌های اتمام کار حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
     }
     if (project.proposalImages?.some((img) => img.url === '')) {
-      throw new Error('تصاویر پروپوزال حاوی آدرس خالی است و قابل ذخیره در سرور نیست.');
+      throw new PermanentError('تصاویر پروپوزال حاوی آدرس خالی است و قابل ذخیره در سرور نیست.');
+    }
+    if (JSON.stringify(project).includes('"data:image/')) {
+      throw new PermanentError('پروژه حاوی داده base64 است و قبل از ثبت باید تصاویر آپلود شوند.');
     }
 
     const cleanProject = { ...project };
     delete (cleanProject as any).__fromCache;
 
     const updatedAt = cleanProject.updatedAt || new Date().toISOString();
-    const { error } = await client.from('projects').upsert(
+    const { error, status } = await client.from('projects').upsert(
       {
         id: cleanProject.id,
         data: { ...cleanProject, updatedAt },
@@ -572,6 +582,7 @@ export const SupabaseSyncService = {
     );
 
     if (error) {
+      (error as any).status = status;
       console.warn(`Failed to upsert project ${project.id}:`, error);
       throw error;
     }
@@ -583,8 +594,9 @@ export const SupabaseSyncService = {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
-    const { error } = await client.from('projects').delete().eq('id', projectId);
+    const { error, status } = await client.from('projects').delete().eq('id', projectId);
     if (error) {
+      (error as any).status = status;
       console.warn(`Failed to delete project ${projectId}:`, error);
       throw error;
     }
@@ -686,12 +698,13 @@ export const SupabaseSyncService = {
     }
 
     // First try dedicated tickets table
-    const { data, error } = await client
+    const { data, error, status } = await client
       .from('tickets')
       .select('id, data, updated_at')
       .order('updated_at', { ascending: false });
 
     if (error) {
+      (error as any).status = status;
       console.warn('Failed to fetch tickets from cloud:', error);
       throw error;
     }
@@ -727,11 +740,11 @@ export const SupabaseSyncService = {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
-    if (JSON.stringify(ticket).includes('"data:')) {
-      throw new Error('تیکت حاوی داده base64 است و قبل از ثبت باید تصاویر آپلود شوند.');
+    if (JSON.stringify(ticket).includes('"data:image/')) {
+      throw new PermanentError('تیکت حاوی داده base64 است و قبل از ثبت باید تصاویر آپلود شوند.');
     }
 
-    const { error } = await client.from('tickets').upsert(
+    const { error, status } = await client.from('tickets').upsert(
       {
         id: ticket.id,
         data: ticket,
@@ -740,6 +753,7 @@ export const SupabaseSyncService = {
       { onConflict: 'id' }
     );
     if (error) {
+      (error as any).status = status;
       console.warn(`Failed to upsert ticket ${ticket.id}:`, error);
       throw error;
     }
@@ -751,22 +765,23 @@ export const SupabaseSyncService = {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
-    if (JSON.stringify(patch).includes('"data:')) {
-      throw new Error('تغییرات تیکت حاوی داده base64 است.');
+    if (JSON.stringify(patch).includes('"data:image/')) {
+      throw new PermanentError('تغییرات تیکت حاوی داده base64 است.');
     }
 
-    const { data: row, error: fetchErr } = await client
+    const { data: row, error: fetchErr, status: fetchStatus } = await client
       .from('tickets')
       .select('data')
       .eq('id', ticketId)
       .single();
 
     if (fetchErr || !row) {
-      throw fetchErr || new Error(`تیکت با شناسه ${ticketId} یافت نشد.`);
+      if (fetchErr) (fetchErr as any).status = fetchStatus;
+      throw fetchErr || new PermanentError(`تیکت با شناسه ${ticketId} یافت نشد.`);
     }
 
     const updatedData = { ...row.data, ...patch };
-    const { error } = await client
+    const { error, status } = await client
       .from('tickets')
       .update({
         data: updatedData,
@@ -775,6 +790,7 @@ export const SupabaseSyncService = {
       .eq('id', ticketId);
 
     if (error) {
+      (error as any).status = status;
       console.warn(`Failed to patch ticket ${ticketId}:`, error);
       throw error;
     }
@@ -786,8 +802,9 @@ export const SupabaseSyncService = {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
-    const { error } = await client.from('tickets').delete().eq('id', ticketId);
+    const { error, status } = await client.from('tickets').delete().eq('id', ticketId);
     if (error) {
+      (error as any).status = status;
       console.warn(`Failed to delete ticket ${ticketId}:`, error);
       throw error;
     }
@@ -861,13 +878,14 @@ export const SupabaseSyncService = {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
-    const { data, error } = await client
+    const { data, error, status } = await client
       .from('talaie_sync')
       .select('value')
       .eq('key', 'settings')
       .maybeSingle();
 
     if (error) {
+      (error as any).status = status;
       console.warn('Failed to fetch settings:', error);
       throw error;
     }
@@ -884,7 +902,7 @@ export const SupabaseSyncService = {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
-    const { error } = await client.from('talaie_sync').upsert(
+    const { error, status } = await client.from('talaie_sync').upsert(
       {
         key: 'settings',
         value: settings,
@@ -893,6 +911,7 @@ export const SupabaseSyncService = {
       { onConflict: 'key' }
     );
     if (error) {
+      (error as any).status = status;
       console.warn('Failed to upsert settings:', error);
       throw error;
     }

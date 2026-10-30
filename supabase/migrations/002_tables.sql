@@ -230,7 +230,7 @@ begin
     raise exception 'Patch must be a valid JSON object';
   end if;
 
-  if patch::text like '%"data:%' then
+  if patch::text like '%"data:image/%' then
     raise exception 'Patch cannot contain base64 data URLs';
   end if;
 
@@ -270,7 +270,7 @@ begin
     raise exception 'Evaluation item must be a valid JSON object';
   end if;
 
-  if item::text like '%"data:%' then
+  if item::text like '%"data:image/%' then
     raise exception 'Evaluation item cannot contain base64 data URLs';
   end if;
 

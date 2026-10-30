@@ -147,43 +147,102 @@ export function dataUrlToBlob(dataUrl: string): Blob {
 }
 
 /**
+ * Error thrown on client-side validation failures or permanent rejection
+ */
+export class PermanentError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PermanentError';
+  }
+}
+
+/**
  * Error classification: Transient (retry indefinitely with backoff) vs Permanent
+ * - Transient:
+ *   - TypeError, AbortError, and network drop (based on message)
+ *   - status 0 ONLY when the error is NOT a PostgrestError or PermanentError
+ *   - HTTP status 408, 429, 5xx
+ *   - 401, PGRST000-PGRST002, and PGRST301
+ *   - 42501 ONLY without session
+ * - Permanent:
+ *   - PermanentError
+ *   - Any PostgrestError that has a code and is not in the transient list (e.g. 42501 with session, P0001, 23505, 22P02, PGRST116)
+ *   - Other 4xx HTTP statuses
  */
 export function isTransientError(err: any, hasSession: boolean = true): boolean {
   if (!err) return false;
 
-  const status = Number(err.status || err.statusCode || 0);
-
-  // Status 0 (network/offline), 408 (timeout), 429 (rate limit), 5xx (server errors)
-  if (status === 0 || status === 408 || status === 429 || (status >= 500 && status < 600)) {
-    return true;
+  // 1. PermanentError is ALWAYS permanent
+  if (err instanceof PermanentError || err?.name === 'PermanentError') {
+    return false;
   }
 
-  // 401 Unauthorized or PGRST301 (JWT expired/invalid)
+  const name = String(err?.name || '');
+  const code = typeof err?.code === 'string' ? err.code.trim() : '';
+  const status = Number(err?.status ?? err?.statusCode ?? -1);
+  const msg = String(err?.message || '').toLowerCase();
+
+  // Determine whether this error is a PostgrestError or has a database code
+  const isPostgrest =
+    name === 'PostgrestError' ||
+    Boolean(code) ||
+    (typeof err === 'object' && ('details' in err || 'hint' in err));
+
+  // If this error has a Postgrest/database error code:
+  if (code) {
+    // Transient codes:
+    if (code === 'PGRST000' || code === 'PGRST001' || code === 'PGRST002' || code === 'PGRST301') {
+      return true;
+    }
+    // 42501 (RLS violation) is transient ONLY if session is missing/expired
+    if (code === '42501') {
+      return !hasSession;
+    }
+    // All other database codes (P0001, 23505, 22P02, PGRST116, etc.) are permanent!
+    return false;
+  }
+
+  // If it's a PostgrestError without a code:
+  if (isPostgrest) {
+    if (status === 408 || status === 429 || (status >= 500 && status < 600)) {
+      return true;
+    }
+    if (status === 401) {
+      return true;
+    }
+    if (status >= 400 && status < 500) {
+      return false;
+    }
+  }
+
+  // 2. HTTP status codes
+  if (status === 408 || status === 429 || (status >= 500 && status < 600)) {
+    return true;
+  }
   if (status === 401) {
     return true;
   }
-
-  const code = String(err.code || '');
-  if (code === 'PGRST000' || code === 'PGRST001' || code === 'PGRST002' || code === 'PGRST301') {
-    return true;
+  if (status >= 400 && status < 500) {
+    return false;
   }
 
-  // 42501 (RLS error) when session is empty/missing (can refresh session)
-  if (code === '42501' && !hasSession) {
+  // 3. TypeError, AbortError, and network messages
+  if (name === 'TypeError' || name === 'AbortError') {
     return true;
   }
-
-  const msg = String(err.message || '').toLowerCase();
   if (
     msg.includes('network') ||
-    msg.includes('failed to fetch') ||
+    msg.includes('fetch') ||
     msg.includes('timeout') ||
     msg.includes('aborted') ||
-    msg.includes('jwt') ||
-    msg.includes('token') ||
+    msg.includes('offline') ||
     msg.includes('connection')
   ) {
+    return true;
+  }
+
+  // 4. status 0 ONLY when the error is NOT a PostgrestError or PermanentError
+  if (status === 0 && !isPostgrest) {
     return true;
   }
 
