@@ -107,8 +107,8 @@ export const Header: React.FC<Props> = ({
               </div>
             )}
 
-            {/* Failed offline operations button for QC Manager */}
-            {isQcManager && failedQueueCount > 0 && (
+            {/* Failed offline operations button for all users */}
+            {failedQueueCount > 0 && (
               <button
                 type="button"
                 onClick={onOpenFailedOperations}

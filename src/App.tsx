@@ -11,14 +11,14 @@ import {
 } from './types';
 import { StorageService } from './utils/storage';
 import { SupabaseSyncService } from './utils/supabase';
-import { OfflineQueue } from './utils/offlineQueue';
+import { Outbox, OutboxMutation, OfflineQueue } from './utils/offlineQueue';
 import { Header } from './components/Header';
 import { FailedOperationsModal } from './components/admin/FailedOperationsModal';
 import { LoginModal } from './components/LoginModal';
 import { ProposalViewerModal } from './components/ProposalViewerModal';
 import { TicketModal } from './components/TicketModal';
 import { MonthPlanner } from './components/admin/MonthPlanner';
-import { ProjectFormModal } from './components/admin/ProjectFormModal';
+import { ProjectFormModal, ProjectFormSaveData } from './components/admin/ProjectFormModal';
 import { QcDesk } from './components/admin/QcDesk';
 import { TicketCenter } from './components/admin/TicketCenter';
 import { TechniciansManager } from './components/admin/TechniciansManager';
@@ -53,6 +53,13 @@ export const App: React.FC = () => {
   useEffect(() => {
     projectsRef.current = projects;
   }, [projects]);
+
+  // Request sequence tracker to drop stale server responses
+  const fetchSeqRef = useRef<number>(0);
+  const isSyncedWithServerRef = useRef<boolean>(false);
+  useEffect(() => {
+    isSyncedWithServerRef.current = isSyncedWithServer;
+  }, [isSyncedWithServer]);
 
   // Subscribe to offline operations queue counts
   useEffect(() => {
@@ -104,6 +111,7 @@ export const App: React.FC = () => {
 
     // 1. Fetch initial server data after login
     const loadCloudData = async () => {
+      const currentSeq = ++fetchSeqRef.current;
       try {
         const [cloudProjects, cloudTickets, cloudUsers, cloudSettings] = await Promise.all([
           SupabaseSyncService.fetchProjects(),
@@ -112,21 +120,33 @@ export const App: React.FC = () => {
           SupabaseSyncService.fetchSettings(),
         ]);
 
-        setProjects(cloudProjects);
-        projectsRef.current = cloudProjects;
-        setTickets(cloudTickets);
+        if (currentSeq !== fetchSeqRef.current) return;
+
+        // Merge any pending outbox operations so unsent local mutations don't vanish
+        const mergedProjects = await Outbox.applyPendingToProjects(cloudProjects);
+        const mergedTickets = await Outbox.applyPendingToTickets(cloudTickets);
+        const mergedSettings = cloudSettings
+          ? await Outbox.applyPendingToSettings(cloudSettings)
+          : undefined;
+
+        if (currentSeq !== fetchSeqRef.current) return;
+
+        setProjects(mergedProjects);
+        projectsRef.current = mergedProjects;
+        setTickets(mergedTickets);
         if (cloudUsers.length > 0) {
           setUsers(cloudUsers);
         }
-        if (cloudSettings) {
-          setSettings((prev) => ({ ...prev, ...cloudSettings }));
+        if (mergedSettings) {
+          setSettings((prev) => ({ ...prev, ...mergedSettings }));
         }
         setIsSyncedWithServer(true);
         setIsOfflineMode(false);
 
         // Attempt processing any pending offline operations
-        SupabaseSyncService.processOfflineQueue();
+        SupabaseSyncService.processOfflineQueue(currentUser.id);
       } catch (err) {
+        if (currentSeq !== fetchSeqRef.current) return;
         console.warn('Initial cloud fetch error (running in offline mode with cached data):', err);
         // Retain existing cached projects & tickets in state
         setIsSyncedWithServer(false);
@@ -136,16 +156,24 @@ export const App: React.FC = () => {
 
     loadCloudData();
 
-    // Re-try fetching cloud data on online event and periodic 30s timer
+    // Re-try fetching cloud data on online event and trigger offline sync
     const handleOnline = () => {
       loadCloudData();
-      SupabaseSyncService.processOfflineQueue();
+      SupabaseSyncService.processOfflineQueue(currentUser?.id);
     };
     window.addEventListener('online', handleOnline);
 
+    const handleSyncTrigger = () => {
+      SupabaseSyncService.processOfflineQueue(currentUser?.id);
+    };
+    window.addEventListener('talaie-trigger-offline-sync', handleSyncTrigger);
+
+    // Polling every 30s ONLY when desynced or offline
     const intervalId = setInterval(() => {
-      if (typeof navigator !== 'undefined' && navigator.onLine) {
-        loadCloudData();
+      if (!isSyncedWithServerRef.current || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+          loadCloudData();
+        }
       }
     }, 30000);
 
@@ -223,6 +251,7 @@ export const App: React.FC = () => {
 
     return () => {
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('talaie-trigger-offline-sync', handleSyncTrigger);
       clearInterval(intervalId);
       unsubProjects();
       unsubTickets();
@@ -297,138 +326,164 @@ export const App: React.FC = () => {
     }
   }, [settings, currentUser]);
 
+  // Unified single write path (Outbox Pattern)
+  const commit = async (
+    mutation: OutboxMutation,
+    onOptimisticApply: () => void
+  ): Promise<boolean> => {
+    if (!currentUser) return false;
+    try {
+      await Outbox.commit(mutation, currentUser.id, onOptimisticApply);
+      return true;
+    } catch (err: any) {
+      console.error('Outbox commit error:', err);
+      showToast('error', 'خطا در ذخیره‌سازی محلی تغییرات. لطفاً مجدداً تلاش نمایید.');
+      throw err;
+    }
+  };
+
   // Project handlers
-  const handleSaveProject = async (project: Project) => {
+  const handleSaveProject = async (data: ProjectFormSaveData) => {
+    if (!currentUser) return;
     if (!isSyncedWithServer) {
       showToast('warning', 'اطلاعات در حال دریافت از سرور است، لطفاً شکیبا باشید.');
       return;
     }
 
-    if (project.__fromCache) {
-      showToast('warning', 'این پروژه هنوز از سرور دریافت نشده است و قابل ویرایش نیست.');
-      return;
-    }
-
-    const currentList = projectsRef.current;
-    const existing = currentList.find((p) => p.id === project.id);
-    let updatedProject: Project;
-
-    if (existing) {
-      // Merge ONLY edited fields over the live project state to prevent wiping technician reports/photos
-      updatedProject = {
-        ...existing,
-        title: project.title,
-        customerName: project.customerName,
-        customerPhone: project.customerPhone,
-        address: project.address,
-        locationUrl: project.locationUrl,
-        shadePanels: project.shadePanels,
-        curtainPanels: project.curtainPanels,
-        mechanismType: project.mechanismType,
-        approximateArea: project.approximateArea,
-        specialNotes: project.specialNotes,
-        proposalImages: project.proposalImages,
-        scheduledDate: project.scheduledDate,
-        scheduledTime: project.scheduledTime,
-        assignedTechnicianIds: project.assignedTechnicianIds,
-        leadTechnicianId: project.leadTechnicianId,
-        isFullTools: project.isFullTools,
-        toolsRequired: project.toolsRequired,
-        customToolsNotes: project.customToolsNotes,
-        status: project.status,
-        qcStatus: project.qcStatus,
-        updatedAt: new Date().toISOString(),
-      };
-      const nextProjects = currentList.map((p) => (p.id === project.id ? updatedProject : p));
-      setProjects(nextProjects);
-      projectsRef.current = nextProjects;
+    if (data.type === 'CREATE_PROJECT') {
+      const newProj = data.project;
+      await commit(
+        {
+          type: 'CREATE_PROJECT',
+          orderingKey: `project:${newProj.id}`,
+          payload: newProj,
+        },
+        () => {
+          const next = [newProj, ...projectsRef.current];
+          setProjects(next);
+          projectsRef.current = next;
+          setIsProjectFormOpen(false);
+          setEditingProject(null);
+        }
+      );
+      showToast('success', 'پروژه جدید با موفقیت ثبت شد.');
     } else {
-      updatedProject = {
-        ...project,
-        updatedAt: new Date().toISOString(),
-      };
-      const nextProjects = [updatedProject, ...currentList];
-      setProjects(nextProjects);
-      projectsRef.current = nextProjects;
+      const { id, patch } = data;
+      if (Object.keys(patch).length === 0) {
+        setIsProjectFormOpen(false);
+        setEditingProject(null);
+        return;
+      }
+      const cleanPatch = { ...patch, updatedAt: new Date().toISOString() };
+      await commit(
+        {
+          type: 'PATCH_PROJECT',
+          orderingKey: `project:${id}`,
+          payload: { id, patch: cleanPatch },
+        },
+        () => {
+          const next = projectsRef.current.map((p) =>
+            p.id === id ? { ...p, ...cleanPatch } : p
+          );
+          setProjects(next);
+          projectsRef.current = next;
+          setIsProjectFormOpen(false);
+          setEditingProject(null);
+        }
+      );
+      showToast('success', 'تغییرات پروژه با موفقیت ذخیره شد.');
     }
+  };
 
-    setIsProjectFormOpen(false);
-    setEditingProject(null);
-
-    // Atomically upsert row to Supabase
-    try {
-      await SupabaseSyncService.upsertProject(updatedProject);
-      showToast('success', existing ? 'تغییرات پروژه با موفقیت در سرور ذخیره شد.' : 'پروژه جدید با موفقیت در سرور ثبت گردید.');
-    } catch (err) {
-      console.warn('Upsert project cloud error:', err);
-      await OfflineQueue.enqueue('UPSERT_PROJECT', updatedProject);
-      showToast('warning', 'ارتباط با سرور برقرار نشد؛ تغییرات در صف ارسال آفلاین قرار گرفت.');
-    }
+  const handlePatchProject = async (projectId: string, patch: Partial<Project>) => {
+    if (!currentUser) return;
+    const cleanPatch = { ...patch, updatedAt: new Date().toISOString() };
+    await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, patch: cleanPatch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId ? { ...p, ...cleanPatch } : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+      }
+    );
   };
 
   const handleDeleteProject = async (projectId: string) => {
+    if (!currentUser) return;
     if (!isSyncedWithServer) {
       showToast('warning', 'اطلاعات در حال دریافت از سرور است، لطفاً شکیبا باشید.');
       return;
     }
 
-    const nextProjects = projectsRef.current.filter((p) => p.id !== projectId);
-    setProjects(nextProjects);
-    projectsRef.current = nextProjects;
-
-    try {
-      await SupabaseSyncService.deleteProject(projectId);
-      showToast('success', 'پروژه با موفقیت از سرور حذف گردید.');
-    } catch (err) {
-      console.warn('Delete project cloud error:', err);
-      await OfflineQueue.enqueue('DELETE_PROJECT', projectId);
-      showToast('warning', 'دستور حذف در صف ارسال آفلاین ذخیره شد.');
-    }
+    await commit(
+      {
+        type: 'DELETE_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId },
+      },
+      () => {
+        const next = projectsRef.current.filter((p) => p.id !== projectId);
+        setProjects(next);
+        projectsRef.current = next;
+      }
+    );
+    showToast('success', 'پروژه با موفقیت حذف گردید.');
   };
 
   const handleMoveProjectDate = async (projectId: string, newDateKey: string) => {
-    const current = projectsRef.current.find((p) => p.id === projectId);
-    if (!current) return;
-
+    if (!currentUser) return;
     const patch = {
       scheduledDate: newDateKey,
       updatedAt: new Date().toISOString(),
     };
 
-    const nextProjects = projectsRef.current.map((p) => (p.id === projectId ? { ...p, ...patch } : p));
-    setProjects(nextProjects);
-    projectsRef.current = nextProjects;
-
-    try {
-      await SupabaseSyncService.patchProject(projectId, patch);
-    } catch (err) {
-      console.warn('Move project cloud error:', err);
-      await OfflineQueue.enqueue('PATCH_PROJECT', { id: projectId, ...patch }, projectId);
-      showToast('warning', 'تغییر تاریخ در صف ارسال آفلاین قرار گرفت.');
-    }
+    await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, patch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId ? { ...p, ...patch } : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+      }
+    );
   };
 
   const handleUpdateStatus = async (projectId: string, newStatus: Project['status']) => {
+    if (!currentUser) return;
     const current = projectsRef.current.find((p) => p.id === projectId);
-    if (!current) return;
-
-    const patch = {
+    const patch: Partial<Project> = {
       status: newStatus,
-      startedAt: newStatus === 'IN_PROGRESS' && !current.startedAt ? new Date().toISOString() : current.startedAt,
       updatedAt: new Date().toISOString(),
     };
-
-    const nextProjects = projectsRef.current.map((p) => (p.id === projectId ? { ...p, ...patch } : p));
-    setProjects(nextProjects);
-    projectsRef.current = nextProjects;
-
-    try {
-      await SupabaseSyncService.patchProject(projectId, patch);
-    } catch (err) {
-      console.warn('Update status cloud error:', err);
-      await OfflineQueue.enqueue('PATCH_PROJECT', { id: projectId, ...patch }, projectId);
-      showToast('warning', 'تغییر وضعیت در صف ارسال آفلاین ثبت شد.');
+    if (newStatus === 'IN_PROGRESS' && current && !current.startedAt) {
+      patch.startedAt = new Date().toISOString();
     }
+
+    await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, patch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId ? { ...p, ...patch } : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+      }
+    );
   };
 
   // Completion report from field
@@ -441,14 +496,12 @@ export const App: React.FC = () => {
     customerSignature?: string;
     customerSatisfaction?: number;
   }) => {
-    if (!completionModalProject) return;
+    if (!completionModalProject || !currentUser) return;
+    const projectId = completionModalProject.id;
 
-    const current = projectsRef.current.find((p) => p.id === completionModalProject.id);
-    if (!current) return;
-
-    const patch = {
-      status: 'COMPLETED' as const,
-      qcStatus: 'PENDING' as const,
+    const patch: Partial<Project> = {
+      status: 'COMPLETED',
+      qcStatus: 'PENDING',
       completionNotes: completionData.completionNotes,
       beforePhotos: completionData.beforePhotos,
       afterPhotos: completionData.afterPhotos,
@@ -460,24 +513,22 @@ export const App: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    const updatedProject: Project = {
-      ...current,
-      ...patch,
-    };
-
-    const nextProjects = projectsRef.current.map((p) => (p.id === updatedProject.id ? updatedProject : p));
-    setProjects(nextProjects);
-    projectsRef.current = nextProjects;
-    setCompletionModalProject(null);
-
-    try {
-      await SupabaseSyncService.patchProject(completionModalProject.id, patch);
-      showToast('success', 'گزارش اتمام کار با موفقیت در سرور ثبت شد و به دسک QC ارسال گردید.');
-    } catch (err) {
-      console.warn('Report completion cloud error:', err);
-      await OfflineQueue.enqueue('PATCH_PROJECT', { id: completionModalProject.id, ...patch }, completionModalProject.id);
-      showToast('warning', 'گزارش اتمام کار در صف ارسال آفلاین ذخیره شد و پس از پایداری اینترنت ارسال می‌گردد.');
-    }
+    await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, patch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId ? { ...p, ...patch } : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+        setCompletionModalProject(null);
+      }
+    );
+    showToast('success', 'گزارش اتمام کار با موفقیت ثبت شد و به دسک QC ارسال گردید.');
   };
 
   // Pre-Installation inspection & 2nd measurement handler
@@ -485,68 +536,62 @@ export const App: React.FC = () => {
     inspection: PreInstallationInspection,
     newScheduledDate?: string
   ) => {
-    if (!preInspectionProject) return;
+    if (!preInspectionProject || !currentUser) return;
+    const projectId = preInspectionProject.id;
+    const current = projectsRef.current.find((p) => p.id === projectId);
 
-    const current = projectsRef.current.find((p) => p.id === preInspectionProject.id);
-    if (!current) return;
-
-    const patch = {
+    const patch: Partial<Project> = {
       status: (inspection.status === 'APPROVED' ? 'SCHEDULED' : 'MEASUREMENT_PENDING') as Project['status'],
-      scheduledDate: newScheduledDate || current.scheduledDate,
+      scheduledDate: newScheduledDate || current?.scheduledDate,
       preInspection: inspection,
       updatedAt: new Date().toISOString(),
     };
 
-    const updatedProject: Project = {
-      ...current,
-      ...patch,
-    };
-
-    const nextProjects = projectsRef.current.map((p) => (p.id === updatedProject.id ? updatedProject : p));
-    setProjects(nextProjects);
-    projectsRef.current = nextProjects;
-    setPreInspectionProject(null);
-
-    try {
-      await SupabaseSyncService.patchProject(preInspectionProject.id, patch);
-      showToast('success', 'گزارش کارشناسی فضا و اندازه‌گیری دوم با موفقیت در سرور ثبت شد.');
-    } catch (err) {
-      console.warn('Save pre-inspection cloud error:', err);
-      await OfflineQueue.enqueue('PATCH_PROJECT', { id: preInspectionProject.id, ...patch }, preInspectionProject.id);
-      showToast('warning', 'گزارش کارشناسی در صف ارسال آفلاین ثبت شد.');
-    }
+    await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, patch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId ? { ...p, ...patch } : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+        setPreInspectionProject(null);
+      }
+    );
+    showToast('success', 'گزارش کارشناسی فضا و اندازه‌گیری دوم با موفقیت در سرور ثبت شد.');
   };
 
-  // 360-degree Personnel evaluation handler
+  // 360-degree Personnel evaluation handler (atomic append via append_project_evaluation RPC)
   const handleSaveEvaluation = async (evaluation: PersonnelEvaluation) => {
-    if (!evaluationProject) return;
+    if (!evaluationProject || !currentUser) return;
+    const projectId = evaluationProject.id;
 
-    const current = projectsRef.current.find((p) => p.id === evaluationProject.id);
-    if (!current) return;
-
-    const patch = {
-      evaluations: [...(current.evaluations || []), evaluation],
-      updatedAt: new Date().toISOString(),
-    };
-
-    const updatedProject: Project = {
-      ...current,
-      ...patch,
-    };
-
-    const nextProjects = projectsRef.current.map((p) => (p.id === updatedProject.id ? updatedProject : p));
-    setProjects(nextProjects);
-    projectsRef.current = nextProjects;
-    setEvaluationProject(null);
-
-    try {
-      await SupabaseSyncService.patchProject(evaluationProject.id, patch);
-      showToast('success', `ارزیابی عملکرد ${evaluation.userName} با موفقیت در سرور ثبت گردید.`);
-    } catch (err) {
-      console.warn('Save evaluation cloud error:', err);
-      await OfflineQueue.enqueue('PATCH_PROJECT', { id: evaluationProject.id, ...patch }, evaluationProject.id);
-      showToast('warning', 'ارزیابی در صف ارسال آفلاین ثبت شد.');
-    }
+    await commit(
+      {
+        type: 'APPEND_PROJECT_EVALUATION',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, evaluation },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId
+            ? {
+                ...p,
+                evaluations: [...(p.evaluations || []), evaluation],
+                updatedAt: new Date().toISOString(),
+              }
+            : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+        setEvaluationProject(null);
+      }
+    );
+    showToast('success', `ارزیابی عملکرد ${evaluation.userName} با موفقیت در سرور ثبت گردید.`);
   };
 
   // On-site acute stoppage / Stuck report handler (<72h KPI)
@@ -555,78 +600,94 @@ export const App: React.FC = () => {
   };
 
   const handleConfirmReportStuck = async (incident: StuckIncident) => {
-    if (!stuckModalProject) return;
+    if (!stuckModalProject || !currentUser) return;
+    const projectId = stuckModalProject.id;
 
-    const current = projectsRef.current.find((p) => p.id === stuckModalProject.id);
-    if (!current) return;
-
-    const patch = {
-      status: 'STUCK' as const,
+    const patch: Partial<Project> = {
+      status: 'STUCK',
       stuckIncident: incident,
       updatedAt: new Date().toISOString(),
     };
 
-    const updatedProject: Project = {
-      ...current,
-      ...patch,
-    };
-
-    const nextProjects = projectsRef.current.map((p) => (p.id === updatedProject.id ? updatedProject : p));
-    setProjects(nextProjects);
-    projectsRef.current = nextProjects;
-    setStuckModalProject(null);
-
-    try {
-      await SupabaseSyncService.patchProject(stuckModalProject.id, patch);
-      showToast('warning', 'پروژه به دسک رفع استاک (<72h) ارسال شد و بلافاصله به مسئولین فنی ارجاع یافت.');
-    } catch (err) {
-      console.warn('Report stuck cloud error:', err);
-      await OfflineQueue.enqueue('PATCH_PROJECT', { id: stuckModalProject.id, ...patch }, stuckModalProject.id);
-      showToast('warning', 'گزارش استاک در صف ارسال آفلاین ثبت شد.');
-    }
+    await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, patch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId ? { ...p, ...patch } : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+        setStuckModalProject(null);
+      }
+    );
+    showToast('warning', 'پروژه به دسک رفع استاک (<72h) ارسال شد و بلافاصله به مسئولین فنی ارجاع یافت.');
   };
 
   // Ticket handlers
   const handleCreateTicket = async (newTicket: Ticket) => {
-    setTickets((prev) => [newTicket, ...prev]);
-    setTicketModalProject(null);
-
-    try {
-      await SupabaseSyncService.upsertTicket(newTicket);
-      showToast('warning', 'تیکت اضطراری با موفقیت در سرور ثبت شد و به اطلاع مدیر QC رسید.');
-    } catch (err) {
-      console.warn('Create ticket cloud error:', err);
-      await OfflineQueue.enqueue('UPSERT_TICKET', newTicket);
-      showToast('warning', 'تیکت در صف ارسال آفلاین ثبت شد.');
-    }
+    if (!currentUser) return;
+    await commit(
+      {
+        type: 'CREATE_TICKET',
+        orderingKey: `ticket:${newTicket.id}`,
+        payload: newTicket,
+      },
+      () => {
+        setTickets((prev) => [newTicket, ...prev]);
+        setTicketModalProject(null);
+      }
+    );
+    showToast('warning', 'تیکت اضطراری با موفقیت ثبت شد و به اطلاع مدیر QC رسید.');
   };
 
   const handleUpdateTicket = async (updatedTicket: Ticket) => {
-    setTickets((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
-
-    try {
-      await SupabaseSyncService.upsertTicket(updatedTicket);
-      showToast('success', 'تیکت با موفقیت به‌روزرسانی شد.');
-    } catch (err) {
-      console.warn('Update ticket cloud error:', err);
-      await OfflineQueue.enqueue('UPSERT_TICKET', updatedTicket);
-      showToast('warning', 'به‌روزرسانی تیکت در صف ارسال آفلاین ثبت شد.');
+    if (!currentUser) return;
+    const existing = tickets.find((t) => t.id === updatedTicket.id);
+    const diff: Partial<Ticket> = {};
+    if (!existing) {
+      Object.assign(diff, updatedTicket);
+    } else {
+      (Object.keys(updatedTicket) as (keyof Ticket)[]).forEach((k) => {
+        if (JSON.stringify(updatedTicket[k]) !== JSON.stringify(existing[k])) {
+          (diff as any)[k] = updatedTicket[k];
+        }
+      });
     }
+
+    await commit(
+      {
+        type: 'PATCH_TICKET',
+        orderingKey: `ticket:${updatedTicket.id}`,
+        payload: { id: updatedTicket.id, patch: diff },
+      },
+      () => {
+        setTickets((prev) =>
+          prev.map((t) => (t.id === updatedTicket.id ? { ...t, ...diff } : t))
+        );
+      }
+    );
+    showToast('success', 'تیکت با موفقیت به‌روزرسانی شد.');
   };
 
   // Settings handler
   const handleUpdateSettings = async (newSettings: SystemSettings) => {
-    setSettings(newSettings);
-    StorageService.saveSettings(newSettings);
-
-    try {
-      await SupabaseSyncService.upsertSettings(newSettings);
-      showToast('success', 'تنظیمات با موفقیت در سرور ابری ثبت شد.');
-    } catch (err) {
-      console.warn('Update settings cloud error:', err);
-      await OfflineQueue.enqueue('UPSERT_SETTINGS', newSettings);
-      showToast('warning', 'تنظیمات در صف ارسال آفلاین ثبت شد.');
-    }
+    if (!currentUser) return;
+    await commit(
+      {
+        type: 'UPDATE_SETTINGS',
+        orderingKey: 'settings',
+        payload: newSettings,
+      },
+      () => {
+        setSettings(newSettings);
+        StorageService.saveSettings(newSettings);
+      }
+    );
+    showToast('success', 'تنظیمات با موفقیت در سیستم ثبت شد.');
   };
 
   // User handlers
@@ -666,6 +727,14 @@ export const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    if (pendingQueueCount > 0) {
+      const confirmed = window.confirm(
+        'تغییرات ذخیره‌نشده روی این دستگاه دارید که در صورت خروج ممکن است بعداً با اکانت دیگر ارسال نشود. آیا مطمئن هستید که می‌خواهید خارج شوید؟'
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
     await SupabaseSyncService.signOut();
     setCurrentUser(null);
     setProjects([]);
@@ -800,10 +869,7 @@ export const App: React.FC = () => {
               <QcDesk
                 projects={projects}
                 users={users}
-                onUpdateProject={(updated) => {
-                  setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-                  SupabaseSyncService.upsertProject(updated);
-                }}
+                onPatchProject={handlePatchProject}
                 onViewProposal={(p) => setProposalModalProject(p)}
                 onOpenCertificate={(p) => setCertificateModalProject(p)}
                 onOpenEvaluation={(p) => setEvaluationProject(p)}
@@ -813,7 +879,7 @@ export const App: React.FC = () => {
             {activeTab === 'stuck' && (
               <StuckProjectsDesk
                 projects={projects}
-                onUpdateProject={handleSaveProject}
+                onPatchProject={handlePatchProject}
               />
             )}
 

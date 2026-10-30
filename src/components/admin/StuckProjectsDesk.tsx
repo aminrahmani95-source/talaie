@@ -21,10 +21,10 @@ import { toPersianDigits } from '../../utils/jalali';
 
 interface Props {
   projects: Project[];
-  onUpdateProject: (project: Project) => void;
+  onPatchProject: (id: string, patch: Partial<Project>) => void;
 }
 
-export const StuckProjectsDesk: React.FC<Props> = ({ projects, onUpdateProject }) => {
+export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject }) => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [fmeaRootCause, setFmeaRootCause] = useState<FmeaRootCause>('SUPPLIER_DEFECT');
@@ -93,14 +93,10 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onUpdateProject }
       rootCause: fmeaRootCause,
     };
 
-    const updatedProject: Project = {
-      ...project,
-      status: 'IN_PROGRESS', // Send back to active installation
+    onPatchProject(project.id, {
+      status: 'IN_PROGRESS',
       stuckIncident: updatedIncident,
-      updatedAt: new Date().toISOString(),
-    };
-
-    onUpdateProject(updatedProject);
+    });
     setResolutionNote('');
     alert('پروژه با موفقیت از حالت استاک خارج شد و مجدداً به برنامه فعال اکیپ نصب بازگشت.');
   };

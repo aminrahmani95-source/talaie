@@ -113,7 +113,8 @@ end;
 $$;
 
 revoke execute on function public.migrate_legacy_user_ids() from anon, public;
-grant execute on function public.migrate_legacy_user_ids() to authenticated;
+revoke execute on function public.migrate_legacy_user_ids() from authenticated;
+-- این تابع فقط از طریق SQL Editor یا توسط Service Role سرور اجرا می‌شود
 
 -- اجرای مهاجرت و نمایش جدول نتیجه
 select * from public.migrate_legacy_user_ids();

@@ -78,17 +78,21 @@ export const FailedOperationsModal: React.FC<Props> = ({
 
   const getOperationTitle = (op: FailedOperation): string => {
     switch (op.type) {
+      case 'CREATE_PROJECT':
+        return 'ثبت پروژه جدید';
       case 'PATCH_PROJECT':
         return 'به‌روزرسانی جزئی پروژه';
-      case 'UPSERT_PROJECT':
-        return 'ذخیره / ویرایش کامل پروژه';
+      case 'APPEND_PROJECT_EVALUATION':
+        return 'ثبت ارزیابی پرسنل';
       case 'DELETE_PROJECT':
         return 'حذف پروژه';
-      case 'UPSERT_TICKET':
-        return 'ثبت / ویرایش تیکت';
+      case 'CREATE_TICKET':
+        return 'ثبت تیکت اضطراری';
+      case 'PATCH_TICKET':
+        return 'به‌روزرسانی تیکت';
       case 'DELETE_TICKET':
         return 'حذف تیکت';
-      case 'UPSERT_SETTINGS':
+      case 'UPDATE_SETTINGS':
         return 'به‌روزرسانی تنظیمات سیستم';
       default:
         return 'عملیات سیستمی';
@@ -157,9 +161,9 @@ export const FailedOperationsModal: React.FC<Props> = ({
                       <span className="text-xs font-black text-rose-700 dark:text-rose-300">
                         {getOperationTitle(op)}
                       </span>
-                      {op.projectId && (
+                      {op.orderingKey && (
                         <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-white dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300">
-                          {op.projectId}
+                          {op.orderingKey}
                         </span>
                       )}
                     </div>

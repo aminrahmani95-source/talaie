@@ -16,7 +16,6 @@ import {
 import { toPersianDigits } from '../utils/jalali';
 import { compressImageFile } from '../utils/imageCompressor';
 import { CloudImage } from './common/CloudImage';
-import { SupabaseSyncService } from '../utils/supabase';
 
 interface Props {
   project: Project;
@@ -105,22 +104,6 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
     setSubmitting(true);
 
-    // Upload photos to Supabase Storage if possible
-    const uploadedPhotos: string[] = [];
-    for (const p of photos) {
-      if (p.startsWith('data:')) {
-        try {
-          const path = await SupabaseSyncService.uploadProjectPhoto(project.id, p);
-          uploadedPhotos.push(path);
-        } catch (err) {
-          console.warn('Ticket image upload to storage failed, falling back to base64:', err);
-          uploadedPhotos.push(p);
-        }
-      } else {
-        uploadedPhotos.push(p);
-      }
-    }
-
     const now = new Date();
     const timeStr = `${toPersianDigits(now.getHours())}:${toPersianDigits(String(now.getMinutes()).padStart(2, '0'))}`;
 
@@ -133,7 +116,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
       authorName: currentUser.name,
       type: selectedType,
       description: description.trim(),
-      photos: uploadedPhotos,
+      photos,
       status: 'OPEN',
       createdAt: `${project.scheduledDate} - ساعت ${timeStr}`,
     };

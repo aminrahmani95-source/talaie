@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient, User as SupabaseAuthUser } from '@supabase/supabase-js';
-import { Project, Ticket, User, SystemSettings } from '../types';
+import { Project, Ticket, User, SystemSettings, PersonnelEvaluation } from '../types';
 import { toEnglishDigits } from './jalali';
-import { OfflineQueue, OfflineOperation, PendingUpload } from './offlineQueue';
+import { Outbox, OutboxOperation, PendingUpload } from './offlineQueue';
 
 export type RealtimeConnectionStatus = 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED';
 
@@ -50,6 +50,48 @@ function setConnectionStatus(status: RealtimeConnectionStatus) {
   }
 }
 
+/**
+ * Creates custom fetch with AbortController timeout:
+ * - 90s for Storage uploads (/storage/v1/object)
+ * - 20s for database queries / REST / RPC
+ * Preserves statusCode on error objects.
+ */
+function createCustomFetch() {
+  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const isUpload = url.includes('/storage/v1/object');
+    const timeoutMs = isUpload ? 90000 : 20000;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, timeoutMs);
+
+    if (init?.signal) {
+      init.signal.addEventListener('abort', () => controller.abort());
+    }
+
+    try {
+      const response = await fetch(input, {
+        ...init,
+        signal: controller.signal,
+      });
+      return response;
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        const timeoutErr: any = new Error(`درخواست به دلیل پایان مهلت زمانی (${timeoutMs / 1000} ثانیه) لغو شد.`);
+        timeoutErr.statusCode = 408;
+        timeoutErr.status = 408;
+        timeoutErr.name = 'TimeoutError';
+        throw timeoutErr;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+}
+
 export const SupabaseSyncService = {
   /**
    * Returns or initializes the singleton Supabase client.
@@ -71,6 +113,9 @@ export const SupabaseSyncService = {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
+        },
+        global: {
+          fetch: createCustomFetch(),
         },
       });
       currentUrl = finalUrl;
@@ -432,6 +477,10 @@ export const SupabaseSyncService = {
     delete (cleanPatch as any).__fromCache;
     cleanPatch.updatedAt = cleanPatch.updatedAt || new Date().toISOString();
 
+    if (JSON.stringify(cleanPatch).includes('"data:')) {
+      throw new Error('تغییرات پروژه حاوی داده base64 است و قبل از ارسال باید تصاویر آپلود شوند.');
+    }
+
     const { error } = await client.rpc('patch_project', {
       id: projectId,
       patch: cleanPatch,
@@ -439,6 +488,49 @@ export const SupabaseSyncService = {
 
     if (error) {
       console.warn(`Failed to patch project ${projectId}:`, error);
+      throw error;
+    }
+  },
+
+  async createProject(project: Project): Promise<void> {
+    const client = this.getClient();
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
+
+    if (JSON.stringify(project).includes('"data:')) {
+      throw new Error('پروژه جدید حاوی داده base64 است و قبل از ثبت باید تصاویر آپلود شوند.');
+    }
+
+    const cleanProject = { ...project };
+    delete (cleanProject as any).__fromCache;
+    const updatedAt = cleanProject.updatedAt || new Date().toISOString();
+
+    const { error } = await client.from('projects').insert({
+      id: cleanProject.id,
+      data: { ...cleanProject, updatedAt },
+      updated_at: updatedAt,
+    });
+
+    if (error) {
+      console.warn(`Failed to insert project ${project.id}:`, error);
+      throw error;
+    }
+  },
+
+  async appendProjectEvaluation(projectId: string, evaluation: PersonnelEvaluation): Promise<void> {
+    const client = this.getClient();
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
+
+    const { error } = await client.rpc('append_project_evaluation', {
+      id: projectId,
+      item: evaluation,
+    });
+
+    if (error) {
+      console.warn(`Failed to append evaluation to project ${projectId}:`, error);
       throw error;
     }
   },
@@ -635,6 +727,10 @@ export const SupabaseSyncService = {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
+    if (JSON.stringify(ticket).includes('"data:')) {
+      throw new Error('تیکت حاوی داده base64 است و قبل از ثبت باید تصاویر آپلود شوند.');
+    }
+
     const { error } = await client.from('tickets').upsert(
       {
         id: ticket.id,
@@ -645,6 +741,41 @@ export const SupabaseSyncService = {
     );
     if (error) {
       console.warn(`Failed to upsert ticket ${ticket.id}:`, error);
+      throw error;
+    }
+  },
+
+  async patchTicket(ticketId: string, patch: Record<string, any>): Promise<void> {
+    const client = this.getClient();
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
+
+    if (JSON.stringify(patch).includes('"data:')) {
+      throw new Error('تغییرات تیکت حاوی داده base64 است.');
+    }
+
+    const { data: row, error: fetchErr } = await client
+      .from('tickets')
+      .select('data')
+      .eq('id', ticketId)
+      .single();
+
+    if (fetchErr || !row) {
+      throw fetchErr || new Error(`تیکت با شناسه ${ticketId} یافت نشد.`);
+    }
+
+    const updatedData = { ...row.data, ...patch };
+    const { error } = await client
+      .from('tickets')
+      .update({
+        data: updatedData,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', ticketId);
+
+    if (error) {
+      console.warn(`Failed to patch ticket ${ticketId}:`, error);
       throw error;
     }
   },
@@ -767,43 +898,73 @@ export const SupabaseSyncService = {
     }
   },
 
-  async executeOfflineOperation(op: OfflineOperation): Promise<void> {
+  async executeOfflineOperation(op: OutboxOperation): Promise<void> {
     switch (op.type) {
-      case 'PATCH_PROJECT': {
-        const projectId = op.projectId || op.payload?.id;
-        if (!projectId) {
-          throw new Error('شناسه پروژه برای عملیات به‌روزرسانی تکه‌ای (patch) یافت نشد.');
-        }
-        await this.patchProject(projectId, op.payload);
+      case 'CREATE_PROJECT': {
+        const project = op.payload?.project || op.payload;
+        await this.createProject(project);
         break;
       }
-      case 'UPSERT_PROJECT':
-        await this.upsertProject(op.payload);
+      case 'PATCH_PROJECT': {
+        const projectId = op.payload?.id || op.orderingKey.replace('project:', '');
+        const patch = op.payload?.patch || op.payload;
+        await this.patchProject(projectId, patch);
         break;
-      case 'DELETE_PROJECT':
-        await this.deleteProject(typeof op.payload === 'string' ? op.payload : op.payload.id);
+      }
+      case 'APPEND_PROJECT_EVALUATION': {
+        const projectId = op.payload?.id || op.orderingKey.replace('project:', '');
+        const evaluation = op.payload?.evaluation;
+        await this.appendProjectEvaluation(projectId, evaluation);
         break;
-      case 'UPSERT_TICKET':
-        await this.upsertTicket(op.payload);
+      }
+      case 'DELETE_PROJECT': {
+        const projectId = op.payload?.id || op.orderingKey.replace('project:', '');
+        await this.deleteProject(projectId);
         break;
-      case 'DELETE_TICKET':
-        await this.deleteTicket(typeof op.payload === 'string' ? op.payload : op.payload.id);
+      }
+      case 'CREATE_TICKET': {
+        const ticket = op.payload?.ticket || op.payload;
+        await this.upsertTicket(ticket);
         break;
-      case 'UPSERT_SETTINGS':
-        await this.upsertSettings(op.payload);
+      }
+      case 'PATCH_TICKET': {
+        const ticketId = op.payload?.id || op.orderingKey.replace('ticket:', '');
+        const patch = op.payload?.patch || op.payload;
+        await this.patchTicket(ticketId, patch);
         break;
+      }
+      case 'DELETE_TICKET': {
+        const ticketId = op.payload?.id || op.orderingKey.replace('ticket:', '');
+        await this.deleteTicket(ticketId);
+        break;
+      }
+      case 'UPDATE_SETTINGS': {
+        const settings = op.payload?.settings || op.payload;
+        await this.upsertSettings(settings);
+        break;
+      }
       default:
         break;
     }
   },
 
-  processOfflineQueue(): Promise<void> {
+  async processOfflineQueue(currentUserId?: string): Promise<void> {
     const client = this.getClient();
-    if (!client) return Promise.resolve();
+    if (!client) return;
 
-    return OfflineQueue.processQueue({
+    let uid = currentUserId;
+    if (!uid) {
+      const sessionUser = await this.getCurrentSessionUser();
+      uid = sessionUser?.id;
+    }
+    if (!uid) return;
+
+    await Outbox.processQueue({
+      currentUserId: uid,
       uploadBlob: async (upload: PendingUpload) => {
-        const storagePath = `projects/${upload.projectId}/${upload.fileName}`;
+        const prefix = upload.orderingKey.replace(':', 's/');
+        const storagePath = `${prefix}/${upload.fileName}`;
+
         const { error } = await client.storage
           .from('talaie-photos')
           .upload(storagePath, upload.blob, {
@@ -812,12 +973,23 @@ export const SupabaseSyncService = {
           });
 
         if (error) {
-          throw new Error(`Upload error on ${storagePath}: ${error.message}`);
+          throw error;
         }
         return storagePath;
       },
-      executeOp: async (op: OfflineOperation) => {
+      executeMutation: async (op: OutboxOperation) => {
         await this.executeOfflineOperation(op);
+      },
+      refreshSession: async () => {
+        try {
+          const { data, error } = await client.auth.refreshSession();
+          return !error && !!data?.session;
+        } catch {
+          return false;
+        }
+      },
+      hasSession: () => {
+        return !!getCachedProfile();
       },
     });
   },

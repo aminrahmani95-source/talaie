@@ -18,7 +18,6 @@ import confetti from 'canvas-confetti';
 import { toPersianDigits } from '../../utils/jalali';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { SignaturePad } from '../SignaturePad';
-import { SupabaseSyncService } from '../../utils/supabase';
 import { CloudImage } from '../common/CloudImage';
 
 interface Props {
@@ -133,48 +132,15 @@ export const ReportCompletionModal: React.FC<Props> = ({
     setIsSubmitting(true);
 
     try {
-      let finalSignature = signature;
-      const uploadedBefore: string[] = [];
-      const uploadedAfter: string[] = [];
-
-      // Try uploading to cloud if online
-      if (typeof navigator !== 'undefined' && navigator.onLine) {
-        try {
-          for (const ph of beforePhotos) {
-            if (ph.startsWith('data:')) {
-              const path = await SupabaseSyncService.uploadProjectPhoto(project.id, ph);
-              uploadedBefore.push(path);
-            } else {
-              uploadedBefore.push(ph);
-            }
-          }
-
-          for (const ph of afterPhotos) {
-            if (ph.startsWith('data:')) {
-              const path = await SupabaseSyncService.uploadProjectPhoto(project.id, ph);
-              uploadedAfter.push(path);
-            } else {
-              uploadedAfter.push(ph);
-            }
-          }
-
-          if (signature && signature.startsWith('data:')) {
-            finalSignature = await SupabaseSyncService.uploadProjectSignature(project.id, signature);
-          }
-        } catch (uploadNetErr) {
-          console.warn('Direct upload failed (likely offline/weak connection), falling back to offline queue:', uploadNetErr);
-          // Fall back to original photos and signature so offline queue stores them as Blobs
-          uploadedBefore.length = 0;
-          uploadedBefore.push(...beforePhotos);
-          uploadedAfter.length = 0;
-          uploadedAfter.push(...afterPhotos);
-          finalSignature = signature;
-        }
-      } else {
-        // Offline: pass original photos and signature directly to offline queue
-        uploadedBefore.push(...beforePhotos);
-        uploadedAfter.push(...afterPhotos);
-      }
+      await onSubmit({
+        completionNotes: completionNotes.trim(),
+        beforePhotos,
+        afterPhotos,
+        completionPhotos: afterPhotos, // Maintain backwards compatibility
+        handoverChecklist: checklist,
+        customerSignature: signature,
+        customerSatisfaction: satisfaction,
+      });
 
       try {
         confetti({
@@ -186,21 +152,10 @@ export const ReportCompletionModal: React.FC<Props> = ({
       } catch {
         // Ignore
       }
-
-      await onSubmit({
-        completionNotes: completionNotes.trim(),
-        beforePhotos: uploadedBefore,
-        afterPhotos: uploadedAfter,
-        completionPhotos: uploadedAfter, // Maintain backwards compatibility
-        handoverChecklist: checklist,
-        customerSignature: finalSignature,
-        customerSatisfaction: satisfaction,
-      });
     } catch (err: any) {
-      console.error('Failed to upload photos or submit completion report:', err);
+      console.error('Failed to submit completion report:', err);
       setUploadError(
-        err.message ||
-          'خطا در ذخیره‌سازی ابری تصاویر یا ثبت گزارش. فرم باز نگه داشته شد تا اطلاعات شما از بین نرود؛ لطفاً دوباره تلاش کنید.'
+        err.message || 'خطا در ثبت گزارش در صف عملیات دستگاه. فرم باز نگه داشته شد.'
       );
     } finally {
       setIsSubmitting(false);

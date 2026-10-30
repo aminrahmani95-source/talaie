@@ -30,7 +30,7 @@ import { CloudImage } from '../common/CloudImage';
 interface Props {
   projects: Project[];
   users: User[];
-  onUpdateProject: (project: Project) => void;
+  onPatchProject: (id: string, patch: Partial<Project>) => void;
   onViewProposal: (project: Project) => void;
   onOpenCertificate?: (project: Project) => void;
   onOpenEvaluation?: (project: Project) => void;
@@ -39,7 +39,7 @@ interface Props {
 export const QcDesk: React.FC<Props> = ({
   projects,
   users,
-  onUpdateProject,
+  onPatchProject,
   onViewProposal,
   onOpenCertificate,
   onOpenEvaluation,
@@ -101,8 +101,7 @@ export const QcDesk: React.FC<Props> = ({
     e.preventDefault();
     if (!selectedProject) return;
 
-    const updated: Project = {
-      ...selectedProject,
+    const patch: Partial<Project> = {
       status: 'COMPLETED',
       qcStatus: 'APPROVED',
       qcScore,
@@ -111,7 +110,7 @@ export const QcDesk: React.FC<Props> = ({
       qcReviewedBy: 'مدیر QC',
     };
 
-    onUpdateProject(updated);
+    onPatchProject(selectedProject.id, patch);
     setIsEditingApproved(false);
 
     try {
@@ -134,8 +133,7 @@ export const QcDesk: React.FC<Props> = ({
   const handleRejectSubmit = (reason: string) => {
     if (!selectedProject) return;
 
-    const updated: Project = {
-      ...selectedProject,
+    const patch: Partial<Project> = {
       status: 'IN_PROGRESS', // Send back to in progress so technician can fix
       qcStatus: 'REJECTED',
       qcNotes: reason,
@@ -143,20 +141,18 @@ export const QcDesk: React.FC<Props> = ({
       qcReviewedBy: 'مدیر QC',
     };
 
-    onUpdateProject(updated);
+    onPatchProject(selectedProject.id, patch);
     setIsRejectModalOpen(false);
   };
 
   // Shortcut for QC manager to mark project as completed & ready for QC directly
   const handleMarkAsReadyForQc = (p: Project) => {
-    const updated: Project = {
-      ...p,
+    const patch: Partial<Project> = {
       status: 'COMPLETED',
       qcStatus: 'PENDING',
       completionNotes: p.completionNotes || 'تکمیل نصب تایید شده توسط مدیر QC جهت بررسی نهایی.',
     };
-    onUpdateProject(updated);
-    handleSelectProject(updated);
+    onPatchProject(p.id, patch);
     alert(`پروژه ${p.title} به وضعیت «اتمام نصب / در انتظار QC» منتقل شد و هم‌اکنون آماده ارزیابی است.`);
   };
 

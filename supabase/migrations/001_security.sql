@@ -157,7 +157,7 @@ create policy "QC Managers delete sync"
 -- ۵. تغییر کلید داده‌های کاربران قدیمی به users_backup با حذف رمزعبور جهت استفاده در مهاجرت شناسه‌ها
 update public.talaie_sync
 set key = 'users_backup',
-    value = (select jsonb_agg(e - 'password') from jsonb_array_elements(value) e)
+    value = coalesce((select jsonb_agg(e - 'password') from jsonb_array_elements(value) e), '[]'::jsonb)
 where key = 'users';
 
 -- ۶. فعال‌سازی همگام‌سازی زنده (Supabase Realtime) برای جداول

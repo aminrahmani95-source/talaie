@@ -226,6 +226,14 @@ begin
     raise exception 'Unauthorized: user is not active';
   end if;
 
+  if jsonb_typeof(patch) is distinct from 'object' then
+    raise exception 'Patch must be a valid JSON object';
+  end if;
+
+  if patch::text like '%"data:%' then
+    raise exception 'Patch cannot contain base64 data URLs';
+  end if;
+
   update public.projects
   set data = data || patch,
       updated_at = now(),
@@ -243,4 +251,49 @@ $$;
 
 revoke execute on function public.patch_project(text, jsonb) from anon, public;
 grant execute on function public.patch_project(text, jsonb) to authenticated;
+
+-- ۱۱. تابع الحاق ارزیابی جدید پرسنل به پروژه بدون بازنویسی کل آرایه
+create or replace function public.append_project_evaluation(id text, item jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated_data jsonb;
+begin
+  if not public.is_active_user() then
+    raise exception 'Unauthorized: user is not active';
+  end if;
+
+  if jsonb_typeof(item) is distinct from 'object' then
+    raise exception 'Evaluation item must be a valid JSON object';
+  end if;
+
+  if item::text like '%"data:%' then
+    raise exception 'Evaluation item cannot contain base64 data URLs';
+  end if;
+
+  update public.projects
+  set data = jsonb_set(
+    data,
+    '{evaluations}',
+    coalesce(data->'evaluations', '[]'::jsonb) || jsonb_build_array(item)
+  ),
+  updated_at = now(),
+  updated_by = auth.uid()
+  where public.projects.id = append_project_evaluation.id
+  returning data into updated_data;
+
+  if not found then
+    raise exception 'Project % not found', append_project_evaluation.id;
+  end if;
+
+  return updated_data;
+end;
+$$;
+
+revoke execute on function public.append_project_evaluation(text, jsonb) from anon, public;
+grant execute on function public.append_project_evaluation(text, jsonb) to authenticated;
+
 

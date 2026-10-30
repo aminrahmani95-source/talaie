@@ -16,13 +16,18 @@ import { getUpcomingDays, getTodayPersianString } from '../../utils/jalali';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { SupabaseSyncService } from '../../utils/supabase';
 import { CloudImage } from '../common/CloudImage';
+import { computeProjectDiff } from '../../utils/offlineQueue';
+
+export type ProjectFormSaveData =
+  | { type: 'CREATE_PROJECT'; project: Project }
+  | { type: 'PATCH_PROJECT'; id: string; patch: Partial<Project> };
 
 interface Props {
   project?: Project | null;
   users: User[];
   settings: SystemSettings;
   onClose: () => void;
-  onSave: (project: Project) => void;
+  onSave: (data: ProjectFormSaveData) => void;
 }
 
 export const ProjectFormModal: React.FC<Props> = ({
@@ -146,17 +151,10 @@ export const ProjectFormModal: React.FC<Props> = ({
       const file = files[index];
       try {
         const compressedUrl = await compressImageFile(file, 1600, 1600, 0.8);
-        let finalUrl = compressedUrl;
-        try {
-          finalUrl = await SupabaseSyncService.uploadProjectPhoto(projectId, compressedUrl);
-        } catch (uploadErr) {
-          console.warn('Storage upload fallback to compressed data URL:', uploadErr);
-        }
-
         const newImg: ProposalImage = {
           id: `prop-${Date.now()}-${index}`,
           title: file.name || `برگه پروپوزال ${proposalImages.length + 1}`,
-          url: finalUrl,
+          url: compressedUrl,
           uploadedAt: getTodayPersianString(),
         };
         setProposalImages((prev) => [...prev, newImg]);
@@ -189,51 +187,70 @@ export const ProjectFormModal: React.FC<Props> = ({
       return;
     }
 
-    const savedProject: Project = {
-      ...(project || {}),
-      id: projectId,
-      code: project?.code || projectCode,
-      title: title.trim(),
-      customerName: customerName.trim() || title.trim(),
-      customerPhone: customerPhone.trim(),
-      address: address.trim(),
-      locationUrl: locationUrl.trim(),
-      shadePanels: Number(shadePanels) || 0,
-      curtainPanels: Number(curtainPanels) || 0,
-      mechanismType: mechanismType.trim(),
-      approximateArea: approximateArea ? Number(approximateArea) : undefined,
-      specialNotes: specialNotes.trim(),
-      proposalImages,
-      scheduledDate,
-      scheduledTime,
-      assignedTechnicianIds,
-      leadTechnicianId: leadTechnicianId || assignedTechnicianIds[0],
-      isFullTools,
-      toolsRequired,
-      customToolsNotes: customToolsNotes.trim(),
-      status,
-      beforePhotos: project?.beforePhotos || [],
-      afterPhotos: project?.afterPhotos || [],
-      completionPhotos: project?.completionPhotos || [],
-      completionNotes: project?.completionNotes || '',
-      handoverChecklist: project?.handoverChecklist,
-      customerSignature: project?.customerSignature,
-      customerSatisfaction: project?.customerSatisfaction,
-      startedAt: project?.startedAt,
-      completedAt: project?.completedAt,
-      qcStatus: status === 'COMPLETED' && qcStatus === 'NOT_STARTED' ? 'PENDING' : qcStatus,
-      qcScore: project?.qcScore,
-      qcNotes: project?.qcNotes,
-      qcReviewedAt: project?.qcReviewedAt,
-      qcReviewedBy: project?.qcReviewedBy,
-      stuckIncident: project?.stuckIncident,
-      preInspection: project?.preInspection,
-      evaluations: project?.evaluations || [],
-      createdAt: project?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    if (project) {
+      // Editing existing project: calculate diff and send ONLY changed fields
+      const newFields: Partial<Project> = {
+        title: title.trim(),
+        customerName: customerName.trim() || title.trim(),
+        customerPhone: customerPhone.trim(),
+        address: address.trim(),
+        locationUrl: locationUrl.trim(),
+        shadePanels: Number(shadePanels) || 0,
+        curtainPanels: Number(curtainPanels) || 0,
+        mechanismType: mechanismType.trim(),
+        approximateArea: approximateArea ? Number(approximateArea) : undefined,
+        specialNotes: specialNotes.trim(),
+        proposalImages,
+        scheduledDate,
+        scheduledTime,
+        assignedTechnicianIds,
+        leadTechnicianId: leadTechnicianId || assignedTechnicianIds[0],
+        isFullTools,
+        toolsRequired,
+        customToolsNotes: customToolsNotes.trim(),
+        status,
+        qcStatus: status === 'COMPLETED' && qcStatus === 'NOT_STARTED' ? 'PENDING' : qcStatus,
+        updatedAt: new Date().toISOString(),
+      };
 
-    onSave(savedProject);
+      const diff = computeProjectDiff(project, newFields);
+      onSave({ type: 'PATCH_PROJECT', id: project.id, patch: diff });
+    } else {
+      // New project: send CREATE_PROJECT
+      const newProject: Project = {
+        id: projectId,
+        code: projectCode,
+        title: title.trim(),
+        customerName: customerName.trim() || title.trim(),
+        customerPhone: customerPhone.trim(),
+        address: address.trim(),
+        locationUrl: locationUrl.trim(),
+        shadePanels: Number(shadePanels) || 0,
+        curtainPanels: Number(curtainPanels) || 0,
+        mechanismType: mechanismType.trim(),
+        approximateArea: approximateArea ? Number(approximateArea) : undefined,
+        specialNotes: specialNotes.trim(),
+        proposalImages,
+        scheduledDate,
+        scheduledTime,
+        assignedTechnicianIds,
+        leadTechnicianId: leadTechnicianId || assignedTechnicianIds[0],
+        isFullTools,
+        toolsRequired,
+        customToolsNotes: customToolsNotes.trim(),
+        status,
+        beforePhotos: [],
+        afterPhotos: [],
+        completionPhotos: [],
+        completionNotes: '',
+        qcStatus: status === 'COMPLETED' ? 'PENDING' : qcStatus,
+        evaluations: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      onSave({ type: 'CREATE_PROJECT', project: newProject });
+    }
   };
 
   return (
