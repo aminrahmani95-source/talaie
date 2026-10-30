@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ProposalImage } from '../types';
 import { X, ZoomIn, ZoomOut, RotateCcw, Download, FileText } from 'lucide-react';
 import { toPersianDigits } from '../utils/jalali';
+import { CloudImage } from './common/CloudImage';
 
 interface Props {
   images: ProposalImage[];
@@ -135,7 +136,7 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
           className="transition-transform duration-200 ease-out origin-center"
           style={{ transform: `scale(${scale})` }}
         >
-          <img
+          <CloudImage
             src={current.url}
             alt={current.title || 'تصویر پروپوزال گالری طلایی'}
             className="max-h-[80vh] max-w-[95vw] rounded-xl shadow-2xl object-contain bg-white"
@@ -161,7 +162,7 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
                   : 'border-transparent opacity-60 hover:opacity-90'
               }`}
             >
-              <img src={img.url} alt="" className="w-16 h-16 object-cover" />
+              <CloudImage src={img.url} alt="" className="w-16 h-16 object-cover" />
               <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[10px] text-center text-white py-0.5 font-bold">
                 صفحه {toPersianDigits(idx + 1)}
               </span>

@@ -25,6 +25,7 @@ import confetti from 'canvas-confetti';
 import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 import { ActiveJobTimer } from '../ActiveJobTimer';
 import { QcRejectModal } from './QcRejectModal';
+import { CloudImage } from '../common/CloudImage';
 
 interface Props {
   projects: Project[];
@@ -479,7 +480,7 @@ export const QcDesk: React.FC<Props> = ({
                             onClick={() => setPreviewImage(photo)}
                             className="relative h-28 rounded-xl overflow-hidden border border-amber-500/40 cursor-pointer shadow-2xs group"
                           >
-                            <img src={photo} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
+                            <CloudImage src={photo} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
                             <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
                               <ZoomIn className="w-5 h-5" />
                             </div>
@@ -511,7 +512,7 @@ export const QcDesk: React.FC<Props> = ({
                             onClick={() => setPreviewImage(photo)}
                             className="relative h-28 rounded-xl overflow-hidden border border-emerald-500/40 cursor-pointer shadow-2xs group"
                           >
-                            <img src={photo} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
+                            <CloudImage src={photo} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
                             <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
                               <ZoomIn className="w-5 h-5" />
                             </div>
@@ -553,7 +554,7 @@ export const QcDesk: React.FC<Props> = ({
                   {selectedProject.customerSignature ? (
                     <div className="bg-white dark:bg-[#161616] p-3.5 rounded-xl border border-[#C1A056]/30 space-y-2 shadow-2xs">
                       <div className="h-24 bg-[#FAF7F2] dark:bg-[#121212] rounded-lg border border-dashed border-[#C1A056]/40 p-2 flex items-center justify-center">
-                        <img
+                        <CloudImage
                           src={selectedProject.customerSignature}
                           alt="امضای کارفرما"
                           className="max-h-full max-w-full object-contain filter dark:invert"
@@ -852,7 +853,7 @@ export const QcDesk: React.FC<Props> = ({
             >
               <X className="w-6 h-6" />
             </button>
-            <img
+            <CloudImage
               src={previewImage}
               alt="بزرگ‌نمایی عکس QC"
               className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain bg-black"

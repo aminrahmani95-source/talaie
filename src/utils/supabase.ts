@@ -2,20 +2,41 @@ import { createClient, SupabaseClient, User as SupabaseAuthUser } from '@supabas
 import { Project, Ticket, User, SystemSettings } from '../types';
 import { toEnglishDigits } from './jalali';
 
+export type RealtimeConnectionStatus = 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED';
+
 let supabaseInstance: SupabaseClient | null = null;
 let currentUrl = '';
 let currentKey = '';
-let syncChannel: ReturnType<SupabaseClient['channel']> | null = null;
+
+// Active Realtime Channels
+let projectsChannel: ReturnType<SupabaseClient['channel']> | null = null;
+let ticketsChannel: ReturnType<SupabaseClient['channel']> | null = null;
 let profilesChannel: ReturnType<SupabaseClient['channel']> | null = null;
+let settingsChannel: ReturnType<SupabaseClient['channel']> | null = null;
+
+// Signed URL cache: path -> { url, expiresAt }
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
+// Realtime connection status listeners
+let currentConnectionStatus: RealtimeConnectionStatus = 'DISCONNECTED';
+const statusListeners = new Set<(status: RealtimeConnectionStatus) => void>();
+
+function setConnectionStatus(status: RealtimeConnectionStatus) {
+  if (currentConnectionStatus !== status) {
+    currentConnectionStatus = status;
+    statusListeners.forEach((listener) => listener(status));
+  }
+}
 
 export const SupabaseSyncService = {
   /**
    * Returns or initializes the singleton Supabase client.
+   * Credentials come strictly from environment variables (.env).
    * Session is persisted in localStorage by Supabase Auth (persistSession: true).
    */
-  getClient(url?: string, anonKey?: string): SupabaseClient | null {
-    const finalUrl = url || import.meta.env.VITE_SUPABASE_URL;
-    const finalKey = anonKey || import.meta.env.VITE_SUPABASE_ANON_KEY;
+  getClient(): SupabaseClient | null {
+    const finalUrl = import.meta.env.VITE_SUPABASE_URL;
+    const finalKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     if (!finalUrl || !finalKey) return null;
 
     if (supabaseInstance && currentUrl === finalUrl && currentKey === finalKey) {
@@ -40,6 +61,21 @@ export const SupabaseSyncService = {
   },
 
   /**
+   * Realtime Connection Status
+   */
+  getRealtimeStatus(): RealtimeConnectionStatus {
+    return currentConnectionStatus;
+  },
+
+  onRealtimeStatusChange(callback: (status: RealtimeConnectionStatus) => void): (() => void) {
+    statusListeners.add(callback);
+    callback(currentConnectionStatus);
+    return () => {
+      statusListeners.delete(callback);
+    };
+  },
+
+  /**
    * Converts an 11-digit Iranian mobile number to internal Supabase Auth email.
    * e.g. "09124339038" -> "09124339038@talaie.local"
    */
@@ -50,7 +86,6 @@ export const SupabaseSyncService = {
 
   /**
    * Real Supabase Auth login with phone and password.
-   * Validates user profile in 'profiles' table and verifies user is active.
    */
   async signIn(phone: string, password: string): Promise<{ user: User; authUser: SupabaseAuthUser }> {
     const client = this.getClient();
@@ -83,9 +118,6 @@ export const SupabaseSyncService = {
     return { user: profile, authUser: authData.user };
   },
 
-  /**
-   * Sign out current user from Supabase Auth
-   */
   async signOut(): Promise<void> {
     const client = this.getClient();
     if (client) {
@@ -93,9 +125,6 @@ export const SupabaseSyncService = {
     }
   },
 
-  /**
-   * Fetch current session and validate active profile
-   */
   async getCurrentSessionUser(): Promise<User | null> {
     const client = this.getClient();
     if (!client) return null;
@@ -116,9 +145,6 @@ export const SupabaseSyncService = {
     }
   },
 
-  /**
-   * Listen to Supabase Auth state changes
-   */
   onAuthStateChange(callback: (user: User | null) => void): (() => void) {
     const client = this.getClient();
     if (!client) return () => {};
@@ -142,9 +168,10 @@ export const SupabaseSyncService = {
     };
   },
 
-  /**
-   * Fetch a single user profile from 'profiles' table
-   */
+  // =========================================================================
+  // PROFILES (Users)
+  // =========================================================================
+
   async fetchProfileById(userId: string): Promise<User | null> {
     const client = this.getClient();
     if (!client) return null;
@@ -171,9 +198,6 @@ export const SupabaseSyncService = {
     }
   },
 
-  /**
-   * Fetch all profiles from 'profiles' table
-   */
   async fetchProfiles(): Promise<User[]> {
     const client = this.getClient();
     if (!client) return [];
@@ -199,9 +223,6 @@ export const SupabaseSyncService = {
     }
   },
 
-  /**
-   * Subscribe to real-time updates on 'profiles' table
-   */
   subscribeProfiles(onUpdate: (profiles: User[]) => void): (() => void) {
     const client = this.getClient();
     if (!client) return () => {};
@@ -234,9 +255,6 @@ export const SupabaseSyncService = {
     };
   },
 
-  /**
-   * Invoke admin-users Edge Function for administrative user operations
-   */
   async invokeAdminUsers(payload: {
     action: 'create' | 'update' | 'reset-password' | 'delete';
     [key: string]: any;
@@ -263,261 +281,603 @@ export const SupabaseSyncService = {
     }
   },
 
-  /**
-   * Initializes remote sync for projects, tickets, and settings
-   */
-  async subscribe(
-    url: string | undefined,
-    anonKey: string | undefined,
-    callbacks: {
-      onProjectsSync: (projects: Project[]) => void;
-      onTicketsSync: (tickets: Ticket[]) => void;
-      onSettingsSync: (settings: SystemSettings) => void;
+  // =========================================================================
+  // PROJECTS (Row-by-Row in dedicated 'projects' table)
+  // =========================================================================
+
+  async fetchProjects(): Promise<Project[]> {
+    const client = this.getClient();
+    if (!client) return [];
+
+    try {
+      // First try fetching from dedicated 'projects' table (Migration 002)
+      const { data, error } = await client
+        .from('projects')
+        .select('id, data, updated_at')
+        .order('updated_at', { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data.map((row: any) => ({
+          ...row.data,
+          id: row.id,
+          updatedAt: row.data.updatedAt || row.updated_at,
+        }));
+      }
+
+      // Fallback: Check legacy talaie_sync if projects table is empty
+      const { data: syncData, error: syncError } = await client
+        .from('talaie_sync')
+        .select('value')
+        .eq('key', 'projects')
+        .maybeSingle();
+
+      if (!syncError && syncData && Array.isArray(syncData.value)) {
+        return syncData.value as Project[];
+      }
+
+      return [];
+    } catch (err) {
+      console.warn('Failed to fetch projects from cloud:', err);
+      return [];
     }
-  ) {
-    const client = this.getClient(url, anonKey);
+  },
+
+  async upsertProject(project: Project): Promise<void> {
+    const client = this.getClient();
+    if (!client) return;
+
+    try {
+      const updatedAt = project.updatedAt || new Date().toISOString();
+      await client.from('projects').upsert(
+        {
+          id: project.id,
+          data: { ...project, updatedAt },
+          updated_at: updatedAt,
+        },
+        { onConflict: 'id' }
+      );
+    } catch (err) {
+      console.warn(`Failed to upsert project ${project.id}:`, err);
+      throw err;
+    }
+  },
+
+  async deleteProject(projectId: string): Promise<void> {
+    const client = this.getClient();
+    if (!client) return;
+
+    try {
+      await client.from('projects').delete().eq('id', projectId);
+    } catch (err) {
+      console.warn(`Failed to delete project ${projectId}:`, err);
+      throw err;
+    }
+  },
+
+  subscribeProjects(callbacks: {
+    onInsert: (project: Project) => void;
+    onUpdate: (project: Project) => void;
+    onDelete: (projectId: string) => void;
+  }): (() => void) {
+    const client = this.getClient();
     if (!client) return () => {};
 
-    // 1. Initial Pull from cloud
     try {
-      const { data, error } = await client.from('talaie_sync').select('key, value');
-      if (!error && data) {
-        data.forEach((row: { key: string; value: unknown }) => {
-          if (row.key === 'projects' && Array.isArray(row.value)) {
-            callbacks.onProjectsSync(row.value as Project[]);
-          } else if (row.key === 'tickets' && Array.isArray(row.value)) {
-            callbacks.onTicketsSync(row.value as Ticket[]);
-          } else if (row.key === 'settings' && row.value && typeof row.value === 'object') {
-            callbacks.onSettingsSync(row.value as SystemSettings);
-          }
-        });
-      }
-    } catch (err) {
-      console.warn('Initial cloud pull failed (check table existence):', err);
-    }
-
-    // 2. Realtime Subscription for talaie_sync
-    try {
-      if (syncChannel) {
-        client.removeChannel(syncChannel);
+      if (projectsChannel) {
+        client.removeChannel(projectsChannel);
       }
 
-      syncChannel = (client as any)
-        .channel('talaie_sync_channel')
+      setConnectionStatus('CONNECTING');
+
+      projectsChannel = (client as any)
+        .channel('talaie_projects_channel')
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'talaie_sync' },
+          { event: 'INSERT', schema: 'public', table: 'projects' },
           (payload: any) => {
-            const row = payload.new;
-            if (!row || !row.key) return;
-
-            if (row.key === 'projects' && Array.isArray(row.value)) {
-              callbacks.onProjectsSync(row.value as Project[]);
-            } else if (row.key === 'tickets' && Array.isArray(row.value)) {
-              callbacks.onTicketsSync(row.value as Ticket[]);
-            } else if (row.key === 'settings' && row.value && typeof row.value === 'object') {
-              callbacks.onSettingsSync(row.value as SystemSettings);
+            const project = payload.new?.data;
+            if (project && project.id) {
+              callbacks.onInsert(project);
             }
           }
         )
-        .subscribe();
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'projects' },
+          (payload: any) => {
+            const project = payload.new?.data;
+            if (project && project.id) {
+              callbacks.onUpdate(project);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'projects' },
+          (payload: any) => {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              callbacks.onDelete(deletedId);
+            }
+          }
+        )
+        .subscribe((status: string) => {
+          if (status === 'SUBSCRIBED') {
+            setConnectionStatus('CONNECTED');
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            setConnectionStatus('DISCONNECTED');
+          }
+        });
     } catch (err) {
-      console.warn('Realtime subscription failed:', err);
+      console.warn('Realtime subscription for projects failed:', err);
+      setConnectionStatus('DISCONNECTED');
     }
 
     return () => {
-      if (syncChannel && client) {
-        client.removeChannel(syncChannel);
-        syncChannel = null;
+      if (projectsChannel && client) {
+        client.removeChannel(projectsChannel);
+        projectsChannel = null;
       }
     };
   },
 
   /**
-   * Push data to cloud (projects, tickets, settings)
+   * Generates next sequential project code (e.g. PRJ-1001) using Postgres sequence
    */
-  async push(
-    url: string | undefined,
-    anonKey: string | undefined,
-    key: 'projects' | 'tickets' | 'settings',
-    value: unknown
-  ) {
-    const client = this.getClient(url, anonKey);
+  async getNextProjectCode(existingProjects: Project[] = []): Promise<string> {
+    const client = this.getClient();
+    if (client) {
+      try {
+        const { data, error } = await client.rpc('next_project_code');
+        if (!error && data && typeof data === 'string') {
+          return data;
+        }
+      } catch {
+        // Fallback below
+      }
+    }
+
+    // Client-side sequential fallback based on existing project codes
+    let maxNum = 1000;
+    existingProjects.forEach((p) => {
+      const match = p.code?.match(/PRJ-(\d+)/);
+      if (match && match[1]) {
+        const val = parseInt(match[1], 10);
+        if (val > maxNum) maxNum = val;
+      }
+    });
+    return `PRJ-${maxNum + 1}`;
+  },
+
+  // =========================================================================
+  // TICKETS (Row-by-Row in dedicated 'tickets' table)
+  // =========================================================================
+
+  async fetchTickets(): Promise<Ticket[]> {
+    const client = this.getClient();
+    if (!client) return [];
+
+    try {
+      // First try dedicated tickets table
+      const { data, error } = await client
+        .from('tickets')
+        .select('id, data, updated_at')
+        .order('updated_at', { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data.map((row: any) => ({
+          ...row.data,
+          id: row.id,
+        }));
+      }
+
+      // Fallback: Check legacy talaie_sync
+      const { data: syncData, error: syncError } = await client
+        .from('talaie_sync')
+        .select('value')
+        .eq('key', 'tickets')
+        .maybeSingle();
+
+      if (!syncError && syncData && Array.isArray(syncData.value)) {
+        return syncData.value as Ticket[];
+      }
+
+      return [];
+    } catch (err) {
+      console.warn('Failed to fetch tickets from cloud:', err);
+      return [];
+    }
+  },
+
+  async upsertTicket(ticket: Ticket): Promise<void> {
+    const client = this.getClient();
+    if (!client) return;
+
+    try {
+      await client.from('tickets').upsert(
+        {
+          id: ticket.id,
+          data: ticket,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
+    } catch (err) {
+      console.warn(`Failed to upsert ticket ${ticket.id}:`, err);
+      throw err;
+    }
+  },
+
+  async deleteTicket(ticketId: string): Promise<void> {
+    const client = this.getClient();
+    if (!client) return;
+
+    try {
+      await client.from('tickets').delete().eq('id', ticketId);
+    } catch (err) {
+      console.warn(`Failed to delete ticket ${ticketId}:`, err);
+      throw err;
+    }
+  },
+
+  subscribeTickets(callbacks: {
+    onInsert: (ticket: Ticket) => void;
+    onUpdate: (ticket: Ticket) => void;
+    onDelete: (ticketId: string) => void;
+  }): (() => void) {
+    const client = this.getClient();
+    if (!client) return () => {};
+
+    try {
+      if (ticketsChannel) {
+        client.removeChannel(ticketsChannel);
+      }
+
+      ticketsChannel = (client as any)
+        .channel('talaie_tickets_channel')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'tickets' },
+          (payload: any) => {
+            const ticket = payload.new?.data;
+            if (ticket && ticket.id) {
+              callbacks.onInsert(ticket);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'tickets' },
+          (payload: any) => {
+            const ticket = payload.new?.data;
+            if (ticket && ticket.id) {
+              callbacks.onUpdate(ticket);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'tickets' },
+          (payload: any) => {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              callbacks.onDelete(deletedId);
+            }
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn('Realtime subscription for tickets failed:', err);
+    }
+
+    return () => {
+      if (ticketsChannel && client) {
+        client.removeChannel(ticketsChannel);
+        ticketsChannel = null;
+      }
+    };
+  },
+
+  // =========================================================================
+  // SETTINGS (Stored in 'talaie_sync' under key = 'settings')
+  // =========================================================================
+
+  async fetchSettings(): Promise<SystemSettings | null> {
+    const client = this.getClient();
+    if (!client) return null;
+
+    try {
+      const { data, error } = await client
+        .from('talaie_sync')
+        .select('value')
+        .eq('key', 'settings')
+        .maybeSingle();
+
+      if (!error && data && data.value && typeof data.value === 'object') {
+        return data.value as SystemSettings;
+      }
+      return null;
+    } catch (err) {
+      console.warn('Failed to fetch settings:', err);
+      return null;
+    }
+  },
+
+  async upsertSettings(settings: SystemSettings): Promise<void> {
+    const client = this.getClient();
     if (!client) return;
 
     try {
       await client.from('talaie_sync').upsert(
         {
-          key,
-          value,
+          key: 'settings',
+          value: settings,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'key' }
       );
     } catch (err) {
-      console.warn(`Cloud push failed for ${key}:`, err);
+      console.warn('Failed to upsert settings:', err);
+      throw err;
     }
+  },
+
+  subscribeSettings(onUpdate: (settings: SystemSettings) => void): (() => void) {
+    const client = this.getClient();
+    if (!client) return () => {};
+
+    try {
+      if (settingsChannel) {
+        client.removeChannel(settingsChannel);
+      }
+
+      settingsChannel = (client as any)
+        .channel('talaie_settings_channel')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'talaie_sync' },
+          (payload: any) => {
+            const row = payload.new;
+            if (row && row.key === 'settings' && row.value && typeof row.value === 'object') {
+              onUpdate(row.value as SystemSettings);
+            }
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn('Realtime subscription for settings failed:', err);
+    }
+
+    return () => {
+      if (settingsChannel && client) {
+        client.removeChannel(settingsChannel);
+        settingsChannel = null;
+      }
+    };
+  },
+
+  // =========================================================================
+  // SUPABASE STORAGE (Bucket: 'talaie-photos' & Signed URLs)
+  // =========================================================================
+
+  /**
+   * Uploads an image (File, Blob, or base64 data URL) to Supabase Storage.
+   * Stored at path: projects/<projectId>/<uuid>.jpg
+   * Returns the storage relative path (e.g. 'projects/p-101/1730000000-abc1234.jpg').
+   */
+  async uploadProjectPhoto(
+    projectId: string,
+    fileOrBlobOrBase64: File | Blob | string
+  ): Promise<string> {
+    const client = this.getClient();
+    if (!client) {
+      throw new Error('عدم اتصال به سرویس ذخیره‌سازی ابری Supabase.');
+    }
+
+    let blob: Blob;
+    if (typeof fileOrBlobOrBase64 === 'string') {
+      // Convert data URL to Blob
+      if (fileOrBlobOrBase64.startsWith('data:')) {
+        const res = await fetch(fileOrBlobOrBase64);
+        blob = await res.blob();
+      } else {
+        // Already a path
+        return fileOrBlobOrBase64;
+      }
+    } else {
+      blob = fileOrBlobOrBase64;
+    }
+
+    const uuid = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const storagePath = `projects/${projectId}/${uuid}.jpg`;
+
+    const { error } = await client.storage
+      .from('talaie-photos')
+      .upload(storagePath, blob, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      });
+
+    if (error) {
+      throw new Error(`خطا در آپلود عکس به فضای ابری: ${error.message}`);
+    }
+
+    return storagePath;
+  },
+
+  /**
+   * Returns a viewable URL for a photo.
+   * If the path is already a base64 data URL or external URL, returns it directly.
+   * If it's a Supabase Storage path, returns a cached or freshly generated signed URL.
+   */
+  async getSignedPhotoUrl(path: string): Promise<string> {
+    if (!path) return '';
+    if (
+      path.startsWith('data:') ||
+      path.startsWith('http://') ||
+      path.startsWith('https://') ||
+      path.startsWith('blob:')
+    ) {
+      return path;
+    }
+
+    // Check memory cache
+    const cached = signedUrlCache.get(path);
+    if (cached && cached.expiresAt > Date.now() + 60000) {
+      return cached.url;
+    }
+
+    const client = this.getClient();
+    if (!client) return '';
+
+    try {
+      const { data, error } = await client.storage
+        .from('talaie-photos')
+        .createSignedUrl(path, 3600); // 1 hour validity
+
+      if (error || !data?.signedUrl) {
+        return '';
+      }
+
+      signedUrlCache.set(path, {
+        url: data.signedUrl,
+        expiresAt: Date.now() + 3500 * 1000,
+      });
+
+      return data.signedUrl;
+    } catch {
+      return '';
+    }
+  },
+
+  /**
+   * Admin tool: Migrates legacy base64 images to Supabase Storage bucket.
+   * Reports progress and updates projects table in database.
+   */
+  async migrateLegacyPhotos(
+    projects: Project[],
+    onProgress: (current: number, total: number) => void
+  ): Promise<{ updatedProjects: Project[]; migratedCount: number }> {
+    // 1. Count total base64 images
+    let totalBase64 = 0;
+    projects.forEach((p) => {
+      p.beforePhotos?.forEach((ph) => { if (ph.startsWith('data:')) totalBase64++; });
+      p.afterPhotos?.forEach((ph) => { if (ph.startsWith('data:')) totalBase64++; });
+      p.completionPhotos?.forEach((ph) => { if (ph.startsWith('data:')) totalBase64++; });
+      p.proposalImages?.forEach((img) => { if (img.url.startsWith('data:')) totalBase64++; });
+    });
+
+    if (totalBase64 === 0) {
+      return { updatedProjects: projects, migratedCount: 0 };
+    }
+
+    let currentProgress = 0;
+    const updatedProjects: Project[] = [];
+
+    for (const proj of projects) {
+      let changed = false;
+      const copy: Project = { ...proj };
+
+      // Before photos
+      if (copy.beforePhotos) {
+        const nextBefore: string[] = [];
+        for (const ph of copy.beforePhotos) {
+          if (ph.startsWith('data:')) {
+            try {
+              const uploadedPath = await this.uploadProjectPhoto(proj.id, ph);
+              nextBefore.push(uploadedPath);
+              changed = true;
+            } catch {
+              nextBefore.push(ph);
+            }
+            currentProgress++;
+            onProgress(currentProgress, totalBase64);
+          } else {
+            nextBefore.push(ph);
+          }
+        }
+        copy.beforePhotos = nextBefore;
+      }
+
+      // After photos
+      if (copy.afterPhotos) {
+        const nextAfter: string[] = [];
+        for (const ph of copy.afterPhotos) {
+          if (ph.startsWith('data:')) {
+            try {
+              const uploadedPath = await this.uploadProjectPhoto(proj.id, ph);
+              nextAfter.push(uploadedPath);
+              changed = true;
+            } catch {
+              nextAfter.push(ph);
+            }
+            currentProgress++;
+            onProgress(currentProgress, totalBase64);
+          } else {
+            nextAfter.push(ph);
+          }
+        }
+        copy.afterPhotos = nextAfter;
+      }
+
+      // Completion photos
+      if (copy.completionPhotos) {
+        const nextComp: string[] = [];
+        for (const ph of copy.completionPhotos) {
+          if (ph.startsWith('data:')) {
+            try {
+              const uploadedPath = await this.uploadProjectPhoto(proj.id, ph);
+              nextComp.push(uploadedPath);
+              changed = true;
+            } catch {
+              nextComp.push(ph);
+            }
+            currentProgress++;
+            onProgress(currentProgress, totalBase64);
+          } else {
+            nextComp.push(ph);
+          }
+        }
+        copy.completionPhotos = nextComp;
+      }
+
+      // Proposal images
+      if (copy.proposalImages) {
+        const nextProps = [];
+        for (const img of copy.proposalImages) {
+          if (img.url.startsWith('data:')) {
+            try {
+              const uploadedPath = await this.uploadProjectPhoto(proj.id, img.url);
+              nextProps.push({ ...img, url: uploadedPath });
+              changed = true;
+            } catch {
+              nextProps.push(img);
+            }
+            currentProgress++;
+            onProgress(currentProgress, totalBase64);
+          } else {
+            nextProps.push(img);
+          }
+        }
+        copy.proposalImages = nextProps;
+      }
+
+      if (changed) {
+        await this.upsertProject(copy);
+      }
+      updatedProjects.push(copy);
+    }
+
+    return { updatedProjects, migratedCount: currentProgress };
   },
 
   /**
    * Helper SQL script for user to copy-paste into Supabase SQL Editor
    */
   getSetupSqlScript(): string {
-    return `-- =========================================================
--- گالری طلایی | اسکریپت فاز ۱ امنیت (جدول profiles و سیاست‌های RLS)
--- =========================================================
-
--- ۱. ساخت جدول پروفایل پرسنل
-create table if not exists public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  name text not null,
-  phone text unique not null,
-  role text not null check (role in ('QC_MANAGER', 'LEAD_TECHNICIAN', 'TECHNICIAN')),
-  avatar text,
-  active boolean not null default true,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
-
--- فعال‌سازی امنیت سطح سطر (RLS)
-alter table public.profiles enable row level security;
-
--- ۲. توابع کمکی امنیتی (Security Definer با search_path ثابت)
-create or replace function public.is_active_user()
-returns boolean
-language sql
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1 from public.profiles
-    where id = auth.uid() and active = true
-  );
-$$;
-
-create or replace function public.is_qc_manager()
-returns boolean
-language sql
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1 from public.profiles
-    where id = auth.uid() and role = 'QC_MANAGER' and active = true
-  );
-$$;
-
--- ۳. سیاست‌های جدول profiles
-drop policy if exists "Active users or self read profiles" on public.profiles;
-drop policy if exists "QC Managers insert profiles" on public.profiles;
-drop policy if exists "QC Managers update profiles" on public.profiles;
-drop policy if exists "QC Managers delete profiles" on public.profiles;
-
-create policy "Active users or self read profiles"
-  on public.profiles
-  for select
-  to authenticated
-  using (auth.uid() = id or public.is_active_user());
-
-create policy "QC Managers insert profiles"
-  on public.profiles
-  for insert
-  to authenticated
-  with check (public.is_qc_manager());
-
-create policy "QC Managers update profiles"
-  on public.profiles
-  for update
-  to authenticated
-  using (public.is_qc_manager())
-  with check (public.is_qc_manager());
-
-create policy "QC Managers delete profiles"
-  on public.profiles
-  for delete
-  to authenticated
-  using (public.is_qc_manager());
-
--- ۴. تنظیم جدول talaie_sync و سیاست‌های RLS
-create table if not exists public.talaie_sync (
-  key text primary key,
-  value jsonb not null,
-  updated_at timestamptz default now()
-);
-
-alter table public.talaie_sync enable row level security;
-
--- حذف سیاست‌های قدیمی
-drop policy if exists "Allow public access to talaie_sync" on public.talaie_sync;
-drop policy if exists "Active users read sync" on public.talaie_sync;
-drop policy if exists "Active users write projects and tickets" on public.talaie_sync;
-drop policy if exists "Active users update projects and tickets" on public.talaie_sync;
-drop policy if exists "QC Managers insert settings" on public.talaie_sync;
-drop policy if exists "QC Managers update settings" on public.talaie_sync;
-drop policy if exists "QC Managers delete sync" on public.talaie_sync;
-
--- لغو دسترسی ناشناس anon به تمام جداول
-revoke all on public.talaie_sync from anon;
-revoke all on public.profiles from anon;
-
--- سیاست‌های جدید talaie_sync
-create policy "Active users read sync"
-  on public.talaie_sync
-  for select
-  to authenticated
-  using (public.is_active_user());
-
-create policy "Active users write projects and tickets"
-  on public.talaie_sync
-  for insert
-  to authenticated
-  with check (public.is_active_user() and key in ('projects', 'tickets'));
-
-create policy "Active users update projects and tickets"
-  on public.talaie_sync
-  for update
-  to authenticated
-  using (public.is_active_user() and key in ('projects', 'tickets'))
-  with check (public.is_active_user() and key in ('projects', 'tickets'));
-
-create policy "QC Managers insert settings"
-  on public.talaie_sync
-  for insert
-  to authenticated
-  with check (public.is_qc_manager() and key = 'settings');
-
-create policy "QC Managers update settings"
-  on public.talaie_sync
-  for update
-  to authenticated
-  using (public.is_qc_manager() and key = 'settings')
-  with check (public.is_qc_manager() and key = 'settings');
-
-create policy "QC Managers delete sync"
-  on public.talaie_sync
-  for delete
-  to authenticated
-  using (public.is_qc_manager());
-
--- ۵. پاک‌سازی ردیف کاربران قدیمی از talaie_sync
-delete from public.talaie_sync where key = 'users';
-
--- ۶. فعال‌سازی همگام‌سازی زنده (Realtime)
-do $$
-begin
-  if not exists (
-    select 1 from pg_publication_tables 
-    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'profiles'
-  ) then
-    alter publication supabase_realtime add table public.profiles;
-  end if;
-  if not exists (
-    select 1 from pg_publication_tables 
-    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'talaie_sync'
-  ) then
-    alter publication supabase_realtime add table public.talaie_sync;
-  end if;
-end $$;
+    return `-- لطفاً دستورات موجود در پوشه supabase/migrations را اجرا فرمایید:
+-- 001_security.sql (فاز ۱: امنیت و profiles)
+-- 002_tables.sql (فاز ۲: جدول‌های projects و tickets و باکت تصاویر)
 `;
   },
 };

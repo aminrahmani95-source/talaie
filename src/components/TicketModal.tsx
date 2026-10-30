@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { toPersianDigits } from '../utils/jalali';
 import { compressImageFile } from '../utils/imageCompressor';
+import { CloudImage } from './common/CloudImage';
+import { SupabaseSyncService } from '../utils/supabase';
 
 interface Props {
   project: Project;
@@ -94,7 +96,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim()) {
       alert('لطفاً شرح مشکل را بنویسید.');
@@ -102,6 +104,22 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
     }
 
     setSubmitting(true);
+
+    // Upload photos to Supabase Storage if possible
+    const uploadedPhotos: string[] = [];
+    for (const p of photos) {
+      if (p.startsWith('data:')) {
+        try {
+          const path = await SupabaseSyncService.uploadProjectPhoto(project.id, p);
+          uploadedPhotos.push(path);
+        } catch (err) {
+          console.warn('Ticket image upload to storage failed, falling back to base64:', err);
+          uploadedPhotos.push(p);
+        }
+      } else {
+        uploadedPhotos.push(p);
+      }
+    }
 
     const now = new Date();
     const timeStr = `${toPersianDigits(now.getHours())}:${toPersianDigits(String(now.getMinutes()).padStart(2, '0'))}`;
@@ -115,7 +133,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
       authorName: currentUser.name,
       type: selectedType,
       description: description.trim(),
-      photos,
+      photos: uploadedPhotos,
       status: 'OPEN',
       createdAt: `${project.scheduledDate} - ساعت ${timeStr}`,
     };
@@ -224,7 +242,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                   key={idx}
                   className="relative w-18 h-18 rounded-2xl overflow-hidden border border-slate-300 dark:border-[#333333] shadow-xs group"
                 >
-                  <img src={p} alt={`تصویر ایراد ${idx + 1}`} className="w-full h-full object-cover" />
+                  <CloudImage src={p} alt={`تصویر ایراد ${idx + 1}`} className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => handleRemovePhoto(idx)}
@@ -267,10 +285,10 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl bg-[#D5733A] hover:bg-[#b85e2b] text-white font-black transition shadow-lg shadow-[#D5733A]/25 text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl bg-[#D5733A] hover:bg-[#b85e2b] text-white font-black transition shadow-lg shadow-[#D5733A]/25 text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60"
             >
               <CheckCircle2 className="w-4 h-4" />
-              ارسال فوری تیکت به QC
+              {submitting ? 'در حال ارسال تیکت...' : 'ارسال فوری تیکت به QC'}
             </button>
           </div>
         </form>

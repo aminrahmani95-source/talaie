@@ -11,11 +11,15 @@ import {
   Flame,
   ShieldCheck,
   PenTool,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toPersianDigits } from '../../utils/jalali';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { SignaturePad } from '../SignaturePad';
+import { SupabaseSyncService } from '../../utils/supabase';
+import { CloudImage } from '../common/CloudImage';
 
 interface Props {
   project: Project;
@@ -60,6 +64,8 @@ export const ReportCompletionModal: React.FC<Props> = ({
   const [signature, setSignature] = useState<string | undefined>(project.customerSignature);
   const [satisfaction, setSatisfaction] = useState<number>(project.customerSatisfaction || 5);
   const [completionNotes, setCompletionNotes] = useState(project.completionNotes || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   const handlePhotoUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -110,8 +116,9 @@ export const ReportCompletionModal: React.FC<Props> = ({
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploadError('');
 
     if (afterPhotos.length === 0) {
       if (
@@ -123,26 +130,59 @@ export const ReportCompletionModal: React.FC<Props> = ({
       }
     }
 
-    try {
-      confetti({
-        particleCount: 65,
-        spread: 60,
-        origin: { y: 0.7 },
-        colors: ['#C1A056', '#212121', '#194840'],
-      });
-    } catch {
-      // Ignore
-    }
+    setIsSubmitting(true);
 
-    onSubmit({
-      completionNotes: completionNotes.trim(),
-      beforePhotos,
-      afterPhotos,
-      completionPhotos: afterPhotos, // Maintain backwards compatibility
-      handoverChecklist: checklist,
-      customerSignature: signature,
-      customerSatisfaction: satisfaction,
-    });
+    try {
+      // Upload any new base64 photos directly to Supabase Storage bucket
+      const uploadedBefore: string[] = [];
+      for (const ph of beforePhotos) {
+        if (ph.startsWith('data:')) {
+          const path = await SupabaseSyncService.uploadProjectPhoto(project.id, ph);
+          uploadedBefore.push(path);
+        } else {
+          uploadedBefore.push(ph);
+        }
+      }
+
+      const uploadedAfter: string[] = [];
+      for (const ph of afterPhotos) {
+        if (ph.startsWith('data:')) {
+          const path = await SupabaseSyncService.uploadProjectPhoto(project.id, ph);
+          uploadedAfter.push(path);
+        } else {
+          uploadedAfter.push(ph);
+        }
+      }
+
+      try {
+        confetti({
+          particleCount: 65,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors: ['#C1A056', '#212121', '#194840'],
+        });
+      } catch {
+        // Ignore
+      }
+
+      await onSubmit({
+        completionNotes: completionNotes.trim(),
+        beforePhotos: uploadedBefore,
+        afterPhotos: uploadedAfter,
+        completionPhotos: uploadedAfter, // Maintain backwards compatibility
+        handoverChecklist: checklist,
+        customerSignature: signature,
+        customerSatisfaction: satisfaction,
+      });
+    } catch (err: any) {
+      console.error('Failed to upload photos or submit completion report:', err);
+      setUploadError(
+        err.message ||
+          'خطا در ذخیره‌سازی ابری تصاویر یا ثبت گزارش. فرم باز نگه داشته شد تا اطلاعات شما از بین نرود؛ لطفاً دوباره تلاش کنید.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -228,6 +268,16 @@ export const ReportCompletionModal: React.FC<Props> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {uploadError && (
+            <div
+              role="alert"
+              className="p-3.5 bg-rose-950/80 border border-rose-500/60 text-rose-200 text-xs rounded-2xl flex items-center gap-2 animate-in fade-in"
+            >
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{uploadError}</span>
+            </div>
+          )}
+
           {/* TAB 1: BEFORE & AFTER PHOTOS */}
           {activeTab === 'PHOTOS' && (
             <div className="space-y-6 animate-in fade-in duration-150">
@@ -249,7 +299,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                       key={idx}
                       className="relative w-20 h-20 rounded-2xl overflow-hidden border border-emerald-500/40 shadow-sm group"
                     >
-                      <img src={p} alt={`بعد از نصب ${idx + 1}`} className="w-full h-full object-cover" />
+                      <CloudImage src={p} alt={`بعد از نصب ${idx + 1}`} className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => handleRemovePhoto(idx, 'AFTER')}
@@ -295,7 +345,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                       key={idx}
                       className="relative w-20 h-20 rounded-2xl overflow-hidden border border-amber-500/40 shadow-sm group"
                     >
-                      <img src={p} alt={`قبل از نصب ${idx + 1}`} className="w-full h-full object-cover" />
+                      <CloudImage src={p} alt={`قبل از نصب ${idx + 1}`} className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => handleRemovePhoto(idx, 'BEFORE')}
@@ -619,17 +669,28 @@ export const ReportCompletionModal: React.FC<Props> = ({
           <div className="flex items-center gap-3 pt-4 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={onClose}
-              className="flex-1 py-3 border border-slate-300 dark:border-[#333333] text-slate-700 dark:text-zinc-300 font-bold rounded-xl text-xs hover:bg-slate-50 dark:hover:bg-[#252525] transition min-h-[44px]"
+              className="flex-1 py-3 border border-slate-300 dark:border-[#333333] text-slate-700 dark:text-zinc-300 font-bold rounded-xl text-xs hover:bg-slate-50 dark:hover:bg-[#252525] transition min-h-[44px] cursor-pointer disabled:opacity-50"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-black rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2 border border-[#C1A056]/30 active:scale-98 min-h-[44px]"
+              disabled={isSubmitting}
+              className="flex-1 py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-black rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2 border border-[#C1A056]/30 active:scale-98 min-h-[44px] cursor-pointer disabled:opacity-50"
             >
-              <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-              ارسال رسمی گزارش به QC
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-[#C1A056]" />
+                  <span>در حال آپلود تصاویر و ارسال...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
+                  <span>ارسال رسمی گزارش به QC</span>
+                </>
+              )}
             </button>
           </div>
         </form>

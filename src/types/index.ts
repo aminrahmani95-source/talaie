@@ -209,6 +209,4 @@ export interface SystemSettings {
   visibilityWindowDays: number; // تعداد روزهای قابل مشاهده برای تکنسین‌ها (پیش‌فرض 4 روز)
   companyName: string;
   defaultTools: string[];
-  supabaseUrl?: string;
-  supabaseAnonKey?: string;
 }

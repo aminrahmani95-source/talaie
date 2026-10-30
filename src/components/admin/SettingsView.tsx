@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { SystemSettings } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { Project, SystemSettings } from '../../types';
 import {
   Layers,
   Eye,
@@ -16,13 +16,17 @@ import {
   Sparkles,
   Copy,
   Check,
+  ImageIcon,
+  Loader2,
 } from 'lucide-react';
 import { StorageService } from '../../utils/storage';
-import { SupabaseSyncService } from '../../utils/supabase';
+import { SupabaseSyncService, RealtimeConnectionStatus } from '../../utils/supabase';
 import { toPersianDigits } from '../../utils/jalali';
 
 interface Props {
   settings: SystemSettings;
+  projects?: Project[];
+  onUpdateProjects?: (projects: Project[]) => void;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
   onUpdateSettings: (settings: SystemSettings) => void;
@@ -31,6 +35,8 @@ interface Props {
 
 export const SettingsView: React.FC<Props> = ({
   settings,
+  projects = [],
+  onUpdateProjects,
   isDarkMode = false,
   onToggleDarkMode,
   onUpdateSettings,
@@ -41,10 +47,23 @@ export const SettingsView: React.FC<Props> = ({
   const [tools, setTools] = useState<string[]>([...settings.defaultTools]);
   const [newTool, setNewTool] = useState('');
 
-  // Supabase states
-  const [supabaseUrl, setSupabaseUrl] = useState(settings.supabaseUrl || '');
-  const [supabaseKey, setSupabaseKey] = useState(settings.supabaseAnonKey || '');
+  // Realtime connection status
+  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeConnectionStatus>(
+    SupabaseSyncService.getRealtimeStatus()
+  );
   const [copiedSql, setCopiedSql] = useState(false);
+
+  // Migration state
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationProgress, setMigrationProgress] = useState<{ current: number; total: number } | null>(null);
+  const [migrationResult, setMigrationResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsub = SupabaseSyncService.onRealtimeStatusChange((status) => {
+      setRealtimeStatus(status);
+    });
+    return () => unsub();
+  }, []);
 
   const handleCopySql = () => {
     navigator.clipboard.writeText(SupabaseSyncService.getSetupSqlScript());
@@ -77,8 +96,6 @@ export const SettingsView: React.FC<Props> = ({
       companyName: companyName.trim(),
       visibilityWindowDays: visibilityDays,
       defaultTools: tools,
-      supabaseUrl: supabaseUrl.trim(),
-      supabaseAnonKey: supabaseKey.trim(),
     });
     alert('تنظیمات سامانه با موفقیت ذخیره شد.');
   };
@@ -116,6 +133,40 @@ export const SettingsView: React.FC<Props> = ({
     reader.readAsText(file);
   };
 
+  // Migrate legacy base64 photos to Supabase Storage
+  const handleMigratePhotos = async () => {
+    if (projects.length === 0) {
+      alert('هیچ پروژه‌ای برای بررسی وجود ندارد.');
+      return;
+    }
+
+    setIsMigrating(true);
+    setMigrationResult(null);
+
+    try {
+      const res = await SupabaseSyncService.migrateLegacyPhotos(
+        projects,
+        (current, total) => {
+          setMigrationProgress({ current, total });
+        }
+      );
+
+      if (res.migratedCount > 0) {
+        if (onUpdateProjects) {
+          onUpdateProjects(res.updatedProjects);
+        }
+        setMigrationResult(`تعداد ${toPersianDigits(res.migratedCount)} تصویر با موفقیت به باکت ابری منتقل و ذخیره شدند.`);
+      } else {
+        setMigrationResult('تمام تصاویر از قبل در فضای ابری ثبت شده‌اند و هیچ عکس قدیمی‌ای یافت نشد.');
+      }
+    } catch (err: any) {
+      setMigrationResult(`خطا در انتقال تصاویر: ${err.message || err}`);
+    } finally {
+      setIsMigrating(false);
+      setMigrationProgress(null);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
       {/* Banner */}
@@ -131,7 +182,7 @@ export const SettingsView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Theme Switcher Card (UI/UX Pro Max) */}
+      {/* Theme Switcher Card */}
       <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-sm text-[#212121] dark:text-white flex items-center gap-2">
@@ -149,7 +200,7 @@ export const SettingsView: React.FC<Props> = ({
             onClick={() => {
               if (isDarkMode && onToggleDarkMode) onToggleDarkMode();
             }}
-            className={`flex items-center justify-center gap-2 p-4 rounded-2xl border transition min-h-[52px] active:scale-95 ${
+            className={`flex items-center justify-center gap-2 p-4 rounded-2xl border transition min-h-[52px] active:scale-95 cursor-pointer ${
               !isDarkMode
                 ? 'border-[#C1A056] bg-[#FAF7F2] text-[#212121] ring-2 ring-[#C1A056]/30 font-bold shadow-xs'
                 : 'border-[#E8E4DC] dark:border-[#333333] text-slate-500 dark:text-zinc-400 hover:bg-[#FAF7F2] dark:hover:bg-[#222222]'
@@ -164,7 +215,7 @@ export const SettingsView: React.FC<Props> = ({
             onClick={() => {
               if (!isDarkMode && onToggleDarkMode) onToggleDarkMode();
             }}
-            className={`flex items-center justify-center gap-2 p-4 rounded-2xl border transition min-h-[52px] active:scale-95 ${
+            className={`flex items-center justify-center gap-2 p-4 rounded-2xl border transition min-h-[52px] active:scale-95 cursor-pointer ${
               isDarkMode
                 ? 'border-[#C1A056] bg-[#222222] text-[#C1A056] ring-2 ring-[#C1A056]/30 font-bold shadow-xs'
                 : 'border-[#E8E4DC] text-slate-500 hover:bg-[#FAF7F2]'
@@ -249,7 +300,7 @@ export const SettingsView: React.FC<Props> = ({
             <button
               type="button"
               onClick={handleAddTool}
-              className="px-5 py-2.5 bg-[#212121] dark:bg-[#C1A056] text-[#C1A056] dark:text-[#121212] rounded-xl text-xs font-bold hover:bg-[#333333] transition flex items-center gap-1 border border-[#C1A056]/30 active:scale-95 min-h-[44px]"
+              className="px-5 py-2.5 bg-[#212121] dark:bg-[#C1A056] text-[#C1A056] dark:text-[#121212] rounded-xl text-xs font-bold hover:bg-[#333333] transition flex items-center gap-1 border border-[#C1A056]/30 active:scale-95 min-h-[44px] cursor-pointer"
             >
               <Plus className="w-4 h-4" aria-hidden="true" />
               افزودن به بانک
@@ -267,7 +318,7 @@ export const SettingsView: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => handleRemoveTool(t)}
-                  className="p-1.5 text-slate-400 hover:text-rose-600 transition"
+                  className="p-1.5 text-slate-400 hover:text-rose-600 transition cursor-pointer"
                   title="حذف از بانک"
                   aria-label={`حذف ${t} از بانک ابزار`}
                 >
@@ -278,40 +329,48 @@ export const SettingsView: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Section 3: Supabase Cloud Sync */}
+        {/* Section 3: Supabase Cloud Realtime Status & Photo Migration */}
         <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Cloud className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
               <h3 className="font-bold text-sm text-[#212121] dark:text-white">
-                اتصال ابری همگام‌سازی لحظه‌ای بین چند دستگاه (Supabase Free Sync)
+                وضعیت شبکه ابری و همگام‌سازی زنده (Supabase Realtime)
               </h3>
             </div>
-            {supabaseUrl && supabaseKey ? (
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+
+            {realtimeStatus === 'CONNECTED' ? (
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>دیتابیس ابری متصل است</span>
+                <span>متصل به شبکه ابری لحظه‌ای (آنلاین)</span>
+              </span>
+            ) : realtimeStatus === 'CONNECTING' ? (
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800 flex items-center gap-1.5">
+                <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+                <span>در حال برقراری ارتباط...</span>
               </span>
             ) : (
-              <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700">
-                حالت ذخیره‌سازی محلی (آفلاین)
+              <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700">
+                حالت محلی / در انتظار اتصال
               </span>
             )}
           </div>
 
           <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#C1A056]/30 rounded-2xl p-4 text-xs text-slate-800 dark:text-zinc-200 leading-relaxed space-y-2">
-            <p className="font-bold text-[#212121] dark:text-[#C1A056]">همگام‌سازی رایگان و ۱۰۰٪ آنلاین بین تمام گوشی‌ها:</p>
+            <p className="font-bold text-[#212121] dark:text-[#C1A056]">
+              ارتباط سطر‌به‌سطر امن و بدون تداخل (Row-by-Row Synchronization):
+            </p>
             <p>
-              سایت شما با گیت‌هاب پیجز رایگان اجرا می‌شود. با اتصال به سرویس ابری رایگان Supabase، هر اطلاعاتی که هر کاربری وارد کند (پروژه، عکس، امضا یا تیکت) در کسری از ثانیه روی تمام گوشی‌های سرپرستان و مدیران آپدیت می‌شود.
+              تنظیمات اتصال مستقیماً از فایل امن کانفیگ پروژه خوانده می‌شود. تغییر وضعیت هر پروژه، آپلود عکس، گزارش اتمام یا تیکت بلافاصله و فقط برای همان ردیف در دیتابیس ثبت شده و دیگر هیچ تداخلی بین تغییرات هم‌زمان پرسنل پیش نخواهد آمد.
             </p>
             <div className="pt-2 flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={handleCopySql}
-                className="px-3 py-1.5 bg-[#212121] hover:bg-[#333333] dark:bg-[#C1A056] dark:hover:bg-[#a88738] text-[#C1A056] dark:text-[#212121] rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 active:scale-95 shadow-xs"
+                className="px-3 py-1.5 bg-[#212121] hover:bg-[#333333] dark:bg-[#C1A056] dark:hover:bg-[#a88738] text-[#C1A056] dark:text-[#212121] rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
               >
                 {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedSql ? 'دستورات SQL کپی شد!' : 'کپی دستورات SQL ساخت جدول در سوپابیس'}</span>
+                <span>{copiedSql ? 'دستورات SQL کپی شد!' : 'کپی دستورات SQL ساخت جدول‌ها'}</span>
               </button>
               <a
                 href="https://supabase.com/dashboard"
@@ -319,47 +378,70 @@ export const SettingsView: React.FC<Props> = ({
                 rel="noreferrer"
                 className="text-[11px] text-[#A88738] dark:text-[#C1A056] font-bold underline hover:opacity-80"
               >
-                ورود به پنل رایگان Supabase ↗
+                ورود به پنل Supabase ↗
               </a>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="supabase-url" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                Supabase Project URL:
-              </label>
-              <input
-                id="supabase-url"
-                type="text"
-                placeholder="https://xyz.supabase.co"
-                value={supabaseUrl}
-                onChange={(e) => setSupabaseUrl(e.target.value)}
-                className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] font-mono text-left bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
-                dir="ltr"
-              />
+          {/* Photo Cloud Migration Tool for QC Manager */}
+          <div className="p-4 rounded-2xl border border-[#E8E4DC] dark:border-[#333333] bg-white dark:bg-[#181818] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-[#C1A056]" />
+                <span className="text-xs font-bold text-[#212121] dark:text-white">
+                  انتقال عکس‌های قدیمی به فضای باکت ابری (talaie-photos)
+                </span>
+              </div>
             </div>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              اگر عکس‌هایی از قبل به‌صورت فشرده در مرورگر ذخیره شده باشند، با زدن این دکمه همه‌ی آن‌ها به باکت اختصاصی ابری Supabase Storage منتقل شده و حافظه گوشی پرسنل آزاد می‌شود.
+            </p>
 
-            <div>
-              <label htmlFor="supabase-key" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                Supabase Anon Public Key:
-              </label>
-              <input
-                id="supabase-key"
-                type="password"
-                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-                value={supabaseKey}
-                onChange={(e) => setSupabaseKey(e.target.value)}
-                className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] font-mono text-left bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
-                dir="ltr"
-              />
-            </div>
+            {migrationProgress && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px] font-mono text-[#C1A056]">
+                  <span>در حال انتقال تصویر {toPersianDigits(migrationProgress.current)} از {toPersianDigits(migrationProgress.total)}...</span>
+                  <span>{Math.round((migrationProgress.current / migrationProgress.total) * 100)}%</span>
+                </div>
+                <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-[#C1A056] h-full transition-all duration-200"
+                    style={{ width: `${(migrationProgress.current / migrationProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {migrationResult && (
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
+                {migrationResult}
+              </div>
+            )}
+
+            <button
+              type="button"
+              disabled={isMigrating}
+              onClick={handleMigratePhotos}
+              className="px-4 py-2 bg-[#212121] dark:bg-[#C1A056] text-[#C1A056] dark:text-[#121212] rounded-xl text-xs font-bold hover:bg-[#333333] transition flex items-center gap-2 border border-[#C1A056]/30 active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              {isMigrating ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>در حال انتقال تصاویر...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>انتقال عکس‌های قدیمی به فضای ابری</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
         <button
           type="submit"
-          className="w-full py-3.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm border border-[#C1A056]/30 active:scale-[0.99] min-h-[48px]"
+          className="w-full py-3.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm border border-[#C1A056]/30 active:scale-[0.99] min-h-[48px] cursor-pointer"
         >
           <CheckCircle2 className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
           ذخیره تمام تنظیمات
@@ -374,14 +456,14 @@ export const SettingsView: React.FC<Props> = ({
         </h3>
 
         <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
-          می‌توانید تمام پروژه‌های یک‌ماهه، لیست تکنسین‌ها، تیکت‌ها و ارزیابی‌های QC را به عنوان فایل پشتیبان JSON دانلود کنید تا هیچ‌وقت اطلاعات شما از بین نرود.
+          می‌توانید تمام پروژه‌ها، لیست تکنسین‌ها، تیکت‌ها و ارزیابی‌های QC را به عنوان فایل پشتیبان JSON دانلود کنید تا هیچ‌وقت اطلاعات شما از بین نرود.
         </p>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
           <button
             type="button"
             onClick={handleExportBackup}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-full text-xs font-bold transition shadow-xs border border-[#C1A056]/30 active:scale-95 min-h-[44px]"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-full text-xs font-bold transition shadow-xs border border-[#C1A056]/30 active:scale-95 min-h-[44px] cursor-pointer"
           >
             <Download className="w-4 h-4" aria-hidden="true" />
             دانلود فایل پشتیبان کامل (JSON Backup)
@@ -401,7 +483,7 @@ export const SettingsView: React.FC<Props> = ({
           <button
             type="button"
             onClick={onResetData}
-            className="flex items-center gap-2 px-4 py-2.5 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-full text-xs font-bold transition mr-auto active:scale-95 min-h-[44px]"
+            className="flex items-center gap-2 px-4 py-2.5 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-full text-xs font-bold transition mr-auto active:scale-95 min-h-[44px] cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" aria-hidden="true" />
             بازنشانی به داده‌های تستی اولیه

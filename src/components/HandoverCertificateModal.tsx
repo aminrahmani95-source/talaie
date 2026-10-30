@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { toPersianDigits, formatDuration, formatTimeOnly } from '../utils/jalali';
+import { CloudImage } from './common/CloudImage';
 
 interface Props {
   project: Project;
@@ -185,7 +186,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                   </div>
                   <div className="h-36 bg-slate-100 flex items-center justify-center overflow-hidden">
                     {beforePhoto ? (
-                      <img src={beforePhoto} alt="" className="w-full h-full object-cover" />
+                      <CloudImage src={beforePhoto} alt="قبل از نصب" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-xs text-slate-400">عکس قبل ضمیمه نشده است</span>
                     )}
@@ -198,7 +199,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                   </div>
                   <div className="h-36 bg-slate-100 flex items-center justify-center overflow-hidden">
                     {afterPhoto ? (
-                      <img src={afterPhoto} alt="" className="w-full h-full object-cover" />
+                      <CloudImage src={afterPhoto} alt="بعد از نصب" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-xs text-slate-400">عکس بعد ضمیمه نشده است</span>
                     )}
@@ -285,7 +286,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
               </p>
               <div className="h-20 bg-[#FCFAF7] rounded-xl border border-dashed border-[#C1A056]/40 flex items-center justify-center p-1">
                 {project.customerSignature ? (
-                  <img src={project.customerSignature} alt="امضای کارفرما" className="max-h-full max-w-full object-contain" />
+                  <CloudImage src={project.customerSignature} alt="امضای کارفرما" className="max-h-full max-w-full object-contain" />
                 ) : (
                   <span className="text-[11px] text-slate-400 italic">امضای فیزیکی در محل</span>
                 )}

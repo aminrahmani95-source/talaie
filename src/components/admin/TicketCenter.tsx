@@ -5,8 +5,11 @@ import {
   CheckCircle2,
   Clock,
   User,
+  X,
+  ZoomIn,
 } from 'lucide-react';
 import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
+import { CloudImage } from '../common/CloudImage';
 
 interface Props {
   tickets: Ticket[];
@@ -17,6 +20,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
   const [filter, setFilter] = useState<'OPEN' | 'RESOLVED' | 'ALL'>('OPEN');
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
   const filteredTickets = tickets.filter((t) => {
     if (filter === 'OPEN') return t.status === 'OPEN';
@@ -159,16 +163,18 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
               {t.photos && t.photos.length > 0 && (
                 <div className="flex items-center gap-2">
                   {t.photos.map((p, i) => (
-                    <a
+                    <button
                       key={i}
-                      href={p}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-16 h-16 rounded-xl overflow-hidden border border-[#E8E4DC] dark:border-[#333333] block"
+                      type="button"
+                      onClick={() => setPreviewPhoto(p)}
+                      className="relative w-16 h-16 rounded-xl overflow-hidden border border-[#E8E4DC] dark:border-[#333333] block group cursor-pointer"
                       aria-label="مشاهده تصویر ضمیمه"
                     >
-                      <img src={p} alt="" className="w-full h-full object-cover" />
-                    </a>
+                      <CloudImage src={p} alt="" className="w-full h-full object-cover group-hover:scale-105 transition" />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
+                        <ZoomIn className="w-4 h-4" />
+                      </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -228,6 +234,31 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Preview Modal for Ticket Photos */}
+      {previewPhoto && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+            <button
+              onClick={() => setPreviewPhoto(null)}
+              className="absolute -top-12 left-0 text-white hover:text-red-400 p-2 rounded-full bg-white/10"
+              aria-label="بستن"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <CloudImage
+              src={previewPhoto}
+              alt="بزرگ‌نمایی عکس تیکت"
+              className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain bg-black"
+            />
+          </div>
         </div>
       )}
     </div>

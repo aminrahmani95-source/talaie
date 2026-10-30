@@ -136,167 +136,207 @@ export const App: React.FC = () => {
     setToast({ type, message });
   };
 
-  // Flag to avoid loopbacks when cloud updates state
-  const isRemoteSyncRef = useRef(false);
-
-  // Cross-tab and real-time synchronization
+  // Fetch initial data from cloud tables (Migration 002: dedicated tables)
   useEffect(() => {
-    // 1. BroadcastChannel for instant multi-tab sync
-    let bc: BroadcastChannel | null = null;
-    try {
-      bc = new BroadcastChannel('talaie_realtime_sync');
-      bc.onmessage = (event) => {
-        if (event.data?.type === 'SYNC_DATA') {
-          setProjects(StorageService.getProjects());
-          setTickets(StorageService.getTickets());
-          setUsers(StorageService.getUsers());
-          setSettings(StorageService.getSettings());
-        }
-      };
-    } catch {
-      // BroadcastChannel not available in older environments
-    }
-
-    // 2. Storage event for cross-window / cross-tab fallback
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key?.startsWith('talaie_')) {
-        setProjects(StorageService.getProjects());
-        setTickets(StorageService.getTickets());
-        setUsers(StorageService.getUsers());
-        setSettings(StorageService.getSettings());
+    SupabaseSyncService.fetchProjects().then((cloudProjects) => {
+      if (cloudProjects.length > 0) {
+        setProjects(cloudProjects);
       }
-    };
-    window.addEventListener('storage', handleStorage);
+    });
 
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      if (bc) bc.close();
-    };
+    SupabaseSyncService.fetchTickets().then((cloudTickets) => {
+      if (cloudTickets.length > 0) {
+        setTickets(cloudTickets);
+      }
+    });
+
+    SupabaseSyncService.fetchSettings().then((cloudSettings) => {
+      if (cloudSettings) {
+        setSettings((prev) => ({ ...prev, ...cloudSettings }));
+      }
+    });
   }, []);
 
-  // Broadcast helper
-  const broadcastSync = () => {
-    try {
-      const bc = new BroadcastChannel('talaie_realtime_sync');
-      bc.postMessage({ type: 'SYNC_DATA', timestamp: Date.now() });
-      bc.close();
-    } catch {}
-  };
-
-  // Cloud sync via Supabase
+  // Realtime row-by-row subscriptions for Projects, Tickets, and Settings
   useEffect(() => {
-    if (!settings.supabaseUrl || !settings.supabaseAnonKey) return;
+    const unsubProjects = SupabaseSyncService.subscribeProjects({
+      onInsert: (newProject) => {
+        setProjects((prev) => {
+          if (prev.some((p) => p.id === newProject.id)) return prev;
+          return [newProject, ...prev];
+        });
+      },
+      onUpdate: (updatedProject) => {
+        setProjects((prev) => {
+          const existing = prev.find((p) => p.id === updatedProject.id);
+          if (!existing) {
+            return [updatedProject, ...prev];
+          }
+          // Conflict resolution: Ignore cloud update if local update is newer
+          const localTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+          const cloudTime = updatedProject.updatedAt ? new Date(updatedProject.updatedAt).getTime() : 0;
+          if (localTime > cloudTime) {
+            return prev;
+          }
+          return prev.map((p) => (p.id === updatedProject.id ? updatedProject : p));
+        });
+      },
+      onDelete: (deletedId) => {
+        setProjects((prev) => prev.filter((p) => p.id !== deletedId));
+      },
+    });
 
-    let unsubscribe: (() => void) | undefined;
-    SupabaseSyncService.subscribe(
-      settings.supabaseUrl,
-      settings.supabaseAnonKey,
-      {
-        onProjectsSync: (cloudProjects) => {
-          if (Array.isArray(cloudProjects) && cloudProjects.length > 0) {
-            isRemoteSyncRef.current = true;
-            setProjects(cloudProjects);
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 800);
-          }
-        },
-        onTicketsSync: (cloudTickets) => {
-          if (Array.isArray(cloudTickets) && cloudTickets.length > 0) {
-            isRemoteSyncRef.current = true;
-            setTickets(cloudTickets);
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 800);
-          }
-        },
-        onSettingsSync: (cloudSettings) => {
-          if (cloudSettings && typeof cloudSettings === 'object') {
-            isRemoteSyncRef.current = true;
-            setSettings((prev) => ({ ...prev, ...cloudSettings }));
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 800);
-          }
-        },
-      }
-    ).then((unsub) => {
-      unsubscribe = unsub;
+    const unsubTickets = SupabaseSyncService.subscribeTickets({
+      onInsert: (newTicket) => {
+        setTickets((prev) => {
+          if (prev.some((t) => t.id === newTicket.id)) return prev;
+          return [newTicket, ...prev];
+        });
+      },
+      onUpdate: (updatedTicket) => {
+        setTickets((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
+      },
+      onDelete: (deletedId) => {
+        setTickets((prev) => prev.filter((t) => t.id !== deletedId));
+      },
+    });
+
+    const unsubSettings = SupabaseSyncService.subscribeSettings((cloudSettings) => {
+      setSettings((prev) => ({ ...prev, ...cloudSettings }));
     });
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubProjects();
+      unsubTickets();
+      unsubSettings();
     };
-  }, [settings.supabaseUrl, settings.supabaseAnonKey]);
+  }, []);
 
-  // Sync state changes with StorageService & Supabase Cloud (debounced and guarded)
+  // Lightweight local storage caching (no loopback, no remote push from effect)
   useEffect(() => {
     StorageService.saveProjects(projects);
-    broadcastSync();
-    if (!isRemoteSyncRef.current && settings.supabaseUrl && settings.supabaseAnonKey) {
-      const timer = setTimeout(() => {
-        SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'projects', projects);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
   }, [projects]);
 
   useEffect(() => {
     StorageService.saveTickets(tickets);
-    broadcastSync();
-    if (!isRemoteSyncRef.current && settings.supabaseUrl && settings.supabaseAnonKey) {
-      const timer = setTimeout(() => {
-        SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'tickets', tickets);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
   }, [tickets]);
 
   useEffect(() => {
     StorageService.saveSettings(settings);
-    broadcastSync();
-    if (!isRemoteSyncRef.current && settings.supabaseUrl && settings.supabaseAnonKey) {
-      const timer = setTimeout(() => {
-        SupabaseSyncService.push(settings.supabaseUrl, settings.supabaseAnonKey, 'settings', settings);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
   }, [settings]);
 
   // Project handlers
-  const handleSaveProject = (project: Project) => {
+  const handleSaveProject = async (project: Project) => {
     const exists = projects.some((p) => p.id === project.id);
-    let updated: Project[];
+    let updatedProject: Project;
+
     if (exists) {
-      updated = projects.map((p) => (p.id === project.id ? project : p));
+      // Merge ONLY edited fields over the live project state to prevent wiping technician reports/photos
+      const liveCurrent = projects.find((p) => p.id === project.id)!;
+      updatedProject = {
+        ...liveCurrent,
+        title: project.title,
+        customerName: project.customerName,
+        customerPhone: project.customerPhone,
+        address: project.address,
+        locationUrl: project.locationUrl,
+        shadePanels: project.shadePanels,
+        curtainPanels: project.curtainPanels,
+        mechanismType: project.mechanismType,
+        approximateArea: project.approximateArea,
+        specialNotes: project.specialNotes,
+        proposalImages: project.proposalImages,
+        scheduledDate: project.scheduledDate,
+        scheduledTime: project.scheduledTime,
+        assignedTechnicianIds: project.assignedTechnicianIds,
+        leadTechnicianId: project.leadTechnicianId,
+        isFullTools: project.isFullTools,
+        toolsRequired: project.toolsRequired,
+        customToolsNotes: project.customToolsNotes,
+        status: project.status,
+        qcStatus: project.qcStatus,
+        updatedAt: new Date().toISOString(),
+      };
+      setProjects((prev) => prev.map((p) => (p.id === project.id ? updatedProject : p)));
     } else {
-      updated = [project, ...projects];
+      updatedProject = {
+        ...project,
+        updatedAt: new Date().toISOString(),
+      };
+      setProjects((prev) => [updatedProject, ...prev]);
     }
-    setProjects(updated);
+
     setIsProjectFormOpen(false);
     setEditingProject(null);
+
+    // Atomically upsert row to Supabase
+    try {
+      await SupabaseSyncService.upsertProject(updatedProject);
+    } catch (err) {
+      console.warn('Upsert project cloud error:', err);
+      showToast('error', 'خطا در همگام‌سازی ابری پروژه. اطلاعات در کش محلی ذخیره شد.');
+    }
   };
 
-  const handleDeleteProject = (projectId: string) => {
+  const handleDeleteProject = async (projectId: string) => {
     setProjects((prev) => prev.filter((p) => p.id !== projectId));
+    try {
+      await SupabaseSyncService.deleteProject(projectId);
+    } catch (err) {
+      console.warn('Delete project cloud error:', err);
+      showToast('error', 'خطا در حذف پروژه از سرور ابری.');
+    }
   };
 
-  const handleMoveProjectDate = (projectId: string, newDateKey: string) => {
+  const handleMoveProjectDate = async (projectId: string, newDateKey: string) => {
+    let targetProject: Project | null = null;
     setProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, scheduledDate: newDateKey } : p))
+      prev.map((p) => {
+        if (p.id === projectId) {
+          targetProject = { ...p, scheduledDate: newDateKey, updatedAt: new Date().toISOString() };
+          return targetProject;
+        }
+        return p;
+      })
     );
+
+    if (targetProject) {
+      try {
+        await SupabaseSyncService.upsertProject(targetProject);
+      } catch (err) {
+        console.warn('Move project cloud error:', err);
+      }
+    }
   };
 
-  const handleUpdateStatus = (projectId: string, newStatus: Project['status']) => {
+  const handleUpdateStatus = async (projectId: string, newStatus: Project['status']) => {
+    let targetProject: Project | null = null;
     setProjects((prev) =>
-      prev.map((p) =>
-        p.id === projectId
-          ? {
-              ...p,
-              status: newStatus,
-              startedAt: newStatus === 'IN_PROGRESS' && !p.startedAt ? new Date().toISOString() : p.startedAt,
-            }
-          : p
-      )
+      prev.map((p) => {
+        if (p.id === projectId) {
+          targetProject = {
+            ...p,
+            status: newStatus,
+            startedAt: newStatus === 'IN_PROGRESS' && !p.startedAt ? new Date().toISOString() : p.startedAt,
+            updatedAt: new Date().toISOString(),
+          };
+          return targetProject;
+        }
+        return p;
+      })
     );
+
+    if (targetProject) {
+      try {
+        await SupabaseSyncService.upsertProject(targetProject);
+      } catch (err) {
+        console.warn('Update status cloud error:', err);
+      }
+    }
   };
 
   // Completion report from field
-  const handleReportCompletion = (completionData: {
+  const handleReportCompletion = async (completionData: {
     completionNotes: string;
     beforePhotos: string[];
     afterPhotos: string[];
@@ -307,70 +347,108 @@ export const App: React.FC = () => {
   }) => {
     if (!completionModalProject) return;
 
+    let targetProject: Project | null = null;
     setProjects((prev) =>
-      prev.map((p) =>
-        p.id === completionModalProject.id
-          ? {
-              ...p,
-              status: 'COMPLETED',
-              qcStatus: 'PENDING',
-              completionNotes: completionData.completionNotes,
-              beforePhotos: completionData.beforePhotos,
-              afterPhotos: completionData.afterPhotos,
-              completionPhotos: completionData.completionPhotos,
-              handoverChecklist: completionData.handoverChecklist,
-              customerSignature: completionData.customerSignature,
-              customerSatisfaction: completionData.customerSatisfaction,
-              completedAt: new Date().toISOString(),
-            }
-          : p
-      )
+      prev.map((p) => {
+        if (p.id === completionModalProject.id) {
+          targetProject = {
+            ...p,
+            status: 'COMPLETED',
+            qcStatus: 'PENDING',
+            completionNotes: completionData.completionNotes,
+            beforePhotos: completionData.beforePhotos,
+            afterPhotos: completionData.afterPhotos,
+            completionPhotos: completionData.completionPhotos,
+            handoverChecklist: completionData.handoverChecklist,
+            customerSignature: completionData.customerSignature,
+            customerSatisfaction: completionData.customerSatisfaction,
+            completedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          return targetProject;
+        }
+        return p;
+      })
     );
 
     setCompletionModalProject(null);
+    showToast('success', 'گزارش اتمام کار با موفقیت ثبت شد و به دسک QC ارسال گردید.');
+
+    if (targetProject) {
+      try {
+        await SupabaseSyncService.upsertProject(targetProject);
+      } catch (err) {
+        console.warn('Report completion cloud error:', err);
+        showToast('error', 'خطا در ارسال ابری گزارش. در حافظه محلی ذخیره شد.');
+      }
+    }
   };
 
   // Pre-Installation inspection & 2nd measurement handler
-  const handleSavePreInspection = (
+  const handleSavePreInspection = async (
     inspection: PreInstallationInspection,
     newScheduledDate?: string
   ) => {
     if (!preInspectionProject) return;
 
+    let targetProject: Project | null = null;
     setProjects((prev) =>
-      prev.map((p) =>
-        p.id === preInspectionProject.id
-          ? {
-              ...p,
-              status: inspection.status === 'APPROVED' ? 'SCHEDULED' : 'MEASUREMENT_PENDING',
-              scheduledDate: newScheduledDate || p.scheduledDate,
-              preInspection: inspection,
-              updatedAt: new Date().toISOString(),
-            }
-          : p
-      )
+      prev.map((p) => {
+        if (p.id === preInspectionProject.id) {
+          targetProject = {
+            ...p,
+            status: inspection.status === 'APPROVED' ? 'SCHEDULED' : 'MEASUREMENT_PENDING',
+            scheduledDate: newScheduledDate || p.scheduledDate,
+            preInspection: inspection,
+            updatedAt: new Date().toISOString(),
+          };
+          return targetProject;
+        }
+        return p;
+      })
     );
+
     setPreInspectionProject(null);
     showToast('success', 'گزارش کارشناسی فضا و اندازه‌گیری دوم با موفقیت در سامانه ثبت شد.');
+
+    if (targetProject) {
+      try {
+        await SupabaseSyncService.upsertProject(targetProject);
+      } catch (err) {
+        console.warn('Save pre-inspection cloud error:', err);
+      }
+    }
   };
 
   // 360-degree Personnel evaluation handler
-  const handleSaveEvaluation = (evaluation: PersonnelEvaluation) => {
+  const handleSaveEvaluation = async (evaluation: PersonnelEvaluation) => {
     if (!evaluationProject) return;
 
+    let targetProject: Project | null = null;
     setProjects((prev) =>
-      prev.map((p) =>
-        p.id === evaluationProject.id
-          ? {
-              ...p,
-              evaluations: [...(p.evaluations || []), evaluation],
-              updatedAt: new Date().toISOString(),
-            }
-          : p
-      )
+      prev.map((p) => {
+        if (p.id === evaluationProject.id) {
+          targetProject = {
+            ...p,
+            evaluations: [...(p.evaluations || []), evaluation],
+            updatedAt: new Date().toISOString(),
+          };
+          return targetProject;
+        }
+        return p;
+      })
     );
+
     setEvaluationProject(null);
     showToast('success', `ارزیابی عملکرد ${evaluation.userName} با موفقیت ثبت گردید.`);
+
+    if (targetProject) {
+      try {
+        await SupabaseSyncService.upsertProject(targetProject);
+      } catch (err) {
+        console.warn('Save evaluation cloud error:', err);
+      }
+    }
   };
 
   // On-site acute stoppage / Stuck report handler (<72h KPI)
@@ -378,34 +456,70 @@ export const App: React.FC = () => {
     setStuckModalProject(project);
   };
 
-  const handleConfirmReportStuck = (incident: StuckIncident) => {
+  const handleConfirmReportStuck = async (incident: StuckIncident) => {
     if (!stuckModalProject) return;
 
+    let targetProject: Project | null = null;
     setProjects((prev) =>
-      prev.map((p) =>
-        p.id === stuckModalProject.id
-          ? {
-              ...p,
-              status: 'STUCK',
-              stuckIncident: incident,
-              updatedAt: new Date().toISOString(),
-            }
-          : p
-      )
+      prev.map((p) => {
+        if (p.id === stuckModalProject.id) {
+          targetProject = {
+            ...p,
+            status: 'STUCK',
+            stuckIncident: incident,
+            updatedAt: new Date().toISOString(),
+          };
+          return targetProject;
+        }
+        return p;
+      })
     );
+
     setStuckModalProject(null);
     showToast('warning', 'پروژه به دسک رفع استاک (<72h) ارسال شد و بلافاصله به مسئولین فنی ارجاع یافت.');
+
+    if (targetProject) {
+      try {
+        await SupabaseSyncService.upsertProject(targetProject);
+      } catch (err) {
+        console.warn('Report stuck cloud error:', err);
+      }
+    }
   };
 
   // Ticket handlers
-  const handleCreateTicket = (newTicket: Ticket) => {
+  const handleCreateTicket = async (newTicket: Ticket) => {
     setTickets((prev) => [newTicket, ...prev]);
     setTicketModalProject(null);
     showToast('warning', 'تیکت اضطراری با موفقیت ثبت شد و به اطلاع مدیر QC رسید.');
+
+    try {
+      await SupabaseSyncService.upsertTicket(newTicket);
+    } catch (err) {
+      console.warn('Create ticket cloud error:', err);
+    }
   };
 
-  const handleUpdateTicket = (updatedTicket: Ticket) => {
+  const handleUpdateTicket = async (updatedTicket: Ticket) => {
     setTickets((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
+
+    try {
+      await SupabaseSyncService.upsertTicket(updatedTicket);
+    } catch (err) {
+      console.warn('Update ticket cloud error:', err);
+    }
+  };
+
+  // Settings handler
+  const handleUpdateSettings = async (newSettings: SystemSettings) => {
+    setSettings(newSettings);
+    StorageService.saveSettings(newSettings);
+
+    try {
+      await SupabaseSyncService.upsertSettings(newSettings);
+    } catch (err) {
+      console.warn('Update settings cloud error:', err);
+    }
   };
 
   // User handlers
@@ -542,7 +656,7 @@ export const App: React.FC = () => {
                 projects={projects}
                 users={users}
                 settings={settings}
-                onUpdateSettings={setSettings}
+                onUpdateSettings={handleUpdateSettings}
                 onNewProject={handleOpenNewProject}
                 onEditProject={handleOpenEditProject}
                 onDeleteProject={handleDeleteProject}
@@ -558,6 +672,7 @@ export const App: React.FC = () => {
                 users={users}
                 onUpdateProject={(updated) => {
                   setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                  SupabaseSyncService.upsertProject(updated);
                 }}
                 onViewProposal={(p) => setProposalModalProject(p)}
                 onOpenCertificate={(p) => setCertificateModalProject(p)}
@@ -590,9 +705,11 @@ export const App: React.FC = () => {
             {activeTab === 'settings' && (
               <SettingsView
                 settings={settings}
+                projects={projects}
+                onUpdateProjects={setProjects}
                 isDarkMode={isDarkMode}
                 onToggleDarkMode={handleToggleDarkMode}
-                onUpdateSettings={setSettings}
+                onUpdateSettings={handleUpdateSettings}
                 onResetData={handleResetData}
               />
             )}

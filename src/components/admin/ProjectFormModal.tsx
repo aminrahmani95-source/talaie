@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, User, SystemSettings, ProposalImage } from '../../types';
 import {
   X,
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { getUpcomingDays, getTodayPersianString } from '../../utils/jalali';
 import { compressImageFile } from '../../utils/imageCompressor';
+import { SupabaseSyncService } from '../../utils/supabase';
+import { CloudImage } from '../common/CloudImage';
 
 interface Props {
   project?: Project | null;
@@ -34,11 +36,22 @@ export const ProjectFormModal: React.FC<Props> = ({
   const days = getUpcomingDays(30);
 
   // Form states
+  const [projectId] = useState(() => project?.id || `p-${Date.now()}`);
+  const [projectCode, setProjectCode] = useState(project?.code || '');
   const [title, setTitle] = useState(project?.title || '');
   const [customerName, setCustomerName] = useState(project?.customerName || '');
   const [customerPhone, setCustomerPhone] = useState(project?.customerPhone || '');
   const [address, setAddress] = useState(project?.address || '');
   const [locationUrl, setLocationUrl] = useState(project?.locationUrl || '');
+
+  // Fetch sequential project code for new project
+  useEffect(() => {
+    if (!project?.code) {
+      SupabaseSyncService.getNextProjectCode().then((code) => {
+        setProjectCode(code);
+      });
+    }
+  }, [project?.code]);
 
   const [shadePanels, setShadePanels] = useState<number>(project?.shadePanels ?? 0);
   const [curtainPanels, setCurtainPanels] = useState<number>(project?.curtainPanels ?? 0);
@@ -122,10 +135,17 @@ export const ProjectFormModal: React.FC<Props> = ({
       const file = files[index];
       try {
         const compressedUrl = await compressImageFile(file, 1600, 1600, 0.8);
+        let finalUrl = compressedUrl;
+        try {
+          finalUrl = await SupabaseSyncService.uploadProjectPhoto(projectId, compressedUrl);
+        } catch (uploadErr) {
+          console.warn('Storage upload fallback to compressed data URL:', uploadErr);
+        }
+
         const newImg: ProposalImage = {
           id: `prop-${Date.now()}-${index}`,
           title: file.name || `برگه پروپوزال ${proposalImages.length + 1}`,
-          url: compressedUrl,
+          url: finalUrl,
           uploadedAt: getTodayPersianString(),
         };
         setProposalImages((prev) => [...prev, newImg]);
@@ -153,10 +173,10 @@ export const ProjectFormModal: React.FC<Props> = ({
       return;
     }
 
-    const newProject: Project = {
+    const savedProject: Project = {
       ...(project || {}),
-      id: project?.id || `p-${Date.now()}`,
-      code: project?.code || `PRJ-${Math.floor(100 + Math.random() * 900)}`,
+      id: projectId,
+      code: projectCode || project?.code || `PRJ-${Date.now().toString().slice(-4)}`,
       title: title.trim(),
       customerName: customerName.trim() || title.trim(),
       customerPhone: customerPhone.trim(),
@@ -197,7 +217,7 @@ export const ProjectFormModal: React.FC<Props> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    onSave(newProject);
+    onSave(savedProject);
   };
 
   return (
@@ -387,7 +407,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   key={img.id}
                   className="relative w-20 h-24 rounded-xl overflow-hidden border border-[#C1A056] shadow-xs bg-white dark:bg-[#141414]"
                 >
-                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  <CloudImage src={img.url} alt="" className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => handleRemoveProposalImage(img.id)}

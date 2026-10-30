@@ -51,8 +51,6 @@ export const INITIAL_SETTINGS: SystemSettings = {
   visibilityWindowDays: 4, // پیش‌فرض 4 روز قابل مشاهده برای تکنسین‌ها
   companyName: 'گالری طلایی | طراحی، پرده و شید',
   defaultTools: DEFAULT_MASTER_TOOLS,
-  supabaseUrl: import.meta.env.VITE_SUPABASE_URL || '',
-  supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
 };
 
 // Generates high quality mock SVG sales proposal in Talaei Gallery brand colors (#C1A056, #212121)
@@ -437,95 +435,46 @@ export const StorageService = {
   getProjects(): Project[] {
     const raw = localStorage.getItem(STORAGE_KEYS.PROJECTS);
     if (!raw) {
-      const initial = getInitialProjects();
-      this.saveProjects(initial);
-      return initial;
+      if (import.meta.env.DEV) {
+        const initial = getInitialProjects();
+        this.saveProjects(initial);
+        return initial;
+      }
+      return [];
     }
     try {
-      let parsed: Project[] = JSON.parse(raw);
-      let modified = false;
-
+      const parsed: Project[] = JSON.parse(raw);
       // Defensive: Ensure all array properties are always defined to prevent runtime crashes
-      parsed = parsed.map((p) => {
-        const safeP = {
-          ...p,
-          assignedTechnicianIds: Array.isArray(p.assignedTechnicianIds) ? p.assignedTechnicianIds : [],
-          toolsRequired: Array.isArray(p.toolsRequired) ? p.toolsRequired : DEFAULT_MASTER_TOOLS,
-          proposalImages: Array.isArray(p.proposalImages) ? p.proposalImages : [],
-          beforePhotos: Array.isArray(p.beforePhotos) ? p.beforePhotos : [],
-          afterPhotos: Array.isArray(p.afterPhotos) ? p.afterPhotos : [],
-          completionPhotos: Array.isArray(p.completionPhotos) ? p.completionPhotos : [],
-          evaluations: Array.isArray(p.evaluations) ? p.evaluations : [],
-        };
-        return safeP;
-      });
-
-      // Date Re-anchoring: If all stored projects are in the past (before today),
-      // re-anchor them so that today and upcoming days always have active testable projects
-      const days = getUpcomingDays(15);
-      const todayKey = days[0]?.dateKey;
-      const hasUpcomingProjects = parsed.some((p) => p.scheduledDate >= todayKey);
-
-      if (!hasUpcomingProjects && parsed.length > 0 && todayKey) {
-        const d0 = days[0]?.dateKey;
-        const d1 = days[1]?.dateKey;
-        const d2 = days[2]?.dateKey;
-        const d3 = days[3]?.dateKey;
-        const d5 = days[5]?.dateKey;
-
-        parsed.forEach((p, idx) => {
-          if (idx === 0 || idx === 1) p.scheduledDate = d0;
-          else if (idx === 2 || idx === 3) p.scheduledDate = d1;
-          else if (idx === 4) p.scheduledDate = d2;
-          else if (idx === 5) p.scheduledDate = d3;
-          else p.scheduledDate = d5 || d0;
-        });
-        modified = true;
-      }
-
-      // Auto-reconcile stuck demo case
-      const hasStuck = parsed.some((p) => p.status === 'STUCK' || p.stuckIncident);
-      if (!hasStuck) {
-        const p3 = parsed.find((p) => p.code === 'PRJ-103' || p.id === 'p-3');
-        if (p3) {
-          p3.status = 'STUCK';
-          p3.stuckIncident = {
-            id: 'stuck-103',
-            stuckAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
-            category: 'HARDWARE_SHORTAGE',
-            description: 'کسری ۲ عدد پایه دوبل سقفی تقویتی برای لت‌های ۴ متری دوبلکس و عدم سیم‌کشی برق کناف در لت شرقی',
-            reportedBy: 'فرخ نقدعلیان (سرپرست اکیپ 1)',
-            photos: [],
-            targetMaxHours: 72,
-            resolutionStatus: 'OPEN',
-          };
-          modified = true;
-        }
-      }
-
-      // Auto-reconcile pre-inspection measurement demo case
-      const hasMeasurement = parsed.some((p) => p.status === 'MEASUREMENT_PENDING');
-      if (!hasMeasurement) {
-        const p6 = parsed.find((p) => p.code === 'PRJ-106' || p.id === 'p-6');
-        if (p6) {
-          p6.status = 'MEASUREMENT_PENDING';
-          p6.specialNotes = 'نیازمند کارشناسی فضا و اندازه‌گیری دوم (بررسی کناف و سیم‌کشی موتور سامفی) پیش از اعزام تیم نصب';
-          modified = true;
-        }
-      }
-
-      if (modified) {
-        this.saveProjects(parsed);
-      }
-      return parsed;
+      return parsed.map((p) => ({
+        ...p,
+        assignedTechnicianIds: Array.isArray(p.assignedTechnicianIds) ? p.assignedTechnicianIds : [],
+        toolsRequired: Array.isArray(p.toolsRequired) ? p.toolsRequired : DEFAULT_MASTER_TOOLS,
+        proposalImages: Array.isArray(p.proposalImages) ? p.proposalImages : [],
+        beforePhotos: Array.isArray(p.beforePhotos) ? p.beforePhotos : [],
+        afterPhotos: Array.isArray(p.afterPhotos) ? p.afterPhotos : [],
+        completionPhotos: Array.isArray(p.completionPhotos) ? p.completionPhotos : [],
+        evaluations: Array.isArray(p.evaluations) ? p.evaluations : [],
+      }));
     } catch {
-      return getInitialProjects();
+      return import.meta.env.DEV ? getInitialProjects() : [];
     }
   },
 
   saveProjects(projects: Project[]) {
     try {
-      localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+      // Lightweight cache: strip large base64 strings so it never causes QuotaExceededError
+      const lightweightProjects = projects.map((p) => ({
+        ...p,
+        proposalImages: p.proposalImages?.map((img) => ({
+          ...img,
+          url: img.url.startsWith('data:') ? '' : img.url,
+        })),
+        beforePhotos: p.beforePhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
+        afterPhotos: p.afterPhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
+        completionPhotos: p.completionPhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
+        customerSignature: p.customerSignature && p.customerSignature.length > 5000 ? '' : p.customerSignature,
+      }));
+      localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(lightweightProjects));
     } catch (e) {
       console.warn('LocalStorage saveProjects failed (quota limit):', e);
     }
@@ -583,8 +532,6 @@ export const StorageService = {
       const merged: SystemSettings = {
         ...INITIAL_SETTINGS,
         ...parsed,
-        supabaseUrl: import.meta.env.VITE_SUPABASE_URL || parsed.supabaseUrl || '',
-        supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || parsed.supabaseAnonKey || '',
       };
       return merged;
     } catch {
