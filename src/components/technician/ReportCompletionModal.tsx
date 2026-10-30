@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toPersianDigits } from '../../utils/jalali';
+import { compressImageFile } from '../../utils/imageCompressor';
 import { SignaturePad } from '../SignaturePad';
 
 interface Props {
@@ -60,27 +61,27 @@ export const ReportCompletionModal: React.FC<Props> = ({
   const [satisfaction, setSatisfaction] = useState<number>(project.customerSatisfaction || 5);
   const [completionNotes, setCompletionNotes] = useState(project.completionNotes || '');
 
-  const handlePhotoUpload = (
+  const handlePhotoUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     type: 'BEFORE' | 'AFTER'
   ) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const res = event.target!.result as string;
-          if (type === 'BEFORE') {
-            setBeforePhotos((prev) => [...prev, res]);
-          } else {
-            setAfterPhotos((prev) => [...prev, res]);
-          }
+    for (const file of Array.from(files)) {
+      try {
+        const compressed = await compressImageFile(file, 1280, 1280, 0.75);
+        if (type === 'BEFORE') {
+          setBeforePhotos((prev) => [...prev, compressed]);
+        } else {
+          setAfterPhotos((prev) => [...prev, compressed]);
         }
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (err) {
+        console.warn('Image compression failed:', err);
+      }
+    }
+    // Clear input so same file can be re-selected if needed
+    e.target.value = '';
   };
 
   const handleRemovePhoto = (index: number, type: 'BEFORE' | 'AFTER') => {

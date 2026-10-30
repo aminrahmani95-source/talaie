@@ -650,7 +650,11 @@ export const StorageService = {
   },
 
   saveProjects(projects: Project[]) {
-    localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+    try {
+      localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+    } catch (e) {
+      console.warn('LocalStorage saveProjects failed (quota limit):', e);
+    }
   },
 
   getUsers(): User[] {
@@ -708,7 +712,11 @@ export const StorageService = {
   },
 
   saveUsers(users: User[]) {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    try {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    } catch (e) {
+      console.warn('LocalStorage saveUsers failed:', e);
+    }
   },
 
   getTickets(): Ticket[] {
@@ -725,7 +733,11 @@ export const StorageService = {
   },
 
   saveTickets(tickets: Ticket[]) {
-    localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets));
+    try {
+      localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets));
+    } catch (e) {
+      console.warn('LocalStorage saveTickets failed:', e);
+    }
   },
 
   getSettings(): SystemSettings {
@@ -749,7 +761,11 @@ export const StorageService = {
   },
 
   saveSettings(settings: SystemSettings) {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    try {
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    } catch (e) {
+      console.warn('LocalStorage saveSettings failed:', e);
+    }
   },
 
   getCurrentUser(): User | null {
@@ -765,10 +781,14 @@ export const StorageService = {
   },
 
   setCurrentUser(user: User | null) {
-    if (user) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    try {
+      if (user) {
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      }
+    } catch (e) {
+      console.warn('LocalStorage setCurrentUser failed:', e);
     }
   },
 

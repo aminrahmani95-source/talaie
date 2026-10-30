@@ -13,6 +13,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { getUpcomingDays, getTodayPersianString } from '../../utils/jalali';
+import { compressImageFile } from '../../utils/imageCompressor';
 
 interface Props {
   project?: Project | null;
@@ -113,25 +114,26 @@ export const ProjectFormModal: React.FC<Props> = ({
     setAssignedTechnicianIds(next);
   };
 
-  const handleProposalUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProposalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach((file, index) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const newImg: ProposalImage = {
-            id: `prop-${Date.now()}-${index}`,
-            title: file.name || `برگه پروپوزال ${proposalImages.length + 1}`,
-            url: event.target!.result as string,
-            uploadedAt: getTodayPersianString(),
-          };
-          setProposalImages((prev) => [...prev, newImg]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
+      try {
+        const compressedUrl = await compressImageFile(file, 1600, 1600, 0.8);
+        const newImg: ProposalImage = {
+          id: `prop-${Date.now()}-${index}`,
+          title: file.name || `برگه پروپوزال ${proposalImages.length + 1}`,
+          url: compressedUrl,
+          uploadedAt: getTodayPersianString(),
+        };
+        setProposalImages((prev) => [...prev, newImg]);
+      } catch (err) {
+        console.warn('Proposal upload compression failed:', err);
+      }
+    }
+    e.target.value = '';
   };
 
   const handleRemoveProposalImage = (id: string) => {

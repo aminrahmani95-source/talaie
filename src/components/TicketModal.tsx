@@ -14,6 +14,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { toPersianDigits } from '../utils/jalali';
+import { compressImageFile } from '../utils/imageCompressor';
 
 interface Props {
   project: Project;
@@ -74,19 +75,19 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
   const [photos, setPhotos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setPhotos((prev) => [...prev, event.target!.result as string]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of Array.from(files)) {
+      try {
+        const compressed = await compressImageFile(file, 1280, 1280, 0.75);
+        setPhotos((prev) => [...prev, compressed]);
+      } catch (err) {
+        console.warn('Ticket image compression failed:', err);
+      }
+    }
+    e.target.value = '';
   };
 
   const handleRemovePhoto = (index: number) => {
