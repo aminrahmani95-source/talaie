@@ -179,8 +179,24 @@ export function isTransientError(err: any, hasSession: boolean = true): boolean 
 
   const name = String(err?.name || '');
   const code = typeof err?.code === 'string' ? err.code.trim() : '';
-  const status = Number(err?.status ?? err?.statusCode ?? -1);
+  // Convert status or statusCode (string/number) to number (e.g. StorageApiError statusCode: '409')
+  const rawStatus =
+    err?.status !== undefined && err?.status !== null && err?.status !== '' && err?.status !== 0
+      ? err.status
+      : (err?.statusCode ?? err?.status ?? -1);
+  const status = Number(rawStatus);
   const msg = String(err?.message || '').toLowerCase();
+
+  // StorageUnknownError is ALWAYS transient (thrown on network drops in Supabase Storage)
+  if (name === 'StorageUnknownError' || name === 'StorageVectorsUnknownError') {
+    return true;
+  }
+
+  // Any error that has no database code (or empty code) and status is 0, undefined, or -1 is transient
+  // (e.g. Safari "Load failed" PostgrestError with code: '', status: 0 / undefined)
+  if (!code && (status <= 0 || isNaN(status))) {
+    return true;
+  }
 
   // Determine whether this error is a PostgrestError or has a database code
   const isPostgrest =
@@ -231,6 +247,7 @@ export function isTransientError(err: any, hasSession: boolean = true): boolean 
     return true;
   }
   if (
+    msg.includes('load failed') ||
     msg.includes('network') ||
     msg.includes('fetch') ||
     msg.includes('timeout') ||

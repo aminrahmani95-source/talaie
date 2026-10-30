@@ -988,10 +988,23 @@ export const SupabaseSyncService = {
           .from('talaie-photos')
           .upload(storagePath, upload.blob, {
             contentType: upload.mimeType,
-            upsert: true,
+            upsert: false,
           });
 
         if (error) {
+          const errCode = (error as any).statusCode || (error as any).status || '';
+          const errMsg = String(error.message || '');
+          const isDuplicate =
+            errCode === 409 ||
+            errCode === '409' ||
+            (error as any).error === 'Duplicate' ||
+            errMsg.toLowerCase().includes('duplicate') ||
+            errMsg.toLowerCase().includes('already exists');
+
+          if (isDuplicate) {
+            // Already uploaded in previous attempt before connection lost; unique path guarantees it is the same file
+            return storagePath;
+          }
           throw error;
         }
         return storagePath;
@@ -1086,10 +1099,22 @@ export const SupabaseSyncService = {
       .from('talaie-photos')
       .upload(storagePath, blob, {
         contentType: 'image/jpeg',
-        upsert: true,
+        upsert: false,
       });
 
     if (error) {
+      const errCode = (error as any).statusCode || (error as any).status || '';
+      const errMsg = String(error.message || '');
+      const isDuplicate =
+        errCode === 409 ||
+        errCode === '409' ||
+        (error as any).error === 'Duplicate' ||
+        errMsg.toLowerCase().includes('duplicate') ||
+        errMsg.toLowerCase().includes('already exists');
+
+      if (isDuplicate) {
+        return storagePath;
+      }
       throw new Error(`خطا در آپلود عکس به فضای ابری: ${error.message}`);
     }
 
@@ -1129,10 +1154,22 @@ export const SupabaseSyncService = {
       .from('talaie-photos')
       .upload(storagePath, blob, {
         contentType: 'image/png',
-        upsert: true,
+        upsert: false,
       });
 
     if (error) {
+      const errCode = (error as any).statusCode || (error as any).status || '';
+      const errMsg = String(error.message || '');
+      const isDuplicate =
+        errCode === 409 ||
+        errCode === '409' ||
+        (error as any).error === 'Duplicate' ||
+        errMsg.toLowerCase().includes('duplicate') ||
+        errMsg.toLowerCase().includes('already exists');
+
+      if (isDuplicate) {
+        return storagePath;
+      }
       throw new Error(`خطا در آپلود امضای کارفرما به فضای ابری: ${error.message}`);
     }
 

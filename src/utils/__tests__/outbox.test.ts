@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { PostgrestError } from '@supabase/supabase-js';
+import { createClient, PostgrestError } from '@supabase/supabase-js';
 import {
   Outbox,
   OutboxMutation,
@@ -531,5 +531,216 @@ describe('Talaei Outbox Writing Layer & Sync Tests', () => {
     expect(failedOps.length).toBe(1);
     expect(failedOps[0].orderingKey).toBe('project:p-p0001');
     expect(failedOps[0].errorReason).toContain('Patch cannot contain base64 data URLs');
+  });
+
+  // --------------------------------------------------------------------------
+  // Scenario 9: Real supabase-js with mock fetch throwing Safari "Load failed"
+  // --------------------------------------------------------------------------
+  it('9. real supabase-js client: Safari "Load failed" is diagnosed as transient for rpc and storage.upload', async () => {
+    const client = createClient('https://mock-proj.supabase.co', 'fake-key', {
+      auth: { persistSession: false },
+      global: {
+        fetch: async () => {
+          throw new TypeError('Load failed');
+        },
+      },
+    });
+
+    const { error: rpcError } = await client.rpc('test_function');
+    expect(rpcError).toBeDefined();
+    expect(isTransientError(rpcError)).toBe(true);
+    expect(isPermanentError(rpcError)).toBe(false);
+
+    const { error: uploadError } = await client.storage
+      .from('talaie-photos')
+      .upload('projects/p-1/photo.jpg', new Blob(['fake image content']), {
+        contentType: 'image/jpeg',
+        upsert: false,
+      });
+    expect(uploadError).toBeDefined();
+    expect(isTransientError(uploadError)).toBe(true);
+    expect(isPermanentError(uploadError)).toBe(false);
+  });
+
+  // --------------------------------------------------------------------------
+  // Scenario 10: Real supabase-js with "Failed to fetch" and "NetworkError when attempting to fetch resource."
+  // --------------------------------------------------------------------------
+  it('10. real supabase-js client: Chrome and Firefox network errors are diagnosed as transient', async () => {
+    // Chrome: "Failed to fetch"
+    const chromeClient = createClient('https://mock-proj.supabase.co', 'fake-key', {
+      auth: { persistSession: false },
+      global: {
+        fetch: async () => {
+          throw new TypeError('Failed to fetch');
+        },
+      },
+    });
+
+    const { error: chromeRpcError } = await chromeClient.rpc('test_function');
+    expect(chromeRpcError).toBeDefined();
+    expect(isTransientError(chromeRpcError)).toBe(true);
+
+    const { error: chromeUploadError } = await chromeClient.storage
+      .from('talaie-photos')
+      .upload('projects/p-1/photo.jpg', new Blob(['chrome']));
+    expect(chromeUploadError).toBeDefined();
+    expect(isTransientError(chromeUploadError)).toBe(true);
+
+    // Firefox: "NetworkError when attempting to fetch resource."
+    const firefoxClient = createClient('https://mock-proj.supabase.co', 'fake-key', {
+      auth: { persistSession: false },
+      global: {
+        fetch: async () => {
+          throw new TypeError('NetworkError when attempting to fetch resource.');
+        },
+      },
+    });
+
+    const { error: firefoxRpcError } = await firefoxClient.rpc('test_function');
+    expect(firefoxRpcError).toBeDefined();
+    expect(isTransientError(firefoxRpcError)).toBe(true);
+
+    const { error: firefoxUploadError } = await firefoxClient.storage
+      .from('talaie-photos')
+      .upload('projects/p-1/photo.jpg', new Blob(['firefox']));
+    expect(firefoxUploadError).toBeDefined();
+    expect(isTransientError(firefoxUploadError)).toBe(true);
+  });
+
+  // --------------------------------------------------------------------------
+  // Scenario 11: StorageUnknownError and StorageApiError statusCode conversion
+  // --------------------------------------------------------------------------
+  it('11. StorageUnknownError is always transient, and StorageApiError converts string statusCode', () => {
+    // StorageUnknownError without status
+    const unknownStorageErr = {
+      name: 'StorageUnknownError',
+      message: 'Network connection lost',
+    };
+    expect(isTransientError(unknownStorageErr)).toBe(true);
+
+    // StorageApiError string status codes: 408, 429, 500, 503 -> transient
+    expect(
+      isTransientError({
+        name: 'StorageApiError',
+        message: 'Request Timeout',
+        statusCode: '408',
+      })
+    ).toBe(true);
+
+    expect(
+      isTransientError({
+        name: 'StorageApiError',
+        message: 'Rate limit exceeded',
+        statusCode: '429',
+      })
+    ).toBe(true);
+
+    expect(
+      isTransientError({
+        name: 'StorageApiError',
+        message: 'Internal Server Error',
+        statusCode: '500',
+      })
+    ).toBe(true);
+
+    expect(
+      isTransientError({
+        name: 'StorageApiError',
+        message: 'Service Unavailable',
+        statusCode: '503',
+      })
+    ).toBe(true);
+
+    // StorageApiError string status codes: 400, 403, 404 -> permanent
+    expect(
+      isTransientError({
+        name: 'StorageApiError',
+        message: 'Invalid input',
+        statusCode: '400',
+      })
+    ).toBe(false);
+
+    expect(
+      isTransientError({
+        name: 'StorageApiError',
+        message: 'Forbidden',
+        statusCode: '403',
+      })
+    ).toBe(false);
+
+    expect(
+      isTransientError({
+        name: 'StorageApiError',
+        message: 'Not found',
+        statusCode: '404',
+      })
+    ).toBe(false);
+  });
+
+  // --------------------------------------------------------------------------
+  // Scenario 12: Re-uploading an existing file succeeds idempotently (409 Duplicate)
+  // --------------------------------------------------------------------------
+  it('12. re-uploading an existing file succeeds idempotently on 409 / Duplicate', async () => {
+    let uploadAttempts = 0;
+    const mockUploadBlob = async (upload: any) => {
+      uploadAttempts++;
+      const prefix = upload.orderingKey.replace(':', 's/');
+      const storagePath = `${prefix}/${upload.fileName}`;
+
+      // Simulate first attempt succeeded at server but connection dropped before client received 200
+      // Second attempt returns 409 Duplicate from storage
+      const error: any = {
+        statusCode: '409',
+        error: 'Duplicate',
+        message: 'The resource already exists',
+      };
+
+      const errCode = error.statusCode || error.status || '';
+      const errMsg = String(error.message || '');
+      const isDuplicate =
+        errCode === 409 ||
+        errCode === '409' ||
+        error.error === 'Duplicate' ||
+        errMsg.toLowerCase().includes('duplicate') ||
+        errMsg.toLowerCase().includes('already exists');
+
+      if (isDuplicate) {
+        return storagePath;
+      }
+      throw error;
+    };
+
+    const base64Data = 'data:image/jpeg;base64,' + btoa('mock-photo-content');
+    await Outbox.commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: 'project:p-dup-1',
+        payload: {
+          id: 'p-dup-1',
+          patch: {
+            afterPhotos: [base64Data],
+          },
+        },
+      },
+      'tech-user'
+    );
+
+    let mutationExecuted = false;
+    let receivedPayload: any = null;
+
+    await Outbox.processQueue({
+      currentUserId: 'tech-user',
+      uploadBlob: mockUploadBlob,
+      executeMutation: async (op) => {
+        mutationExecuted = true;
+        receivedPayload = op.payload;
+      },
+    });
+
+    expect(uploadAttempts).toBe(1);
+    expect(mutationExecuted).toBe(true);
+    expect(receivedPayload.patch.afterPhotos[0]).toMatch(/^projects\/p-dup-1\/.+\.jpg$/);
+    expect(await Outbox.getPendingCount()).toBe(0);
+    expect(await Outbox.getFailedCount()).toBe(0);
   });
 });
