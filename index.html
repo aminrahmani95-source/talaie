@@ -19,11 +19,35 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="گالری طلایی" />
     <meta name="application-name" content="گالری طلایی" />
+
+    <!-- Cache-Busting Headers to prevent PWA and browsers from serving stale cache -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
     <!-- Typography: Vazirmatn with Google Fonts + reliable jsDelivr CDN fallback for Iran -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+
+    <script>
+      // Clear any cached assets or registered service workers from previous builds
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (var name of names) {
+            caches.delete(name);
+          }
+        });
+      }
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (var reg of registrations) {
+            reg.unregister();
+          }
+        });
+      }
+    </script>
     <script type="module" crossorigin src="./assets/index-CokPj02T.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-BDOjc68f.css">
   </head>
