@@ -1,10 +1,11 @@
 -- ==============================================================================
--- گالری طلایی | توابع مدیریت آسان پرسنل و تکنسین‌ها از داخل اپلیکیشن
+-- گالری طلایی | توابع جامع مدیریت خودکار پرسنل از داخل اپلیکیشن
 -- این توابع به مدیر QC اجازه می‌دهند بدون نیاز به پنل Supabase، مستقیماً
--- از داخل اپلیکیشن تکنسین جدید بسازد، رمز آن‌ها را تغییر دهد یا حذف کند.
+-- از داخل اپلیکیشن تکنسین بسازد، رمز عبور را تغییر دهد، ویرایش و حذف کند.
+-- شامل اتصال کامل به جدول auth.identities جهت لاگین آنی و بدون خطای GoTrue.
 -- ==============================================================================
 
--- ۱. تابع ایجاد تکنسین / سرپرست جدید از داخل برنامه
+-- ۱. تابع ثبت اتوماتیک پرسنل جدید توسط مدیر QC
 create or replace function public.admin_create_personnel(
   new_name text,
   new_phone text,
@@ -36,14 +37,13 @@ begin
 
   email_addr := clean_phone || '@talaie.ir';
 
-  -- جستجوی کاربر در صورت وجود قبلی در auth.users
+  -- ۱. بررسی وجود قبلی کاربر در جدول auth.users
   select id into user_uid
   from auth.users
   where email in (email_addr, clean_phone || '@talaie.local')
   limit 1;
 
   if user_uid is not null then
-    -- کاربر وجود دارد؛ به‌روزرسانی رمز و فعال‌سازی
     update auth.users
     set encrypted_password = crypt(new_password, gen_salt('bf')),
         email_confirmed_at = coalesce(email_confirmed_at, now()),
@@ -71,7 +71,29 @@ begin
     );
   end if;
 
-  -- ثبت یا به‌روزرسانی در جدول profiles
+  -- ۲. درج در جدول auth.identities جهت اتصال کامل به موتور احراز هویت Supabase GoTrue
+  delete from auth.identities where user_id = user_uid;
+  insert into auth.identities (
+    id,
+    user_id,
+    identity_data,
+    provider,
+    provider_id,
+    last_sign_in_at,
+    created_at,
+    updated_at
+  ) values (
+    user_uid::text,
+    user_uid,
+    jsonb_build_object('sub', user_uid::text, 'email', email_addr),
+    'email',
+    user_uid::text,
+    now(),
+    now(),
+    now()
+  );
+
+  -- ۳. ثبت یا به‌روزرسانی در جدول profiles
   insert into public.profiles (id, name, phone, role, avatar, active)
   values (
     user_uid,
@@ -143,17 +165,24 @@ set search_path = public, auth, extensions
 as $$
 declare
   clean_phone text;
+  email_addr text;
 begin
   if not public.is_qc_manager() then
     raise exception 'فقط مدیر QC مجاز به ویرایش پرسنل است.';
   end if;
 
   clean_phone := trim(new_phone);
+  email_addr := clean_phone || '@talaie.ir';
 
   update auth.users
-  set email = clean_phone || '@talaie.ir',
+  set email = email_addr,
       updated_at = now()
   where id = target_id;
+
+  update auth.identities
+  set identity_data = jsonb_build_object('sub', target_id::text, 'email', email_addr),
+      updated_at = now()
+  where user_id = target_id;
 
   update public.profiles
   set name = new_name,
@@ -185,6 +214,7 @@ begin
     raise exception 'مدیر QC نمی‌تواند حساب کاربری خودش را حذف کند.';
   end if;
 
+  delete from auth.identities where user_id = target_id;
   delete from auth.users where id = target_id;
   delete from public.profiles where id = target_id;
 
@@ -193,11 +223,6 @@ end;
 $$;
 
 -- دسترسی به توابع برای کاربران لاگین‌شده
-revoke all on function public.admin_create_personnel(text, text, text, text) from public, anon;
-revoke all on function public.admin_reset_personnel_password(uuid, text) from public, anon;
-revoke all on function public.admin_update_personnel(uuid, text, text, text, boolean) from public, anon;
-revoke all on function public.admin_delete_personnel(uuid) from public, anon;
-
 grant execute on function public.admin_create_personnel(text, text, text, text) to authenticated;
 grant execute on function public.admin_reset_personnel_password(uuid, text) to authenticated;
 grant execute on function public.admin_update_personnel(uuid, text, text, text, boolean) to authenticated;
