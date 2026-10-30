@@ -1,8 +1,30 @@
 import { createClient, SupabaseClient, User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { Project, Ticket, User, SystemSettings } from '../types';
 import { toEnglishDigits } from './jalali';
+import { OfflineQueue, OfflineOperation } from './offlineQueue';
 
 export type RealtimeConnectionStatus = 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED';
+
+const CACHED_PROFILE_KEY = 'talaie_cached_profile';
+
+function saveCachedProfile(profile: User | null) {
+  try {
+    if (profile) {
+      localStorage.setItem(CACHED_PROFILE_KEY, JSON.stringify(profile));
+    } else {
+      localStorage.removeItem(CACHED_PROFILE_KEY);
+    }
+  } catch {}
+}
+
+function getCachedProfile(): User | null {
+  try {
+    const raw = localStorage.getItem(CACHED_PROFILE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
 let supabaseInstance: SupabaseClient | null = null;
 let currentUrl = '';
@@ -104,21 +126,31 @@ export const SupabaseSyncService = {
     }
 
     // Fetch user profile from profiles table
-    const profile = await this.fetchProfileById(authData.user.id);
+    let profile: User | null = null;
+    try {
+      profile = await this.fetchProfileById(authData.user.id);
+    } catch {
+      profile = getCachedProfile();
+    }
+
     if (!profile) {
       await client.auth.signOut();
+      saveCachedProfile(null);
       throw new Error('پروفایل پرسنلی شما در سامانه یافت نشد. با مدیر QC تماس بگیرید.');
     }
 
     if (!profile.active) {
       await client.auth.signOut();
+      saveCachedProfile(null);
       throw new Error('حساب کاربری شما غیرفعال شده است. با مدیر QC تماس بگیرید.');
     }
 
+    saveCachedProfile(profile);
     return { user: profile, authUser: authData.user };
   },
 
   async signOut(): Promise<void> {
+    saveCachedProfile(null);
     const client = this.getClient();
     if (client) {
       await client.auth.signOut();
@@ -130,18 +162,41 @@ export const SupabaseSyncService = {
     if (!client) return null;
 
     try {
-      const { data: { session }, error } = await client.auth.getSession();
-      if (error || !session?.user) return null;
-
-      const profile = await this.fetchProfileById(session.user.id);
-      if (!profile || !profile.active) {
-        await client.auth.signOut();
+      const { data: { session }, error: sessionError } = await client.auth.getSession();
+      if (sessionError || !session?.user) {
+        saveCachedProfile(null);
         return null;
       }
-      return profile;
+
+      try {
+        const profile = await this.fetchProfileById(session.user.id);
+        if (!profile) {
+          // Explicitly not in database (404/deleted)
+          saveCachedProfile(null);
+          await client.auth.signOut();
+          return null;
+        }
+        if (!profile.active) {
+          // Explicitly deactivated
+          saveCachedProfile(null);
+          await client.auth.signOut();
+          return null;
+        }
+        saveCachedProfile(profile);
+        return profile;
+      } catch (networkErr) {
+        // Network failure: preserve session with last valid cached profile
+        console.warn('Network error fetching profile in session check, using cached profile:', networkErr);
+        const cached = getCachedProfile();
+        if (cached && cached.id === session.user.id && cached.active) {
+          return cached;
+        }
+        return null;
+      }
     } catch (err) {
       console.warn('Error fetching current session user:', err);
-      return null;
+      const cached = getCachedProfile();
+      return cached && cached.active ? cached : null;
     }
   },
 
@@ -149,18 +204,40 @@ export const SupabaseSyncService = {
     const client = this.getClient();
     if (!client) return () => {};
 
-    const { data: { subscription } } = client.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const profile = await this.fetchProfileById(session.user.id);
-        if (profile && profile.active) {
-          callback(profile);
+    // Synchronous callback wrapper with setTimeout(..., 0) to prevent auth state deadlock
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
+      setTimeout(async () => {
+        if (session?.user) {
+          try {
+            const profile = await this.fetchProfileById(session.user.id);
+            if (!profile) {
+              saveCachedProfile(null);
+              await client.auth.signOut();
+              callback(null);
+              return;
+            }
+            if (!profile.active) {
+              saveCachedProfile(null);
+              await client.auth.signOut();
+              callback(null);
+              return;
+            }
+            saveCachedProfile(profile);
+            callback(profile);
+          } catch (networkErr) {
+            console.warn('Network error in onAuthStateChange, using last valid cached profile:', networkErr);
+            const cached = getCachedProfile();
+            if (cached && cached.id === session.user.id && cached.active) {
+              callback(cached);
+            } else {
+              callback(null);
+            }
+          }
         } else {
-          await client.auth.signOut();
+          saveCachedProfile(null);
           callback(null);
         }
-      } else {
-        callback(null);
-      }
+      }, 0);
     });
 
     return () => {
@@ -176,26 +253,26 @@ export const SupabaseSyncService = {
     const client = this.getClient();
     if (!client) return null;
 
-    try {
-      const { data, error } = await client
-        .from('profiles')
-        .select('id, name, phone, role, avatar, active')
-        .eq('id', userId)
-        .maybeSingle();
+    const { data, error } = await client
+      .from('profiles')
+      .select('id, name, phone, role, avatar, active')
+      .eq('id', userId)
+      .maybeSingle();
 
-      if (error || !data) return null;
-      return {
-        id: data.id,
-        name: data.name,
-        phone: data.phone,
-        role: data.role,
-        avatar: data.avatar || undefined,
-        active: Boolean(data.active),
-      };
-    } catch (err) {
-      console.warn('Failed to fetch profile:', err);
-      return null;
+    if (error) {
+      // Throw database/network error so caller knows it's a network issue, not a 404
+      throw error;
     }
+
+    if (!data) return null;
+    return {
+      id: data.id,
+      name: data.name,
+      phone: data.phone,
+      role: data.role,
+      avatar: data.avatar || undefined,
+      active: Boolean(data.active),
+    };
   },
 
   async fetchProfiles(): Promise<User[]> {
@@ -324,33 +401,56 @@ export const SupabaseSyncService = {
 
   async upsertProject(project: Project): Promise<void> {
     const client = this.getClient();
-    if (!client) return;
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
 
-    try {
-      const updatedAt = project.updatedAt || new Date().toISOString();
-      await client.from('projects').upsert(
-        {
-          id: project.id,
-          data: { ...project, updatedAt },
-          updated_at: updatedAt,
-        },
-        { onConflict: 'id' }
-      );
-    } catch (err) {
-      console.warn(`Failed to upsert project ${project.id}:`, err);
-      throw err;
+    // بررسی ممانعت از ذخیره فیلدهای عکس یا امضای خالی در دیتابیس
+    if (project.customerSignature === '') {
+      throw new Error('امضای کارفرما رشته خالی است و قابل ذخیره در سرور نیست.');
+    }
+    if (project.beforePhotos?.some((ph) => ph === '')) {
+      throw new Error('آرایه عکس‌های قبل از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+    }
+    if (project.afterPhotos?.some((ph) => ph === '')) {
+      throw new Error('آرایه عکس‌های بعد از نصب حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+    }
+    if (project.completionPhotos?.some((ph) => ph === '')) {
+      throw new Error('آرایه عکس‌های اتمام کار حاوی رشته خالی است و قابل ذخیره در سرور نیست.');
+    }
+    if (project.proposalImages?.some((img) => img.url === '')) {
+      throw new Error('تصاویر پروپوزال حاوی آدرس خالی است و قابل ذخیره در سرور نیست.');
+    }
+
+    const cleanProject = { ...project };
+    delete (cleanProject as any).__fromCache;
+
+    const updatedAt = cleanProject.updatedAt || new Date().toISOString();
+    const { error } = await client.from('projects').upsert(
+      {
+        id: cleanProject.id,
+        data: { ...cleanProject, updatedAt },
+        updated_at: updatedAt,
+      },
+      { onConflict: 'id' }
+    );
+
+    if (error) {
+      console.warn(`Failed to upsert project ${project.id}:`, error);
+      throw error;
     }
   },
 
   async deleteProject(projectId: string): Promise<void> {
     const client = this.getClient();
-    if (!client) return;
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
 
-    try {
-      await client.from('projects').delete().eq('id', projectId);
-    } catch (err) {
-      console.warn(`Failed to delete project ${projectId}:`, err);
-      throw err;
+    const { error } = await client.from('projects').delete().eq('id', projectId);
+    if (error) {
+      console.warn(`Failed to delete project ${projectId}:`, error);
+      throw error;
     }
   },
 
@@ -422,31 +522,21 @@ export const SupabaseSyncService = {
   },
 
   /**
-   * Generates next sequential project code (e.g. PRJ-1001) using Postgres sequence
+   * Generates next sequential project code (e.g. PRJ-1001) using Postgres sequence.
+   * Throws if sequence RPC fails; never falls back to client timestamps or random codes.
    */
-  async getNextProjectCode(existingProjects: Project[] = []): Promise<string> {
+  async getNextProjectCode(): Promise<string> {
     const client = this.getClient();
-    if (client) {
-      try {
-        const { data, error } = await client.rpc('next_project_code');
-        if (!error && data && typeof data === 'string') {
-          return data;
-        }
-      } catch {
-        // Fallback below
-      }
+    if (!client) {
+      throw new Error('عدم دسترسی به سرور Supabase جهت دریافت شماره سفارش پروژه.');
     }
 
-    // Client-side sequential fallback based on existing project codes
-    let maxNum = 1000;
-    existingProjects.forEach((p) => {
-      const match = p.code?.match(/PRJ-(\d+)/);
-      if (match && match[1]) {
-        const val = parseInt(match[1], 10);
-        if (val > maxNum) maxNum = val;
-      }
-    });
-    return `PRJ-${maxNum + 1}`;
+    const { data, error } = await client.rpc('next_project_code');
+    if (error || !data || typeof data !== 'string') {
+      throw new Error(`خطا در صدور کد ترتیبی پروژه از سرور: ${error?.message || 'کد پروژه دریافت نشد.'}`);
+    }
+
+    return data;
   },
 
   // =========================================================================
@@ -491,32 +581,34 @@ export const SupabaseSyncService = {
 
   async upsertTicket(ticket: Ticket): Promise<void> {
     const client = this.getClient();
-    if (!client) return;
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
 
-    try {
-      await client.from('tickets').upsert(
-        {
-          id: ticket.id,
-          data: ticket,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'id' }
-      );
-    } catch (err) {
-      console.warn(`Failed to upsert ticket ${ticket.id}:`, err);
-      throw err;
+    const { error } = await client.from('tickets').upsert(
+      {
+        id: ticket.id,
+        data: ticket,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    );
+    if (error) {
+      console.warn(`Failed to upsert ticket ${ticket.id}:`, error);
+      throw error;
     }
   },
 
   async deleteTicket(ticketId: string): Promise<void> {
     const client = this.getClient();
-    if (!client) return;
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
 
-    try {
-      await client.from('tickets').delete().eq('id', ticketId);
-    } catch (err) {
-      console.warn(`Failed to delete ticket ${ticketId}:`, err);
-      throw err;
+    const { error } = await client.from('tickets').delete().eq('id', ticketId);
+    if (error) {
+      console.warn(`Failed to delete ticket ${ticketId}:`, error);
+      throw error;
     }
   },
 
@@ -605,21 +697,53 @@ export const SupabaseSyncService = {
 
   async upsertSettings(settings: SystemSettings): Promise<void> {
     const client = this.getClient();
-    if (!client) return;
-
-    try {
-      await client.from('talaie_sync').upsert(
-        {
-          key: 'settings',
-          value: settings,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'key' }
-      );
-    } catch (err) {
-      console.warn('Failed to upsert settings:', err);
-      throw err;
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
+
+    const { error } = await client.from('talaie_sync').upsert(
+      {
+        key: 'settings',
+        value: settings,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' }
+    );
+    if (error) {
+      console.warn('Failed to upsert settings:', error);
+      throw error;
+    }
+  },
+
+  async executeOfflineOperation(op: OfflineOperation): Promise<boolean> {
+    try {
+      switch (op.type) {
+        case 'UPSERT_PROJECT':
+          await this.upsertProject(op.payload);
+          return true;
+        case 'DELETE_PROJECT':
+          await this.deleteProject(op.payload);
+          return true;
+        case 'UPSERT_TICKET':
+          await this.upsertTicket(op.payload);
+          return true;
+        case 'DELETE_TICKET':
+          await this.deleteTicket(op.payload);
+          return true;
+        case 'UPSERT_SETTINGS':
+          await this.upsertSettings(op.payload);
+          return true;
+        default:
+          return true;
+      }
+    } catch (err) {
+      console.warn(`Execution of offline op ${op.type} failed:`, err);
+      return false;
+    }
+  },
+
+  processOfflineQueue(): Promise<void> {
+    return OfflineQueue.processQueue((op) => this.executeOfflineOperation(op));
   },
 
   subscribeSettings(onUpdate: (settings: SystemSettings) => void): (() => void) {
@@ -878,6 +1002,14 @@ export const SupabaseSyncService = {
     return `-- لطفاً دستورات موجود در پوشه supabase/migrations را اجرا فرمایید:
 -- 001_security.sql (فاز ۱: امنیت و profiles)
 -- 002_tables.sql (فاز ۲: جدول‌های projects و tickets و باکت تصاویر)
+-- 003_migrate_user_ids.sql (فاز ۲: مهاجرت شناسه‌های پرسنل به UUID)
 `;
   },
 };
+
+// پردازش صف آفلاین در زمان اتصال مجدد اینترنت
+if (typeof window !== 'undefined') {
+  window.addEventListener('talaie-trigger-offline-sync', () => {
+    SupabaseSyncService.processOfflineQueue();
+  });
+}

@@ -14,7 +14,9 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scale, setScale] = useState(1);
 
-  if (!images || images.length === 0) {
+  const validImages = (images || []).filter((img) => Boolean(img && img.url && img.url.trim() !== ''));
+
+  if (!validImages || validImages.length === 0) {
     return (
       <div
         role="dialog"
@@ -44,7 +46,7 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
     );
   }
 
-  const current = images[selectedIndex];
+  const current = validImages[selectedIndex] || validImages[0];
 
   const handleZoomIn = () => setScale((s) => Math.min(s + 0.3, 3));
   const handleZoomOut = () => setScale((s) => Math.max(s - 0.3, 0.6));
@@ -145,9 +147,9 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
       </div>
 
       {/* Bottom Thumbnail Bar (if multiple images) */}
-      {images.length > 1 && (
+      {validImages.length > 1 && (
         <div className="flex items-center justify-center gap-3 p-3 bg-[#151515] border-t border-white/10 overflow-x-auto">
-          {images.map((img, idx) => (
+          {validImages.map((img, idx) => (
             <button
               key={img.id}
               type="button"

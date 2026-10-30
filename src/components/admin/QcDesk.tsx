@@ -165,9 +165,8 @@ export const QcDesk: React.FC<Props> = ({
     return users.find((u) => u.id === id)?.name || '';
   };
 
-  const beforePhotos = selectedProject?.beforePhotos || [];
-  const afterPhotos =
-    selectedProject?.afterPhotos || selectedProject?.completionPhotos || [];
+  const beforePhotos = (selectedProject?.beforePhotos || []).filter((p) => Boolean(p && p.trim() !== ''));
+  const afterPhotos = (selectedProject?.afterPhotos || selectedProject?.completionPhotos || []).filter((p) => Boolean(p && p.trim() !== ''));
   const checklist = selectedProject?.handoverChecklist;
 
   return (

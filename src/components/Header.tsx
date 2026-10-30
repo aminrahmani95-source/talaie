@@ -26,6 +26,7 @@ interface Props {
   openTicketCount: number;
   openStuckCount?: number;
   pendingQcCount: number;
+  pendingQueueCount?: number;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
   onLogout: () => void;
@@ -43,6 +44,7 @@ export const Header: React.FC<Props> = ({
   openTicketCount,
   openStuckCount = 0,
   pendingQcCount,
+  pendingQueueCount = 0,
   isDarkMode = false,
   onToggleDarkMode,
   onLogout,
@@ -90,6 +92,17 @@ export const Header: React.FC<Props> = ({
 
           {/* Right Tools & User Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Unsynced offline operations pill */}
+            {pendingQueueCount > 0 && (
+              <div
+                className="flex items-center gap-1.5 px-3 py-1.5 min-h-[38px] bg-amber-500/15 dark:bg-amber-950/60 border border-amber-500/50 text-amber-700 dark:text-amber-300 rounded-2xl text-xs font-bold transition animate-pulse"
+                title={`${toPersianDigits(pendingQueueCount)} تغییر محلی در صف ارسال به سرور است و به محض اتصال پایدار همگام‌سازی خواهد شد.`}
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span>{toPersianDigits(pendingQueueCount)} تغییر ارسال‌نشده</span>
+              </div>
+            )}
+
             {/* Dark Mode Toggle Button */}
             {onToggleDarkMode && (
               <button

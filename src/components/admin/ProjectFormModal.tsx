@@ -43,13 +43,24 @@ export const ProjectFormModal: React.FC<Props> = ({
   const [customerPhone, setCustomerPhone] = useState(project?.customerPhone || '');
   const [address, setAddress] = useState(project?.address || '');
   const [locationUrl, setLocationUrl] = useState(project?.locationUrl || '');
+  const [codeLoading, setCodeLoading] = useState<boolean>(!project?.code);
+  const [codeError, setCodeError] = useState<string | null>(null);
 
   // Fetch sequential project code for new project
   useEffect(() => {
     if (!project?.code) {
-      SupabaseSyncService.getNextProjectCode().then((code) => {
-        setProjectCode(code);
-      });
+      setCodeLoading(true);
+      setCodeError(null);
+      SupabaseSyncService.getNextProjectCode()
+        .then((code) => {
+          setProjectCode(code);
+          setCodeLoading(false);
+        })
+        .catch((err) => {
+          console.warn('Failed to get sequential project code:', err);
+          setCodeError('خطا در دریافت کد رهگیری ترتیبی از سرور ابری. لطفاً اتصال را بررسی نمایید.');
+          setCodeLoading(false);
+        });
     }
   }, [project?.code]);
 
@@ -168,6 +179,11 @@ export const ProjectFormModal: React.FC<Props> = ({
       return;
     }
 
+    if (!project?.code && !projectCode) {
+      alert('کد سفارش معتبر از سرور دریافت نشده است. لطفاً اتصال اینترنت را بررسی و مجدداً تلاش فرمایید.');
+      return;
+    }
+
     if (assignedTechnicianIds.length === 0) {
       alert('حداقل یک تکنسین یا سرپرست باید به این مأموریت اختصاص داده شود.');
       return;
@@ -176,7 +192,7 @@ export const ProjectFormModal: React.FC<Props> = ({
     const savedProject: Project = {
       ...(project || {}),
       id: projectId,
-      code: projectCode || project?.code || `PRJ-${Date.now().toString().slice(-4)}`,
+      code: project?.code || projectCode,
       title: title.trim(),
       customerName: customerName.trim() || title.trim(),
       customerPhone: customerPhone.trim(),
@@ -235,9 +251,24 @@ export const ProjectFormModal: React.FC<Props> = ({
               <Plus className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
-              <h3 id="project-modal-title" className="font-black text-lg text-white">
-                {isEditing ? 'ویرایش مأموریت و پروژه' : 'ثبت مأموریت جدید گالری طلایی'}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 id="project-modal-title" className="font-black text-lg text-white">
+                  {isEditing ? 'ویرایش مأموریت و پروژه' : 'ثبت مأموریت جدید گالری طلایی'}
+                </h3>
+                {projectCode && (
+                  <span className="text-xs bg-[#C1A056] text-black font-mono font-bold px-2 py-0.5 rounded-lg">
+                    {projectCode}
+                  </span>
+                )}
+                {codeLoading && (
+                  <span className="text-[10px] text-amber-300 animate-pulse">
+                    در حال دریافت کد...
+                  </span>
+                )}
+              </div>
+              {codeError && (
+                <p className="text-xs text-rose-400 font-bold mt-1">{codeError}</p>
+              )}
               <p className="text-xs text-[#E8E4DC]">
                 مشخصات فنی شید و پرده، تخصیص اکیپ، چک‌لیست ابزار و پیوست پروپوزال فروش
               </p>

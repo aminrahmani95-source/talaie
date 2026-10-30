@@ -177,6 +177,7 @@ export interface Project {
   
   createdAt: string;
   updatedAt: string;
+  __fromCache?: boolean; // علامت‌گذاری موقت برای پروژه‌های خوانده‌شده از کش محلی
 }
 
 export type TicketType = 

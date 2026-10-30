@@ -445,8 +445,10 @@ export const StorageService = {
     try {
       const parsed: Project[] = JSON.parse(raw);
       // Defensive: Ensure all array properties are always defined to prevent runtime crashes
+      // Flag each project loaded from cache with __fromCache: true
       return parsed.map((p) => ({
         ...p,
+        __fromCache: true,
         assignedTechnicianIds: Array.isArray(p.assignedTechnicianIds) ? p.assignedTechnicianIds : [],
         toolsRequired: Array.isArray(p.toolsRequired) ? p.toolsRequired : DEFAULT_MASTER_TOOLS,
         proposalImages: Array.isArray(p.proposalImages) ? p.proposalImages : [],
@@ -456,24 +458,28 @@ export const StorageService = {
         evaluations: Array.isArray(p.evaluations) ? p.evaluations : [],
       }));
     } catch {
-      return import.meta.env.DEV ? getInitialProjects() : [];
+      return import.meta.env.DEV ? getInitialProjects().map((p) => ({ ...p, __fromCache: true })) : [];
     }
   },
 
   saveProjects(projects: Project[]) {
     try {
-      // Lightweight cache: strip large base64 strings so it never causes QuotaExceededError
-      const lightweightProjects = projects.map((p) => ({
-        ...p,
-        proposalImages: p.proposalImages?.map((img) => ({
-          ...img,
-          url: img.url.startsWith('data:') ? '' : img.url,
-        })),
-        beforePhotos: p.beforePhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
-        afterPhotos: p.afterPhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
-        completionPhotos: p.completionPhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
-        customerSignature: p.customerSignature && p.customerSignature.length > 5000 ? '' : p.customerSignature,
-      }));
+      // Lightweight cache: strip large base64 strings and __fromCache flag so it never causes QuotaExceededError
+      const lightweightProjects = projects.map((p) => {
+        const copy: any = {
+          ...p,
+          proposalImages: p.proposalImages?.map((img) => ({
+            ...img,
+            url: img.url.startsWith('data:') ? '' : img.url,
+          })),
+          beforePhotos: p.beforePhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
+          afterPhotos: p.afterPhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
+          completionPhotos: p.completionPhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
+          customerSignature: p.customerSignature && p.customerSignature.length > 5000 ? '' : p.customerSignature,
+        };
+        delete copy.__fromCache;
+        return copy;
+      });
       localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(lightweightProjects));
     } catch (e) {
       console.warn('LocalStorage saveProjects failed (quota limit):', e);

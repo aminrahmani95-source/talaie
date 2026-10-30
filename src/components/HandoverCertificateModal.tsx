@@ -27,8 +27,10 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
   };
 
   const leadTech = users.find((u) => u.id === project.leadTechnicianId)?.name || 'تکنسین گالری طلایی';
-  const beforePhoto = project.beforePhotos?.[0];
-  const afterPhoto = project.afterPhotos?.[0] || project.completionPhotos?.[0];
+  const beforePhoto = project.beforePhotos?.find((ph) => Boolean(ph && ph.trim() !== ''));
+  const afterPhoto =
+    project.afterPhotos?.find((ph) => Boolean(ph && ph.trim() !== '')) ||
+    project.completionPhotos?.find((ph) => Boolean(ph && ph.trim() !== ''));
   const checklist = project.handoverChecklist;
 
   return (

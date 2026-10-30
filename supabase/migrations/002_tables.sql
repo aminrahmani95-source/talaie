@@ -28,7 +28,7 @@ create index if not exists idx_tickets_updated_at on public.tickets(updated_at);
 create or replace function public.set_updated_at_and_user()
 returns trigger
 language plpgsql
-security definer
+set search_path = public
 as $$
 begin
   NEW.updated_at = now();
@@ -56,6 +56,7 @@ create or replace function public.next_project_code()
 returns text
 language plpgsql
 security definer
+set search_path = public
 as $$
 declare
   seq_val bigint;
@@ -64,6 +65,9 @@ begin
   return 'PRJ-' || seq_val;
 end;
 $$;
+
+revoke execute on function public.next_project_code() from anon, public;
+grant execute on function public.next_project_code() to authenticated;
 
 -- ۶. امنیت سطح سطر (RLS) برای جدول‌های projects و tickets
 alter table public.projects enable row level security;
@@ -135,8 +139,7 @@ select
 from public.talaie_sync,
      jsonb_array_elements(case jsonb_typeof(value) when 'array' then value else '[]'::jsonb end) as elem
 where key = 'projects' and elem->>'id' is not null
-on conflict (id) do update set
-  data = excluded.data;
+on conflict (id) do nothing;
 
 insert into public.tickets (id, data, updated_at)
 select 
@@ -146,8 +149,7 @@ select
 from public.talaie_sync,
      jsonb_array_elements(case jsonb_typeof(value) when 'array' then value else '[]'::jsonb end) as elem
 where key = 'tickets' and elem->>'id' is not null
-on conflict (id) do update set
-  data = excluded.data;
+on conflict (id) do nothing;
 
 -- تنظیم مقدار شروع sequence بر اساس بزرگترین کد پروژه موجود
 do $$

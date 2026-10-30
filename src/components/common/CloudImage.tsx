@@ -54,6 +54,11 @@ export const CloudImage: React.FC<Props> = ({
     };
   }, [src]);
 
+  if (!src || src.trim() === '') {
+    if (fallback) return <>{fallback}</>;
+    return null;
+  }
+
   if (!resolvedSrc) {
     if (fallback) return <>{fallback}</>;
     return (

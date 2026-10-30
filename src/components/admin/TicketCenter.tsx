@@ -160,9 +160,9 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
               </p>
 
               {/* Photos */}
-              {t.photos && t.photos.length > 0 && (
+              {t.photos && t.photos.filter((p) => Boolean(p && p.trim() !== '')).length > 0 && (
                 <div className="flex items-center gap-2">
-                  {t.photos.map((p, i) => (
+                  {t.photos.filter((p) => Boolean(p && p.trim() !== '')).map((p, i) => (
                     <button
                       key={i}
                       type="button"
