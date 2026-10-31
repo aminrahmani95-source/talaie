@@ -1,7 +1,7 @@
 -- ==============================================================================
--- گالری طلایی | اسکریپت جامع راه‌اندازی دیتابیس و فعال‌سازی مدیر ارشد QC
--- این اسکریپت تمام جداول (پروفایل‌ها، پروژه‌ها، تیکت‌ها)، امنیت RLS و باکت عکس‌ها را ساخته
--- و حساب کاربر 09124339038 با رمز 91243390380 را در یک مرحله فعال می‌کند.
+-- گالری طلایی | اسکریپت جامع راه‌اندازی دیتابیس، جداول، RLS و امنیت سامانه
+-- این اسکریپت تمام جداول (پروفایل‌ها، پروژه‌ها، تیکت‌ها)، امنیت RLS و باکت عکس‌ها را
+-- در یک مرحله ایجاد و آماده‌سازی می‌کند.
 -- ==============================================================================
 
 -- ۱. ساخت جدول پروفایل پرسنل (profiles)
@@ -288,54 +288,4 @@ begin
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'talaie_sync') then
     alter publication supabase_realtime add table public.talaie_sync;
   end if;
-end $$;
-
--- ۶. ایجاد و فعال‌سازی کاربر مدیر ارشد QC (09124339038 با رمز 91243390380)
-do $$
-declare
-  target_uid uuid;
-begin
-  select id into target_uid
-  from auth.users
-  where email in ('09124339038@talaie.ir', '09124339038@talaie.local')
-  limit 1;
-
-  if target_uid is not null then
-    update auth.users
-    set encrypted_password = crypt('91243390380', gen_salt('bf')),
-        email_confirmed_at = coalesce(email_confirmed_at, now()),
-        raw_app_meta_data = '{"provider":"email","providers":["email"]}'::jsonb,
-        updated_at = now()
-    where id = target_uid;
-  else
-    target_uid := gen_random_uuid();
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-      raw_app_meta_data, raw_user_meta_data, is_super_admin, created_at, updated_at
-    ) values (
-      '00000000-0000-0000-0000-000000000000',
-      target_uid, 'authenticated', 'authenticated', '09124339038@talaie.ir',
-      crypt('91243390380', gen_salt('bf')), now(),
-      '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, false, now(), now()
-    );
-  end if;
-
-  insert into public.profiles (id, name, phone, role, avatar, active)
-  values (
-    target_uid,
-    'امین رحمانی (مسئول QC)',
-    '09124339038',
-    'QC_MANAGER',
-    '👔',
-    true
-  )
-  on conflict (id) do update set
-    name = 'امین رحمانی (مسئول QC)',
-    phone = '09124339038',
-    role = 'QC_MANAGER',
-    active = true;
-
-  update public.profiles
-  set role = 'QC_MANAGER', active = true
-  where phone = '09124339038';
 end $$;

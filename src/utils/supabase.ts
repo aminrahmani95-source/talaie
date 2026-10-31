@@ -400,83 +400,105 @@ export const SupabaseSyncService = {
     };
   },
 
-  async invokeAdminUsers(payload: {
-    action: 'create' | 'update' | 'reset-password' | 'delete';
-    [key: string]: any;
-  }): Promise<{ success: boolean; error?: string; data?: any }> {
+  async adminCreatePersonnel(payload: {
+    name: string;
+    phone: string;
+    password: string;
+    role: string;
+  }): Promise<{ success: boolean; data?: any; error?: string }> {
     const client = this.getClient();
     if (!client) {
       return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
     }
 
     try {
-      // 1. Direct PostgreSQL RPC (Migration 005)
-      if (payload.action === 'create') {
-        const { data, error } = await client.rpc('admin_create_personnel', {
-          new_name: payload.name,
-          new_phone: payload.phone,
-          new_password: payload.password,
-          new_role: payload.role,
-        });
-
-        if (!error && data) {
-          return { success: true, data };
-        }
-        if (error && error.message && !error.message.includes('could not find') && !error.message.includes('function admin_create_personnel')) {
-          return { success: false, error: error.message };
-        }
-      } else if (payload.action === 'update') {
-        const { data, error } = await client.rpc('admin_update_personnel', {
-          target_id: payload.id,
-          new_name: payload.name,
-          new_phone: payload.phone,
-          new_role: payload.role,
-          new_active: payload.active ?? true,
-        });
-
-        if (!error) {
-          return { success: true, data };
-        }
-        if (error && error.message && !error.message.includes('could not find') && !error.message.includes('function admin_update_personnel')) {
-          return { success: false, error: error.message };
-        }
-      } else if (payload.action === 'reset-password') {
-        const { data, error } = await client.rpc('admin_reset_personnel_password', {
-          target_id: payload.id,
-          new_password: payload.newPassword,
-        });
-
-        if (!error) {
-          return { success: true, data };
-        }
-        if (error && error.message && !error.message.includes('could not find') && !error.message.includes('function admin_reset_personnel_password')) {
-          return { success: false, error: error.message };
-        }
-      } else if (payload.action === 'delete') {
-        const { data, error } = await client.rpc('admin_delete_personnel', {
-          target_id: payload.id,
-        });
-
-        if (!error) {
-          return { success: true, data };
-        }
-        if (error && error.message && !error.message.includes('could not find') && !error.message.includes('function admin_delete_personnel')) {
-          return { success: false, error: error.message };
-        }
-      }
-
-      // 2. Fallback to Supabase Edge Function if deployed
-      const { data, error } = await client.functions.invoke('admin-users', {
-        body: payload,
+      const { data, error } = await client.rpc('admin_create_personnel', {
+        new_name: payload.name,
+        new_phone: payload.phone,
+        new_password: payload.password,
+        new_role: payload.role,
       });
 
       if (error) {
-        return { success: false, error: error.message || 'خطا در ثبت پرسنل در پایگاه داده.' };
-      }
-      if (data && data.error) {
-        return { success: false, error: data.error };
+        return { success: false, error: error.message || 'خطا در ثبت پرسنل در دیتابیس.' };
       }
       return { success: true, data };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'خطای غیرمنتظره در ارتباط با سرور' };
+    }
+  },
+
+  async adminUpdatePersonnel(payload: {
+    id: string;
+    name?: string;
+    phone?: string;
+    role?: string;
+    active?: boolean;
+  }): Promise<{ success: boolean; error?: string }> {
+    const client = this.getClient();
+    if (!client) {
+      return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
+    }
+
+    try {
+      const { error } = await client.rpc('admin_update_personnel', {
+        target_id: payload.id,
+        new_name: payload.name ?? null,
+        new_phone: payload.phone ?? null,
+        new_role: payload.role ?? null,
+        new_active: payload.active ?? null,
+      });
+
+      if (error) {
+        return { success: false, error: error.message || 'خطا در ویرایش اطلاعات پرسنل در دیتابیس.' };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'خطای غیرمنتظره در ارتباط با سرور' };
+    }
+  },
+
+  async adminResetPersonnelPassword(payload: {
+    id: string;
+    newPassword: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    const client = this.getClient();
+    if (!client) {
+      return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
+    }
+
+    try {
+      const { error } = await client.rpc('admin_reset_personnel_password', {
+        target_id: payload.id,
+        new_password: payload.newPassword,
+      });
+
+      if (error) {
+        return { success: false, error: error.message || 'خطا در تغییر رمز عبور در دیتابیس.' };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'خطای غیرمنتظره در ارتباط با سرور' };
+    }
+  },
+
+  async adminDeletePersonnel(payload: {
+    id: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    const client = this.getClient();
+    if (!client) {
+      return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
+    }
+
+    try {
+      const { error } = await client.rpc('admin_delete_personnel', {
+        target_id: payload.id,
+      });
+
+      if (error) {
+        return { success: false, error: error.message || 'خطا در حذف پرسنل از دیتابیس.' };
+      }
+      return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message || 'خطای غیرمنتظره در ارتباط با سرور' };
     }

@@ -92,9 +92,15 @@ export const TechniciansManager: React.FC<Props> = ({
       return;
     }
 
-    if (!editingUser && !password.trim()) {
-      alert('لطفاً رمز عبور کاربر جدید را تعیین کنید.');
-      return;
+    if (!editingUser) {
+      if (!password.trim()) {
+        alert('لطفاً رمز عبور کاربر جدید را تعیین کنید.');
+        return;
+      }
+      if (password.trim().length < 8) {
+        alert('رمز عبور باید حداقل ۸ کاراکتر باشد.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -111,8 +117,7 @@ export const TechniciansManager: React.FC<Props> = ({
     try {
       if (editingUser) {
         // Update user
-        const res = await SupabaseSyncService.invokeAdminUsers({
-          action: 'update',
+        const res = await SupabaseSyncService.adminUpdatePersonnel({
           id: editingUser.id,
           name: fullName,
           phone: trimmedPhone,
@@ -135,8 +140,7 @@ export const TechniciansManager: React.FC<Props> = ({
         onSaveUser(updated);
       } else {
         // Create user
-        const res = await SupabaseSyncService.invokeAdminUsers({
-          action: 'create',
+        const res = await SupabaseSyncService.adminCreatePersonnel({
           name: fullName,
           phone: trimmedPhone,
           password: toEnglishDigits(password.trim()),
@@ -172,13 +176,16 @@ export const TechniciansManager: React.FC<Props> = ({
       alert('لطفاً رمز عبور جدید را وارد کنید.');
       return;
     }
+    if (newPassword.trim().length < 8) {
+      alert('رمز عبور باید حداقل ۸ کاراکتر باشد.');
+      return;
+    }
 
     setIsSubmitting(true);
     setFeedback(null);
 
     try {
-      const res = await SupabaseSyncService.invokeAdminUsers({
-        action: 'reset-password',
+      const res = await SupabaseSyncService.adminResetPersonnelPassword({
         id: selectedUserForReset.id,
         newPassword: toEnglishDigits(newPassword.trim()),
       });
@@ -202,8 +209,7 @@ export const TechniciansManager: React.FC<Props> = ({
     }
 
     try {
-      const res = await SupabaseSyncService.invokeAdminUsers({
-        action: 'delete',
+      const res = await SupabaseSyncService.adminDeletePersonnel({
         id: u.id,
       });
       if (!res.success) {
@@ -518,7 +524,8 @@ export const TechniciansManager: React.FC<Props> = ({
                     id="tech-password"
                     type="password"
                     required
-                    placeholder="حداقل ۶ کاراکتر"
+                    minLength={8}
+                    placeholder="حداقل ۸ کاراکتر"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] font-mono text-left bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
@@ -661,7 +668,8 @@ export const TechniciansManager: React.FC<Props> = ({
                   id="new-password"
                   type="password"
                   required
-                  placeholder="حداقل ۶ کاراکتر"
+                  minLength={8}
+                  placeholder="حداقل ۸ کاراکتر"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] font-mono text-left bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
