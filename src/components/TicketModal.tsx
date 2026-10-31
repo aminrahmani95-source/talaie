@@ -75,6 +75,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [ticketError, setTicketError] = useState<string | null>(null);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -97,8 +98,11 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+    setTicketError(null);
+
     if (!description.trim()) {
-      alert('لطفاً شرح مشکل را بنویسید.');
+      setTicketError('لطفاً شرح مشکل را بنویسید.');
       return;
     }
 
@@ -121,7 +125,12 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
       createdAt: `${project.scheduledDate} - ساعت ${timeStr}`,
     };
 
-    onSubmit(newTicket);
+    try {
+      onSubmit(newTicket);
+    } catch (err: any) {
+      setTicketError(err.message || 'خطا در ثبت تیکت.');
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -157,6 +166,12 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {ticketError && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+              <span>{ticketError}</span>
+            </div>
+          )}
           {/* Ticket Type Picker */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-[#E8E4DC] mb-2.5">
@@ -260,8 +275,9 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
           <div className="flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-[#2D2D2D]">
             <button
               type="button"
+              disabled={submitting}
               onClick={onClose}
-              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl border border-slate-300 dark:border-[#333333] text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-100 dark:hover:bg-[#252525] transition text-sm active:scale-[0.98]"
+              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl border border-slate-300 dark:border-[#333333] text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-100 dark:hover:bg-[#252525] transition text-sm active:scale-[0.98] disabled:opacity-50"
             >
               انصراف
             </button>

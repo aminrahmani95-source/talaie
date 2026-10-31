@@ -33,6 +33,8 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
   const [fmeaRootCause, setFmeaRootCause] = useState<FmeaRootCause>('SUPPLIER_DEFECT');
   const [filter, setFilter] = useState<'ALL' | 'OPEN' | 'RESOLVED'>('OPEN');
   const [searchQuery, setSearchQuery] = useState('');
+  const [resolutionError, setResolutionError] = useState<string | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
 
   const upcomingDays = getUpcomingDays(30);
 
@@ -92,9 +94,12 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
     };
   };
 
-  const handleResolveStuck = (project: Project) => {
+  const handleResolveStuck = async (project: Project) => {
+    if (isResolving) return;
+    setResolutionError(null);
+
     if (!resolutionNote.trim()) {
-      alert('لطفاً اقدام انجام‌شده جهت رفع توقف پروژه را یادداشت کنید.');
+      setResolutionError('لطفاً اقدام انجام‌شده جهت رفع توقف پروژه را یادداشت کنید.');
       return;
     }
 
@@ -142,10 +147,17 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
       ...(newScheduledDate ? { scheduledDate: newScheduledDate } : {}),
     };
 
-    onPatchProject(project.id, patch);
-    setResolutionNote('');
-    setNewScheduledDate('');
-    alert('پروژه با موفقیت از حالت استاک خارج شد و مجدداً به برنامه فعال اکیپ نصب بازگشت.');
+    setIsResolving(true);
+    try {
+      await onPatchProject(project.id, patch);
+      setResolutionNote('');
+      setNewScheduledDate('');
+      alert('پروژه با موفقیت از حالت استاک خارج شد و مجدداً به برنامه فعال اکیپ نصب بازگشت.');
+    } catch (err: any) {
+      setResolutionError(err.message || 'خطا در رفع استاک پروژه.');
+    } finally {
+      setIsResolving(false);
+    }
   };
 
   // KPI Calculations across all incidents
@@ -519,11 +531,20 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                     <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
                       شرح اقدام انجام‌شده و نحوه تامین فوری کسری:
                     </label>
+                    {resolutionError && (
+                      <div className="mb-2 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                        <span>{resolutionError}</span>
+                      </div>
+                    )}
                     <textarea
                       rows={3}
                       placeholder="مثال: قطعه کسری از انبار مرکزی تامین شد و جهت تسریع با پیک ارسال گردید. پروژه به روال عادی برگشت."
                       value={resolutionNote}
-                      onChange={(e) => setResolutionNote(e.target.value)}
+                      onChange={(e) => {
+                        setResolutionNote(e.target.value);
+                        setResolutionError(null);
+                      }}
                       className="w-full text-xs p-3 rounded-xl border border-[#E8E4DC] dark:border-[#333333] bg-[#FAF7F2] dark:bg-[#161616] dark:text-white focus:ring-2 focus:ring-[#C1A056]"
                     />
                   </div>
@@ -532,11 +553,12 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                   <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                     <button
                       type="button"
+                      disabled={isResolving}
                       onClick={() => handleResolveStuck(selectedProject)}
-                      className="w-full sm:flex-1 py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black rounded-xl text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                      className="w-full sm:flex-1 py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black rounded-xl text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
                     >
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>رفع استاک و بازگشت پروژه به جریان فعال نصب</span>
+                      <span>{isResolving ? 'در حال ثبت رفع استاک...' : 'رفع استاک و بازگشت پروژه به جریان فعال نصب'}</span>
                     </button>
                   </div>
                 </div>

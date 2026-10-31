@@ -11,6 +11,9 @@ import {
   Calendar,
   Clock,
   FileText,
+  AlertCircle,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { getUpcomingDays, getTodayPersianString } from '../../utils/jalali';
 import { compressImageFile } from '../../utils/imageCompressor';
@@ -107,6 +110,12 @@ export const ProjectFormModal: React.FC<Props> = ({
   const [status, setStatus] = useState<Project['status']>(project?.status || 'SCHEDULED');
   const [qcStatus, setQcStatus] = useState<Project['qcStatus']>(project?.qcStatus || 'NOT_STARTED');
 
+  // Form error and submission lock
+  const [formError, setFormError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const hasLeadTechnician = users.some((u) => u.role === 'LEAD_TECHNICIAN');
+
   const handleToggleFullTools = () => {
     if (!isFullTools) {
       setIsFullTools(true);
@@ -173,87 +182,109 @@ export const ProjectFormModal: React.FC<Props> = ({
     setProposalImages((prev) => prev.filter((img) => img.id !== id));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    if (!hasLeadTechnician) {
+      setFormError('ابتدا از بخش مدیریت تکنسینها حداقل یک سرپرست اکیپ تعریف کنید');
+      return;
+    }
 
     if (!title.trim()) {
-      alert('لطفاً عنوان یا نام پروژه را وارد کنید.');
+      setFormError('لطفاً عنوان یا نام پروژه را وارد کنید.');
       return;
     }
 
     if (!project?.code && !projectCode) {
-      alert('کد سفارش معتبر از سرور دریافت نشده است. لطفاً اتصال اینترنت را بررسی و مجدداً تلاش فرمایید.');
+      setFormError('کد سفارش معتبر از سرور دریافت نشده است. لطفاً اتصال اینترنت را بررسی و مجدداً تلاش فرمایید.');
       return;
     }
 
     if (assignedTechnicianIds.length === 0) {
-      alert('حداقل یک تکنسین یا سرپرست باید به این مأموریت اختصاص داده شود.');
+      setFormError('حداقل یک تکنسین یا سرپرست باید به این مأموریت اختصاص داده شود.');
       return;
     }
 
-    if (project) {
-      // Editing existing project: calculate diff and send ONLY changed fields
-      const newFields: Partial<Project> = {
-        title: title.trim(),
-        customerName: customerName.trim() || title.trim(),
-        customerPhone: customerPhone.trim(),
-        address: address.trim(),
-        locationUrl: locationUrl.trim(),
-        shadePanels: Number(shadePanels) || 0,
-        curtainPanels: Number(curtainPanels) || 0,
-        mechanismType: mechanismType.trim(),
-        approximateArea: approximateArea ? Number(approximateArea) : undefined,
-        specialNotes: specialNotes.trim(),
-        proposalImages,
-        scheduledDate,
-        scheduledTime,
-        assignedTechnicianIds,
-        leadTechnicianId: leadTechnicianId || assignedTechnicianIds[0],
-        isFullTools,
-        toolsRequired,
-        customToolsNotes: customToolsNotes.trim(),
-        status,
-        qcStatus: status === 'COMPLETED' && qcStatus === 'NOT_STARTED' ? 'PENDING' : qcStatus,
-        updatedAt: new Date().toISOString(),
-      };
+    const effectiveLead = leadTechnicianId || assignedTechnicianIds[0];
+    if (!effectiveLead) {
+      setFormError('لطفاً سرپرست اکیپ را مشخص کنید.');
+      return;
+    }
 
-      const diff = computeProjectDiff(project, newFields);
-      onSave({ type: 'PATCH_PROJECT', id: project.id, patch: diff });
-    } else {
-      // New project: send CREATE_PROJECT
-      const newProject: Project = {
-        id: projectId,
-        code: projectCode,
-        title: title.trim(),
-        customerName: customerName.trim() || title.trim(),
-        customerPhone: customerPhone.trim(),
-        address: address.trim(),
-        locationUrl: locationUrl.trim(),
-        shadePanels: Number(shadePanels) || 0,
-        curtainPanels: Number(curtainPanels) || 0,
-        mechanismType: mechanismType.trim(),
-        approximateArea: approximateArea ? Number(approximateArea) : undefined,
-        specialNotes: specialNotes.trim(),
-        proposalImages,
-        scheduledDate,
-        scheduledTime,
-        assignedTechnicianIds,
-        leadTechnicianId: leadTechnicianId || assignedTechnicianIds[0],
-        isFullTools,
-        toolsRequired,
-        customToolsNotes: customToolsNotes.trim(),
-        status,
-        beforePhotos: [],
-        afterPhotos: [],
-        completionPhotos: [],
-        completionNotes: '',
-        qcStatus: status === 'COMPLETED' ? 'PENDING' : qcStatus,
-        evaluations: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+    setFormError('');
+    setIsSubmitting(true);
 
-      onSave({ type: 'CREATE_PROJECT', project: newProject });
+    try {
+      if (project) {
+        // Editing existing project: calculate diff and send ONLY changed fields
+        const newFields: Partial<Project> = {
+          title: title.trim(),
+          customerName: customerName.trim() || title.trim(),
+          customerPhone: customerPhone.trim(),
+          address: address.trim(),
+          locationUrl: locationUrl.trim(),
+          shadePanels: Number(shadePanels) || 0,
+          curtainPanels: Number(curtainPanels) || 0,
+          mechanismType: mechanismType.trim(),
+          approximateArea: approximateArea ? Number(approximateArea) : undefined,
+          specialNotes: specialNotes.trim(),
+          proposalImages,
+          scheduledDate,
+          scheduledTime,
+          assignedTechnicianIds,
+          leadTechnicianId: effectiveLead,
+          isFullTools,
+          toolsRequired,
+          customToolsNotes: customToolsNotes.trim(),
+          status,
+          qcStatus: status === 'COMPLETED' && qcStatus === 'NOT_STARTED' ? 'PENDING' : qcStatus,
+          updatedAt: new Date().toISOString(),
+        };
+
+        const diff = computeProjectDiff(project, newFields);
+        await onSave({ type: 'PATCH_PROJECT', id: project.id, patch: diff });
+      } else {
+        // New project: send CREATE_PROJECT
+        const newProject: Project = {
+          id: projectId,
+          code: projectCode,
+          title: title.trim(),
+          customerName: customerName.trim() || title.trim(),
+          customerPhone: customerPhone.trim(),
+          address: address.trim(),
+          locationUrl: locationUrl.trim(),
+          shadePanels: Number(shadePanels) || 0,
+          curtainPanels: Number(curtainPanels) || 0,
+          mechanismType: mechanismType.trim(),
+          approximateArea: approximateArea ? Number(approximateArea) : undefined,
+          specialNotes: specialNotes.trim(),
+          proposalImages,
+          scheduledDate,
+          scheduledTime,
+          assignedTechnicianIds,
+          leadTechnicianId: effectiveLead,
+          isFullTools,
+          toolsRequired,
+          customToolsNotes: customToolsNotes.trim(),
+          status,
+          beforePhotos: [],
+          afterPhotos: [],
+          completionPhotos: [],
+          completionNotes: '',
+          qcStatus: status === 'COMPLETED' ? 'PENDING' : qcStatus,
+          evaluations: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        await onSave({ type: 'CREATE_PROJECT', project: newProject });
+      }
+      onClose();
+    } catch (err: any) {
+      setFormError(err.message || 'خطا در ثبت اطلاعات مأموریت.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -536,6 +567,12 @@ export const ProjectFormModal: React.FC<Props> = ({
 
             {/* Technicians Multi-Select */}
             <div className="pt-2">
+              {!hasLeadTechnician && (
+                <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>ابتدا از بخش مدیریت تکنسینها حداقل یک سرپرست اکیپ تعریف کنید</span>
+                </div>
+              )}
               <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-2">
                 تکنسین‌های حاضر در این مأموریت (حداقل یک نفر باید سرپرست باشد):
               </label>
@@ -706,21 +743,35 @@ export const ProjectFormModal: React.FC<Props> = ({
             </div>
           </div>
 
+          {/* Inline Validation Error Message */}
+          {formError && (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-900 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="flex items-center gap-3 pt-4 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl border border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-50 dark:hover:bg-[#252525] active:scale-[0.99] transition text-sm min-h-[44px]"
+              className="flex-1 py-3 px-4 rounded-xl border border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-50 dark:hover:bg-[#252525] active:scale-[0.99] transition text-sm min-h-[44px] cursor-pointer"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold transition shadow-lg text-sm flex items-center justify-center gap-2 border border-[#C1A056]/30 active:scale-[0.99] min-h-[44px]"
+              disabled={!hasLeadTechnician || isSubmitting}
+              className="flex-1 py-3 px-4 rounded-xl bg-[#212121] hover:bg-[#333333] disabled:opacity-50 text-[#C1A056] font-bold transition shadow-lg text-sm flex items-center justify-center gap-2 border border-[#C1A056]/30 active:scale-[0.99] min-h-[44px] cursor-pointer"
             >
-              <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-              {isEditing ? 'ذخیره تغییرات مأموریت' : 'ثبت و ابلاغ مأموریت'}
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin text-[#C1A056]" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
+              )}
+              {isSubmitting ? 'در حال ثبت...' : isEditing ? 'ذخیره تغییرات مأموریت' : 'ثبت و ابلاغ مأموریت'}
             </button>
           </div>
         </form>

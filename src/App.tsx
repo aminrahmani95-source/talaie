@@ -15,6 +15,7 @@ import { Outbox, OutboxMutation, OfflineQueue } from './utils/offlineQueue';
 import {
   validateProjectPatchRoleGuards,
   validateTicketRoleGuards,
+  validateEvaluationRoleGuards,
   isValidStatusTransition,
 } from './utils/roleGuards';
 import { Header } from './components/Header';
@@ -354,6 +355,13 @@ export const App: React.FC = () => {
       } else if (mutation.type === 'CREATE_PROJECT' || mutation.type === 'DELETE_PROJECT') {
         showToast('error', 'تنها مدیر ارشد QC مجاز به ثبت یا حذف مستقیم پروژه است.');
         return false;
+      } else if (mutation.type === 'APPEND_PROJECT_EVALUATION') {
+        try {
+          validateEvaluationRoleGuards(currentUser);
+        } catch (err: any) {
+          showToast('error', err.message || 'خطای عدم دسترسی به ثبت ارزیابی.');
+          return false;
+        }
       } else if (mutation.type === 'CREATE_TICKET' || mutation.type === 'PATCH_TICKET') {
         const ticket = mutation.payload?.ticket || mutation.payload;
         const project = projectsRef.current.find((p) => p.id === ticket?.projectId);
@@ -687,7 +695,6 @@ export const App: React.FC = () => {
 
     const patch: Partial<Project> = {
       status: 'STUCK',
-      stuckIncident: incidentWithPrevious,
       stuckIncidents: updatedIncidents,
       updatedAt: new Date().toISOString(),
     };
@@ -700,7 +707,7 @@ export const App: React.FC = () => {
       },
       () => {
         const next = projectsRef.current.map((p) =>
-          p.id === projectId ? { ...p, ...patch } : p
+          p.id === projectId ? { ...p, ...patch, stuckIncident: incidentWithPrevious } : p
         );
         setProjects(next);
         projectsRef.current = next;

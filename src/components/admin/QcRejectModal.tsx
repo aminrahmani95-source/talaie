@@ -20,6 +20,7 @@ export const QcRejectModal: React.FC<Props> = ({
   const [quickDefects, setQuickDefects] = useState<string[]>([]);
   const [newScheduledDate, setNewScheduledDate] = useState(project.scheduledDate || '');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
@@ -43,8 +44,10 @@ export const QcRejectModal: React.FC<Props> = ({
     setQuickDefects(next);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     const finalReason = [
       ...quickDefects,
       reason.trim(),
@@ -57,7 +60,13 @@ export const QcRejectModal: React.FC<Props> = ({
       return;
     }
 
-    onSubmit(finalReason, newScheduledDate || undefined);
+    setIsSubmitting(true);
+    try {
+      await onSubmit(finalReason, newScheduledDate || undefined);
+    } catch (err: any) {
+      setError(err.message || 'خطا در ثبت دستور اصلاح.');
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -172,17 +181,19 @@ export const QcRejectModal: React.FC<Props> = ({
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#FAF7F2] dark:bg-[#252525] hover:bg-[#EAE6DD] text-slate-700 dark:text-zinc-300 transition"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#FAF7F2] dark:bg-[#252525] hover:bg-[#EAE6DD] text-slate-700 dark:text-zinc-300 transition disabled:opacity-50"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 shadow-md active:scale-95 transition"
+              disabled={isSubmitting}
+              className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 shadow-md active:scale-95 transition disabled:opacity-50"
             >
               <Send className="w-3.5 h-3.5" />
-              <span>ارسال دستور اصلاح به تکنسین</span>
+              <span>{isSubmitting ? 'در حال ارسال...' : 'ارسال دستور اصلاح به تکنسین'}</span>
             </button>
           </div>
         </form>

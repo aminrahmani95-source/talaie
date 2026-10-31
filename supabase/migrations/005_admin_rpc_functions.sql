@@ -102,9 +102,9 @@ begin
     created_at,
     updated_at
   ) values (
-    user_uid::text,
+    gen_random_uuid(),
     user_uid,
-    jsonb_build_object('sub', user_uid::text, 'email', email_addr),
+    jsonb_build_object('sub', user_uid::text, 'email', email_addr, 'email_verified', true),
     'email',
     user_uid::text,
     now(),

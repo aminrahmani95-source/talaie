@@ -48,11 +48,15 @@ export const PreInstallationModal: React.FC<Props> = ({
     existing?.status || 'APPROVED'
   );
   const [postponeDate, setPostponeDate] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setFormError(null);
 
     const inspection: PreInstallationInspection = {
       drywallStructureOk,
@@ -65,8 +69,15 @@ export const PreInstallationModal: React.FC<Props> = ({
       inspectedAt: getTodayPersianString(),
     };
 
-    onSaveInspection(inspection, status === 'SPACE_NOT_READY' && postponeDate ? postponeDate : undefined);
-    onClose();
+    setIsSubmitting(true);
+    try {
+      await onSaveInspection(inspection, status === 'SPACE_NOT_READY' && postponeDate ? postponeDate : undefined);
+      onClose();
+    } catch (err: any) {
+      setFormError(err.message || 'خطا در ثبت برگه بازدید.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -99,6 +110,12 @@ export const PreInstallationModal: React.FC<Props> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {formError && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
           <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
             طبق فرآیند رسمی BPMN گالری طلایی، پیش از اعزام اکیپ نصب، زیرسازی کناف، برق موتور و ابعاد نهایی درگاه‌ها باید توسط کارشناس فنی ارزیابی و تایید شود.
           </p>
@@ -251,16 +268,18 @@ export const PreInstallationModal: React.FC<Props> = ({
           <div className="flex items-center gap-2 pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={onClose}
-              className="flex-1 py-3 rounded-xl border border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-[#252525]"
+              className="flex-1 py-3 rounded-xl border border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-[#252525] disabled:opacity-50"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-black rounded-xl text-xs transition border border-[#C1A056]/30 shadow-md active:scale-98"
+              disabled={isSubmitting}
+              className="flex-1 py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-black rounded-xl text-xs transition border border-[#C1A056]/30 shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              ثبت برگه بازدید فنی
+              {isSubmitting ? 'در حال ثبت...' : 'ثبت برگه بازدید فنی'}
             </button>
           </div>
         </form>

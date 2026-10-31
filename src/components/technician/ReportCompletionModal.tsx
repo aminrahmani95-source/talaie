@@ -117,6 +117,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setUploadError('');
 
     if (afterPhotos.length === 0) {

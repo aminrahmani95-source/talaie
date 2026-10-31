@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Sparkles,
   FileText,
+  AlertTriangle,
 } from 'lucide-react';
 import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 
@@ -45,14 +46,24 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
   const [behavioralScore, setBehavioralScore] = useState<number>(5);
   const [cleanlinessScore, setCleanlinessScore] = useState<number>(5);
   const [criticalIncidentNote, setCriticalIncidentNote] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const targetUser = users.find((u) => u.id === selectedUserId) || leadUser || crewUsers[0];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!targetUser) return;
+    if (isSubmitting) return;
+    setError(null);
+
+    if (!targetUser) {
+      setError('نیروی کار مورد نظر جهت ارزیابی یافت نشد.');
+      return;
+    }
+
+    setIsSubmitting(true);
 
     const evaluation: PersonnelEvaluation = {
       id: `eval-${Date.now()}`,
@@ -67,9 +78,15 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
       evaluatedAt: getTodayPersianString(),
     };
 
-    onSaveEvaluation(evaluation);
-    onClose();
-    alert(`ارزیابی عملکرد ${targetUser.name} با موفقیت در سوابق و شاخص‌های KPI ثبت شد.`);
+    try {
+      await onSaveEvaluation(evaluation);
+      onClose();
+      alert(`ارزیابی عملکرد ${targetUser.name} با موفقیت در سوابق و شاخص‌های KPI ثبت شد.`);
+    } catch (err: any) {
+      setError(err.message || 'خطا در ثبت ارزیابی عملکرد پرسنل.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderStarPicker = (
@@ -135,6 +152,12 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {error && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           {/* Pick User to evaluate */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
@@ -220,17 +243,19 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
           <div className="flex items-center gap-2 pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={onClose}
-              className="flex-1 py-3 rounded-xl border border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-[#252525]"
+              className="flex-1 py-3 rounded-xl border border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-[#252525] disabled:opacity-50"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-black rounded-xl text-xs transition border border-[#C1A056]/30 shadow-md active:scale-98 flex items-center justify-center gap-1.5"
+              disabled={isSubmitting}
+              className="flex-1 py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-black rounded-xl text-xs transition border border-[#C1A056]/30 shadow-md active:scale-98 flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4 text-[#C1A056]" />
-              ثبت ارزیابی پرسنل
+              {isSubmitting ? 'در حال ثبت...' : 'ثبت ارزیابی پرسنل'}
             </button>
           </div>
         </form>

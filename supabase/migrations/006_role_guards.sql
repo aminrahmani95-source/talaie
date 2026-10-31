@@ -88,6 +88,48 @@ begin
       end;
     end if;
 
+    -- هـ) بررسی گزارش توقف (stuckIncidents):
+    -- برای تکنسین تنها الصاق دقیقاً یک رویداد جدید با resolutionStatus = 'OPEN' مجاز است و رویدادهای قبلی نباید تغییر کنند
+    if patch ? 'stuckIncidents' then
+      declare
+        curr_incidents jsonb := coalesce(
+          case
+            when current_data ? 'stuckIncidents' and jsonb_typeof(current_data->'stuckIncidents') = 'array'
+              then current_data->'stuckIncidents'
+            when current_data ? 'stuckIncident' and current_data->'stuckIncident' is not null and jsonb_typeof(current_data->'stuckIncident') = 'object'
+              then jsonb_build_array(current_data->'stuckIncident')
+            else '[]'::jsonb
+          end,
+          '[]'::jsonb
+        );
+        new_incidents jsonb := patch->'stuckIncidents';
+        curr_len int;
+        new_len int;
+        i int;
+      begin
+        if jsonb_typeof(new_incidents) is distinct from 'array' then
+          raise exception 'دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند.';
+        end if;
+
+        curr_len := jsonb_array_length(curr_incidents);
+        new_len := jsonb_array_length(new_incidents);
+
+        if new_len != curr_len + 1 then
+          raise exception 'دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند.';
+        end if;
+
+        for i in 0 .. (curr_len - 1) loop
+          if (curr_incidents->i) is distinct from (new_incidents->i) then
+            raise exception 'دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند.';
+          end if;
+        end loop;
+
+        if (new_incidents->(new_len - 1)->>'resolutionStatus') is distinct from 'OPEN' then
+          raise exception 'دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند.';
+        end if;
+      end;
+    end if;
+
   end if;
 
   -- به‌روزرسانی نهایی پروژه
@@ -104,6 +146,54 @@ $$;
 
 revoke execute on function public.patch_project(text, jsonb) from anon, public;
 grant execute on function public.patch_project(text, jsonb) to authenticated;
+
+-- ۱.۱. تابع الحاق ارزیابی پرسنل (انحصاری برای مدیر QC)
+create or replace function public.append_project_evaluation(id text, item jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated_data jsonb;
+begin
+  if not public.is_active_user() then
+    raise exception 'Unauthorized: user is not active';
+  end if;
+
+  if not public.is_qc_manager() then
+    raise exception 'دسترسی غیرمجاز: تنها مدیر ارشد QC می‌تواند ارزیابی پرسنل را ثبت کند.';
+  end if;
+
+  if jsonb_typeof(item) is distinct from 'object' then
+    raise exception 'Evaluation item must be a valid JSON object';
+  end if;
+
+  if item::text like '%"data:image/%' then
+    raise exception 'Evaluation item cannot contain base64 data URLs';
+  end if;
+
+  update public.projects
+  set data = jsonb_set(
+    data,
+    '{evaluations}',
+    coalesce(data->'evaluations', '[]'::jsonb) || jsonb_build_array(item)
+  ),
+  updated_at = now(),
+  updated_by = auth.uid()
+  where public.projects.id = append_project_evaluation.id
+  returning data into updated_data;
+
+  if not found then
+    raise exception 'Project % not found', append_project_evaluation.id;
+  end if;
+
+  return updated_data;
+end;
+$$;
+
+revoke execute on function public.append_project_evaluation(text, jsonb) from anon, public;
+grant execute on function public.append_project_evaluation(text, jsonb) to authenticated;
 
 -- ۲. محدود کردن سیاست‌های مستقیم جدول پروژه‌ها (projects)
 -- خواندن: تمامی پرسنل فعال

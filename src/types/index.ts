@@ -133,7 +133,7 @@ export interface Project {
   scheduledTime: string; // مثلاً 09:30 یا 14:00
   
   // اکیپ نصب
-  leadTechnicianId?: string; // شناسه سرپرست اکیپ (نقدعلیان، اسکندری، رحمتی، ترکمنی)
+  leadTechnicianId?: string; // شناسه سرپرست اکیپ نصب
   assignedTechnicianIds: string[]; // تمام اعضای اکیپ
   
   // چک‌لیست ابزار

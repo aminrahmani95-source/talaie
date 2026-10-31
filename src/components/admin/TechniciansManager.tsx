@@ -49,10 +49,14 @@ export const TechniciansManager: React.FC<Props> = ({
 
   // Async loading & error feedback
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
   const handleOpenAdd = () => {
     setFeedback(null);
+    setModalError(null);
     setEditingUser(null);
     setName('');
     setPhone('');
@@ -64,6 +68,7 @@ export const TechniciansManager: React.FC<Props> = ({
 
   const handleOpenEdit = (u: User) => {
     setFeedback(null);
+    setModalError(null);
     setEditingUser(u);
     setName(u.name.split(' (')[0]);
     setPhone(u.phone);
@@ -75,6 +80,7 @@ export const TechniciansManager: React.FC<Props> = ({
 
   const handleOpenResetPassword = (u: User) => {
     setFeedback(null);
+    setResetError(null);
     setSelectedUserForReset(u);
     setNewPassword('');
     setIsResetPasswordOpen(true);
@@ -82,23 +88,26 @@ export const TechniciansManager: React.FC<Props> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     setFeedback(null);
+    setModalError(null);
 
     const trimmedName = name.trim();
     const trimmedPhone = toEnglishDigits(phone.trim().replace(/\s+/g, ''));
 
     if (!trimmedName || !trimmedPhone) {
-      alert('لطفاً نام و شماره تلفن را وارد کنید.');
+      setModalError('لطفاً نام و شماره تلفن را وارد کنید.');
       return;
     }
 
     if (!editingUser) {
       if (!password.trim()) {
-        alert('لطفاً رمز عبور کاربر جدید را تعیین کنید.');
+        setModalError('لطفاً رمز عبور کاربر جدید را تعیین کنید.');
         return;
       }
       if (password.trim().length < 8) {
-        alert('رمز عبور باید حداقل ۸ کاراکتر باشد.');
+        setModalError('رمز عبور باید حداقل ۸ کاراکتر باشد.');
         return;
       }
     }
@@ -126,7 +135,7 @@ export const TechniciansManager: React.FC<Props> = ({
         });
 
         if (!res.success) {
-          alert(res.error || 'خطا در ویرایش اطلاعات پرسنل در دیتابیس.');
+          setModalError(res.error || 'خطا در ویرایش اطلاعات پرسنل در دیتابیس.');
           return;
         }
 
@@ -148,7 +157,7 @@ export const TechniciansManager: React.FC<Props> = ({
         });
 
         if (!res.success) {
-          alert(res.error || 'خطا در ثبت پرسنل در دیتابیس.');
+          setModalError(res.error || 'خطا در ثبت پرسنل در دیتابیس.');
           return;
         }
 
@@ -164,7 +173,7 @@ export const TechniciansManager: React.FC<Props> = ({
 
       setIsModalOpen(false);
     } catch (err: any) {
-      alert(err.message || 'خطا در ثبت اطلاعات.');
+      setModalError(err.message || 'خطا در ثبت اطلاعات.');
     } finally {
       setIsSubmitting(false);
     }
@@ -172,17 +181,20 @@ export const TechniciansManager: React.FC<Props> = ({
 
   const handleConfirmResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     if (!selectedUserForReset || !newPassword.trim()) {
-      alert('لطفاً رمز عبور جدید را وارد کنید.');
+      setResetError('لطفاً رمز عبور جدید را وارد کنید.');
       return;
     }
     if (newPassword.trim().length < 8) {
-      alert('رمز عبور باید حداقل ۸ کاراکتر باشد.');
+      setResetError('رمز عبور باید حداقل ۸ کاراکتر باشد.');
       return;
     }
 
     setIsSubmitting(true);
     setFeedback(null);
+    setResetError(null);
 
     try {
       const res = await SupabaseSyncService.adminResetPersonnelPassword({
@@ -191,23 +203,26 @@ export const TechniciansManager: React.FC<Props> = ({
       });
 
       if (!res.success) {
-        alert(res.error || 'خطا در تغییر رمز عبور در سرور.');
+        setResetError(res.error || 'خطا در تغییر رمز عبور در سرور.');
       } else {
         alert(`رمز عبور حساب ${selectedUserForReset.name} با موفقیت تغییر یافت.`);
         setIsResetPasswordOpen(false);
       }
     } catch (err: any) {
-      alert(err.message || 'خطا در تغییر رمز عبور.');
+      setResetError(err.message || 'خطا در تغییر رمز عبور.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (u: User) => {
+    if (deleteLoadingId || isSubmitting) return;
+
     if (!confirm(`آیا از حذف حساب پرسنلی «${u.name}» از سامانه و دیتابیس اطمینان دارید؟`)) {
       return;
     }
 
+    setDeleteLoadingId(u.id);
     try {
       const res = await SupabaseSyncService.adminDeletePersonnel({
         id: u.id,
@@ -219,6 +234,8 @@ export const TechniciansManager: React.FC<Props> = ({
       onDeleteUser(u.id);
     } catch (err: any) {
       alert(err.message || 'خطا در حذف پرسنل.');
+    } finally {
+      setDeleteLoadingId(null);
     }
   };
 
@@ -424,12 +441,17 @@ export const TechniciansManager: React.FC<Props> = ({
                   </button>
                   <button
                     type="button"
+                    disabled={Boolean(deleteLoadingId) || isSubmitting}
                     onClick={() => handleDelete(u)}
-                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer disabled:opacity-50"
                     title="حذف حساب"
                     aria-label={`حذف حساب ${u.name}`}
                   >
-                    <Trash2 className="w-4 h-4" aria-hidden="true" />
+                    {deleteLoadingId === u.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-rose-600" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -483,6 +505,12 @@ export const TechniciansManager: React.FC<Props> = ({
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {modalError && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>{modalError}</span>
+                </div>
+              )}
               <div>
                 <label htmlFor="tech-name" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
                   نام و نام‌خانوادگی:
@@ -647,6 +675,12 @@ export const TechniciansManager: React.FC<Props> = ({
             </div>
 
             <form onSubmit={handleConfirmResetPassword} className="p-6 space-y-4">
+              {resetError && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>{resetError}</span>
+                </div>
+              )}
               <div className="text-xs text-slate-600 dark:text-zinc-300">
                 تنظیم رمز عبور جدید برای:
                 <div className="font-bold text-sm text-[#212121] dark:text-white mt-1">

@@ -74,6 +74,41 @@ export function validateProjectPatchRoleGuards(
       );
     }
   }
+
+  // ۵. بررسی تغییرات stuckIncidents: تکنسین فقط می‌تواند دقیقاً یک رویداد جدید با resolutionStatus = 'OPEN' الصاق کند
+  if (patch.stuckIncidents !== undefined) {
+    if (!Array.isArray(patch.stuckIncidents)) {
+      throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند.');
+    }
+
+    const currentIncidents = Array.isArray(project.stuckIncidents)
+      ? project.stuckIncidents
+      : project.stuckIncident
+      ? [project.stuckIncident]
+      : [];
+
+    const newIncidents = patch.stuckIncidents;
+    if (newIncidents.length !== currentIncidents.length + 1) {
+      throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند.');
+    }
+
+    for (let i = 0; i < currentIncidents.length; i++) {
+      if (JSON.stringify(currentIncidents[i]) !== JSON.stringify(newIncidents[i])) {
+        throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند.');
+      }
+    }
+
+    const newlyAppended = newIncidents[newIncidents.length - 1];
+    if (!newlyAppended || newlyAppended.resolutionStatus !== 'OPEN') {
+      throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند.');
+    }
+  }
+}
+
+export function validateEvaluationRoleGuards(user: User): void {
+  if (user.role !== 'QC_MANAGER') {
+    throw new PermanentError('دسترسی غیرمجاز: تنها مدیر ارشد QC می‌تواند ارزیابی پرسنل را ثبت کند.');
+  }
 }
 
 export function validateTicketRoleGuards(

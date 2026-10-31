@@ -526,7 +526,7 @@ export const SupabaseSyncService = {
       throw error;
     }
 
-    if (Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data)) {
       return data
         .filter((row: any) => !['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6'].includes(row.id))
         .map((row: any) => ({
@@ -534,23 +534,6 @@ export const SupabaseSyncService = {
           id: row.id,
           updatedAt: row.data.updatedAt || row.updated_at,
         }));
-    }
-
-    // Fallback: Check legacy talaie_sync ONLY when projects table returned 0 rows without error
-    const { data: syncData, error: syncError } = await client
-      .from('talaie_sync')
-      .select('value')
-      .eq('key', 'projects')
-      .maybeSingle();
-
-    if (syncError) {
-      throw syncError;
-    }
-
-    if (syncData && Array.isArray(syncData.value)) {
-      return (syncData.value as Project[]).filter(
-        (p) => !['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6'].includes(p.id)
-      );
     }
 
     return [];
@@ -810,28 +793,13 @@ export const SupabaseSyncService = {
       throw error;
     }
 
-    if (Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data)) {
       return data
         .filter((row: any) => row.id !== 't-1')
         .map((row: any) => ({
           ...row.data,
           id: row.id,
         }));
-    }
-
-    // Fallback: Check legacy talaie_sync ONLY when tickets table returned 0 rows without error
-    const { data: syncData, error: syncError } = await client
-      .from('talaie_sync')
-      .select('value')
-      .eq('key', 'tickets')
-      .maybeSingle();
-
-    if (syncError) {
-      throw syncError;
-    }
-
-    if (syncData && Array.isArray(syncData.value)) {
-      return (syncData.value as Ticket[]).filter((t) => t.id !== 't-1');
     }
 
     return [];

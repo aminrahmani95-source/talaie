@@ -30,11 +30,14 @@ export const ReportStuckModal: React.FC<Props> = ({
   const [category, setCategory] = useState<StuckCategory>('HARDWARE_SHORTAGE');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     if (!description.trim()) {
       setError('لطفاً شرح دقیق مانع یا دلیل توقف کار را یادداشت فرمایید.');
       return;
@@ -52,7 +55,13 @@ export const ReportStuckModal: React.FC<Props> = ({
       previousStatus: project.status,
     };
 
-    onSubmit(incident);
+    setIsSubmitting(true);
+    try {
+      await onSubmit(incident);
+    } catch (err: any) {
+      setError(err.message || 'خطا در ثبت استاک.');
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -159,17 +168,19 @@ export const ReportStuckModal: React.FC<Props> = ({
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#FAF7F2] dark:bg-[#252525] hover:bg-[#EAE6DD] text-slate-700 dark:text-zinc-300 transition"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#FAF7F2] dark:bg-[#252525] hover:bg-[#EAE6DD] text-slate-700 dark:text-zinc-300 transition disabled:opacity-50"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 shadow-md active:scale-95 transition"
+              disabled={isSubmitting}
+              className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 shadow-md active:scale-95 transition disabled:opacity-50"
             >
               <Send className="w-3.5 h-3.5" />
-              <span>ارسال به دسک رفع استاک</span>
+              <span>{isSubmitting ? 'در حال ارسال...' : 'ارسال به دسک رفع استاک'}</span>
             </button>
           </div>
         </form>

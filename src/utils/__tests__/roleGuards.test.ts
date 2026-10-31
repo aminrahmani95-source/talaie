@@ -4,8 +4,9 @@ import {
   isValidStatusTransition,
   validateProjectPatchRoleGuards,
   validateTicketRoleGuards,
+  validateEvaluationRoleGuards,
 } from '../roleGuards';
-import { Project, ProjectStatus, Ticket, User } from '../../types';
+import { Project, ProjectStatus, Ticket, User, StuckIncident } from '../../types';
 import { PermanentError } from '../offlineQueue';
 
 describe('Role Guards & State Machine Validation', () => {
@@ -207,12 +208,126 @@ describe('Role Guards & State Machine Validation', () => {
 
       // 4. Valid reporting stuck from IN_PROGRESS to STUCK
       const inProgressProject: Project = { ...mockProject, status: 'IN_PROGRESS' };
+      const newIncident: StuckIncident = {
+        id: 'stuck-1',
+        stuckAt: '2026-11-01T10:00:00Z',
+        category: 'HARDWARE_SHORTAGE',
+        description: 'کسری پایه',
+        reportedBy: technician.name,
+        photos: [],
+        targetMaxHours: 72,
+        resolutionStatus: 'OPEN',
+      };
+
       expect(() => {
         validateProjectPatchRoleGuards(technician, inProgressProject, {
           status: 'STUCK',
-          stuckIncidents: [],
+          stuckIncidents: [newIncident],
         });
       }).not.toThrow();
+    });
+
+    it('enforces stuckIncidents append-only rules for technicians', () => {
+      const initialIncident: StuckIncident = {
+        id: 'stuck-1',
+        stuckAt: '2026-11-01T10:00:00Z',
+        category: 'HARDWARE_SHORTAGE',
+        description: 'کسری پایه',
+        reportedBy: technician.name,
+        photos: [],
+        targetMaxHours: 72,
+        resolutionStatus: 'RESOLVED',
+        resolvedAt: '2026-11-01T11:00:00Z',
+        resolvedBy: qcManager.name,
+      };
+
+      const projectWithStuck: Project = {
+        ...mockProject,
+        status: 'IN_PROGRESS',
+        stuckIncidents: [initialIncident],
+      };
+
+      const secondValidIncident: StuckIncident = {
+        id: 'stuck-2',
+        stuckAt: '2026-11-01T12:00:00Z',
+        category: 'FABRIC_DEFECT',
+        description: 'پارگی پارچه',
+        reportedBy: technician.name,
+        photos: [],
+        targetMaxHours: 72,
+        resolutionStatus: 'OPEN',
+      };
+
+      // 1. Valid append of a second incident with resolutionStatus = OPEN
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithStuck, {
+          status: 'STUCK',
+          stuckIncidents: [initialIncident, secondValidIncident],
+        });
+      }).not.toThrow();
+
+      // 2. Reject if newly appended incident has resolutionStatus = RESOLVED
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithStuck, {
+          status: 'STUCK',
+          stuckIncidents: [
+            initialIncident,
+            { ...secondValidIncident, resolutionStatus: 'RESOLVED' },
+          ],
+        });
+      }).toThrowError(/دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند/);
+
+      // 3. Reject if existing incident was modified
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithStuck, {
+          status: 'STUCK',
+          stuckIncidents: [
+            { ...initialIncident, description: 'دستکاری گزارش قبلی' },
+            secondValidIncident,
+          ],
+        });
+      }).toThrowError(/دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند/);
+
+      // 4. Reject if no new incident appended (same length)
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithStuck, {
+          stuckIncidents: [initialIncident],
+        });
+      }).toThrowError(/دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند/);
+
+      // 5. Reject if incidents array truncated
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithStuck, {
+          stuckIncidents: [],
+        });
+      }).toThrowError(/دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند/);
+
+      // 6. QC_MANAGER is unrestricted and can modify or resolve incidents
+      expect(() => {
+        validateProjectPatchRoleGuards(qcManager, projectWithStuck, {
+          stuckIncidents: [
+            { ...initialIncident, resolutionNote: 'تایید مدیر QC' },
+          ],
+        });
+      }).not.toThrow();
+    });
+  });
+
+  describe('validateEvaluationRoleGuards', () => {
+    it('allows QC_MANAGER to append evaluation', () => {
+      expect(() => {
+        validateEvaluationRoleGuards(qcManager);
+      }).not.toThrow();
+    });
+
+    it('blocks LEAD_TECHNICIAN and TECHNICIAN from appending evaluation', () => {
+      expect(() => {
+        validateEvaluationRoleGuards(leadTech);
+      }).toThrowError(/دسترسی غیرمجاز: تنها مدیر ارشد QC می‌تواند ارزیابی پرسنل را ثبت کند/);
+
+      expect(() => {
+        validateEvaluationRoleGuards(technician);
+      }).toThrowError(/دسترسی غیرمجاز: تنها مدیر ارشد QC می‌تواند ارزیابی پرسنل را ثبت کند/);
     });
   });
 
