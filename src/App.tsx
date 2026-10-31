@@ -38,6 +38,8 @@ import { ReportCompletionModal } from './components/technician/ReportCompletionM
 import { HandoverCertificateModal } from './components/HandoverCertificateModal';
 import { ReportStuckModal } from './components/technician/ReportStuckModal';
 import { Toast, ToastMessage } from './components/Toast';
+import { Sidebar } from './components/navigation/Sidebar';
+import { BottomNav, ManagerTab } from './components/navigation/BottomNav';
 
 export const App: React.FC = () => {
   // Session & Authentication via Supabase Auth
@@ -267,7 +269,7 @@ export const App: React.FC = () => {
   }, [currentUser?.id, authChecking]);
 
   // Navigation tab for QC Manager
-  const [activeTab, setActiveTab] = useState<string>('planner');
+  const [activeTab, setActiveTab] = useState<ManagerTab>('planner');
 
   // Dark Mode state with persistence and system detection
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -907,21 +909,13 @@ export const App: React.FC = () => {
       {/* App Header */}
       <Header
         currentUser={currentUser}
-        users={users}
-        settings={settings}
-        openTicketCount={openTicketCount}
-        openStuckCount={openStuckCount}
-        pendingQcCount={pendingQcCount}
+        isOfflineMode={isOfflineMode}
         pendingQueueCount={pendingQueueCount}
         failedQueueCount={failedQueueCount}
         onOpenFailedOperations={() => setIsFailedOpsModalOpen(true)}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         onLogout={handleLogout}
-        onResetData={handleResetData}
-        onOpenSettings={() => setActiveTab('settings')}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
       />
 
       {/* Offline state or syncing banner */}
@@ -941,84 +935,104 @@ export const App: React.FC = () => {
       <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
         {isQcManager ? (
           // ================= QC MANAGER VIEW =================
-          <div>
-            {activeTab === 'planner' && (
-              <MonthPlanner
-                projects={projects}
-                users={users}
-                settings={settings}
-                onUpdateSettings={handleUpdateSettings}
-                onNewProject={handleOpenNewProject}
-                onEditProject={handleOpenEditProject}
-                onDeleteProject={handleDeleteProject}
-                onMoveProjectDate={handleMoveProjectDate}
-                onViewProposal={(p) => setProposalModalProject(p)}
-                onOpenPreInspection={(p) => setPreInspectionProject(p)}
-              />
-            )}
+          <div className="flex gap-6 pb-20 lg:pb-6">
+            <Sidebar
+              activeTab={activeTab}
+              onSelectTab={(tab) => setActiveTab(tab)}
+              pendingQcCount={pendingQcCount}
+              openStuckCount={openStuckCount}
+              openTicketCount={openTicketCount}
+            />
 
-            {activeTab === 'qc' && (
-              <QcDesk
-                projects={projects}
-                users={users}
-                currentUser={currentUser}
-                onPatchProject={handlePatchProject}
-                onViewProposal={(p) => setProposalModalProject(p)}
-                onOpenCertificate={(p) => setCertificateModalProject(p)}
-                onOpenEvaluation={(p) => setEvaluationProject(p)}
-              />
-            )}
+            <div className="flex-1 min-w-0">
+              {activeTab === 'planner' && (
+                <MonthPlanner
+                  projects={projects}
+                  users={users}
+                  settings={settings}
+                  onUpdateSettings={handleUpdateSettings}
+                  onNewProject={handleOpenNewProject}
+                  onEditProject={handleOpenEditProject}
+                  onDeleteProject={handleDeleteProject}
+                  onMoveProjectDate={handleMoveProjectDate}
+                  onViewProposal={(p) => setProposalModalProject(p)}
+                  onOpenPreInspection={(p) => setPreInspectionProject(p)}
+                />
+              )}
 
-            {activeTab === 'stuck' && (
-              <StuckProjectsDesk
-                projects={projects}
-                currentUser={currentUser}
-                onPatchProject={handlePatchProject}
-              />
-            )}
+              {activeTab === 'qc' && (
+                <QcDesk
+                  projects={projects}
+                  users={users}
+                  currentUser={currentUser}
+                  onPatchProject={handlePatchProject}
+                  onViewProposal={(p) => setProposalModalProject(p)}
+                  onOpenCertificate={(p) => setCertificateModalProject(p)}
+                  onOpenEvaluation={(p) => setEvaluationProject(p)}
+                />
+              )}
 
-            {activeTab === 'tickets' && (
-              <TicketCenter
-                tickets={tickets}
-                onUpdateTicket={handleUpdateTicket}
-              />
-            )}
+              {activeTab === 'stuck' && (
+                <StuckProjectsDesk
+                  projects={projects}
+                  currentUser={currentUser}
+                  onPatchProject={handlePatchProject}
+                />
+              )}
 
-            {activeTab === 'technicians' && (
-              <TechniciansManager
-                users={users}
-                onSaveUser={handleSaveUser}
-                onDeleteUser={handleDeleteUser}
-              />
-            )}
+              {activeTab === 'tickets' && (
+                <TicketCenter
+                  tickets={tickets}
+                  onUpdateTicket={handleUpdateTicket}
+                />
+              )}
 
-            {activeTab === 'settings' && (
-              <SettingsView
-                settings={settings}
-                projects={projects}
-                onUpdateProjects={setProjects}
-                isDarkMode={isDarkMode}
-                onToggleDarkMode={handleToggleDarkMode}
-                onUpdateSettings={handleUpdateSettings}
-                onResetData={handleResetData}
-              />
-            )}
+              {activeTab === 'technicians' && (
+                <TechniciansManager
+                  users={users}
+                  onSaveUser={handleSaveUser}
+                  onDeleteUser={handleDeleteUser}
+                />
+              )}
+
+              {activeTab === 'settings' && (
+                <SettingsView
+                  settings={settings}
+                  projects={projects}
+                  onUpdateProjects={setProjects}
+                  isDarkMode={isDarkMode}
+                  onToggleDarkMode={handleToggleDarkMode}
+                  onUpdateSettings={handleUpdateSettings}
+                  onResetData={handleResetData}
+                />
+              )}
+            </div>
+
+            <BottomNav
+              activeTab={activeTab}
+              onSelectTab={(tab) => setActiveTab(tab)}
+              pendingQcCount={pendingQcCount}
+              openStuckCount={openStuckCount}
+              openTicketCount={openTicketCount}
+            />
           </div>
         ) : (
           // ================= TECHNICIAN & LEAD VIEW =================
-          <TechnicianDashboard
-            currentUser={currentUser}
-            settings={settings}
-            projects={projects}
-            onViewProposal={(p) => setProposalModalProject(p)}
-            onOpenToolChecklist={(p) => setToolChecklistProject(p)}
-            onOpenTicketModal={(p) => setTicketModalProject(p)}
-            onOpenCompletionModal={(p) => setCompletionModalProject(p)}
-            onUpdateStatus={transitionStatus}
-            inFlightTransitions={inFlightTransitions}
-            onOpenCertificate={(p) => setCertificateModalProject(p)}
-            onReportStuck={handleReportStuck}
-          />
+          <div className="max-w-3xl mx-auto pb-8">
+            <TechnicianDashboard
+              currentUser={currentUser}
+              settings={settings}
+              projects={projects}
+              onViewProposal={(p) => setProposalModalProject(p)}
+              onOpenToolChecklist={(p) => setToolChecklistProject(p)}
+              onOpenTicketModal={(p) => setTicketModalProject(p)}
+              onOpenCompletionModal={(p) => setCompletionModalProject(p)}
+              onUpdateStatus={transitionStatus}
+              inFlightTransitions={inFlightTransitions}
+              onOpenCertificate={(p) => setCertificateModalProject(p)}
+              onReportStuck={handleReportStuck}
+            />
+          </div>
         )}
       </main>
 

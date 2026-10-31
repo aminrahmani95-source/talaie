@@ -1,256 +1,174 @@
 import React, { useState } from 'react';
-import { User, SystemSettings } from '../types';
-import {
-  CalendarDays,
-  Layers,
-  ShieldCheck,
-  Users,
-  Eye,
-  LogOut,
-  AlertTriangle,
-  AlertOctagon,
-  Moon,
-  Sun,
-  UserCheck,
-  ChevronDown,
-  X,
-} from 'lucide-react';
-import { toPersianDigits } from '../utils/jalali';
+import { User } from '../types';
+import { Moon, Sun, LogOut, X, Cloud, CloudOff, AlertOctagon, Check } from 'lucide-react';
+import { Avatar } from './ui/Avatar';
+import { IconButton } from './ui/IconButton';
+import { getDisplayName } from './admin/TechniciansManager';
 
 interface Props {
   currentUser: User;
-  users?: User[];
-  settings: SystemSettings;
-  openTicketCount: number;
-  openStuckCount?: number;
-  pendingQcCount: number;
+  isOfflineMode?: boolean;
   pendingQueueCount?: number;
   failedQueueCount?: number;
   onOpenFailedOperations?: () => void;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
   onLogout: () => void;
-  onResetData?: () => void;
-  onOpenSettings?: () => void;
-  activeTab?: string;
-  setActiveTab?: (tab: string) => void;
 }
 
 export const Header: React.FC<Props> = ({
   currentUser,
-  users = [],
-  settings,
-  openTicketCount,
-  openStuckCount = 0,
-  pendingQcCount,
+  isOfflineMode = false,
   pendingQueueCount = 0,
   failedQueueCount = 0,
   onOpenFailedOperations,
   isDarkMode = false,
   onToggleDarkMode,
   onLogout,
-  onOpenSettings,
-  activeTab,
-  setActiveTab,
 }) => {
-  const isQcManager = currentUser.role === 'QC_MANAGER';
-  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const roleTitle =
+    currentUser.role === 'QC_MANAGER'
+      ? 'مدیر کنترل کیفیت'
+      : currentUser.role === 'LEAD_TECHNICIAN'
+      ? 'سرپرست اکیپ نصب'
+      : 'تکنسین نصب';
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#141414]/95 backdrop-blur-md border-b border-[#E8E4DC] dark:border-[#262626] shadow-xs transition-colors duration-200">
-      {/* Top Gold Accent Bar */}
-      <div className="h-1 bg-gradient-to-r from-[#1E1E1E] via-[#C1A056] to-[#D5733A]" />
-
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#141414]/95 backdrop-blur-md border-b border-[#E2DDD4] dark:border-[#262626] transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-3 sm:px-6">
-        <div className="flex items-center justify-between h-20">
-          {/* Brand & Official Logo */}
-          <div className="flex items-center gap-3 sm:gap-4">
-            <a href="/" className="flex items-center gap-2.5 py-1 group">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#181818] dark:bg-[#1E1E1E] flex items-center justify-center p-1.5 shadow-sm group-hover:border-[#C1A056] border border-[#181818] dark:border-[#C1A056]/30 transition duration-200">
-                <img
-                  src="./talaei-lion-gold.png"
-                  alt="نشان گالری طلایی"
-                  className="w-full h-full object-contain transition-transform group-hover:scale-105 duration-200"
-                />
-              </div>
-            </a>
-
-            <div className="border-r border-[#E8E4DC] dark:border-[#262626] pr-3 sm:pr-4">
-              <div className="flex items-center gap-2">
-                <span className="font-black text-sm sm:text-base text-[#1E1E1E] dark:text-[#F5EFEB] tracking-tight">
-                  {settings.companyName || 'گالری طلایی'}
-                </span>
-                <span className="hidden sm:inline-block text-[10px] bg-[#FAF7F2] dark:bg-[#1E1E1E] text-[#C1A056] px-2.5 py-0.5 rounded-full font-bold border border-[#C1A056]/30">
-                  عملیات و QC نصب
-                </span>
-              </div>
-              <p className="text-[11px] text-[#71717A] dark:text-[#A1A1AA] hidden sm:block">
-                سامانه هوشمند زمان‌بندی، دیسپچ تکنسین‌ها و کنترل کیفیت
-              </p>
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-3">
+          {/* Logo & Brand Name on ONE single line */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#212121] dark:bg-[#1A1A1A] p-1.5 border border-[#C1A056]/40 flex items-center justify-center shrink-0 shadow-2xs">
+              <img
+                src="./talaei-lion-gold.png"
+                alt="لوگوی گالری طلایی"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div className="flex items-baseline gap-2 min-w-0">
+              <span className="font-black text-base sm:text-lg text-[#181818] dark:text-[#F5F3EF] truncate tracking-tight">
+                گالری طلایی
+              </span>
+              <span className="hidden md:inline-block text-xs text-[#8E6F27] dark:text-[#E5CA8F] font-bold">
+                سامانه عملیات و QC
+              </span>
             </div>
           </div>
 
-          {/* Right Tools & User Profile */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Unsynced offline operations pill */}
-            {pendingQueueCount > 0 && (
-              <div
-                className="flex items-center gap-1.5 px-3 py-1.5 min-h-[38px] bg-amber-500/15 dark:bg-amber-950/60 border border-amber-500/50 text-amber-700 dark:text-amber-300 rounded-2xl text-xs font-bold transition animate-pulse"
-                title={`${toPersianDigits(pendingQueueCount)} تغییر محلی در صف ارسال به سرور است و به محض اتصال پایدار همگام‌سازی خواهد شد.`}
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span>{toPersianDigits(pendingQueueCount)} تغییر ارسال‌نشده</span>
-              </div>
-            )}
-
-            {/* Failed offline operations button for all users */}
-            {failedQueueCount > 0 && (
+          {/* Right Controls: Sync Pill + Theme Toggle + User Avatar */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Sync Status Indicator Pill */}
+            {failedQueueCount > 0 ? (
               <button
                 type="button"
                 onClick={onOpenFailedOperations}
-                className="flex items-center gap-1.5 px-3 py-1.5 min-h-[38px] bg-rose-500/15 dark:bg-rose-950/60 border border-rose-500/50 text-rose-700 dark:text-rose-300 rounded-2xl text-xs font-bold transition hover:bg-rose-500/25 active:scale-95 cursor-pointer animate-pulse"
-                title="مشاهده و مدیریت ارسال‌های ناموفق به سرور"
+                className="flex items-center gap-1.5 px-2.5 py-1 min-h-[36px] bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-900/60 rounded-xl text-xs font-bold transition hover:bg-rose-100 cursor-pointer animate-pulse"
+                title={`${failedQueueCount} عملیات ناموفق — کلیک جهت بررسی`}
               >
                 <AlertOctagon className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                <span>{toPersianDigits(failedQueueCount)} ارسال ناموفق</span>
+                <span>{failedQueueCount} ناموفق</span>
               </button>
-            )}
-
-            {/* Dark Mode Toggle Button */}
-            {onToggleDarkMode && (
-              <button
-                type="button"
-                onClick={onToggleDarkMode}
-                className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E8E4DC] dark:border-[#2E2E2E] text-[#1E1E1E] dark:text-[#C1A056] hover:bg-[#F2ECE1] dark:hover:bg-[#282828] active:scale-95 transition-all shadow-2xs cursor-pointer"
-                title={isDarkMode ? 'تغییر به حالت روز (روشن)' : 'تغییر به حالت شب (تاریک)'}
-                aria-label={isDarkMode ? 'تغییر به حالت روز' : 'تغییر به حالت شب'}
+            ) : isOfflineMode ? (
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1 min-h-[36px] bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200 border border-amber-300 dark:border-amber-800/60 rounded-xl text-xs font-bold"
+                title="سامانه در حالت آفلاین کار می‌کند"
               >
-                {isDarkMode ? (
-                  <Sun className="w-4 h-4 text-[#C1A056] animate-in spin-in-180 duration-300" aria-hidden="true" />
-                ) : (
-                  <Moon className="w-4 h-4 text-[#1E1E1E] animate-in spin-in-180 duration-300" aria-hidden="true" />
-                )}
-              </button>
-            )}
-
-            {/* Technician Visibility Window Badge (for QC Manager) */}
-            {isQcManager && (
-              <button
-                type="button"
-                onClick={onOpenSettings}
-                className="hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#C1A056]/40 text-[#1E1E1E] dark:text-[#F5EFEB] text-xs font-semibold hover:bg-[#F2ECE1] dark:hover:bg-[#282828] active:scale-95 transition cursor-pointer"
-                title="تغییر پنجره دید تکنسین‌ها"
-                aria-label={`پنجره دید تکنسین‌ها: ${settings.visibilityWindowDays} روز آینده`}
+                <CloudOff className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span className="hidden xs:inline">آفلاین</span>
+              </div>
+            ) : pendingQueueCount > 0 ? (
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1 min-h-[36px] bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200 border border-amber-300 dark:border-amber-800/60 rounded-xl text-xs font-bold animate-pulse"
+                title={`${pendingQueueCount} تغییر محلی در صف همگام‌سازی`}
               >
-                <Eye className="w-3.5 h-3.5 text-[#C1A056]" aria-hidden="true" />
-                <span>دید تکنسین‌ها:</span>
-                <span className="font-black text-[#C1A056] font-mono">
-                  {toPersianDigits(settings.visibilityWindowDays)} روز
-                </span>
-              </button>
-            )}
-
-            {/* Quick Ticket & QC Alerts */}
-            {isQcManager && (
-              <div className="flex items-center gap-1.5">
-                {openStuckCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab && setActiveTab('stuck')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 min-h-[38px] bg-rose-500/10 dark:bg-rose-950/60 hover:bg-rose-500/20 border border-rose-500/40 text-rose-600 dark:text-rose-300 rounded-2xl text-xs font-bold active:scale-95 transition animate-pulse cursor-pointer"
-                    title={`${openStuckCount} پروژه در وضعیت استاک زیر 72 ساعت`}
-                  >
-                    <AlertOctagon className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" aria-hidden="true" />
-                    <span>{toPersianDigits(openStuckCount)} استاک</span>
-                  </button>
-                )}
-
-                {openTicketCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab && setActiveTab('tickets')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 min-h-[38px] bg-amber-500/10 dark:bg-amber-950/40 hover:bg-amber-500/20 border border-amber-500/30 text-amber-800 dark:text-amber-200 rounded-2xl text-xs font-bold active:scale-95 transition cursor-pointer"
-                    title={`${openTicketCount} تیکت باز سر پروژه`}
-                  >
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" aria-hidden="true" />
-                    <span>{toPersianDigits(openTicketCount)} تیکت</span>
-                  </button>
-                )}
-
-                {pendingQcCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab && setActiveTab('qc')}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 min-h-[38px] bg-[#C1A056]/15 hover:bg-[#C1A056]/25 border border-[#C1A056] text-[#A88738] dark:text-[#C1A056] rounded-2xl text-xs font-bold active:scale-95 transition cursor-pointer"
-                    title={`${pendingQcCount} پروژه آماده تایید QC`}
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#C1A056]" aria-hidden="true" />
-                    <span className="font-black">{toPersianDigits(pendingQcCount)}</span>
-                    <span>QC</span>
-                  </button>
-                )}
+                <Cloud className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>{pendingQueueCount} در صف</span>
+              </div>
+            ) : (
+              <div
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 min-h-[36px] bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 rounded-xl text-xs font-bold"
+                title="سامانه همگام با سرور ابری است"
+              >
+                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>همگام</span>
               </div>
             )}
 
-            {/* User Profile Pill & Quick Switcher Trigger */}
+            {/* Dark Mode Toggle */}
+            {onToggleDarkMode && (
+              <IconButton
+                variant="ghost"
+                size="sm"
+                aria-label={isDarkMode ? 'حالت روز' : 'حالت شب'}
+                onClick={onToggleDarkMode}
+                icon={
+                  isDarkMode ? (
+                    <Sun className="w-4 h-4 text-[#C1A056]" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-[#4A4742]" />
+                  )
+                }
+              />
+            )}
+
+            {/* User Avatar Menu Trigger */}
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setIsSwitcherOpen((prev) => !prev)}
-                className="flex items-center bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E8E4DC] dark:border-[#2E2E2E] hover:border-[#C1A056]/50 rounded-2xl p-1 gap-2 shadow-2xs transition active:scale-95 cursor-pointer"
-                title="تغییر سریع کاربر / خروج"
-                aria-label={`کاربر جاری: ${currentUser.name}`}
+                onClick={() => setIsMenuOpen((prev) => !prev)}
+                className="flex items-center gap-2 p-1 rounded-xl hover:bg-[#EFEBE4]/50 dark:hover:bg-[#252525] transition active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1A056]"
+                aria-label={`پروفایل ${currentUser.name}`}
+                aria-expanded={isMenuOpen}
               >
-                <div className="w-8 h-8 rounded-xl bg-[#1E1E1E] dark:bg-[#121212] border border-[#C1A056]/50 flex items-center justify-center text-xs font-bold text-[#C1A056]">
-                  {currentUser.role === 'QC_MANAGER' ? 'QC' : currentUser.name.slice(0, 2)}
-                </div>
-                <div className="hidden sm:block text-right pr-1">
-                  <div className="text-xs font-bold text-[#1E1E1E] dark:text-[#F5EFEB] leading-tight">
-                    {currentUser.name.split(' (')[0]}
-                  </div>
-                  <div className="text-[10px] text-[#C1A056] font-bold">
-                    {currentUser.role === 'QC_MANAGER'
-                      ? 'مدیر QC'
-                      : currentUser.role === 'LEAD_TECHNICIAN'
-                      ? 'سرپرست نصب'
-                      : 'تکنسین'}
-                  </div>
-                </div>
-                <ChevronDown className="w-3.5 h-3.5 text-zinc-400 pl-1" />
+                <Avatar
+                  name={currentUser.name}
+                  id={currentUser.id}
+                  role={currentUser.role}
+                  size="sm"
+                />
+                <span className="hidden sm:inline-block text-xs font-bold text-[#181818] dark:text-[#F5F3EF] max-w-[120px] truncate">
+                  {getDisplayName(currentUser.name)}
+                </span>
               </button>
 
-              {/* Profile & Session Dropdown Menu */}
-              {isSwitcherOpen && (
+              {/* Profile Popover / Dropdown */}
+              {isMenuOpen && (
                 <>
                   <div
                     className="fixed inset-0 z-40"
-                    onClick={() => setIsSwitcherOpen(false)}
+                    onClick={() => setIsMenuOpen(false)}
                     aria-hidden="true"
                   />
-                  <div className="absolute left-0 top-12 mt-2 w-72 bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-2xl border border-[#E8E4DC] dark:border-[#2E2E2E] p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="flex items-center justify-between pb-3 border-b border-[#E8E4DC] dark:border-[#2A2A2A] text-xs font-bold text-[#1E1E1E] dark:text-white">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{currentUser.avatar || '👤'}</span>
-                        <div className="text-right">
-                          <div className="font-bold text-sm text-[#212121] dark:text-white leading-tight">
-                            {currentUser.name}
+                  <div className="absolute left-0 top-12 mt-2 w-64 bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-xl border border-[#E2DDD4] dark:border-[#2E2E2E] p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="flex items-start justify-between pb-3 border-b border-[#E2DDD4] dark:border-[#2D2D2D]">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Avatar
+                          name={currentUser.name}
+                          id={currentUser.id}
+                          role={currentUser.role}
+                          size="md"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-bold text-sm text-[#181818] dark:text-[#F5F3EF] truncate">
+                            {getDisplayName(currentUser.name)}
                           </div>
-                          <div className="text-[11px] text-[#C1A056] font-semibold mt-0.5">
-                            {currentUser.role === 'QC_MANAGER'
-                              ? 'مسئول فنی و کنترل کیفیت (QC)'
-                              : currentUser.role === 'LEAD_TECHNICIAN'
-                              ? 'سرپرست اکیپ نصب'
-                              : 'تکنسین اجرایی نصب'}
+                          <div className="text-xs text-[#8E6F27] dark:text-[#E5CA8F] font-semibold mt-0.5">
+                            {roleTitle}
                           </div>
-                          <div className="text-[10px] text-slate-400 font-mono mt-0.5" dir="ltr">
-                            {currentUser.phone}
-                          </div>
+                          {currentUser.phone && (
+                            <div className="text-[11px] text-[#69655F] dark:text-[#9E988D] font-mono mt-0.5" dir="ltr">
+                              {currentUser.phone}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setIsSwitcherOpen(false)}
-                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"
                         aria-label="بستن منو"
                       >
                         <X className="w-4 h-4" />
@@ -261,10 +179,10 @@ export const Header: React.FC<Props> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          setIsSwitcherOpen(false);
+                          setIsMenuOpen(false);
                           onLogout();
                         }}
-                        className="w-full py-2.5 px-3 rounded-2xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center gap-2 transition cursor-pointer border border-rose-200 dark:border-rose-900/40"
+                        className="w-full min-h-[44px] py-2 px-3 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center gap-2 transition cursor-pointer border border-rose-200 dark:border-rose-900/40"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>خروج از حساب کاربری</span>
@@ -276,116 +194,6 @@ export const Header: React.FC<Props> = ({
             </div>
           </div>
         </div>
-
-        {/* Navigation Segmented Capsule Bar for QC Manager */}
-        {isQcManager && setActiveTab && (
-          <div className="pb-3 pt-1">
-            <nav
-              role="tablist"
-              aria-label="بخش‌های پنل مدیریت"
-              className="bg-[#F2ECE1] dark:bg-[#181818] p-1.5 rounded-2xl border border-[#E0D9CB] dark:border-[#282828] flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs font-semibold"
-            >
-              <button
-                role="tab"
-                aria-selected={activeTab === 'planner'}
-                onClick={() => setActiveTab('planner')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition shrink-0 active:scale-95 ${
-                  activeTab === 'planner'
-                    ? 'bg-[#1E1E1E] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#121212] shadow-sm font-black'
-                    : 'text-[#444] dark:text-[#A1A1AA] hover:text-[#1E1E1E] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5'
-                }`}
-              >
-                <CalendarDays className="w-4 h-4" aria-hidden="true" />
-                <span>تقویم و برنامه‌ریزی ماهانه</span>
-              </button>
-
-              <button
-                role="tab"
-                aria-selected={activeTab === 'qc'}
-                onClick={() => setActiveTab('qc')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition shrink-0 active:scale-95 ${
-                  activeTab === 'qc'
-                    ? 'bg-[#1E1E1E] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#121212] shadow-sm font-black'
-                    : 'text-[#444] dark:text-[#A1A1AA] hover:text-[#1E1E1E] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5'
-                }`}
-              >
-                <ShieldCheck className="w-4 h-4" aria-hidden="true" />
-                <span>میز کار QC (تایید کیفیت)</span>
-                {pendingQcCount > 0 && (
-                  <span className="bg-[#C1A056] text-white dark:bg-[#121212] dark:text-[#C1A056] text-[10px] px-1.5 py-0.2 rounded-full font-black">
-                    {toPersianDigits(pendingQcCount)}
-                  </span>
-                )}
-              </button>
-
-              <button
-                role="tab"
-                aria-selected={activeTab === 'stuck'}
-                onClick={() => setActiveTab('stuck')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition shrink-0 active:scale-95 ${
-                  activeTab === 'stuck'
-                    ? 'bg-[#1E1E1E] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#121212] shadow-sm font-black'
-                    : 'text-[#444] dark:text-[#A1A1AA] hover:text-[#1E1E1E] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5'
-                }`}
-              >
-                <AlertOctagon className="w-4 h-4 text-rose-500" aria-hidden="true" />
-                <span>کارتابل رفع استاک (&lt;72h)</span>
-                {openStuckCount > 0 && (
-                  <span className="bg-rose-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
-                    {toPersianDigits(openStuckCount)}
-                  </span>
-                )}
-              </button>
-
-              <button
-                role="tab"
-                aria-selected={activeTab === 'tickets'}
-                onClick={() => setActiveTab('tickets')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition shrink-0 active:scale-95 ${
-                  activeTab === 'tickets'
-                    ? 'bg-[#1E1E1E] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#121212] shadow-sm font-black'
-                    : 'text-[#444] dark:text-[#A1A1AA] hover:text-[#1E1E1E] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5'
-                }`}
-              >
-                <AlertTriangle className="w-4 h-4" aria-hidden="true" />
-                <span>تیکت‌های فوری و کسری</span>
-                {openTicketCount > 0 && (
-                  <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.2 rounded-full font-black">
-                    {toPersianDigits(openTicketCount)}
-                  </span>
-                )}
-              </button>
-
-              <button
-                role="tab"
-                aria-selected={activeTab === 'technicians'}
-                onClick={() => setActiveTab('technicians')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition shrink-0 active:scale-95 ${
-                  activeTab === 'technicians'
-                    ? 'bg-[#1E1E1E] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#121212] shadow-sm font-black'
-                    : 'text-[#444] dark:text-[#A1A1AA] hover:text-[#1E1E1E] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5'
-                }`}
-              >
-                <Users className="w-4 h-4" aria-hidden="true" />
-                <span>مدیریت تکنسین‌ها</span>
-              </button>
-
-              <button
-                role="tab"
-                aria-selected={activeTab === 'settings'}
-                onClick={() => setActiveTab('settings')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl transition shrink-0 active:scale-95 ${
-                  activeTab === 'settings'
-                    ? 'bg-[#1E1E1E] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#121212] shadow-sm font-black'
-                    : 'text-[#444] dark:text-[#A1A1AA] hover:text-[#1E1E1E] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5'
-                }`}
-              >
-                <Layers className="w-4 h-4" aria-hidden="true" />
-                <span>تنظیمات و همگام‌سازی</span>
-              </button>
-            </nav>
-          </div>
-        )}
       </div>
     </header>
   );
