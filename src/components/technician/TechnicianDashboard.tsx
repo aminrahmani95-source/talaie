@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, User, SystemSettings, ProjectStatus } from '../../types';
 import { ProjectCard } from './ProjectCard';
 import { Calendar, Users, ArrowLeft, Sparkles, AlertOctagon } from 'lucide-react';
@@ -32,16 +32,16 @@ export const TechnicianDashboard: React.FC<Props> = ({
   inFlightTransitions,
 }) => {
   const isLead = currentUser.role === 'LEAD_TECHNICIAN';
-  const allDays = getUpcomingDays(30);
-  const visibleDays = allDays.slice(0, settings.visibilityWindowDays);
-
-  const [viewScope, setViewScope] = useState<'MY_JOBS' | 'ALL_DAY_JOBS'>('MY_JOBS');
 
   // Helper to check if a project belongs to current user
   const isProjectAssignedToMe = (p: Project) => {
     const techIds = p.assignedTechnicianIds || [];
     return techIds.includes(currentUser.id) || p.leadTechnicianId === currentUser.id;
   };
+
+  const [visibleDays, setVisibleDays] = useState(() =>
+    getUpcomingDays(30).slice(0, settings.visibilityWindowDays)
+  );
 
   // Find the first day with assigned jobs or fallback to first visible day
   const defaultDayKey =
@@ -50,6 +50,36 @@ export const TechnicianDashboard: React.FC<Props> = ({
     )?.dateKey || visibleDays[0]?.dateKey || '';
 
   const [selectedDateKey, setSelectedDateKey] = useState<string>(defaultDayKey);
+  const [viewScope, setViewScope] = useState<'MY_JOBS' | 'ALL_DAY_JOBS'>('MY_JOBS');
+
+  useEffect(() => {
+    const updateDays = () => {
+      const freshVisible = getUpcomingDays(30).slice(0, settings.visibilityWindowDays);
+      setVisibleDays(freshVisible);
+      setSelectedDateKey((prev) => {
+        if (freshVisible.some((d) => d.dateKey === prev)) {
+          return prev;
+        }
+        const assignedDay = freshVisible.find((day) =>
+          projects.some((p) => p.scheduledDate === day.dateKey && isProjectAssignedToMe(p))
+        );
+        return assignedDay?.dateKey || freshVisible[0]?.dateKey || '';
+      });
+    };
+
+    const interval = setInterval(updateDays, 60000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        updateDays();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [settings.visibilityWindowDays, projects, currentUser.id]);
 
   const filteredProjects = projects.filter((p) => {
     if (p.scheduledDate !== selectedDateKey) return false;

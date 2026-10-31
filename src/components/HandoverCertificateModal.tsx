@@ -12,7 +12,7 @@ import {
   FileCheck2,
   Sparkles,
 } from 'lucide-react';
-import { toPersianDigits, formatDuration, formatTimeOnly } from '../utils/jalali';
+import { toPersianDigits, formatDuration, formatTimeOnly, formatJalali } from '../utils/jalali';
 import { CloudImage } from './common/CloudImage';
 
 interface Props {
@@ -38,9 +38,9 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
       role="dialog"
       aria-modal="true"
       aria-labelledby="cert-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+      className="certificate-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl my-6 border border-[#E8E4DC] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="certificate-modal-container bg-white rounded-3xl max-w-3xl w-full shadow-2xl my-6 border border-[#E8E4DC] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Top Action Bar (Screen Only - Hidden in Print) */}
         <div className="no-print bg-[#212121] px-6 py-4 text-white flex items-center justify-between border-b-2 border-[#C1A056]">
           <div className="flex items-center gap-3">
@@ -103,10 +103,10 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             <div className="text-left font-mono space-y-1">
               <div className="text-xs font-bold text-slate-500">شماره سفارش:</div>
               <div className="text-sm font-black text-[#212121] bg-white border border-[#E8E4DC] px-2.5 py-1 rounded-lg">
-                {project.code}
+                {project.code || '—'}
               </div>
               <div className="text-[10px] text-slate-500 mt-1">
-                تاریخ: {toPersianDigits(project.scheduledDate)}
+                تاریخ: {formatJalali(project.completedAt || project.scheduledDate)}
               </div>
             </div>
           </div>
@@ -115,27 +115,27 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-4 rounded-2xl border border-[#E8E4DC] text-xs">
             <div>
               <span className="text-slate-400 block text-[10px]">کارفرما / سفارش‌دهنده:</span>
-              <span className="font-bold text-[#212121] mt-0.5 block">{project.customerName}</span>
+              <span className="font-bold text-[#212121] mt-0.5 block">{project.customerName || '—'}</span>
             </div>
             <div>
               <span className="text-slate-400 block text-[10px]">شماره تماس:</span>
               <span className="font-mono font-bold text-slate-700 mt-0.5 block" dir="ltr">
-                {toPersianDigits(project.customerPhone)}
+                {project.customerPhone ? toPersianDigits(project.customerPhone) : '—'}
               </span>
             </div>
             <div>
               <span className="text-slate-400 block text-[10px]">سرپرست اکیپ نصب:</span>
-              <span className="font-bold text-[#212121] mt-0.5 block">{leadTech}</span>
+              <span className="font-bold text-[#212121] mt-0.5 block">{leadTech || '—'}</span>
             </div>
             <div>
               <span className="text-slate-400 block text-[10px]">وضعیت کنترل کیفی:</span>
-              <span className="font-black text-emerald-700 mt-0.5 block">
-                {project.qcStatus === 'APPROVED' ? '✓ تایید نهایی QC' : 'در انتظار تایید نهایی'}
+              <span className={`font-black mt-0.5 block ${project.qcStatus === 'APPROVED' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                {project.qcStatus === 'APPROVED' ? '✓ تایید نهایی QC' : 'در انتظار بررسی QC'}
               </span>
             </div>
             <div className="col-span-2 sm:col-span-4 pt-2 border-t border-slate-100 flex items-start gap-1.5 text-slate-600">
               <MapPin className="w-3.5 h-3.5 text-[#C1A056] shrink-0 mt-0.5" />
-              <span className="text-[11px] leading-relaxed">نشانی محل نصب: {project.address}</span>
+              <span className="text-[11px] leading-relaxed">نشانی محل نصب: {project.address || '—'}</span>
             </div>
           </div>
 
@@ -298,14 +298,17 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                   <Star
                     key={s}
                     className={`w-3.5 h-3.5 ${
-                      s <= (project.customerSatisfaction || 5)
+                      project.customerSatisfaction && s <= project.customerSatisfaction
                         ? 'text-[#C1A056] fill-[#C1A056]'
                         : 'text-slate-200'
                     }`}
                   />
                 ))}
                 <span className="text-[10px] font-bold text-slate-600 mr-1">
-                  رضایت: {toPersianDigits(project.customerSatisfaction || 5)} از 5
+                  رضایت:{' '}
+                  {project.customerSatisfaction
+                    ? `${toPersianDigits(project.customerSatisfaction)} از 5`
+                    : '—'}
                 </span>
               </div>
             </div>
@@ -318,16 +321,26 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
               </p>
 
               <div className="h-20 flex items-center justify-center">
-                <div className="border-2 border-[#194840] rounded-xl px-4 py-2 bg-[#194840]/5 rotate-[-2deg]">
-                  <div className="text-xs font-black text-[#194840] tracking-wider">TALAEI QC APPROVED</div>
-                  <div className="text-[10px] text-emerald-700 font-bold mt-0.5">
-                    امتیاز کیفی: {toPersianDigits(project.qcScore || 5)} از 5 ستاره
+                {project.qcStatus === 'APPROVED' ? (
+                  <div className="border-2 border-[#194840] rounded-xl px-4 py-2 bg-[#194840]/5 rotate-[-2deg]">
+                    <div className="text-xs font-black text-[#194840] tracking-wider">TALAEI QC APPROVED</div>
+                    <div className="text-[10px] text-emerald-700 font-bold mt-0.5">
+                      امتیاز کیفی: {project.qcScore ? `${toPersianDigits(project.qcScore)} از 5 ستاره` : '—'}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="border-2 border-slate-300 rounded-xl px-4 py-2 bg-slate-100 rotate-[-2deg]">
+                    <div className="text-xs font-black text-slate-500 tracking-wider">در انتظار بررسی QC</div>
+                  </div>
+                )}
               </div>
 
               <div className="text-[10px] text-slate-500">
-                مسئول کنترل کیفیت: {project.qcReviewedBy || 'مسئول QC'} ({toPersianDigits(project.qcReviewedAt || project.scheduledDate)})
+                {project.qcStatus === 'APPROVED' ? (
+                  <>مسئول کنترل کیفیت: {project.qcReviewedBy || '—'} ({formatJalali(project.qcReviewedAt)})</>
+                ) : (
+                  <>مسئول کنترل کیفیت: —</>
+                )}
               </div>
             </div>
           </div>

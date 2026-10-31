@@ -11,7 +11,6 @@ export const SignaturePad: React.FC<Props> = ({ value, onChange, className = '' 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(Boolean(value));
-  const isDark = document.documentElement.classList.contains('dark');
 
   // Setup Canvas resolution and context
   const setupCanvas = useCallback(() => {
@@ -31,7 +30,7 @@ export const SignaturePad: React.FC<Props> = ({ value, onChange, className = '' 
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.lineWidth = 2.5;
-      ctx.strokeStyle = isDark ? '#E8E4DC' : '#1E1E1E';
+      ctx.strokeStyle = '#1E1E1E';
     }
 
     // If pre-existing value, draw image onto canvas
@@ -46,7 +45,7 @@ export const SignaturePad: React.FC<Props> = ({ value, onChange, className = '' 
       };
       img.src = value;
     }
-  }, [value, isDark]);
+  }, [value]);
 
   useEffect(() => {
     setupCanvas();
@@ -113,9 +112,21 @@ export const SignaturePad: React.FC<Props> = ({ value, onChange, className = '' 
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Export signature as PNG data URL
-    const dataUrl = canvas.toDataURL('image/png');
-    onChange(dataUrl);
+    // Export signature as PNG data URL with solid white background
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = canvas.width;
+    exportCanvas.height = canvas.height;
+    const exportCtx = exportCanvas.getContext('2d');
+    if (exportCtx) {
+      exportCtx.fillStyle = '#FFFFFF';
+      exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+      exportCtx.drawImage(canvas, 0, 0);
+      const dataUrl = exportCanvas.toDataURL('image/png');
+      onChange(dataUrl);
+    } else {
+      const dataUrl = canvas.toDataURL('image/png');
+      onChange(dataUrl);
+    }
   };
 
   const handleClear = () => {
@@ -132,18 +143,18 @@ export const SignaturePad: React.FC<Props> = ({ value, onChange, className = '' 
 
   return (
     <div className={`space-y-2 select-none ${className}`}>
-      <div className="relative border-2 border-dashed border-[#C1A056]/50 rounded-2xl overflow-hidden bg-[#FAF7F2] dark:bg-[#161616] transition-colors shadow-inner">
+      <div className="relative border-2 border-dashed border-[#C1A056]/60 rounded-2xl overflow-hidden bg-white shadow-sm">
         {/* Placeholder hint when canvas is pristine */}
         {!hasSignature && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-slate-400 dark:text-zinc-500">
-            <PenTool className="w-6 h-6 mb-1 text-[#C1A056]/60" aria-hidden="true" />
-            <span className="text-xs font-bold">با انگشت یا قلم در این کادر امضا کنید</span>
-            <span className="text-[10px] mt-0.5 opacity-75">تاییدیه رسمی تحویل اقلام و پرده‌های گالری طلایی</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-slate-400">
+            <PenTool className="w-6 h-6 mb-1 text-[#C1A056]/70" aria-hidden="true" />
+            <span className="text-xs font-bold text-slate-600">با انگشت یا قلم در این کادر امضا کنید</span>
+            <span className="text-[10px] mt-0.5 text-slate-400">تاییدیه رسمی تحویل اقلام و پرده‌های گالری طلایی</span>
           </div>
         )}
 
         {/* Guideline line at bottom */}
-        <div className="absolute bottom-6 inset-x-6 border-b border-dashed border-slate-300/70 dark:border-zinc-700/60 pointer-events-none flex justify-between text-[9px] text-slate-400 dark:text-zinc-600 px-1">
+        <div className="absolute bottom-6 inset-x-6 border-b border-dashed border-slate-300 pointer-events-none flex justify-between text-[9px] text-slate-400 px-1">
           <span>خط امضای کارفرما</span>
           <span>TALAEI QC</span>
         </div>

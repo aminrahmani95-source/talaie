@@ -28,6 +28,11 @@ interface Props {
 
 type TabFilter = 'ALL' | 'QC_LEADS' | 'CREW_LEADS' | 'CREW';
 
+export const getDisplayName = (rawName?: string) => {
+  if (!rawName) return '';
+  return rawName.replace(/\s*\([^)]*\)\s*$/, '').trim();
+};
+
 export const TechniciansManager: React.FC<Props> = ({
   users,
   onSaveUser,
@@ -70,7 +75,7 @@ export const TechniciansManager: React.FC<Props> = ({
     setFeedback(null);
     setModalError(null);
     setEditingUser(u);
-    setName(u.name.split(' (')[0]);
+    setName(getDisplayName(u.name));
     setPhone(u.phone);
     setPassword('');
     setRole(u.role);
@@ -114,21 +119,14 @@ export const TechniciansManager: React.FC<Props> = ({
 
     setIsSubmitting(true);
 
-    const roleTitle =
-      role === 'LEAD_TECHNICIAN'
-        ? 'سرپرست اکیپ'
-        : role === 'TECHNICIAN'
-        ? 'تکنسین نصب'
-        : 'مسئول QC و فنی';
-
-    const fullName = `${trimmedName} (${roleTitle})`;
+    const plainName = getDisplayName(trimmedName);
 
     try {
       if (editingUser) {
         // Update user
         const res = await SupabaseSyncService.adminUpdatePersonnel({
           id: editingUser.id,
-          name: fullName,
+          name: plainName,
           phone: trimmedPhone,
           role,
           active: isActive,
@@ -141,7 +139,7 @@ export const TechniciansManager: React.FC<Props> = ({
 
         const updated: User = {
           ...editingUser,
-          name: fullName,
+          name: plainName,
           phone: trimmedPhone,
           role,
           active: isActive,
@@ -150,7 +148,7 @@ export const TechniciansManager: React.FC<Props> = ({
       } else {
         // Create user
         const res = await SupabaseSyncService.adminCreatePersonnel({
-          name: fullName,
+          name: plainName,
           phone: trimmedPhone,
           password: toEnglishDigits(password.trim()),
           role,
@@ -163,7 +161,7 @@ export const TechniciansManager: React.FC<Props> = ({
 
         const newUser: User = {
           id: res.data?.user?.id || `u-${Date.now()}`,
-          name: fullName,
+          name: plainName,
           phone: trimmedPhone,
           role,
           active: true,
@@ -205,7 +203,7 @@ export const TechniciansManager: React.FC<Props> = ({
       if (!res.success) {
         setResetError(res.error || 'خطا در تغییر رمز عبور در سرور.');
       } else {
-        alert(`رمز عبور حساب ${selectedUserForReset.name} با موفقیت تغییر یافت.`);
+        alert(`رمز عبور حساب ${getDisplayName(selectedUserForReset.name)} با موفقیت تغییر یافت.`);
         setIsResetPasswordOpen(false);
       }
     } catch (err: any) {
@@ -218,7 +216,7 @@ export const TechniciansManager: React.FC<Props> = ({
   const handleDelete = async (u: User) => {
     if (deleteLoadingId || isSubmitting) return;
 
-    if (!confirm(`آیا از حذف حساب پرسنلی «${u.name}» از سامانه و دیتابیس اطمینان دارید؟`)) {
+    if (!confirm(`آیا از حذف حساب پرسنلی «${getDisplayName(u.name)}» از سامانه و دیتابیس اطمینان دارید؟`)) {
       return;
     }
 
@@ -400,7 +398,7 @@ export const TechniciansManager: React.FC<Props> = ({
                     {badge.icon}
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-[#212121] dark:text-white">{u.name}</h4>
+                    <h4 className="font-bold text-sm text-[#212121] dark:text-white">{getDisplayName(u.name)}</h4>
                     <div className="flex items-center gap-1.5 mt-1">
                       <span
                         className={`inline-block text-[10px] px-2.5 py-0.5 rounded-full font-bold ${badge.classes}`}
@@ -426,7 +424,7 @@ export const TechniciansManager: React.FC<Props> = ({
                     onClick={() => handleOpenEdit(u)}
                     className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-[#C1A056] hover:bg-[#FAF7F2] dark:hover:bg-[#282828] rounded-lg transition cursor-pointer"
                     title="ویرایش حساب"
-                    aria-label={`ویرایش حساب ${u.name}`}
+                    aria-label={`ویرایش حساب ${getDisplayName(u.name)}`}
                   >
                     <Edit2 className="w-4 h-4" aria-hidden="true" />
                   </button>
@@ -435,7 +433,7 @@ export const TechniciansManager: React.FC<Props> = ({
                     onClick={() => handleOpenResetPassword(u)}
                     className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition cursor-pointer"
                     title="تغییر رمز عبور"
-                    aria-label={`تغییر رمز عبور ${u.name}`}
+                    aria-label={`تغییر رمز عبور ${getDisplayName(u.name)}`}
                   >
                     <KeyRound className="w-4 h-4" aria-hidden="true" />
                   </button>
@@ -445,7 +443,7 @@ export const TechniciansManager: React.FC<Props> = ({
                     onClick={() => handleDelete(u)}
                     className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer disabled:opacity-50"
                     title="حذف حساب"
-                    aria-label={`حذف حساب ${u.name}`}
+                    aria-label={`حذف حساب ${getDisplayName(u.name)}`}
                   >
                     {deleteLoadingId === u.id ? (
                       <Loader2 className="w-4 h-4 animate-spin text-rose-600" />
@@ -684,7 +682,7 @@ export const TechniciansManager: React.FC<Props> = ({
               <div className="text-xs text-slate-600 dark:text-zinc-300">
                 تنظیم رمز عبور جدید برای:
                 <div className="font-bold text-sm text-[#212121] dark:text-white mt-1">
-                  {selectedUserForReset.name}
+                  {getDisplayName(selectedUserForReset.name)}
                 </div>
                 <div className="text-[11px] text-zinc-400 font-mono mt-0.5" dir="ltr">
                   {selectedUserForReset.phone}

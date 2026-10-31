@@ -17,8 +17,8 @@ export function gregorianToJalali(gy: number, gm: number, gd: number): JalaliDat
   days %= 12053;
   jy += 4 * Math.floor(days / 1461);
   days %= 1461;
-  jy += Math.floor((days - 1) / 365);
-  if (days > 0) {
+  if (days > 365) {
+    jy += Math.floor((days - 1) / 365);
     days = (days - 1) % 365;
   }
   let jm: number;
@@ -47,8 +47,10 @@ export function jalaliToGregorian(jy: number, jm: number, jd: number): { gy: num
   }
   gy += 4 * Math.floor(days / 1461);
   days %= 1461;
-  gy += Math.floor((days - 1) / 365);
-  if (days > 0) days = (days - 1) % 365;
+  if (days > 365) {
+    gy += Math.floor((days - 1) / 365);
+    days = (days - 1) % 365;
+  }
   let gd = days + 1;
   const sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   let gm: number;
@@ -172,9 +174,34 @@ export function formatTimeOnly(isoOrDate?: string | Date): string {
 }
 
 // Format full Jalali date and time (e.g. ۱۴۰۵/۰۸/۰۸ ۰۹:۳۰)
-export function formatJalaliDateTime(isoOrDate?: string | Date): string {
-  if (!isoOrDate) return '';
+export function formatJalaliDateTime(isoOrDate?: string | Date, fallback = '—'): string {
+  if (!isoOrDate) return fallback;
   const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;
-  if (isNaN(d.getTime())) return '';
-  return `${formatToPersianDateString(d)} ${formatTimeOnly(d)}`;
+  if (isNaN(d.getTime())) {
+    return typeof isoOrDate === 'string' ? formatJalali(isoOrDate, fallback) : fallback;
+  }
+  const time = formatTimeOnly(d);
+  return `${formatToPersianDateString(d)}${time ? ` ساعت ${time}` : ''}`;
+}
+
+// Universal Jalali date formatter (supports ISO timestamps, YYYY-MM-DD dateKey, or preformatted Jalali)
+export function formatJalali(isoOrDateKey?: string | null, fallback = '—'): string {
+  if (!isoOrDateKey || !isoOrDateKey.trim()) return fallback;
+  const str = isoOrDateKey.trim();
+  // If already Jalali (e.g. 1405/08/09 or 1405-08-09)
+  if (/^1[34]\d{2}[\/\-]\d{1,2}[\/\-]\d{1,2}/.test(str)) {
+    return str.replace(/-/g, '/');
+  }
+  // If YYYY-MM-DD or ISO timestamp
+  const m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) {
+    const gy = parseInt(m[1], 10);
+    const gm = parseInt(m[2], 10);
+    const gd = parseInt(m[3], 10);
+    const { jy, jm, jd } = gregorianToJalali(gy, gm, gd);
+    return `${jy}/${String(jm).padStart(2, '0')}/${String(jd).padStart(2, '0')}`;
+  }
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return str;
+  return formatToPersianDateString(d);
 }

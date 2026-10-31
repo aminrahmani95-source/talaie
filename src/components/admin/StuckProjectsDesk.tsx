@@ -18,7 +18,7 @@ import {
   Filter,
   Calendar,
 } from 'lucide-react';
-import { toPersianDigits, getUpcomingDays } from '../../utils/jalali';
+import { toPersianDigits, getUpcomingDays, formatJalali, formatJalaliDateTime } from '../../utils/jalali';
 
 interface Props {
   projects: Project[];
@@ -438,7 +438,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                   </div>
                   <span className="font-mono">
                     {activeIncident?.stuckAt
-                      ? new Date(activeIncident.stuckAt).toLocaleString('fa-IR')
+                      ? formatJalaliDateTime(activeIncident.stuckAt)
                       : 'ثبت‌شده سر پروژه'}
                   </span>
                 </div>
@@ -517,10 +517,10 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                       onChange={(e) => setNewScheduledDate(e.target.value)}
                       className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] bg-[#FAF7F2] dark:bg-[#161616] dark:text-white font-medium"
                     >
-                      <option value="">بدون تغییر ({selectedProject.scheduledDate || 'تعیین‌نشده'})</option>
+                      <option value="">بدون تغییر ({formatJalali(selectedProject.scheduledDate, 'تعیین‌نشده')})</option>
                       {upcomingDays.map((d) => (
                         <option key={d.dateKey} value={d.dateKey}>
-                          {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} - {d.persianDayNum} {d.persianMonthName} ({d.dateKey})
+                          {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} - {d.persianDayNum} {d.persianMonthName} ({formatJalali(d.dateKey)})
                         </option>
                       ))}
                     </select>

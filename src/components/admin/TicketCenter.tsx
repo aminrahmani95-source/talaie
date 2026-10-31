@@ -8,7 +8,7 @@ import {
   X,
   ZoomIn,
 } from 'lucide-react';
-import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
+import { toPersianDigits, formatJalaliDateTime } from '../../utils/jalali';
 import { CloudImage } from '../common/CloudImage';
 
 interface Props {
@@ -38,7 +38,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
       ...ticket,
       status: 'RESOLVED',
       resolutionNote: resolutionNote.trim(),
-      resolvedAt: getTodayPersianString(),
+      resolvedAt: new Date().toISOString(),
     };
 
     onUpdateTicket(updated);
@@ -151,7 +151,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
                 <div className="flex items-center gap-2 text-[11px] text-[#71717A] dark:text-zinc-400 mt-1">
                   <span>فرستنده: {t.authorName}</span>
                   <span>•</span>
-                  <span>{t.createdAt}</span>
+                  <span>{formatJalaliDateTime(t.createdAt)}</span>
                 </div>
               </div>
 
@@ -182,9 +182,16 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
               {/* Resolution Info if Resolved */}
               {t.status === 'RESOLVED' && (
                 <div className="bg-[#FAF7F2] dark:bg-[#202020] rounded-2xl p-3 border border-[#C1A056]/40 text-xs text-[#212121] dark:text-zinc-200 space-y-1">
-                  <div className="font-bold flex items-center gap-1.5 text-[#A88738] dark:text-[#C1A056]">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#C1A056]" aria-hidden="true" />
-                    اقدام انجام شده توسط QC:
+                  <div className="font-bold flex items-center justify-between text-[#A88738] dark:text-[#C1A056]">
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#C1A056]" aria-hidden="true" />
+                      اقدام انجام شده توسط QC:
+                    </span>
+                    {t.resolvedAt && (
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        {formatJalaliDateTime(t.resolvedAt)}
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] text-slate-700 dark:text-zinc-300">{t.resolutionNote}</p>
                 </div>

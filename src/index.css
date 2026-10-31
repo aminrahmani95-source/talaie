@@ -157,11 +157,53 @@
 
 /* Print optimization for official certificates & handover sheets */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
   body {
     background: #ffffff !important;
     color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  /* Hide everything else on page when printing */
+  body > * {
+    visibility: hidden;
+  }
+
+  /* Only display certificate modal hierarchy */
+  .certificate-modal-overlay,
+  .certificate-modal-overlay * {
+    visibility: visible;
+  }
+
+  .certificate-modal-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+  }
+
+  .certificate-modal-container {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: visible !important;
   }
 
   .no-print {
@@ -169,12 +211,11 @@
   }
 
   .printable-certificate {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: static !important;
     width: 100% !important;
+    max-width: 100% !important;
     margin: 0 !important;
-    padding: 24px !important;
+    padding: 12px !important;
     background: #ffffff !important;
     color: #000000 !important;
     border: none !important;

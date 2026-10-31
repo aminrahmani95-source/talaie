@@ -133,15 +133,15 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
       </div>
 
       {/* Main Preview Area */}
-      <div className="flex-1 overflow-auto flex items-center justify-center p-4 touch-pan-x touch-pan-y">
+      <div className="flex-1 overflow-auto flex p-4">
         <div
-          className="transition-transform duration-200 ease-out origin-center"
-          style={{ transform: `scale(${scale})` }}
+          className="transition-all duration-200 ease-out flex items-center justify-center m-auto"
+          style={{ width: `${scale * 100}%`, maxWidth: scale === 1 ? '95vw' : 'none' }}
         >
           <CloudImage
             src={current.url}
             alt={current.title || 'تصویر پروپوزال گالری طلایی'}
-            className="max-h-[80vh] max-w-[95vw] rounded-xl shadow-2xl object-contain bg-white"
+            className="w-full h-auto max-h-[85vh] rounded-xl shadow-2xl object-contain bg-white"
           />
         </div>
       </div>

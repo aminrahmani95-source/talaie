@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, User } from '../../types';
 import {
   ShieldCheck,
@@ -22,7 +22,7 @@ import {
   Award,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
+import { toPersianDigits, getTodayPersianString, formatJalali } from '../../utils/jalali';
 import { ActiveJobTimer } from '../ActiveJobTimer';
 import { QcRejectModal } from './QcRejectModal';
 import { CloudImage } from '../common/CloudImage';
@@ -50,7 +50,7 @@ export const QcDesk: React.FC<Props> = ({
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   // QC Form states
-  const [qcScore, setQcScore] = useState<number>(5);
+  const [qcScore, setQcScore] = useState<number | null>(null);
   const [qcNotes, setQcNotes] = useState<string>('');
   const [isEditingApproved, setIsEditingApproved] = useState<boolean>(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -92,23 +92,36 @@ export const QcDesk: React.FC<Props> = ({
   const selectedProject =
     relevantProjects.find((p) => p.id === selectedProjectId) || relevantProjects[0];
 
+  useEffect(() => {
+    if (selectedProject) {
+      setQcScore(selectedProject.qcScore || null);
+      setQcNotes(selectedProject.qcNotes || '');
+    }
+  }, [selectedProject?.id]);
+
+  const canApprove =
+    Boolean(selectedProject) &&
+    Boolean(qcScore) &&
+    ((selectedProject.status === 'COMPLETED' && selectedProject.qcStatus === 'PENDING') ||
+      (isEditingApproved && selectedProject.qcStatus === 'APPROVED'));
+
   const handleSelectProject = (p: Project) => {
     setSelectedProjectId(p.id);
-    setQcScore(p.qcScore || 5);
+    setQcScore(p.qcScore || null);
     setQcNotes(p.qcNotes || '');
     setIsEditingApproved(false);
   };
 
   const handleApprove = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProject) return;
+    if (!selectedProject || !canApprove || !qcScore) return;
 
     const patch: Partial<Project> = {
       status: 'COMPLETED',
       qcStatus: 'APPROVED',
       qcScore,
       qcNotes: qcNotes.trim() || 'نصب با رعایت کامل استانداردهای گالری طلایی انجام و تایید شد.',
-      qcReviewedAt: getTodayPersianString(),
+      qcReviewedAt: new Date().toISOString(),
       qcReviewedBy: currentUser?.name || 'مسئول QC',
     };
 
@@ -140,7 +153,7 @@ export const QcDesk: React.FC<Props> = ({
       qcStatus: 'REJECTED',
       qcNotes: reason,
       reworkStartedAt: new Date().toISOString(),
-      qcReviewedAt: getTodayPersianString(),
+      qcReviewedAt: new Date().toISOString(),
       qcReviewedBy: currentUser?.name || 'مسئول QC',
       ...(newScheduledDate ? { scheduledDate: newScheduledDate } : {}),
     };
@@ -361,12 +374,15 @@ export const QcDesk: React.FC<Props> = ({
                         </span>
                       )}
 
-                      {p.handoverChecklist && Object.values(p.handoverChecklist).every(Boolean) && (
-                        <span className="inline-flex items-center gap-1 text-[10px] bg-[#C1A056]/15 text-[#8B6D20] dark:text-[#E2C37E] px-2 py-0.5 rounded-md border border-[#C1A056]/30 font-bold">
-                          <ShieldCheck className="w-3 h-3" />
-                          <span>4 استاندارد ✓</span>
-                        </span>
-                      )}
+                      {p.handoverChecklist &&
+                        (['floorProtectiveClothUsed', 'cradleBracketsSecured', 'remoteTested', 'leveled', 'ironedPleated', 'cleaned'] as const).every(
+                          (k) => p.handoverChecklist?.[k] === true
+                        ) && (
+                          <span className="inline-flex items-center gap-1 text-[10px] bg-[#C1A056]/15 text-[#8B6D20] dark:text-[#E2C37E] px-2 py-0.5 rounded-md border border-[#C1A056]/30 font-bold">
+                            <ShieldCheck className="w-3 h-3" />
+                            <span>۶ استاندارد ✓</span>
+                          </span>
+                        )}
                     </div>
 
                     <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D] text-[11px] text-slate-600 dark:text-zinc-400">
@@ -569,12 +585,17 @@ export const QcDesk: React.FC<Props> = ({
                             <Star
                               key={s}
                               className={`w-3.5 h-3.5 ${
-                                s <= (selectedProject.customerSatisfaction || 5)
+                                selectedProject.customerSatisfaction && s <= selectedProject.customerSatisfaction
                                   ? 'text-[#C1A056] fill-[#C1A056]'
                                   : 'text-slate-300 dark:text-zinc-600'
                               }`}
                             />
                           ))}
+                          <span className="text-[10px] text-slate-500 font-bold mr-1">
+                            {selectedProject.customerSatisfaction
+                              ? `${toPersianDigits(selectedProject.customerSatisfaction)} از 5`
+                              : '—'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -595,45 +616,49 @@ export const QcDesk: React.FC<Props> = ({
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#161616] border border-[#E8E4DC] dark:border-zinc-800 text-[11px]">
-                      <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
-                        <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
-                        <span>تست حرکت ریل، موتور و ریموت</span>
-                      </span>
-                      <span className={`font-bold ${checklist?.remoteTested !== false ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        {checklist?.remoteTested !== false ? '✓ تایید' : '—'}
-                      </span>
-                    </div>
+                    {[
+                      { key: 'floorProtectiveClothUsed', label: 'استفاده از آستری محافظ کف (لوکس طلایی)', icon: Sparkles },
+                      { key: 'cradleBracketsSecured', label: 'مهاربندی کرپی‌ها و عودت به وانت لجستیک', icon: CheckCircle2 },
+                      { key: 'remoteTested', label: 'تست حرکت روان ریل، موتور هوشمند و ریموت', icon: SlidersHorizontal },
+                      { key: 'leveled', label: 'تراز و شاقول بودن قاب و پایه‌ها', icon: Sparkles },
+                      { key: 'ironedPleated', label: 'اتوکشی و فرم‌دهی پلیسه‌ها', icon: Flame },
+                      { key: 'cleaned', label: 'نظافت کامل محل و جمع‌آوری ضایعات', icon: CheckCircle2 },
+                    ].map((item) => {
+                      const IconComp = item.icon;
+                      const isChecked = checklist?.[item.key as keyof typeof checklist] === true;
+                      const isMissing = !checklist || checklist[item.key as keyof typeof checklist] === undefined;
+                      const note = (checklist as any)?.handoverChecklistNotes?.[item.key];
 
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#161616] border border-[#E8E4DC] dark:border-zinc-800 text-[11px]">
-                      <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
-                        <Sparkles className="w-3.5 h-3.5 text-slate-400" />
-                        <span>تراز و شاقول بودن قاب و پایه‌ها</span>
-                      </span>
-                      <span className={`font-bold ${checklist?.leveled !== false ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        {checklist?.leveled !== false ? '✓ تایید' : '—'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#161616] border border-[#E8E4DC] dark:border-zinc-800 text-[11px]">
-                      <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
-                        <Flame className="w-3.5 h-3.5 text-slate-400" />
-                        <span>اتوکشی و فرم‌دهی پلیسه‌ها</span>
-                      </span>
-                      <span className={`font-bold ${checklist?.ironedPleated !== false ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        {checklist?.ironedPleated !== false ? '✓ تایید' : '—'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#161616] border border-[#E8E4DC] dark:border-zinc-800 text-[11px]">
-                      <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
-                        <span>نظافت کامل محل و جمع‌آوری ضایعات</span>
-                      </span>
-                      <span className={`font-bold ${checklist?.cleaned !== false ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        {checklist?.cleaned !== false ? '✓ تایید' : '—'}
-                      </span>
-                    </div>
+                      return (
+                        <div
+                          key={item.key}
+                          className="flex flex-col p-2 rounded-lg bg-white dark:bg-[#161616] border border-[#E8E4DC] dark:border-zinc-800 text-[11px] gap-1"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
+                              <IconComp className="w-3.5 h-3.5 text-slate-400" />
+                              <span>{item.label}</span>
+                            </span>
+                            <span
+                              className={`font-bold ${
+                                isChecked
+                                  ? 'text-emerald-600'
+                                  : isMissing
+                                  ? 'text-slate-400'
+                                  : 'text-amber-600'
+                              }`}
+                            >
+                              {isChecked ? '✓ تایید' : isMissing ? 'ثبت نشده' : 'عدم اجرا'}
+                            </span>
+                          </div>
+                          {!isChecked && note && (
+                            <div className="text-[10px] text-amber-700 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/20 px-2 py-0.5 rounded">
+                              علت: {note}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -746,7 +771,7 @@ export const QcDesk: React.FC<Props> = ({
                   )}
 
                   <div className="text-[10px] text-slate-500 dark:text-zinc-400">
-                    تایید شده توسط {selectedProject.qcReviewedBy || 'مسئول QC'} در تاریخ {selectedProject.qcReviewedAt}
+                    تایید شده توسط {selectedProject.qcReviewedBy || 'مسئول QC'} در تاریخ {formatJalali(selectedProject.qcReviewedAt)}
                   </div>
                 </div>
               )}
@@ -774,16 +799,22 @@ export const QcDesk: React.FC<Props> = ({
                         >
                           <Star
                             className={`w-6 h-6 ${
-                              star <= qcScore
+                              qcScore && star <= qcScore
                                 ? 'text-[#C1A056] fill-[#C1A056]'
                                 : 'text-slate-300 dark:text-zinc-600'
                             }`}
                           />
                         </button>
                       ))}
-                      <span className="text-xs font-bold text-[#212121] dark:text-white mr-2">
-                        {toPersianDigits(qcScore)} از 5 ستاره
-                      </span>
+                      {qcScore ? (
+                        <span className="text-xs font-bold text-[#212121] dark:text-white mr-2">
+                          {toPersianDigits(qcScore)} از 5 ستاره
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-amber-600 dark:text-amber-400 mr-2">
+                          (لطفاً امتیاز را انتخاب کنید)
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -802,23 +833,33 @@ export const QcDesk: React.FC<Props> = ({
                   </div>
 
                   {/* Status Actions */}
-                  <div className="flex items-center gap-3 pt-2">
-                    <button
-                      type="submit"
-                      className="flex-1 py-3 px-4 rounded-xl bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold transition shadow-md text-xs flex items-center justify-center gap-2 border border-[#C1A056]/30"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      تایید نهایی کیفی و ثبت در سابقه
-                    </button>
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="submit"
+                        disabled={!canApprove}
+                        className="flex-1 py-3 px-4 rounded-xl bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold transition shadow-md text-xs flex items-center justify-center gap-2 border border-[#C1A056]/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        تایید نهایی کیفی و ثبت در سابقه
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={handleOpenReject}
-                      className="py-3 px-4 rounded-xl bg-white dark:bg-[#181818] hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-700 dark:text-rose-400 font-bold border border-rose-200 dark:border-rose-900/50 transition text-xs flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <XCircle className="w-4 h-4" />
-                      عدم تایید / نیاز به اصلاح
-                    </button>
+                      <button
+                        type="button"
+                        onClick={handleOpenReject}
+                        className="py-3 px-4 rounded-xl bg-white dark:bg-[#181818] hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-700 dark:text-rose-400 font-bold border border-rose-200 dark:border-rose-900/50 transition text-xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        عدم تایید / نیاز به اصلاح
+                      </button>
+                    </div>
+                    {!canApprove && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                        {!qcScore
+                          ? 'برای تایید نهایی، ابتدا باید امتیاز کیفی (۱ تا ۵ ستاره) را انتخاب کنید.'
+                          : 'تایید نهایی کیفی فقط برای پروژه‌های با وضعیت «نصب شده (COMPLETED)» و «در انتظار تایید (PENDING)» مجاز است.'}
+                      </p>
+                    )}
                   </div>
                 </form>
               )}

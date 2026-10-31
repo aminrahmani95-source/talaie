@@ -13,6 +13,7 @@ import {
   PenTool,
   Loader2,
   AlertTriangle,
+  Upload,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toPersianDigits } from '../../utils/jalali';
@@ -47,21 +48,26 @@ export const ReportCompletionModal: React.FC<Props> = ({
     project.afterPhotos || project.completionPhotos || []
   );
 
-  // Handover checklist states
+  // Handover checklist states (defaults to false per standard QC requirements)
   const [checklist, setChecklist] = useState<HandoverChecklist>(
     project.handoverChecklist || {
-      floorProtectiveClothUsed: true,
-      cradleBracketsSecured: true,
-      remoteTested: true,
-      leveled: true,
-      ironedPleated: true,
-      cleaned: true,
+      floorProtectiveClothUsed: false,
+      cradleBracketsSecured: false,
+      remoteTested: false,
+      leveled: false,
+      ironedPleated: false,
+      cleaned: false,
     }
+  );
+  const [checklistNotes, setChecklistNotes] = useState<Record<string, string>>(
+    (project.handoverChecklist as any)?.handoverChecklistNotes ||
+    project.handoverChecklistNotes ||
+    {}
   );
 
   // Signature & satisfaction states
   const [signature, setSignature] = useState<string | undefined>(project.customerSignature);
-  const [satisfaction, setSatisfaction] = useState<number>(project.customerSatisfaction || 5);
+  const [satisfaction, setSatisfaction] = useState<number | undefined>(project.customerSatisfaction);
   const [completionNotes, setCompletionNotes] = useState(project.completionNotes || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -120,6 +126,31 @@ export const ReportCompletionModal: React.FC<Props> = ({
     if (isSubmitting) return;
     setUploadError('');
 
+    // 1. Check handover checklist: every item must be checked OR have a written reason
+    const CHECKLIST_FIELDS: { key: keyof HandoverChecklist; label: string }[] = [
+      { key: 'floorProtectiveClothUsed', label: 'استفاده از آستری محافظ کف' },
+      { key: 'cradleBracketsSecured', label: 'مهاربندی کرپی‌ها و عودت به وانت' },
+      { key: 'remoteTested', label: 'تست حرکت روان ریل، موتور و ریموت' },
+      { key: 'leveled', label: 'بررسی تراز و شاقول بودن لت‌ها و قاب' },
+      { key: 'ironedPleated', label: 'مرتب‌سازی چین‌ها و اتوکشی نهایی' },
+      { key: 'cleaned', label: 'نظافت کامل محل و جمع‌آوری ضایعات' },
+    ];
+
+    for (const item of CHECKLIST_FIELDS) {
+      if (!checklist[item.key] && !checklistNotes[item.key]?.trim()) {
+        setUploadError(`لطفاً آیتم «${item.label}» را تایید فرمایید یا علت عدم اجرای آن را یادداشت کنید.`);
+        setActiveTab('CHECKLIST');
+        return;
+      }
+    }
+
+    // 2. Customer satisfaction must be selected
+    if (!satisfaction) {
+      setUploadError('لطفاً میزان رضایت کارفرما از نصب را مشخص نمایید (الزامی).');
+      setActiveTab('SIGNATURE');
+      return;
+    }
+
     if (afterPhotos.length === 0) {
       if (
         !confirm(
@@ -138,7 +169,10 @@ export const ReportCompletionModal: React.FC<Props> = ({
         beforePhotos,
         afterPhotos,
         completionPhotos: afterPhotos, // Maintain backwards compatibility
-        handoverChecklist: checklist,
+        handoverChecklist: {
+          ...checklist,
+          handoverChecklistNotes: checklistNotes,
+        },
         customerSignature: signature,
         customerSatisfaction: satisfaction,
       });
@@ -292,14 +326,27 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     </div>
                   ))}
 
+                  {/* Camera Button (with capture) */}
                   <label className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl border-2 border-dashed border-emerald-500/50 bg-emerald-50/40 dark:bg-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer text-emerald-600 dark:text-emerald-400 transition min-h-[80px]">
-                    <Camera className="w-6 h-6 mb-1" aria-hidden="true" />
-                    <span className="text-[10px] font-bold">عکاسی / آپلود</span>
+                    <Camera className="w-5 h-5 mb-1" aria-hidden="true" />
+                    <span className="text-[10px] font-bold">دوربین</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => handlePhotoUpload(e, 'AFTER')}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Gallery Button (without capture) */}
+                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl border-2 border-dashed border-slate-300 dark:border-zinc-700 bg-white dark:bg-[#181818] hover:bg-slate-50 dark:hover:bg-[#222222] cursor-pointer text-slate-600 dark:text-zinc-300 transition min-h-[80px]">
+                    <Upload className="w-5 h-5 mb-1 text-slate-400" aria-hidden="true" />
+                    <span className="text-[10px] font-bold">گالری</span>
                     <input
                       type="file"
                       accept="image/*"
                       multiple
-                      capture="environment"
                       onChange={(e) => handlePhotoUpload(e, 'AFTER')}
                       className="hidden"
                     />
@@ -338,14 +385,27 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     </div>
                   ))}
 
+                  {/* Camera Button (with capture) */}
                   <label className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl border-2 border-dashed border-amber-500/50 bg-amber-50/40 dark:bg-amber-950/20 hover:bg-amber-50 dark:hover:bg-amber-950/40 cursor-pointer text-amber-600 dark:text-amber-400 transition min-h-[80px]">
-                    <Camera className="w-6 h-6 mb-1" aria-hidden="true" />
-                    <span className="text-[10px] font-bold">عکاسی / آپلود</span>
+                    <Camera className="w-5 h-5 mb-1" aria-hidden="true" />
+                    <span className="text-[10px] font-bold">دوربین</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => handlePhotoUpload(e, 'BEFORE')}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Gallery Button (without capture) */}
+                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl border-2 border-dashed border-slate-300 dark:border-zinc-700 bg-white dark:bg-[#181818] hover:bg-slate-50 dark:hover:bg-[#222222] cursor-pointer text-slate-600 dark:text-zinc-300 transition min-h-[80px]">
+                    <Upload className="w-5 h-5 mb-1 text-slate-400" aria-hidden="true" />
+                    <span className="text-[10px] font-bold">گالری</span>
                     <input
                       type="file"
                       accept="image/*"
                       multiple
-                      capture="environment"
                       onChange={(e) => handlePhotoUpload(e, 'BEFORE')}
                       className="hidden"
                     />
@@ -388,7 +448,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     چک‌لیست استانداردهای طلایی تحویل پرده و شید:
                   </h4>
                   <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                    تکنسین موظف است قبل از ترک محل، هر 4 مورد زیر را بررسی و تایید نماید.
+                    تکنسین موظف است قبل از ترک محل، هر ۶ مورد زیر را بررسی و تایید نماید یا علت عدم اجرا را بنویسد.
                   </p>
                 </div>
                 <button
@@ -403,158 +463,266 @@ export const ReportCompletionModal: React.FC<Props> = ({
               <div className="space-y-2.5">
                 {/* 1. Floor protective cloth */}
                 <div
-                  onClick={() => toggleChecklistItem('floorProtectiveClothUsed')}
-                  className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition min-h-[52px] select-none ${
+                  className={`p-3.5 rounded-2xl border transition ${
                     checklist.floorProtectiveClothUsed
                       ? 'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#212121] dark:text-white'
                       : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161616] text-slate-500'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checklist.floorProtectiveClothUsed}
-                    onChange={() => {}}
-                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
-                  />
-                  <div>
-                    <div className="text-xs font-bold flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>پهن کردن آستری محافظ زیر جعبه‌ابزار و نردبان (استاندارد لوکس طلایی)</span>
+                  <div
+                    onClick={() => toggleChecklistItem('floorProtectiveClothUsed')}
+                    className="flex items-start gap-3 cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checklist.floorProtectiveClothUsed}
+                      onChange={() => {}}
+                      className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                    />
+                    <div>
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>پهن کردن آستری محافظ زیر جعبه‌ابزار و نردبان (استاندارد لوکس طلایی)</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                        آستری پهن شد تا هیچ‌گونه خط و خش روی پارکت یا سنگ لوکس مشتری ایجاد نشود.
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                      آستری پهن شد تا هیچ‌گونه خط و خش روی پارکت یا سنگ لوکس مشتری ایجاد نشود.
-                    </p>
                   </div>
+                  {!checklist.floorProtectiveClothUsed && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-zinc-800" onClick={(e) => e.stopPropagation()}>
+                      <label className="block text-[11px] font-bold text-amber-600 dark:text-amber-400 mb-1">
+                        علت عدم اجرا یا استثنا (الزامی):
+                      </label>
+                      <input
+                        type="text"
+                        value={checklistNotes.floorProtectiveClothUsed || ''}
+                        onChange={(e) => setChecklistNotes((prev) => ({ ...prev, floorProtectiveClothUsed: e.target.value }))}
+                        placeholder="دلیل عدم انجام این بند را بنویسید..."
+                        className="w-full text-xs p-2 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50/30 dark:bg-amber-950/10 focus:ring-1 focus:ring-amber-500 text-slate-800 dark:text-white"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* 2. Cradle brackets secured */}
                 <div
-                  onClick={() => toggleChecklistItem('cradleBracketsSecured')}
-                  className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition min-h-[52px] select-none ${
+                  className={`p-3.5 rounded-2xl border transition ${
                     checklist.cradleBracketsSecured
                       ? 'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#212121] dark:text-white'
                       : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161616] text-slate-500'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checklist.cradleBracketsSecured}
-                    onChange={() => {}}
-                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
-                  />
-                  <div>
-                    <div className="text-xs font-bold flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>مهاربندی کرپی‌های شید و عودت کرپی‌های خالی به وانت لجستیک</span>
+                  <div
+                    onClick={() => toggleChecklistItem('cradleBracketsSecured')}
+                    className="flex items-start gap-3 cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checklist.cradleBracketsSecured}
+                      onChange={() => {}}
+                      className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                    />
+                    <div>
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>مهاربندی کرپی‌های شید و عودت کرپی‌های خالی به وانت لجستیک</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                        شیدها با سلامت از کرپی خارج شده و لوازم باربند جمع‌آوری و به راننده تحویل شد.
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                      شیدها با سلامت از کرپی خارج شده و لوازم باربند جمع‌آوری و به راننده تحویل شد.
-                    </p>
                   </div>
+                  {!checklist.cradleBracketsSecured && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-zinc-800" onClick={(e) => e.stopPropagation()}>
+                      <label className="block text-[11px] font-bold text-amber-600 dark:text-amber-400 mb-1">
+                        علت عدم اجرا یا استثنا (الزامی):
+                      </label>
+                      <input
+                        type="text"
+                        value={checklistNotes.cradleBracketsSecured || ''}
+                        onChange={(e) => setChecklistNotes((prev) => ({ ...prev, cradleBracketsSecured: e.target.value }))}
+                        placeholder="دلیل عدم انجام این بند را بنویسید..."
+                        className="w-full text-xs p-2 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50/30 dark:bg-amber-950/10 focus:ring-1 focus:ring-amber-500 text-slate-800 dark:text-white"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* 3. Remote & Motor test */}
                 <div
-                  onClick={() => toggleChecklistItem('remoteTested')}
-                  className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition min-h-[52px] select-none ${
+                  className={`p-3.5 rounded-2xl border transition ${
                     checklist.remoteTested
                       ? 'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#212121] dark:text-white'
                       : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161616] text-slate-500'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checklist.remoteTested}
-                    onChange={() => {}}
-                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
-                  />
-                  <div>
-                    <div className="text-xs font-bold flex items-center gap-1.5">
-                      <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>تست حرکت روان ریل، موتور هوشمند و کد کردن ریموت کنترل</span>
+                  <div
+                    onClick={() => toggleChecklistItem('remoteTested')}
+                    className="flex items-start gap-3 cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checklist.remoteTested}
+                      onChange={() => {}}
+                      className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                    />
+                    <div>
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>تست حرکت روان ریل، موتور هوشمند و کد کردن ریموت کنترل</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                        حد بالا و پایین (End-Limit) شید تنظیم شده و حرکت بی‌صدا تایید است.
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                      حد بالا و پایین (End-Limit) شید تنظیم شده و حرکت بی‌صدا تایید است.
-                    </p>
                   </div>
+                  {!checklist.remoteTested && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-zinc-800" onClick={(e) => e.stopPropagation()}>
+                      <label className="block text-[11px] font-bold text-amber-600 dark:text-amber-400 mb-1">
+                        علت عدم اجرا یا استثنا (الزامی):
+                      </label>
+                      <input
+                        type="text"
+                        value={checklistNotes.remoteTested || ''}
+                        onChange={(e) => setChecklistNotes((prev) => ({ ...prev, remoteTested: e.target.value }))}
+                        placeholder="دلیل عدم انجام این بند را بنویسید..."
+                        className="w-full text-xs p-2 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50/30 dark:bg-amber-950/10 focus:ring-1 focus:ring-amber-500 text-slate-800 dark:text-white"
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {/* 2. Leveled & Plumb */}
+                {/* 4. Leveled & Plumb */}
                 <div
-                  onClick={() => toggleChecklistItem('leveled')}
-                  className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition min-h-[52px] select-none ${
+                  className={`p-3.5 rounded-2xl border transition ${
                     checklist.leveled
                       ? 'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#212121] dark:text-white'
                       : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161616] text-slate-500'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checklist.leveled}
-                    onChange={() => {}}
-                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
-                  />
-                  <div>
-                    <div className="text-xs font-bold flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>بررسی تراز و شاقول بودن قاب، پایه‌ها و تقارن لت‌ها</span>
+                  <div
+                    onClick={() => toggleChecklistItem('leveled')}
+                    className="flex items-start gap-3 cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checklist.leveled}
+                      onChange={() => {}}
+                      className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                    />
+                    <div>
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>بررسی تراز و شاقول بودن قاب، پایه‌ها و تقارن لت‌ها</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                        پایه‌ها با رولپلاک مناسب محکم شده و هیچ کجی یا فاصله‌ای دیده نمی‌شود.
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                      پایه‌ها با رولپلاک مناسب محکم شده و هیچ کجی یا فاصله‌ای دیده نمی‌شود.
-                    </p>
                   </div>
+                  {!checklist.leveled && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-zinc-800" onClick={(e) => e.stopPropagation()}>
+                      <label className="block text-[11px] font-bold text-amber-600 dark:text-amber-400 mb-1">
+                        علت عدم اجرا یا استثنا (الزامی):
+                      </label>
+                      <input
+                        type="text"
+                        value={checklistNotes.leveled || ''}
+                        onChange={(e) => setChecklistNotes((prev) => ({ ...prev, leveled: e.target.value }))}
+                        placeholder="دلیل عدم انجام این بند را بنویسید..."
+                        className="w-full text-xs p-2 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50/30 dark:bg-amber-950/10 focus:ring-1 focus:ring-amber-500 text-slate-800 dark:text-white"
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {/* 3. Ironed & Pleats */}
+                {/* 5. Ironed & Pleats */}
                 <div
-                  onClick={() => toggleChecklistItem('ironedPleated')}
-                  className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition min-h-[52px] select-none ${
+                  className={`p-3.5 rounded-2xl border transition ${
                     checklist.ironedPleated
                       ? 'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#212121] dark:text-white'
                       : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161616] text-slate-500'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checklist.ironedPleated}
-                    onChange={() => {}}
-                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
-                  />
-                  <div>
-                    <div className="text-xs font-bold flex items-center gap-1.5">
-                      <Flame className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>مرتب‌سازی چین‌ها، فرم‌دهی پلیسه‌ها و اتوکشی نهایی</span>
+                  <div
+                    onClick={() => toggleChecklistItem('ironedPleated')}
+                    className="flex items-start gap-3 cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checklist.ironedPleated}
+                      onChange={() => {}}
+                      className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                    />
+                    <div>
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <Flame className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>مرتب‌سازی چین‌ها، فرم‌دهی پلیسه‌ها و اتوکشی نهایی</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                        چروک‌های ناشی از حمل و نقل کاملاً برطرف شده و ایستایی پارچه یکدست است.
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                      چروک‌های ناشی از حمل و نقل کاملاً برطرف شده و ایستایی پارچه یکدست است.
-                    </p>
                   </div>
+                  {!checklist.ironedPleated && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-zinc-800" onClick={(e) => e.stopPropagation()}>
+                      <label className="block text-[11px] font-bold text-amber-600 dark:text-amber-400 mb-1">
+                        علت عدم اجرا یا استثنا (الزامی):
+                      </label>
+                      <input
+                        type="text"
+                        value={checklistNotes.ironedPleated || ''}
+                        onChange={(e) => setChecklistNotes((prev) => ({ ...prev, ironedPleated: e.target.value }))}
+                        placeholder="دلیل عدم انجام این بند را بنویسید..."
+                        className="w-full text-xs p-2 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50/30 dark:bg-amber-950/10 focus:ring-1 focus:ring-amber-500 text-slate-800 dark:text-white"
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {/* 4. Cleanup */}
+                {/* 6. Cleanup */}
                 <div
-                  onClick={() => toggleChecklistItem('cleaned')}
-                  className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition min-h-[52px] select-none ${
+                  className={`p-3.5 rounded-2xl border transition ${
                     checklist.cleaned
                       ? 'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#212121] dark:text-white'
                       : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161616] text-slate-500'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checklist.cleaned}
-                    onChange={() => {}}
-                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
-                  />
-                  <div>
-                    <div className="text-xs font-bold flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>نظافت کامل محیط، جمع‌آوری کارتن‌ها و پاک‌کردن گرد و خاک</span>
+                  <div
+                    onClick={() => toggleChecklistItem('cleaned')}
+                    className="flex items-start gap-3 cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checklist.cleaned}
+                      onChange={() => {}}
+                      className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                    />
+                    <div>
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>نظافت کامل محیط، جمع‌آوری کارتن‌ها و پاک‌کردن گرد و خاک</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                        محل کارفرما بدون هرگونه گرد گچ یا نخ اضافی و کاملاً تمیز تحویل شد.
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                      محل کارفرما بدون هرگونه گرد گچ یا نخ اضافی و کاملاً تمیز تحویل شد.
-                    </p>
                   </div>
+                  {!checklist.cleaned && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-zinc-800" onClick={(e) => e.stopPropagation()}>
+                      <label className="block text-[11px] font-bold text-amber-600 dark:text-amber-400 mb-1">
+                        علت عدم اجرا یا استثنا (الزامی):
+                      </label>
+                      <input
+                        type="text"
+                        value={checklistNotes.cleaned || ''}
+                        onChange={(e) => setChecklistNotes((prev) => ({ ...prev, cleaned: e.target.value }))}
+                        placeholder="دلیل عدم انجام این بند را بنویسید..."
+                        className="w-full text-xs p-2 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50/30 dark:bg-amber-950/10 focus:ring-1 focus:ring-amber-500 text-slate-800 dark:text-white"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -597,7 +765,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     >
                       <Star
                         className={`w-6 h-6 ${
-                          s <= satisfaction
+                          satisfaction && s <= satisfaction
                             ? 'text-[#C1A056] fill-[#C1A056]'
                             : 'text-slate-300 dark:text-zinc-600'
                         }`}
@@ -605,9 +773,15 @@ export const ReportCompletionModal: React.FC<Props> = ({
                       />
                     </button>
                   ))}
-                  <span className="text-xs font-bold text-[#212121] dark:text-white mr-2">
-                    {toPersianDigits(satisfaction)} از 5 ستاره
-                  </span>
+                  {satisfaction ? (
+                    <span className="text-xs font-bold text-[#212121] dark:text-white mr-2">
+                      {toPersianDigits(satisfaction)} از 5 ستاره
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 mr-2">
+                      (الزامی - انتخاب نشده)
+                    </span>
+                  )}
                 </div>
               </div>
 

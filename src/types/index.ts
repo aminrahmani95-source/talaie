@@ -39,6 +39,7 @@ export interface HandoverChecklist {
   leveled: boolean; // بررسی تراز لیزری ۳۶۰ درجه و شاقول بودن قاب و پایه‌ها
   ironedPleated: boolean; // مرتب‌سازی چین‌ها و اتوکشی نهایی پرده
   cleaned: boolean; // نظافت کامل محیط و جمع‌آوری تمام ضایعات و گرد و خاک
+  handoverChecklistNotes?: Record<string, string>; // توضیحات موارد تاییدنشده
 }
 
 // بازدید پیش از نصب و اندازه‌گیری دوم (BPMN Step: کارشناس فنی)
@@ -158,6 +159,7 @@ export interface Project {
   
   // چک‌لیست استانداردهای طلایی تحویل
   handoverChecklist?: HandoverChecklist;
+  handoverChecklistNotes?: Record<string, string>;
   
   // پرونده‌های استاک سر پروژه (در صورت توقف زیر 72 ساعت)
   stuckIncident?: StuckIncident; // سابقه تکی سازگار با گذشته

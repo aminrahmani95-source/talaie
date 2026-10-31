@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Project, Ticket, TicketType, User } from '../types';
 import {
   AlertTriangle,
+  Camera,
   Upload,
   X,
   CheckCircle2,
@@ -108,9 +109,6 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
     setSubmitting(true);
 
-    const now = new Date();
-    const timeStr = `${toPersianDigits(now.getHours())}:${toPersianDigits(String(now.getMinutes()).padStart(2, '0'))}`;
-
     const newTicket: Ticket = {
       id: `t-${Date.now()}`,
       projectId: project.id,
@@ -122,7 +120,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
       description: description.trim(),
       photos,
       status: 'OPEN',
-      createdAt: `${project.scheduledDate} - ساعت ${timeStr}`,
+      createdAt: new Date().toISOString(),
     };
 
     try {
@@ -252,18 +250,31 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                 </div>
               ))}
 
+              {/* Camera Button (with capture) */}
               <label
-                htmlFor="ticket-photo-upload"
+                className="flex flex-col items-center justify-center w-18 h-18 rounded-2xl border-2 border-dashed border-[#D5733A]/50 bg-[#D5733A]/10 hover:bg-[#D5733A]/20 cursor-pointer text-[#D5733A] transition min-h-[72px] min-w-[72px]"
+              >
+                <Camera className="w-5 h-5 mb-1" aria-hidden="true" />
+                <span className="text-[10px] font-bold">دوربین</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+              </label>
+
+              {/* Gallery Button (without capture) */}
+              <label
                 className="flex flex-col items-center justify-center w-18 h-18 rounded-2xl border-2 border-dashed border-slate-300 dark:border-[#3A3A3A] hover:border-[#D5733A] dark:hover:border-[#D5733A] bg-slate-50 dark:bg-[#222222] cursor-pointer text-slate-500 dark:text-slate-400 hover:text-[#D5733A] dark:hover:text-[#D5733A] transition min-h-[72px] min-w-[72px]"
               >
                 <Upload className="w-5 h-5 mb-1" aria-hidden="true" />
-                <span className="text-[10px] font-bold">افزودن عکس</span>
+                <span className="text-[10px] font-bold">گالری</span>
                 <input
-                  id="ticket-photo-upload"
                   type="file"
                   accept="image/*"
                   multiple
-                  capture="environment"
                   onChange={handlePhotoUpload}
                   className="hidden"
                 />

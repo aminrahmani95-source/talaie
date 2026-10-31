@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Project } from '../../types';
 import { XCircle, X, AlertTriangle, Send, Calendar } from 'lucide-react';
-import { getUpcomingDays } from '../../utils/jalali';
+import { getUpcomingDays, formatJalali } from '../../utils/jalali';
 
 interface Props {
   project: Project;
@@ -168,10 +168,10 @@ export const QcRejectModal: React.FC<Props> = ({
               onChange={(e) => setNewScheduledDate(e.target.value)}
               className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-rose-500 focus:border-rose-500 bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
             >
-              <option value="">بدون تغییر ({project.scheduledDate || 'تعیین‌نشده'})</option>
+              <option value="">بدون تغییر ({formatJalali(project.scheduledDate, 'تعیین‌نشده')})</option>
               {upcomingDays.map((d) => (
                 <option key={d.dateKey} value={d.dateKey}>
-                  {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} - {d.persianDayNum} {d.persianMonthName} ({d.dateKey})
+                  {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} - {d.persianDayNum} {d.persianMonthName} ({formatJalali(d.dateKey)})
                 </option>
               ))}
             </select>

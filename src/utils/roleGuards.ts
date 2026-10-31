@@ -11,6 +11,7 @@ export const ALLOWED_TECHNICIAN_PATCH_KEYS = new Set([
   'afterPhotos',
   'completionPhotos',
   'handoverChecklist',
+  'handoverChecklistNotes',
   'customerSignature',
   'customerSatisfaction',
   'customerSurvey',

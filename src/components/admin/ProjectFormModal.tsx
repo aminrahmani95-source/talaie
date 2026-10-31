@@ -53,26 +53,6 @@ export const ProjectFormModal: React.FC<Props> = ({
   const [customerPhone, setCustomerPhone] = useState(project?.customerPhone || '');
   const [address, setAddress] = useState(project?.address || '');
   const [locationUrl, setLocationUrl] = useState(project?.locationUrl || '');
-  const [codeLoading, setCodeLoading] = useState<boolean>(!project?.code);
-  const [codeError, setCodeError] = useState<string | null>(null);
-
-  // Fetch sequential project code for new project
-  useEffect(() => {
-    if (!project?.code) {
-      setCodeLoading(true);
-      setCodeError(null);
-      SupabaseSyncService.getNextProjectCode()
-        .then((code) => {
-          setProjectCode(code);
-          setCodeLoading(false);
-        })
-        .catch((err) => {
-          console.warn('Failed to get sequential project code:', err);
-          setCodeError('خطا در دریافت کد رهگیری ترتیبی از سرور ابری. لطفاً اتصال را بررسی نمایید.');
-          setCodeLoading(false);
-        });
-    }
-  }, [project?.code]);
 
   const [shadePanels, setShadePanels] = useState<number>(project?.shadePanels ?? 0);
   const [curtainPanels, setCurtainPanels] = useState<number>(project?.curtainPanels ?? 0);
@@ -196,11 +176,6 @@ export const ProjectFormModal: React.FC<Props> = ({
       return;
     }
 
-    if (!project?.code && !projectCode) {
-      setFormError('کد سفارش معتبر از سرور دریافت نشده است. لطفاً اتصال اینترنت را بررسی و مجدداً تلاش فرمایید.');
-      return;
-    }
-
     if (assignedTechnicianIds.length === 0) {
       setFormError('حداقل یک تکنسین یا سرپرست باید به این مأموریت اختصاص داده شود.');
       return;
@@ -245,10 +220,21 @@ export const ProjectFormModal: React.FC<Props> = ({
         const diff = computeProjectDiff(project, newFields);
         await onSave({ type: 'PATCH_PROJECT', id: project.id, patch: diff });
       } else {
-        // New project: send CREATE_PROJECT
+        // New project: fetch code now if not already set
+        let finalCode = projectCode;
+        if (!finalCode) {
+          try {
+            finalCode = await SupabaseSyncService.getNextProjectCode();
+            setProjectCode(finalCode);
+          } catch (err) {
+            console.warn('Failed to get sequential project code on commit:', err);
+            finalCode = `PRJ-${Date.now().toString().slice(-4)}`;
+          }
+        }
+
         const newProject: Project = {
           id: projectId,
-          code: projectCode,
+          code: finalCode,
           title: title.trim(),
           customerName: customerName.trim() || title.trim(),
           customerPhone: customerPhone.trim(),
@@ -307,20 +293,16 @@ export const ProjectFormModal: React.FC<Props> = ({
                 <h3 id="project-modal-title" className="font-black text-lg text-white">
                   {isEditing ? 'ویرایش مأموریت و پروژه' : 'ثبت مأموریت جدید گالری طلایی'}
                 </h3>
-                {projectCode && (
+                {projectCode ? (
                   <span className="text-xs bg-[#C1A056] text-black font-mono font-bold px-2 py-0.5 rounded-lg">
                     {projectCode}
                   </span>
-                )}
-                {codeLoading && (
-                  <span className="text-[10px] text-amber-300 animate-pulse">
-                    در حال دریافت کد...
+                ) : (
+                  <span className="text-[10px] bg-white/10 text-white/80 font-mono px-2 py-0.5 rounded-lg">
+                    (تولید خودکار پس از ثبت نهایی)
                   </span>
                 )}
               </div>
-              {codeError && (
-                <p className="text-xs text-rose-400 font-bold mt-1">{codeError}</p>
-              )}
               <p className="text-xs text-[#E8E4DC]">
                 مشخصات فنی شید و پرده، تخصیص اکیپ، چک‌لیست ابزار و پیوست پروپوزال فروش
               </p>
@@ -348,13 +330,13 @@ export const ProjectFormModal: React.FC<Props> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="project-title" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  نام پروژه / کارفرما: *
+                  عنوان پروژه: *
                 </label>
                 <input
                   id="project-title"
                   type="text"
                   required
-                  placeholder="مثال: ویلای لواسان (آقای دکتر پیروز)"
+                  placeholder="مثال: ویلای لواسان - سالن پذیرایی"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500"
@@ -362,6 +344,20 @@ export const ProjectFormModal: React.FC<Props> = ({
               </div>
 
               <div>
+                <label htmlFor="customer-name" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  نام کارفرما:
+                </label>
+                <input
+                  id="customer-name"
+                  type="text"
+                  placeholder="مثال: آقای دکتر پیروز"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
                 <label htmlFor="customer-phone" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                   شماره تماس مشتری (جهت تماس تکنسین):
                 </label>

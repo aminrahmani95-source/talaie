@@ -14,7 +14,7 @@ import {
   Ruler,
   AlertOctagon,
 } from 'lucide-react';
-import { getUpcomingDays, toPersianDigits } from '../../utils/jalali';
+import { getUpcomingDays, toPersianDigits, formatJalali } from '../../utils/jalali';
 
 interface Props {
   projects: Project[];
@@ -228,7 +228,7 @@ export const MonthPlanner: React.FC<Props> = ({
                       {proj.title}
                     </h5>
                     <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                      {proj.customerName} | {proj.scheduledDate || 'بدون تاریخ'}
+                      {proj.customerName} | {formatJalali(proj.scheduledDate, 'بدون تاریخ')}
                     </p>
                   </div>
 

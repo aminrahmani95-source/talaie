@@ -501,6 +501,7 @@ export const App: React.FC = () => {
     );
   };
 
+  const transitioningLockRef = useRef<Set<string>>(new Set());
   const [inFlightTransitions, setInFlightTransitions] = useState<Set<string>>(new Set());
 
   const transitionStatus = async (
@@ -509,7 +510,7 @@ export const App: React.FC = () => {
     to: Project['status']
   ) => {
     if (!currentUser) return;
-    if (inFlightTransitions.has(projectId)) return;
+    if (transitioningLockRef.current.has(projectId)) return;
 
     const current = projectsRef.current.find((p) => p.id === projectId);
     if (!current) return;
@@ -525,6 +526,8 @@ export const App: React.FC = () => {
       return;
     }
 
+    // Acquire lock synchronously before any await
+    transitioningLockRef.current.add(projectId);
     setInFlightTransitions((prev) => new Set(prev).add(projectId));
 
     const patch: Partial<Project> = {
@@ -551,6 +554,7 @@ export const App: React.FC = () => {
         }
       );
     } finally {
+      transitioningLockRef.current.delete(projectId);
       setInFlightTransitions((prev) => {
         const next = new Set(prev);
         next.delete(projectId);
