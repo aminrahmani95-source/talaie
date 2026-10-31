@@ -85,7 +85,7 @@ export const QcRejectModal: React.FC<Props> = ({
             </div>
             <div>
               <h3 id="qc-reject-title" className="font-black text-base sm:text-lg text-white">
-                عدم تایید کیفی / دستور اصلاح (QC Return)
+                عدم تایید کیفی / دستور اصلاح (بازگشت به تکنسین)
               </h3>
               <p className="text-xs text-rose-300 font-mono mt-0.5">
                 {project.code} • {project.title}

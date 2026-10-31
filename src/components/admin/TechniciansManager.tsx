@@ -364,15 +364,15 @@ export const TechniciansManager: React.FC<Props> = ({
                       {getDisplayName(u.name)}
                     </h4>
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${badge.classes}`}>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${badge.classes}`}>
                         {badge.label}
                       </span>
                       {u.active === false ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                        <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
                           غیرفعال
                         </span>
                       ) : (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                        <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
                           فعال
                         </span>
                       )}
@@ -599,7 +599,7 @@ export const TechniciansManager: React.FC<Props> = ({
               <div className="font-bold text-sm text-[#181818] dark:text-white mt-1">
                 {getDisplayName(selectedUserForReset.name)}
               </div>
-              <div className="text-[11px] font-mono mt-0.5" dir="ltr">
+              <div className="text-xs font-mono mt-0.5" dir="ltr">
                 {selectedUserForReset.phone}
               </div>
             </div>

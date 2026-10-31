@@ -149,12 +149,12 @@ export const SignaturePad: React.FC<Props> = ({ value, onChange, className = '' 
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-slate-400">
             <PenTool className="w-6 h-6 mb-1 text-[#C1A056]/70" aria-hidden="true" />
             <span className="text-xs font-bold text-slate-600">با انگشت یا قلم در این کادر امضا کنید</span>
-            <span className="text-[10px] mt-0.5 text-slate-400">تاییدیه رسمی تحویل اقلام و پرده‌های گالری طلایی</span>
+            <span className="text-xs mt-0.5 text-slate-400">تاییدیه رسمی تحویل اقلام و پرده‌های گالری طلایی</span>
           </div>
         )}
 
         {/* Guideline line at bottom */}
-        <div className="absolute bottom-6 inset-x-6 border-b border-dashed border-slate-300 pointer-events-none flex justify-between text-[9px] text-slate-400 px-1">
+        <div className="absolute bottom-6 inset-x-6 border-b border-dashed border-slate-300 pointer-events-none flex justify-between text-xs text-slate-400 px-1">
           <span>خط امضای کارفرما</span>
           <span>TALAEI QC</span>
         </div>
@@ -190,7 +190,7 @@ export const SignaturePad: React.FC<Props> = ({ value, onChange, className = '' 
           <button
             type="button"
             onClick={handleClear}
-            className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 font-bold py-1 px-2.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition text-[11px]"
+            className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 font-bold py-1.5 px-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition text-xs min-h-[44px]"
           >
             <RotateCcw className="w-3 h-3" />
             <span>پاک کردن و امضای مجدد</span>

@@ -54,7 +54,7 @@ export const ToolChecklistDrawer: React.FC<Props> = ({ project, onClose }) => {
                   چک‌لیست بارگیری ابزار از انبار
                 </h3>
                 {project.isFullTools && (
-                  <span className="text-[10px] bg-[#C1A056]/20 text-[#C1A056] border border-[#C1A056]/40 px-2.5 py-0.5 rounded-full font-bold">
+                  <span className="text-xs bg-[#C1A056]/20 text-[#C1A056] border border-[#C1A056]/40 px-2.5 py-0.5 rounded-full font-bold">
                     فول ابزار
                   </span>
                 )}

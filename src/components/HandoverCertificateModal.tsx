@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toPersianDigits, formatDuration, formatTimeOnly, formatJalali } from '../utils/jalali';
 import { CloudImage } from './common/CloudImage';
+import { getDisplayName } from '../utils/technicianName';
 
 interface Props {
   project: Project;
@@ -26,7 +27,8 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
     window.print();
   };
 
-  const leadTech = users.find((u) => u.id === project.leadTechnicianId)?.name || 'تکنسین گالری طلایی';
+  const rawLead = users.find((u) => u.id === project.leadTechnicianId)?.name;
+  const leadTech = rawLead ? getDisplayName(rawLead) : 'تکنسین گالری طلایی';
   const beforePhoto = project.beforePhotos?.find((ph) => Boolean(ph && ph.trim() !== ''));
   const afterPhoto =
     project.afterPhotos?.find((ph) => Boolean(ph && ph.trim() !== '')) ||
@@ -94,7 +96,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                 <p className="text-xs sm:text-sm text-[#A88738] font-bold mt-0.5">
                   شناسنامه رسمی تحویل، گواهی اصالت و تاییدیه کنترل کیفیت (QC)
                 </p>
-                <p className="text-[10px] text-slate-500 font-sans mt-0.5">
+                <p className="text-xs text-slate-500 font-sans mt-0.5">
                   مرکز تخصصی طراحی، دوخت و تجهیز پرده‌های لوکس و سیستم‌های موتوری هوشمند (talaei.ir)
                 </p>
               </div>
@@ -105,7 +107,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
               <div className="text-sm font-black text-[#212121] bg-white border border-[#E8E4DC] px-2.5 py-1 rounded-lg">
                 {project.code || '—'}
               </div>
-              <div className="text-[10px] text-slate-500 mt-1">
+              <div className="text-xs text-slate-500 mt-1">
                 تاریخ: {formatJalali(project.completedAt || project.scheduledDate)}
               </div>
             </div>
@@ -114,28 +116,28 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
           {/* Project & Client Information Card */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-4 rounded-2xl border border-[#E8E4DC] text-xs">
             <div>
-              <span className="text-slate-400 block text-[10px]">کارفرما / سفارش‌دهنده:</span>
+              <span className="text-slate-400 block text-xs">کارفرما / سفارش‌دهنده:</span>
               <span className="font-bold text-[#212121] mt-0.5 block">{project.customerName || '—'}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px]">شماره تماس:</span>
+              <span className="text-slate-400 block text-xs">شماره تماس:</span>
               <span className="font-mono font-bold text-slate-700 mt-0.5 block" dir="ltr">
                 {project.customerPhone ? toPersianDigits(project.customerPhone) : '—'}
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px]">سرپرست اکیپ نصب:</span>
+              <span className="text-slate-400 block text-xs">سرپرست اکیپ نصب:</span>
               <span className="font-bold text-[#212121] mt-0.5 block">{leadTech || '—'}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px]">وضعیت کنترل کیفی:</span>
+              <span className="text-slate-400 block text-xs">وضعیت کنترل کیفی:</span>
               <span className={`font-black mt-0.5 block ${project.qcStatus === 'APPROVED' ? 'text-emerald-700' : 'text-amber-700'}`}>
                 {project.qcStatus === 'APPROVED' ? '✓ تایید نهایی QC' : 'در انتظار بررسی QC'}
               </span>
             </div>
             <div className="col-span-2 sm:col-span-4 pt-2 border-t border-slate-100 flex items-start gap-1.5 text-slate-600">
               <MapPin className="w-3.5 h-3.5 text-[#C1A056] shrink-0 mt-0.5" />
-              <span className="text-[11px] leading-relaxed">نشانی محل نصب: {project.address || '—'}</span>
+              <span className="text-xs leading-relaxed">نشانی محل نصب: {project.address || '—'}</span>
             </div>
           </div>
 
@@ -147,25 +149,25 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y divide-slate-100 text-center text-xs p-2">
               <div className="p-2.5">
-                <span className="text-slate-400 block text-[10px]">شیدهای هوشمند:</span>
+                <span className="text-slate-400 block text-xs">شیدهای هوشمند:</span>
                 <span className="font-black text-base text-[#212121] font-mono mt-1 block">
                   {toPersianDigits(project.shadePanels)} لت
                 </span>
               </div>
               <div className="p-2.5">
-                <span className="text-slate-400 block text-[10px]">پرده و حریر دکوراتیو:</span>
+                <span className="text-slate-400 block text-xs">پرده و حریر دکوراتیو:</span>
                 <span className="font-black text-base text-[#C1A056] font-mono mt-1 block">
                   {toPersianDigits(project.curtainPanels)} لت
                 </span>
               </div>
               <div className="p-2.5">
-                <span className="text-slate-400 block text-[10px]">متراژ تقریبی:</span>
+                <span className="text-slate-400 block text-xs">متراژ تقریبی:</span>
                 <span className="font-black text-sm text-slate-700 font-mono mt-1 block">
                   {toPersianDigits(project.approximateArea || '—')} مترمربع
                 </span>
               </div>
               <div className="p-2.5">
-                <span className="text-slate-400 block text-[10px]">مکانیزم / سیستم حرکتی:</span>
+                <span className="text-slate-400 block text-xs">مکانیزم / سیستم حرکتی:</span>
                 <span className="font-bold text-xs text-slate-800 mt-1 block truncate">
                   {project.mechanismType || 'استاندارد گالری طلایی'}
                 </span>
@@ -183,7 +185,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="border border-[#E8E4DC] rounded-xl overflow-hidden bg-white">
-                  <div className="bg-amber-600 text-white text-[10px] font-bold py-1 px-3 text-center">
+                  <div className="bg-amber-600 text-white text-xs font-bold py-1 px-3 text-center">
                     تصویر وضعیت پنجره و کناف قبل از نصب (Before)
                   </div>
                   <div className="h-36 bg-slate-100 flex items-center justify-center overflow-hidden">
@@ -196,7 +198,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                 </div>
 
                 <div className="border border-[#E8E4DC] rounded-xl overflow-hidden bg-white">
-                  <div className="bg-emerald-700 text-white text-[10px] font-bold py-1 px-3 text-center">
+                  <div className="bg-emerald-700 text-white text-xs font-bold py-1 px-3 text-center">
                     تصویر پرده و شید تکمیل‌شده نهایی (After)
                   </div>
                   <div className="h-36 bg-slate-100 flex items-center justify-center overflow-hidden">
@@ -215,11 +217,11 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Checklist */}
             <div className="bg-white p-3.5 rounded-2xl border border-[#E8E4DC] space-y-2 text-xs">
-              <div className="font-bold text-slate-800 text-[11px] pb-1 border-b border-slate-100 flex items-center gap-1">
+              <div className="font-bold text-slate-800 text-xs pb-1 border-b border-slate-100 flex items-center gap-1">
                 <ShieldCheck className="w-4 h-4 text-[#C1A056]" />
                 <span>بررسی استانداردهای تحویل لوکس طلایی:</span>
               </div>
-              <div className="space-y-1.5 text-[11px]">
+              <div className="space-y-1.5 text-xs">
                 <div className="flex items-center justify-between text-slate-700">
                   <span>• استفاده از پارچه و کاور محافظ کف:</span>
                   <span className="font-bold text-emerald-600">{checklist?.floorProtectiveClothUsed !== false ? '✓ تایید' : '—'}</span>
@@ -250,11 +252,11 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             {/* Time on site & Statement */}
             <div className="bg-white p-3.5 rounded-2xl border border-[#E8E4DC] space-y-2 text-xs flex flex-col justify-between">
               <div>
-                <div className="font-bold text-slate-800 text-[11px] pb-1 border-b border-slate-100 flex items-center gap-1">
+                <div className="font-bold text-slate-800 text-xs pb-1 border-b border-slate-100 flex items-center gap-1">
                   <Clock className="w-4 h-4 text-[#C1A056]" />
                   <span>زمان و راندمان اجرای کار در محل:</span>
                 </div>
-                <div className="mt-2 space-y-1 text-[11px] text-slate-700">
+                <div className="mt-2 space-y-1 text-xs text-slate-700">
                   <div className="flex justify-between">
                     <span>{project.reworkStartedAt ? 'زمان شروع بازکاری:' : 'زمان شروع نصب:'}</span>
                     <span className="font-mono font-bold">{formatTimeOnly(project.reworkStartedAt || project.startedAt) || '—'}</span>
@@ -271,7 +273,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
               </div>
 
               {project.completionNotes && (
-                <div className="text-[10px] text-slate-500 italic bg-[#FAF7F2] p-2 rounded-lg mt-2">
+                <div className="text-xs text-slate-500 italic bg-[#FAF7F2] p-2 rounded-lg mt-2">
                   «{project.completionNotes}»
                 </div>
               )}
@@ -283,14 +285,14 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             {/* Customer Digital Signature Box */}
             <div className="bg-white border border-[#E8E4DC] rounded-2xl p-4 text-center space-y-2">
               <div className="text-xs font-bold text-slate-700">تایید و امضای دیجیتال کارفرما / تحویل‌گیرنده:</div>
-              <p className="text-[9px] text-slate-400">
+              <p className="text-xs text-slate-400">
                 اینجانب سلامت کامل اقلام و عملکرد بی‌نقص سیستم‌های نصب‌شده را تایید می‌نمایم.
               </p>
               <div className="h-20 bg-[#FCFAF7] rounded-xl border border-dashed border-[#C1A056]/40 flex items-center justify-center p-1">
                 {project.customerSignature ? (
                   <CloudImage src={project.customerSignature} alt="امضای کارفرما" className="max-h-full max-w-full object-contain" />
                 ) : (
-                  <span className="text-[11px] text-slate-400 italic">امضای فیزیکی در محل</span>
+                  <span className="text-xs text-slate-400 italic">امضای فیزیکی در محل</span>
                 )}
               </div>
               <div className="flex items-center justify-center gap-1">
@@ -304,7 +306,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                     }`}
                   />
                 ))}
-                <span className="text-[10px] font-bold text-slate-600 mr-1">
+                <span className="text-xs font-bold text-slate-600 mr-1">
                   رضایت:{' '}
                   {project.customerSatisfaction
                     ? `${toPersianDigits(project.customerSatisfaction)} از 5`
@@ -316,7 +318,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             {/* Official QC Seal Box */}
             <div className="bg-white border border-[#E8E4DC] rounded-2xl p-4 text-center space-y-2 relative overflow-hidden">
               <div className="text-xs font-bold text-[#212121]">مهر و تاییدیه رسمی واحد کنترل کیفیت (QC):</div>
-              <p className="text-[9px] text-slate-400">
+              <p className="text-xs text-slate-400">
                 مطابق استانداردهای فنی و ایمنی گالری طلایی تایید گردید.
               </p>
 
@@ -324,7 +326,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                 {project.qcStatus === 'APPROVED' ? (
                   <div className="border-2 border-[#194840] rounded-xl px-4 py-2 bg-[#194840]/5 rotate-[-2deg]">
                     <div className="text-xs font-black text-[#194840] tracking-wider">TALAEI QC APPROVED</div>
-                    <div className="text-[10px] text-emerald-700 font-bold mt-0.5">
+                    <div className="text-xs text-emerald-700 font-bold mt-0.5">
                       امتیاز کیفی: {project.qcScore ? `${toPersianDigits(project.qcScore)} از 5 ستاره` : '—'}
                     </div>
                   </div>
@@ -335,9 +337,9 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                 )}
               </div>
 
-              <div className="text-[10px] text-slate-500">
+              <div className="text-xs text-slate-500">
                 {project.qcStatus === 'APPROVED' ? (
-                  <>مسئول کنترل کیفیت: {project.qcReviewedBy || '—'} ({formatJalali(project.qcReviewedAt)})</>
+                  <>مسئول کنترل کیفیت: {project.qcReviewedBy ? getDisplayName(project.qcReviewedBy) : '—'} ({formatJalali(project.qcReviewedAt)})</>
                 ) : (
                   <>مسئول کنترل کیفیت: —</>
                 )}
@@ -346,7 +348,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
           </div>
 
           {/* Footer watermark & contact */}
-          <div className="text-center text-[10px] text-slate-400 pt-3 border-t border-slate-100">
+          <div className="text-center text-xs text-slate-400 pt-3 border-t border-slate-100">
             گالری طلایی | نشانی وب‌سایت: talaei.ir | پشتیبانی فنی و خدمات پس از فروش: 021-88888888
           </div>
         </div>

@@ -95,7 +95,7 @@ export const Sidebar: React.FC<Props> = ({
 
               {item.badge !== undefined && (
                 <span
-                  className={`min-w-[18px] h-4.5 px-1.5 rounded-full text-[11px] font-mono font-bold flex items-center justify-center ${
+                  className={`min-w-[18px] h-4.5 px-1.5 rounded-full text-xs font-mono font-bold flex items-center justify-center ${
                     isSelected
                       ? 'bg-[#C1A056] text-[#212121] dark:bg-[#181818] dark:text-[#C1A056]'
                       : item.badgeColor || 'bg-[#E2DDD4] text-[#4A4742]'

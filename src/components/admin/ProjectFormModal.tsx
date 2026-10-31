@@ -23,6 +23,7 @@ import { CloudImage } from '../common/CloudImage';
 import { computeProjectDiff } from '../../utils/offlineQueue';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
+import { getDisplayName } from '../../utils/technicianName';
 
 export type ProjectFormSaveData =
   | { type: 'CREATE_PROJECT'; project: Project }
@@ -281,7 +282,8 @@ export const ProjectFormModal: React.FC<Props> = ({
   const nonQcUsers = users.filter((u) => u.role !== 'QC_MANAGER');
   const filteredUsers = nonQcUsers.filter((u) => {
     if (!techSearchQuery.trim()) return true;
-    return u.name.includes(techSearchQuery.trim());
+    const q = techSearchQuery.trim().toLowerCase();
+    return getDisplayName(u.name).toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
   });
 
   return (
@@ -504,7 +506,7 @@ export const ProjectFormModal: React.FC<Props> = ({
 
               <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#C1A056] hover:border-[#212121] bg-white dark:bg-[#141414] cursor-pointer text-[#8E6F27] dark:text-[#E5CA8F] transition">
                 <Camera className="w-5 h-5 mb-1" />
-                <span className="text-[10px] font-bold">پیوست عکس</span>
+                <span className="text-xs font-bold">پیوست عکس</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -599,8 +601,8 @@ export const ProjectFormModal: React.FC<Props> = ({
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <Avatar name={u.name} id={u.id} size="sm" />
-                        <span className="text-xs font-bold truncate">{u.name}</span>
+                        <Avatar name={getDisplayName(u.name)} id={u.id} size="sm" />
+                        <span className="text-xs font-bold truncate">{getDisplayName(u.name)}</span>
                       </div>
 
                       {isSelected && (
@@ -610,7 +612,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                             e.stopPropagation();
                             setLeadTechnicianId(u.id);
                           }}
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition cursor-pointer ${
+                          className={`text-xs px-2.5 py-0.5 rounded-full font-bold transition cursor-pointer ${
                             isLead
                               ? 'bg-[#212121] text-[#E5CA8F]'
                               : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200'

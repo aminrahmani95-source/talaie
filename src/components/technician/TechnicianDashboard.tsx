@@ -3,6 +3,7 @@ import { Project, User, SystemSettings, ProjectStatus } from '../../types';
 import { ProjectCard } from './ProjectCard';
 import { Calendar, Users, WifiOff, AlertOctagon } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits, getTodayPersianString } from '../../utils/jalali';
+import { getDisplayName } from '../../utils/technicianName';
 
 interface Props {
   currentUser: User;
@@ -119,7 +120,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
             {getTodayPersianString()}
           </div>
           <h2 className="font-black text-base sm:text-lg text-white mt-0.5">
-            سلام، {currentUser.name}
+            سلام، {getDisplayName(currentUser.name)}
           </h2>
           <div className="text-xs text-[#BDB8AF] mt-0.5">
             {todayProjectsCount > 0 ? (
@@ -135,12 +136,12 @@ export const TechnicianDashboard: React.FC<Props> = ({
         {/* Lead Scope Toggle */}
         {isLead && (
           <div className="flex flex-col items-end gap-1 shrink-0">
-            <span className="text-[10px] text-zinc-400">نمایش:</span>
-            <div className="flex items-center gap-1 bg-white/10 p-0.5 rounded-xl border border-white/10 text-[11px]">
+            <span className="text-xs text-zinc-400">نمایش:</span>
+            <div className="flex items-center gap-1 bg-white/10 p-1 rounded-2xl border border-white/10 text-xs">
               <button
                 type="button"
                 onClick={() => setViewScope('MY_JOBS')}
-                className={`px-2 py-1 rounded-lg font-bold transition cursor-pointer ${
+                className={`min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-xl font-bold transition cursor-pointer flex items-center justify-center ${
                   viewScope === 'MY_JOBS'
                     ? 'bg-[#C1A056] text-[#212121]'
                     : 'text-zinc-300 hover:text-white'
@@ -151,7 +152,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setViewScope('ALL_DAY_JOBS')}
-                className={`px-2 py-1 rounded-lg font-bold transition cursor-pointer ${
+                className={`min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-xl font-bold transition cursor-pointer flex items-center justify-center ${
                   viewScope === 'ALL_DAY_JOBS'
                     ? 'bg-[#C1A056] text-[#212121]'
                     : 'text-zinc-300 hover:text-white'
@@ -175,7 +176,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               </span>
               <span>کارهای فعال و نیازمند پیگیری:</span>
             </div>
-            <span className="text-[11px] bg-rose-600 text-white px-2 py-0.5 rounded-full font-bold font-mono">
+            <span className="text-xs bg-rose-600 text-white px-2.5 py-1 rounded-full font-bold font-mono">
               {toPersianDigits(openProjects.length)}
             </span>
           </div>
@@ -207,7 +208,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
             <Calendar className="w-3.5 h-3.5 text-[#8E6F27] dark:text-[#E5CA8F]" />
             <span>برنامه روزهای کاری:</span>
           </span>
-          <span className="text-[11px] text-[#69655F] dark:text-[#9E988D] font-mono">
+          <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-mono">
             (پنجره دید {toPersianDigits(settings.visibilityWindowDays)} روز آینده)
           </span>
         </div>
@@ -237,17 +238,17 @@ export const TechnicianDashboard: React.FC<Props> = ({
                     : 'bg-white dark:bg-[#1A1A1A] text-[#4A4742] dark:text-[#BDB8AF] border-[#E2DDD4] dark:border-[#2C2C2C] hover:border-[#C1A056]/50'
                 }`}
               >
-                <span className="text-[11px] font-bold">
+                <span className="text-xs font-bold">
                   {day.isToday ? 'امروز' : day.dayOffset === 1 ? 'فردا' : day.persianDayName}
                 </span>
                 <span className="text-sm font-black font-mono my-0.5">
                   {toPersianDigits(day.persianDayNum)}
                 </span>
-                <span className="text-[9px] opacity-75">{day.persianMonthName}</span>
+                <span className="text-xs opacity-75">{day.persianMonthName}</span>
 
                 {count > 0 && (
                   <span
-                    className={`mt-1 text-[9px] px-1.5 rounded-full font-bold font-mono ${
+                    className={`mt-1 text-xs px-2 py-0.5 rounded-full font-bold font-mono ${
                       isSelected
                         ? 'bg-[#C1A056] text-[#212121]'
                         : 'bg-[#FAF7F2] dark:bg-[#252525] text-[#8E6F27] dark:text-[#E5CA8F] border border-[#C1A056]/30'
@@ -279,7 +280,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
             <h4 className="font-bold text-xs sm:text-sm text-[#181818] dark:text-white">
               مأموریتی برای این روز برنامه‌ریزی نشده است
             </h4>
-            <p className="text-[11px] text-[#69655F] dark:text-[#9E988D]">
+            <p className="text-xs text-[#69655F] dark:text-[#9E988D]">
               پروژه‌های باز و در حال اجرای شما در بالای صفحه نمایش داده شده‌اند.
             </p>
           </div>

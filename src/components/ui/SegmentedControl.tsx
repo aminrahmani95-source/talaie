@@ -27,7 +27,7 @@ export function SegmentedControl<T extends string = string>({
   ariaLabel = 'انتخاب دسته‌بندی',
 }: SegmentedControlProps<T>) {
   const sizeClasses = size === 'sm' ? 'text-xs p-1' : 'text-xs sm:text-sm p-1';
-  const itemPadding = size === 'sm' ? 'px-3 py-1.5 min-h-[36px]' : 'px-3.5 py-2 min-h-[40px]';
+  const itemPadding = size === 'sm' ? 'px-3 py-2 min-h-[44px] min-w-[44px]' : 'px-3.5 py-2.5 min-h-[44px] min-w-[44px]';
 
   return (
     <div
@@ -56,7 +56,7 @@ export function SegmentedControl<T extends string = string>({
             <span>{opt.label}</span>
             {countVal !== undefined && (
               <span
-                className={`text-[11px] px-1.5 py-0.2 rounded-full font-mono font-bold leading-none ${
+                className={`text-xs px-1.5 py-0.2 rounded-full font-mono font-bold leading-none ${
                   isSelected
                     ? 'bg-[#C1A056] text-[#212121] dark:bg-[#181818] dark:text-[#C1A056]'
                     : 'bg-[#E2DDD4] text-[#4A4742] dark:bg-[#2C2C2C] dark:text-[#BDB8AF]'

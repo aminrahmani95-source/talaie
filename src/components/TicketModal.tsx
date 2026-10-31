@@ -17,6 +17,7 @@ import {
 import { toPersianDigits } from '../utils/jalali';
 import { compressImageFile } from '../utils/imageCompressor';
 import { CloudImage } from './common/CloudImage';
+import { getDisplayName } from '../utils/technicianName';
 
 interface Props {
   project: Project;
@@ -115,7 +116,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
       projectCode: project.code,
       projectTitle: project.title,
       authorId: currentUser.id,
-      authorName: currentUser.name,
+      authorName: getDisplayName(currentUser.name),
       type: selectedType,
       description: description.trim(),
       photos,
@@ -201,7 +202,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="font-bold text-xs leading-snug">{t.label}</div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5 line-clamp-2">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 leading-tight mt-0.5 line-clamp-2">
                         {t.desc}
                       </div>
                     </div>
@@ -255,7 +256,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                 className="flex flex-col items-center justify-center w-18 h-18 rounded-2xl border-2 border-dashed border-[#D5733A]/50 bg-[#D5733A]/10 hover:bg-[#D5733A]/20 cursor-pointer text-[#D5733A] transition min-h-[72px] min-w-[72px]"
               >
                 <Camera className="w-5 h-5 mb-1" aria-hidden="true" />
-                <span className="text-[10px] font-bold">دوربین</span>
+                <span className="text-xs font-bold">دوربین</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -270,7 +271,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                 className="flex flex-col items-center justify-center w-18 h-18 rounded-2xl border-2 border-dashed border-slate-300 dark:border-[#3A3A3A] hover:border-[#D5733A] dark:hover:border-[#D5733A] bg-slate-50 dark:bg-[#222222] cursor-pointer text-slate-500 dark:text-slate-400 hover:text-[#D5733A] dark:hover:text-[#D5733A] transition min-h-[72px] min-w-[72px]"
               >
                 <Upload className="w-5 h-5 mb-1" aria-hidden="true" />
-                <span className="text-[10px] font-bold">گالری</span>
+                <span className="text-xs font-bold">گالری</span>
                 <input
                   type="file"
                   accept="image/*"

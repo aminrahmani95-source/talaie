@@ -92,7 +92,7 @@ export const BottomNav: React.FC<Props> = ({
                   />
                   {item.badge !== undefined && (
                     <span
-                      className={`absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-mono font-bold flex items-center justify-center ${
+                      className={`absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full text-xs font-mono font-bold flex items-center justify-center ${
                         item.badgeColor || 'bg-[#C1A056] text-white'
                       }`}
                     >
@@ -100,7 +100,7 @@ export const BottomNav: React.FC<Props> = ({
                     </span>
                   )}
                 </div>
-                <span className="text-[11px] leading-none">{item.label}</span>
+                <span className="text-xs leading-none">{item.label}</span>
                 {isSelected && (
                   <span className="absolute bottom-1 w-6 h-0.5 rounded-full bg-[#C1A056]" />
                 )}
@@ -123,7 +123,7 @@ export const BottomNav: React.FC<Props> = ({
                 isMoreActive ? 'scale-110' : ''
               }`}
             />
-            <span className="text-[11px] leading-none">بیشتر</span>
+            <span className="text-xs leading-none">بیشتر</span>
             {isMoreActive && (
               <span className="absolute bottom-1 w-6 h-0.5 rounded-full bg-[#C1A056]" />
             )}

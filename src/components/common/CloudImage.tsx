@@ -63,7 +63,7 @@ export const CloudImage: React.FC<Props> = ({
     if (fallback) return <>{fallback}</>;
     return (
       <div
-        className={`bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded-lg flex items-center justify-center text-zinc-400 text-[10px] ${className}`}
+        className={`bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded-lg flex items-center justify-center text-zinc-400 text-xs ${className}`}
       >
         <span>در حال بارگذاری...</span>
       </div>

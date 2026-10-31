@@ -13,6 +13,7 @@ import { CloudImage } from '../common/CloudImage';
 import { PageHeader } from '../ui/PageHeader';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { Button } from '../ui/Button';
+import { getDisplayName } from '../../utils/technicianName';
 
 interface Props {
   tickets: Ticket[];
@@ -115,7 +116,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
                   {getTicketTypeLabel(t.type)}
                 </span>
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
                     t.status === 'OPEN'
                       ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
                       : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
@@ -129,8 +130,8 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
                 <h4 className="font-bold text-sm text-[#181818] dark:text-[#F5F3EF] leading-tight">
                   {t.projectTitle} ({t.projectCode})
                 </h4>
-                <div className="flex items-center gap-2 text-[11px] text-[#69655F] dark:text-[#9E988D] mt-1">
-                  <span>ارسال‌کننده: {t.authorName}</span>
+                <div className="flex items-center gap-2 text-xs text-[#69655F] dark:text-[#9E988D] mt-1">
+                  <span>ارسال‌کننده: {getDisplayName(t.authorName)}</span>
                   <span>•</span>
                   <span>{formatJalaliDateTime(t.createdAt)}</span>
                 </div>
@@ -171,12 +172,12 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
                       <span>اقدام انجام شده:</span>
                     </span>
                     {t.resolvedAt && (
-                      <span className="text-[10px] text-[#69655F] dark:text-[#9E988D] font-normal font-mono">
+                      <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-normal font-mono">
                         {formatJalaliDateTime(t.resolvedAt)}
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-[#4A4742] dark:text-[#BDB8AF]">{t.resolutionNote}</p>
+                  <p className="text-xs text-[#4A4742] dark:text-[#BDB8AF]">{t.resolutionNote}</p>
                 </div>
               )}
 

@@ -237,7 +237,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
             <Camera className="w-4 h-4" />
             <span>۱. عکس‌ها</span>
             {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
-              <span className="bg-[#C1A056] text-[#212121] text-[10px] w-4 h-4 rounded-full inline-flex items-center justify-center font-mono font-bold">
+              <span className="bg-[#C1A056] text-[#212121] text-xs px-1.5 h-4 rounded-full inline-flex items-center justify-center font-mono font-bold">
                 {toPersianDigits(beforePhotos.length + afterPhotos.length)}
               </span>
             )}
@@ -293,7 +293,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                     <span>عکس‌های بعد از نصب (پرده و شید نهایی):</span>
                   </label>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">
                     الزامی برای QC
                   </span>
                 </div>
@@ -319,7 +319,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                   {/* Camera Button */}
                   <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-emerald-500/50 bg-emerald-500/5 hover:bg-emerald-500/10 cursor-pointer text-emerald-700 dark:text-emerald-400 transition min-h-[80px]">
                     <Camera className="w-5 h-5 mb-1" />
-                    <span className="text-[10px] font-bold">دوربین</span>
+                    <span className="text-xs font-bold">دوربین</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -332,7 +332,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                   {/* Gallery Button */}
                   <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-[#69655F] dark:text-[#9E988D] transition min-h-[80px]">
                     <Upload className="w-5 h-5 mb-1 text-slate-400" />
-                    <span className="text-[10px] font-bold">گالری</span>
+                    <span className="text-xs font-bold">گالری</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -351,7 +351,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
                     <span>عکس‌های قبل از نصب (پنجره خام و زیرسازی):</span>
                   </label>
-                  <span className="text-[10px] text-[#69655F] dark:text-[#9E988D]">اختیاری</span>
+                  <span className="text-xs text-[#69655F] dark:text-[#9E988D]">اختیاری</span>
                 </div>
 
                 <div className="flex flex-wrap gap-2.5 items-center">
@@ -374,7 +374,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
 
                   <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-amber-500/50 bg-amber-500/5 hover:bg-amber-500/10 cursor-pointer text-amber-700 dark:text-amber-400 transition min-h-[80px]">
                     <Camera className="w-5 h-5 mb-1" />
-                    <span className="text-[10px] font-bold">دوربین</span>
+                    <span className="text-xs font-bold">دوربین</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -386,7 +386,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
 
                   <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-[#69655F] dark:text-[#9E988D] transition min-h-[80px]">
                     <Upload className="w-5 h-5 mb-1 text-slate-400" />
-                    <span className="text-[10px] font-bold">گالری</span>
+                    <span className="text-xs font-bold">گالری</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -505,7 +505,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                             <Icon className="w-3.5 h-3.5 text-emerald-600" />
                             <span>{item.title}</span>
                           </div>
-                          <p className="text-[10px] text-[#69655F] dark:text-[#9E988D] mt-0.5">
+                          <p className="text-xs text-[#69655F] dark:text-[#9E988D] mt-0.5">
                             {item.desc}
                           </p>
                         </div>
@@ -513,7 +513,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
 
                       {!isChecked && (
                         <div className="mt-2 pt-2 border-t border-[#E2DDD4] dark:border-[#2C2C2C]" onClick={(e) => e.stopPropagation()}>
-                          <label className="block text-[11px] font-bold text-amber-700 dark:text-amber-400 mb-1">
+                          <label className="block text-xs font-bold text-amber-700 dark:text-amber-400 mb-1">
                             علت عدم اجرا (الزامی):
                           </label>
                           <input
@@ -567,7 +567,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                       key={s}
                       type="button"
                       onClick={() => setSatisfaction(s)}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl hover:scale-110 active:scale-95 transition cursor-pointer"
+                      className="min-w-[44px] min-h-[44px] w-11 h-11 flex items-center justify-center rounded-xl hover:scale-110 active:scale-95 transition cursor-pointer"
                       aria-label={`${s} ستاره`}
                     >
                       <Star
@@ -598,12 +598,12 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     <PenTool className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
                     <span>امضای دیجیتال کارفرما:</span>
                   </label>
-                  <span className="text-[11px] text-[#69655F] dark:text-[#9E988D]">
+                  <span className="text-xs text-[#69655F] dark:text-[#9E988D]">
                     {project.customerName}
                   </span>
                 </div>
 
-                <p className="text-[11px] text-[#69655F] dark:text-[#9E988D] bg-[#FAF7F2] dark:bg-[#141414] p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] mb-2 leading-relaxed">
+                <p className="text-xs text-[#69655F] dark:text-[#9E988D] bg-[#FAF7F2] dark:bg-[#141414] p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] mb-2 leading-relaxed">
                   «اینجانب سلامت ظاهری، ابعاد، عملکرد موتور و تحویل شید/پرده را تایید می‌نمایم.»
                 </p>
 

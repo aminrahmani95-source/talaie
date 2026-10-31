@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserRole } from '../../types';
+import { getDisplayName } from '../../utils/technicianName';
 
 export interface AvatarProps {
   name: string;
@@ -21,14 +22,13 @@ const AVATAR_PALETTE = [
   'bg-[#374151] text-white',
 ];
 
-function getAvatarInitials(fullName: string): string {
-  if (!fullName) return '';
-  // Clean role suffixes like (مسئول QC) or (سرپرست اکیپ)
-  const clean = fullName.replace(/\s*\([^)]*\)\s*$/, '').trim();
+export function getAvatarInitials(fullName: string): string {
+  const clean = getDisplayName(fullName);
+  if (!clean) return '';
   const parts = clean.split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '';
   if (parts.length === 1) return parts[0].slice(0, 1);
-  return (parts[0].slice(0, 1) + parts[parts.length - 1].slice(0, 1)).slice(0, 2);
+  return parts[0].slice(0, 1) + parts[1].slice(0, 1);
 }
 
 function getAvatarColor(key: string): string {
@@ -52,7 +52,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   const colorClass = getAvatarColor(id || name);
 
   const sizeClasses = {
-    xs: 'w-6 h-6 text-[10px] rounded-lg',
+    xs: 'w-6 h-6 text-xs rounded-lg',
     sm: 'w-8 h-8 text-xs rounded-xl',
     md: 'w-10 h-10 text-sm rounded-xl',
     lg: 'w-12 h-12 text-base rounded-2xl',
@@ -65,7 +65,9 @@ export const Avatar: React.FC<AvatarProps> = ({
       title={name}
       aria-label={name}
     >
-      <span>{initials}</span>
+      <span dir="ltr" style={{ unicodeBidi: 'isolate' }}>
+        {initials}
+      </span>
 
       {/* Role indicator ring or dot */}
       {role === 'QC_MANAGER' && (

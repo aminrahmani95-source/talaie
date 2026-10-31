@@ -162,7 +162,7 @@ export const FailedOperationsModal: React.FC<Props> = ({
                         {getOperationTitle(op)}
                       </span>
                       {op.orderingKey && (
-                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-white dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300">
+                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-white dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300">
                           {op.orderingKey}
                         </span>
                       )}
@@ -175,7 +175,7 @@ export const FailedOperationsModal: React.FC<Props> = ({
                     )}
                   </div>
 
-                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1 font-mono">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1 font-mono">
                     <Clock className="w-3.5 h-3.5 text-zinc-400" />
                     <span>{formatJalaliDateTime(new Date(op.failedAt))}</span>
                   </div>
@@ -189,7 +189,7 @@ export const FailedOperationsModal: React.FC<Props> = ({
 
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-1 border-t border-rose-500/10">
-                  <span className="text-[11px] text-zinc-500">
+                  <span className="text-xs text-zinc-500">
                     تعداد تلاش‌ها: <strong className="font-mono text-zinc-700 dark:text-zinc-300">{toPersianDigits(op.retryCount)}</strong>
                   </span>
                   <div className="flex items-center gap-2">

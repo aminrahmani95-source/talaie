@@ -14,6 +14,7 @@ import { PageHeader } from '../ui/PageHeader';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { StatusPill } from '../ui/StatusPill';
 import { Button } from '../ui/Button';
+import { getDisplayName } from '../../utils/technicianName';
 
 interface Props {
   projects: Project[];
@@ -115,7 +116,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
       ...baseIncident,
       resolutionStatus: 'RESOLVED',
       resolvedAt: new Date().toISOString(),
-      resolvedBy: currentUser?.name || 'مسئول QC',
+      resolvedBy: getDisplayName(currentUser?.name) || 'مسئول QC',
       resolutionNote: resolutionNote.trim(),
       rootCause: fmeaRootCause,
     };
@@ -305,12 +306,12 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                       {p.code}
                     </span>
                     {isResolved ? (
-                      <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
                         رفع شده
                       </span>
                     ) : (
                       <span
-                        className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 ${
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 ${
                           timing.isOverdue
                             ? 'bg-rose-600 text-white animate-pulse'
                             : timing.hours < 24
@@ -332,7 +333,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                     <h4 className="font-bold text-xs sm:text-sm text-[#181818] dark:text-[#F5F3EF] line-clamp-1">
                       {p.title}
                     </h4>
-                    <p className="text-[11px] text-[#69655F] dark:text-[#9E988D] mt-0.5 line-clamp-1">
+                    <p className="text-xs text-[#69655F] dark:text-[#9E988D] mt-0.5 line-clamp-1">
                       {p.customerName} | {getCategoryTitle(latestInc?.category)}
                     </p>
                   </div>
@@ -380,7 +381,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                     <Flame className="w-4 h-4 text-rose-500" />
                     <span>علت اعلام توقف:</span>
                   </div>
-                  <span className="font-mono text-[11px]">
+                  <span className="font-mono text-xs">
                     {activeIncident?.stuckAt ? formatJalaliDateTime(activeIncident.stuckAt) : ''}
                   </span>
                 </div>
@@ -478,8 +479,8 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                       اقدام انجام‌شده: «{activeIncident.resolutionNote}»
                     </p>
                   )}
-                  <div className="text-[10px] text-[#69655F] dark:text-[#9E988D]">
-                    ثبت توسط {activeIncident?.resolvedBy} در تاریخ {formatJalaliDateTime(activeIncident?.resolvedAt)}
+                  <div className="text-xs text-[#69655F] dark:text-[#9E988D]">
+                    ثبت توسط {getDisplayName(activeIncident?.resolvedBy)} در تاریخ {formatJalaliDateTime(activeIncident?.resolvedAt)}
                   </div>
                 </div>
               )}

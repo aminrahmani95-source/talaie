@@ -18,6 +18,7 @@ import {
   validateEvaluationRoleGuards,
   isValidStatusTransition,
 } from './utils/roleGuards';
+import { getDisplayName } from './utils/technicianName';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
 import { TechnicianDashboard } from './components/technician/TechnicianDashboard';
@@ -645,7 +646,7 @@ export const App: React.FC = () => {
         setCompletionModalProject(null);
       }
     );
-    showToast('success', 'گزارش اتمام کار با موفقیت ثبت شد و به دسک QC ارسال گردید.');
+    showToast('success', 'گزارش اتمام کار با موفقیت ثبت شد و به بررسی QC ارسال گردید.');
   };
 
   // Pre-Installation inspection & 2nd measurement handler
@@ -758,7 +759,7 @@ export const App: React.FC = () => {
         setStuckModalProject(null);
       }
     );
-    showToast('warning', 'پروژه به دسک رفع استاک (<72h) ارسال شد و بلافاصله به مسئولین فنی ارجاع یافت.');
+    showToast('warning', 'پروژه به فهرست پروژه‌های متوقف‌شده ارجاع یافت و مهلت ۷۲ ساعته آغاز شد.');
   };
 
   // Ticket handlers
@@ -1158,7 +1159,7 @@ export const App: React.FC = () => {
           <ReportStuckModal
             project={stuckModalProject}
             isOpen={!!stuckModalProject}
-            reporterName={currentUser.name}
+            reporterName={getDisplayName(currentUser.name)}
             onClose={() => setStuckModalProject(null)}
             onSubmit={handleConfirmReportStuck}
           />

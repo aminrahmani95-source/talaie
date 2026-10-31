@@ -12,6 +12,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
+import { getDisplayName } from '../../utils/technicianName';
 
 interface Props {
   project: Project;
@@ -68,20 +69,20 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
     const evaluation: PersonnelEvaluation = {
       id: `eval-${Date.now()}`,
       userId: targetUser.id,
-      userName: targetUser.name,
+      userName: getDisplayName(targetUser.name),
       role: targetUser.role,
       technicalScore,
       behavioralScore,
       cleanlinessScore,
       criticalIncidentNote: criticalIncidentNote.trim(),
-      evaluatedBy: currentUser?.name || 'مسئول QC',
+      evaluatedBy: getDisplayName(currentUser?.name) || 'مسئول QC',
       evaluatedAt: getTodayPersianString(),
     };
 
     try {
       await onSaveEvaluation(evaluation);
       onClose();
-      alert(`ارزیابی عملکرد ${targetUser.name} با موفقیت در سوابق و شاخص‌های KPI ثبت شد.`);
+      alert(`ارزیابی عملکرد ${getDisplayName(targetUser.name)} با موفقیت در سوابق و شاخص‌های ارزیابی ثبت شد.`);
     } catch (err: any) {
       setError(err.message || 'خطا در ثبت ارزیابی عملکرد پرسنل.');
     } finally {
@@ -100,14 +101,14 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
         <span className="font-bold text-[#212121] dark:text-white">{label}</span>
         <span className="font-bold text-[#C1A056] font-mono">{toPersianDigits(value)} از 5</span>
       </div>
-      <p className="text-[11px] text-slate-500 dark:text-zinc-400">{subLabel}</p>
-      <div className="flex items-center gap-1.5 pt-1">
+      <p className="text-xs text-slate-500 dark:text-zinc-400">{subLabel}</p>
+      <div className="flex items-center gap-1 pt-1">
         {[1, 2, 3, 4, 5].map((s) => (
           <button
             key={s}
             type="button"
             onClick={() => onChange(s)}
-            className="p-1 transition hover:scale-115 active:scale-95"
+            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center transition hover:scale-115 active:scale-95 cursor-pointer"
           >
             <Star
               className={`w-5 h-5 ${
@@ -184,9 +185,9 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
                     </div>
                     <div className="overflow-hidden">
                       <div className="font-bold text-xs text-[#212121] dark:text-white truncate">
-                        {u.name.split(' (')[0]}
+                        {getDisplayName(u.name)}
                       </div>
-                      <div className="text-[10px] text-slate-500 dark:text-zinc-400 font-mono">
+                      <div className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
                         {u.phone}
                       </div>
                     </div>
@@ -228,7 +229,7 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-[#C1A056]" />
-              <span>فرم ثبت وقایع حساس (CIT) جهت محاسبه در KPI و پاداش:</span>
+              <span>فرم ثبت وقایع حساس (CIT) جهت محاسبه در ارزیابی و پاداش:</span>
             </label>
             <textarea
               rows={2}

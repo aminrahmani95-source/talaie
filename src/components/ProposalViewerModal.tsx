@@ -165,7 +165,7 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
               }`}
             >
               <CloudImage src={img.url} alt="" className="w-16 h-16 object-cover" />
-              <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[10px] text-center text-white py-0.5 font-bold">
+              <span className="absolute bottom-0 inset-x-0 bg-black/75 text-xs text-center text-white py-0.5 font-bold">
                 صفحه {toPersianDigits(idx + 1)}
               </span>
             </button>

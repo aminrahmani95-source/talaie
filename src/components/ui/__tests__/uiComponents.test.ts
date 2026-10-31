@@ -17,6 +17,11 @@ describe('Shared UI Components', () => {
 
       const html3 = renderToString(createElement(Avatar, { name: 'محسن' }));
       expect(html3).toContain('م');
+
+      const html4 = renderToString(createElement(Avatar, { name: 'TEST سرپرست (سرپرست اکیپ)' }));
+      expect(html4).toContain('Tس');
+      expect(html4).toContain('dir="ltr"');
+      expect(html4).toContain('unicode-bidi:isolate');
     });
 
     it('handles empty name with fallback', () => {

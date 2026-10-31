@@ -120,11 +120,11 @@ export const Header: React.FC<Props> = ({
                 type="button"
                 onClick={() => setIsMenuOpen((prev) => !prev)}
                 className="flex items-center gap-2 p-1 rounded-xl hover:bg-[#EFEBE4]/50 dark:hover:bg-[#252525] transition active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1A056]"
-                aria-label={`پروفایل ${currentUser.name}`}
+                aria-label={`پروفایل ${getDisplayName(currentUser.name)}`}
                 aria-expanded={isMenuOpen}
               >
                 <Avatar
-                  name={currentUser.name}
+                  name={getDisplayName(currentUser.name)}
                   id={currentUser.id}
                   role={currentUser.role}
                   size="sm"
@@ -146,7 +146,7 @@ export const Header: React.FC<Props> = ({
                     <div className="flex items-start justify-between pb-3 border-b border-[#E2DDD4] dark:border-[#2D2D2D]">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Avatar
-                          name={currentUser.name}
+                          name={getDisplayName(currentUser.name)}
                           id={currentUser.id}
                           role={currentUser.role}
                           size="md"
@@ -159,7 +159,7 @@ export const Header: React.FC<Props> = ({
                             {roleTitle}
                           </div>
                           {currentUser.phone && (
-                            <div className="text-[11px] text-[#69655F] dark:text-[#9E988D] font-mono mt-0.5" dir="ltr">
+                            <div className="text-xs text-[#69655F] dark:text-[#9E988D] font-mono mt-0.5" dir="ltr">
                               {currentUser.phone}
                             </div>
                           )}

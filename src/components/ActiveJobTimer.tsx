@@ -50,7 +50,7 @@ export const ActiveJobTimer: React.FC<Props> = ({
 
     if (compact) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-[11px] font-mono font-bold">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-xs font-mono font-bold">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>{toPersianDigits(timeString)}</span>
         </span>
@@ -65,11 +65,11 @@ export const ActiveJobTimer: React.FC<Props> = ({
             <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
           </span>
           <div>
-            <div className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+            <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
               <Play className="w-3 h-3 fill-emerald-600 text-emerald-600" />
               <span>{isRework ? 'زمان‌سنج کار در محل (بازکاری / رفع نقص QC):' : 'زمان‌سنج کار در محل (فعال):'}</span>
             </div>
-            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
+            <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
               {isRework ? 'شروع بازکاری:' : 'شروع کار:'} ساعت {formatTimeOnly(effectiveStartedAt)}
             </div>
           </div>
@@ -89,7 +89,7 @@ export const ActiveJobTimer: React.FC<Props> = ({
 
     if (compact) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#202020] text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-800 text-[10px] font-bold">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-[#202020] text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-800 text-xs font-bold">
           <Clock className="w-3 h-3 text-[#C1A056]" />
           <span>{durationText}</span>
         </span>
@@ -106,7 +106,7 @@ export const ActiveJobTimer: React.FC<Props> = ({
             <span className="font-bold text-[#212121] dark:text-white block">
               مدت زمان اجرای کار در محل:
             </span>
-            <span className="text-[10px] text-slate-500 dark:text-zinc-400">
+            <span className="text-xs text-slate-500 dark:text-zinc-400">
               از ساعت {startTimeStr} تا {endTimeStr || 'اتمام کار'}
             </span>
           </div>

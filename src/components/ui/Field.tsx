@@ -30,7 +30,7 @@ export const Field: React.FC<FieldProps> = ({
           {label} {required && <span className="text-rose-500 font-bold">*</span>}
         </label>
         {hint && !error && (
-          <span className="text-[11px] text-[#69655F] dark:text-[#9E988D]">
+          <span className="text-xs text-[#69655F] dark:text-[#9E988D]">
             {hint}
           </span>
         )}

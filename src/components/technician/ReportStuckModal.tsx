@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Project, StuckIncident, StuckCategory } from '../../types';
 import { AlertOctagon, X, Clock, ShieldAlert, Send } from 'lucide-react';
+import { getDisplayName } from '../../utils/technicianName';
 
 interface Props {
   project: Project;
@@ -48,7 +49,7 @@ export const ReportStuckModal: React.FC<Props> = ({
       stuckAt: new Date().toISOString(),
       category,
       description: description.trim(),
-      reportedBy: reporterName || 'تکنسین نصب',
+      reportedBy: getDisplayName(reporterName) || 'تکنسین نصب',
       photos: [],
       targetMaxHours: 72,
       resolutionStatus: 'OPEN',
@@ -97,14 +98,14 @@ export const ReportStuckModal: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* Warning & KPI Banner */}
+        {/* Warning Banner */}
         <div className="bg-rose-500/10 dark:bg-rose-950/40 border-b border-rose-500/20 p-4 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200 font-bold">
             <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>گیت‌وی رفع توقف زیر ۷۲ ساعت (KPI دفتر مرکزی)</span>
+            <span>مهلت رفع توقف زیر ۷۲ ساعت (دفتر مرکزی)</span>
           </div>
-          <span className="bg-rose-600 text-white text-[10px] font-mono px-2 py-0.5 rounded-full font-black">
-            KPI &lt; 72h
+          <span className="bg-rose-600 text-white text-xs font-mono px-2 py-0.5 rounded-full font-black">
+            &lt; 72h
           </span>
         </div>
 
@@ -112,7 +113,7 @@ export const ReportStuckModal: React.FC<Props> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-2">
-              دسته‌بندی مانع و علت توقف (FMEA):
+              دسته‌بندی مانع و علت توقف:
             </label>
             <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
               {CATEGORIES.map((cat) => {
@@ -160,8 +161,8 @@ export const ReportStuckModal: React.FC<Props> = ({
             {error && <p className="text-rose-600 text-xs font-bold mt-1">{error}</p>}
           </div>
 
-          <div className="text-[11px] text-slate-500 dark:text-zinc-400 bg-[#FAF7F2] dark:bg-[#222222] p-3 rounded-xl border border-[#E8E4DC] dark:border-[#2D2D2D] leading-relaxed">
-            با ارسال این گزارش، پروژه بلافاصله در دسک رفع استاک تحت پیگیری مسئولین فنی قرار گرفته و شمارش معکوس ۷۲ ساعته آغاز می‌شود.
+          <div className="text-xs text-slate-500 dark:text-zinc-400 bg-[#FAF7F2] dark:bg-[#222222] p-3 rounded-xl border border-[#E8E4DC] dark:border-[#2D2D2D] leading-relaxed">
+            با ارسال این گزارش، پروژه بلافاصله در فهرست پروژه‌های متوقف‌شده تحت پیگیری مسئولین فنی قرار گرفته و شمارش معکوس ۷۲ ساعته آغاز می‌شود.
           </div>
 
           {/* Action Buttons */}
@@ -170,17 +171,17 @@ export const ReportStuckModal: React.FC<Props> = ({
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#FAF7F2] dark:bg-[#252525] hover:bg-[#EAE6DD] text-slate-700 dark:text-zinc-300 transition disabled:opacity-50"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#FAF7F2] dark:bg-[#252525] hover:bg-[#EAE6DD] text-slate-700 dark:text-zinc-300 transition disabled:opacity-50 min-h-[44px] cursor-pointer"
             >
               انصراف
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 shadow-md active:scale-95 transition disabled:opacity-50"
+              className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 shadow-md active:scale-95 transition disabled:opacity-50 min-h-[44px] cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
-              <span>{isSubmitting ? 'در حال ارسال...' : 'ارسال به دسک رفع استاک'}</span>
+              <span>{isSubmitting ? 'در حال ارسال...' : 'ارسال گزارش توقف'}</span>
             </button>
           </div>
         </form>

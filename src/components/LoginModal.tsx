@@ -190,7 +190,7 @@ export const LoginModal: React.FC<Props> = ({
           </form>
 
           <div className="pt-3 border-t border-[#262626] text-center">
-            <p className="text-[11px] text-zinc-400 leading-relaxed">
+            <p className="text-xs text-zinc-400 leading-relaxed">
               مرکز پشتیبانی فنی و مدیریت QC گالری طلایی | طراحی، پرده و شید هوشمند (talaei.ir)
             </p>
           </div>

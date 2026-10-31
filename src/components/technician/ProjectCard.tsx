@@ -79,7 +79,7 @@ export const ProjectCard: React.FC<Props> = ({
 
         <div className="flex items-center gap-1.5">
           {isTransitioning && (
-            <span className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold animate-pulse">
+            <span className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold animate-pulse">
               در صف ارسال
             </span>
           )}
@@ -97,7 +97,7 @@ export const ProjectCard: React.FC<Props> = ({
             </span>
           </div>
           {project.qcNotes && (
-            <div className="bg-white dark:bg-[#141414] p-2 rounded-lg border border-rose-200 dark:border-rose-900/50 text-[#181818] dark:text-zinc-200 text-[11px] leading-relaxed">
+            <div className="bg-white dark:bg-[#141414] p-2 rounded-lg border border-rose-200 dark:border-rose-900/50 text-[#181818] dark:text-zinc-200 text-xs leading-relaxed">
               <span className="font-bold text-rose-600 block mb-0.5">نکات QC:</span>
               «{project.qcNotes}»
             </div>
@@ -142,7 +142,7 @@ export const ProjectCard: React.FC<Props> = ({
         </div>
 
         {project.mechanismType && (
-          <span className="text-[11px] text-[#8E6F27] dark:text-[#E5CA8F] font-bold truncate max-w-[170px]">
+          <span className="text-xs text-[#8E6F27] dark:text-[#E5CA8F] font-bold truncate max-w-[170px]">
             {project.mechanismType}
           </span>
         )}
@@ -157,12 +157,12 @@ export const ProjectCard: React.FC<Props> = ({
             title={`تماس با ${project.customerPhone}`}
           >
             <Phone className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F] mb-0.5" />
-            <span className="text-[10px] font-bold">تماس</span>
+            <span className="text-xs font-bold">تماس</span>
           </a>
         ) : (
           <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-400 opacity-60 min-h-[48px]">
             <Phone className="w-4 h-4 mb-0.5" />
-            <span className="text-[10px]">بدون تلفن</span>
+            <span className="text-xs">بدون تلفن</span>
           </div>
         )}
 
@@ -177,7 +177,7 @@ export const ProjectCard: React.FC<Props> = ({
           title="مسیریابی هوشمند نشان / بلد"
         >
           <Navigation className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F] mb-0.5" />
-          <span className="text-[10px] font-bold">مسیریابی</span>
+          <span className="text-xs font-bold">مسیریابی</span>
         </a>
 
         <button
@@ -186,7 +186,7 @@ export const ProjectCard: React.FC<Props> = ({
           className="flex flex-col items-center justify-center p-2 rounded-xl bg-[#FAF7F2] dark:bg-[#1E1E1E] hover:bg-[#EFEBE4] dark:hover:bg-[#252525] border border-[#E2DDD4] dark:border-[#2C2C2C] text-[#181818] dark:text-zinc-200 transition min-h-[48px] active:scale-95 cursor-pointer"
         >
           <FileText className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F] mb-0.5" />
-          <span className="text-[10px] font-bold">پروپوزال</span>
+          <span className="text-xs font-bold">پروپوزال</span>
         </button>
 
         <button
@@ -195,7 +195,7 @@ export const ProjectCard: React.FC<Props> = ({
           className="flex flex-col items-center justify-center p-2 rounded-xl bg-[#FAF7F2] dark:bg-[#1E1E1E] hover:bg-[#EFEBE4] dark:hover:bg-[#252525] border border-[#E2DDD4] dark:border-[#2C2C2C] text-[#181818] dark:text-zinc-200 transition min-h-[48px] active:scale-95 cursor-pointer"
         >
           <Wrench className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F] mb-0.5" />
-          <span className="text-[10px] font-bold">ابزار</span>
+          <span className="text-xs font-bold">ابزار</span>
         </button>
       </div>
 
@@ -251,7 +251,7 @@ export const ProjectCard: React.FC<Props> = ({
               <span>پروژه متوقف است — در حال پیگیری توسط مسئولین فنی</span>
             </div>
             {project.stuckIncident?.description && (
-              <p className="mt-1 text-[11px] text-[#69655F] dark:text-[#9E988D]">
+              <p className="mt-1 text-xs text-[#69655F] dark:text-[#9E988D]">
                 علت: {project.stuckIncident.description}
               </p>
             )}
@@ -270,7 +270,7 @@ export const ProjectCard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => onOpenCertificate(project)}
-                className="px-2.5 py-1 bg-white dark:bg-[#1E1E1E] border border-[#C1A056] text-[#8E6F27] dark:text-[#E5CA8F] rounded-lg text-[11px] font-bold hover:bg-[#FAF7F2] transition cursor-pointer"
+                className="px-3 py-1.5 min-h-[44px] bg-white dark:bg-[#1E1E1E] border border-[#C1A056] text-[#8E6F27] dark:text-[#E5CA8F] rounded-lg text-xs font-bold hover:bg-[#FAF7F2] transition cursor-pointer flex items-center justify-center"
               >
                 شناسنامه تحویل
               </button>
@@ -284,7 +284,7 @@ export const ProjectCard: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => setIsMenuOpen((prev) => !prev)}
-          className="flex items-center gap-1 text-[#69655F] dark:text-[#9E988D] hover:text-[#181818] dark:hover:text-white py-1 px-2 rounded-lg transition cursor-pointer"
+          className="flex items-center gap-1 text-[#69655F] dark:text-[#9E988D] hover:text-[#181818] dark:hover:text-white py-2 px-3 rounded-lg transition cursor-pointer min-h-[44px]"
         >
           <MoreVertical className="w-3.5 h-3.5" />
           <span>سایر اقدامات و گزارش‌ها</span>
@@ -296,7 +296,7 @@ export const ProjectCard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => onReportStuck(project)}
-                className="text-[11px] text-rose-600 font-bold hover:underline cursor-pointer"
+                className="text-xs text-rose-600 font-bold hover:underline cursor-pointer min-h-[44px] px-2 flex items-center"
               >
                 گزارش توقف کار
               </button>
@@ -305,7 +305,7 @@ export const ProjectCard: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => onOpenTicketModal(project)}
-              className="text-[11px] text-[#8E6F27] dark:text-[#E5CA8F] font-bold hover:underline cursor-pointer"
+              className="text-xs text-[#8E6F27] dark:text-[#E5CA8F] font-bold hover:underline cursor-pointer min-h-[44px] px-2 flex items-center"
             >
               ثبت تیکت فوری
             </button>

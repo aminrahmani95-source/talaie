@@ -12,6 +12,7 @@ import {
   FileCheck,
 } from 'lucide-react';
 import { toPersianDigits, getTodayPersianString, getUpcomingDays } from '../../utils/jalali';
+import { getDisplayName } from '../../utils/technicianName';
 
 interface Props {
   project: Project;
@@ -65,7 +66,7 @@ export const PreInstallationModal: React.FC<Props> = ({
       measurementsMatched,
       status,
       notes: notes.trim(),
-      inspectedBy: currentUser?.name || 'کارشناس اندازه‌گیری و بازدید',
+      inspectedBy: getDisplayName(currentUser?.name) || 'کارشناس اندازه‌گیری و بازدید',
       inspectedAt: getTodayPersianString(),
     };
 
@@ -117,7 +118,7 @@ export const PreInstallationModal: React.FC<Props> = ({
             </div>
           )}
           <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
-            طبق فرآیند رسمی BPMN گالری طلایی، پیش از اعزام اکیپ نصب، زیرسازی کناف، برق موتور و ابعاد نهایی درگاه‌ها باید توسط کارشناس فنی ارزیابی و تایید شود.
+            طبق فرآیند رسمی گالری طلایی، پیش از اعزام اکیپ نصب، زیرسازی کناف، برق موتور و ابعاد نهایی درگاه‌ها باید توسط کارشناس فنی ارزیابی و تایید شود.
           </p>
 
           {/* 4 Inspection Checkboxes */}
@@ -231,7 +232,7 @@ export const PreInstallationModal: React.FC<Props> = ({
           {/* Postpone date input if not ready */}
           {status === 'SPACE_NOT_READY' && (
             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/40 p-3 rounded-2xl space-y-1.5">
-              <label className="block text-[11px] font-bold text-amber-900 dark:text-amber-200">
+              <label className="block text-xs font-bold text-amber-900 dark:text-amber-200">
                 تاریخ پیشنهادی جهت موکول شدن نصب (انتخاب از تقویم ۳۰ روزه):
               </label>
               <select
