@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Project, User, SystemSettings, ProjectStatus } from '../../types';
 import { ProjectCard } from './ProjectCard';
-import { Calendar, Users, ArrowLeft, Sparkles, AlertOctagon } from 'lucide-react';
-import { getUpcomingDays, toPersianDigits } from '../../utils/jalali';
+import { Calendar, Users, WifiOff, AlertOctagon } from 'lucide-react';
+import { getUpcomingDays, toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 
 interface Props {
   currentUser: User;
@@ -81,13 +81,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
     };
   }, [settings.visibilityWindowDays, projects, currentUser.id]);
 
-  const filteredProjects = projects.filter((p) => {
-    if (p.scheduledDate !== selectedDateKey) return false;
-    if (isLead && viewScope === 'ALL_DAY_JOBS') return true;
-    return isProjectAssignedToMe(p);
-  });
-
-  // Persistent Open Jobs (In-Flight, Stuck, or QC Rejected) regardless of scheduled date
+  // PRIORITY JOBS: In-Flight, Stuck, or QC Rejected that need immediate attention
   const openProjects = projects.filter((p) => {
     if (!isProjectAssignedToMe(p)) return false;
     const isEnRouteOrInProgress = p.status === 'EN_ROUTE' || p.status === 'IN_PROGRESS';
@@ -96,100 +90,97 @@ export const TechnicianDashboard: React.FC<Props> = ({
     return isEnRouteOrInProgress || isStuck || isQcRejected;
   });
 
+  // OPEN PROJECT IDS for deduplication so no job ever appears twice!
+  const openProjectIds = new Set(openProjects.map((p) => p.id));
+
+  // TODAY'S JOBS (for greeting summary)
+  const todayKey = visibleDays.find((d) => d.isToday)?.dateKey;
+  const todayProjectsCount = projects.filter(
+    (p) => p.scheduledDate === todayKey && isProjectAssignedToMe(p)
+  ).length;
+
+  // SCHEDULED JOBS for selected date (strictly excluding open projects already displayed above)
+  const filteredScheduledProjects = projects.filter((p) => {
+    if (p.scheduledDate !== selectedDateKey) return false;
+    // DEDUPLICATION: if already shown in priority open projects, skip here!
+    if (openProjectIds.has(p.id)) return false;
+    if (isLead && viewScope === 'ALL_DAY_JOBS') return true;
+    return isProjectAssignedToMe(p);
+  });
+
   const selectedDayInfo = visibleDays.find((d) => d.dateKey === selectedDateKey);
 
-  // Find other days that have projects assigned to me
-  const otherDayWithProjects = visibleDays.find(
-    (d) =>
-      d.dateKey !== selectedDateKey &&
-      projects.some((p) => p.scheduledDate === d.dateKey && isProjectAssignedToMe(p))
-  );
-
   return (
-    <div className="space-y-6 max-w-2xl mx-auto safe-bottom-padding">
-      {/* Top Welcome Card with Brand Logo & Obsidian/Gold Style */}
-      <div className="bg-[#212121] rounded-3xl p-5 text-white shadow-xl relative overflow-hidden border border-[#C1A056]/30">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-13 h-13 rounded-2xl bg-white/5 border border-[#C1A056]/40 flex items-center justify-center p-2 shadow-inner">
-              <img
-                src="./talaei-lion-gold.png"
-                alt="نشان گالری طلایی"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-black text-base sm:text-lg text-white">{currentUser.name}</h2>
-              </div>
-              <p className="text-xs text-[#C1A056] font-bold mt-0.5">
-                {currentUser.role === 'LEAD_TECHNICIAN'
-                  ? 'سرپرست اکیپ نصب | گالری طلایی'
-                  : 'تکنسین فنی و اجرای مأموریت | گالری طلایی'}
-              </p>
-            </div>
+    <div className="space-y-4 max-w-xl mx-auto pb-12">
+      {/* Technician Greeting Header (Clean, mobile-first, high contrast) */}
+      <div className="bg-[#212121] rounded-2xl p-4 text-white shadow-md border border-[#C1A056]/30 flex items-center justify-between">
+        <div>
+          <div className="text-xs text-[#E5CA8F] font-bold">
+            {getTodayPersianString()}
           </div>
-
-          <div className="bg-white/10 px-3 py-1.5 rounded-2xl text-center border border-white/10">
-            <span className="text-[10px] text-[#E8E4DC] block">پنجره دید مجاز</span>
-            <span className="font-bold text-xs text-[#C1A056] font-mono">
-              {toPersianDigits(settings.visibilityWindowDays)} روز
-            </span>
+          <h2 className="font-black text-base sm:text-lg text-white mt-0.5">
+            سلام، {currentUser.name}
+          </h2>
+          <div className="text-xs text-[#BDB8AF] mt-0.5">
+            {todayProjectsCount > 0 ? (
+              <span className="text-[#E5CA8F] font-bold font-mono">
+                {toPersianDigits(todayProjectsCount)} مأموریت برای امروز دارید
+              </span>
+            ) : (
+              <span>امروز مأموریت جدیدی ثبت نشده است</span>
+            )}
           </div>
         </div>
 
-        {/* Lead Technician Scope Switcher */}
+        {/* Lead Scope Toggle */}
         {isLead && (
-          <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs">
-            <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-[#C1A056]" />
-              <span>دامنه دید سرپرست:</span>
-            </span>
-            <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl border border-white/10">
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className="text-[10px] text-zinc-400">نمایش:</span>
+            <div className="flex items-center gap-1 bg-white/10 p-0.5 rounded-xl border border-white/10 text-[11px]">
               <button
                 type="button"
                 onClick={() => setViewScope('MY_JOBS')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                className={`px-2 py-1 rounded-lg font-bold transition cursor-pointer ${
                   viewScope === 'MY_JOBS'
                     ? 'bg-[#C1A056] text-[#212121]'
                     : 'text-zinc-300 hover:text-white'
                 }`}
               >
-                مأموریت‌های اکیپ من
+                اکیپ من
               </button>
               <button
                 type="button"
                 onClick={() => setViewScope('ALL_DAY_JOBS')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                className={`px-2 py-1 rounded-lg font-bold transition cursor-pointer ${
                   viewScope === 'ALL_DAY_JOBS'
                     ? 'bg-[#C1A056] text-[#212121]'
                     : 'text-zinc-300 hover:text-white'
                 }`}
               >
-                کل پروژه‌های روز
+                همه
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Persistent Open Jobs Section (Always visible above Day Tabs) */}
+      {/* PRIORITY JOBS: Open, in-flight, stuck, or QC-rejected jobs (Show FIRST) */}
       {openProjects.length > 0 && (
-        <div className="space-y-3 bg-rose-50/40 dark:bg-rose-950/20 p-4 rounded-3xl border border-rose-200/80 dark:border-rose-900/40">
+        <div className="space-y-3 bg-rose-500/10 dark:bg-rose-950/20 p-3.5 rounded-2xl border border-rose-500/30">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2 text-xs font-black text-rose-800 dark:text-rose-300">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
               </span>
-              <span>کارهای باز من (در حال اجرا، متوقف یا برگشتی از QC):</span>
+              <span>کارهای فعال و نیازمند پیگیری:</span>
             </div>
-            <span className="text-[11px] bg-rose-600 text-white px-2.5 py-0.5 rounded-full font-bold font-mono shadow-2xs">
-              {toPersianDigits(openProjects.length)} مورد
+            <span className="text-[11px] bg-rose-600 text-white px-2 py-0.5 rounded-full font-bold font-mono">
+              {toPersianDigits(openProjects.length)}
             </span>
           </div>
 
-          <div className="space-y-4 pt-1">
+          <div className="space-y-3">
             {openProjects.map((proj) => (
               <ProjectCard
                 key={`open-${proj.id}`}
@@ -209,16 +200,23 @@ export const TechnicianDashboard: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Horizontal Day Tabs (Restricted by Visibility Window) */}
+      {/* Horizontal Day Tabs */}
       <div>
-        <div className="text-xs font-bold text-[#212121] dark:text-[#F5EFEB] mb-2 px-1 flex items-center justify-between">
-          <span>روزهای کاری مجاز:</span>
-          <span className="text-[11px] text-slate-500 dark:text-zinc-400">
-            (برنامه‌ریزی {toPersianDigits(settings.visibilityWindowDays)} روز آینده)
+        <div className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] mb-2 px-1 flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-[#8E6F27] dark:text-[#E5CA8F]" />
+            <span>برنامه روزهای کاری:</span>
+          </span>
+          <span className="text-[11px] text-[#69655F] dark:text-[#9E988D] font-mono">
+            (پنجره دید {toPersianDigits(settings.visibilityWindowDays)} روز آینده)
           </span>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar" role="tablist" aria-label="روزهای کاری">
+        <div
+          className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar"
+          role="tablist"
+          aria-label="روزهای کاری"
+        >
           {visibleDays.map((day) => {
             const isSelected = day.dateKey === selectedDateKey;
             const count = projects.filter(
@@ -233,29 +231,29 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setSelectedDateKey(day.dateKey)}
-                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[80px] min-h-[72px] py-2.5 px-3 rounded-2xl border transition text-center active:scale-95 cursor-pointer ${
+                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[72px] min-h-[64px] py-2 px-2.5 rounded-xl border transition text-center active:scale-95 cursor-pointer ${
                   isSelected
-                    ? 'bg-[#212121] dark:bg-[#C1A056] text-[#C1A056] dark:text-[#121212] border-[#C1A056] shadow-sm font-bold'
-                    : 'bg-white dark:bg-[#1C1C1C] text-slate-700 dark:text-zinc-300 border-[#E8E4DC] dark:border-[#2D2D2D] hover:border-[#C1A056]/50'
+                    ? 'bg-[#212121] text-[#E5CA8F] border-[#C1A056] shadow-xs font-bold ring-1 ring-[#C1A056]/30'
+                    : 'bg-white dark:bg-[#1A1A1A] text-[#4A4742] dark:text-[#BDB8AF] border-[#E2DDD4] dark:border-[#2C2C2C] hover:border-[#C1A056]/50'
                 }`}
               >
                 <span className="text-[11px] font-bold">
                   {day.isToday ? 'امروز' : day.dayOffset === 1 ? 'فردا' : day.persianDayName}
                 </span>
-                <span className="text-base font-black font-mono my-0.5">
+                <span className="text-sm font-black font-mono my-0.5">
                   {toPersianDigits(day.persianDayNum)}
                 </span>
-                <span className="text-[9px] opacity-80">{day.persianMonthName}</span>
+                <span className="text-[9px] opacity-75">{day.persianMonthName}</span>
 
                 {count > 0 && (
                   <span
-                    className={`mt-1 text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
+                    className={`mt-1 text-[9px] px-1.5 rounded-full font-bold font-mono ${
                       isSelected
-                        ? 'bg-[#C1A056] dark:bg-[#121212] text-[#212121] dark:text-[#C1A056]'
-                        : 'bg-[#FAF7F2] dark:bg-[#252525] text-[#A88738] dark:text-[#C1A056] border border-[#C1A056]/30'
+                        ? 'bg-[#C1A056] text-[#212121]'
+                        : 'bg-[#FAF7F2] dark:bg-[#252525] text-[#8E6F27] dark:text-[#E5CA8F] border border-[#C1A056]/30'
                     }`}
                   >
-                    {toPersianDigits(count)} مأموریت
+                    {toPersianDigits(count)}
                   </span>
                 )}
               </button>
@@ -264,44 +262,29 @@ export const TechnicianDashboard: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Day Projects List */}
-      <div className="space-y-4">
+      {/* Selected Day Scheduled Jobs */}
+      <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-[#212121] dark:text-[#F5EFEB]">
-            <Calendar className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-            <span>
-              مأموریت‌های {selectedDayInfo?.persianDayName} {selectedDayInfo?.persianDayNum}{' '}
-              {selectedDayInfo?.persianMonthName}
-            </span>
+          <div className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF]">
+            مأموریت‌های {selectedDayInfo?.persianDayName} {selectedDayInfo?.persianDayNum}{' '}
+            {selectedDayInfo?.persianMonthName}:
           </div>
-          <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono font-bold">
-            {toPersianDigits(filteredProjects.length)} مأموریت
+          <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-mono font-bold">
+            {toPersianDigits(filteredScheduledProjects.length)} مأموریت
           </span>
         </div>
 
-        {filteredProjects.length === 0 ? (
-          <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-8 text-center border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#FAF7F2] dark:bg-[#222222] border border-[#E8E4DC] dark:border-[#333333] flex items-center justify-center mx-auto text-[#C1A056]">
-              <Calendar className="w-6 h-6" aria-hidden="true" />
-            </div>
-            <h4 className="font-bold text-sm text-[#212121] dark:text-white">برای این روز مأموریتی ثبت نشده است</h4>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-sm mx-auto">
-              در حال حاضر پروژه‌ای برای این تاریخ در کارتابل شما نیست.
+        {filteredScheduledProjects.length === 0 ? (
+          <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-6 text-center border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-1">
+            <h4 className="font-bold text-xs sm:text-sm text-[#181818] dark:text-white">
+              مأموریتی برای این روز برنامه‌ریزی نشده است
+            </h4>
+            <p className="text-[11px] text-[#69655F] dark:text-[#9E988D]">
+              پروژه‌های باز و در حال اجرای شما در بالای صفحه نمایش داده شده‌اند.
             </p>
-
-            {otherDayWithProjects && (
-              <button
-                type="button"
-                onClick={() => setSelectedDateKey(otherDayWithProjects.dateKey)}
-                className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 bg-[#FAF7F2] dark:bg-[#252525] hover:bg-[#F2ECE1] text-[#A88738] dark:text-[#C1A056] border border-[#C1A056]/40 rounded-xl text-xs font-bold transition cursor-pointer"
-              >
-                <span>مشاهده مأموریت‌های {otherDayWithProjects.isToday ? 'امروز' : otherDayWithProjects.dayOffset === 1 ? 'فردا' : otherDayWithProjects.persianDayName}</span>
-                <ArrowLeft className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
         ) : (
-          filteredProjects.map((proj) => (
+          filteredScheduledProjects.map((proj) => (
             <ProjectCard
               key={proj.id}
               project={proj}
