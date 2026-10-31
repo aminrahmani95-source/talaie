@@ -897,7 +897,7 @@ export const App: React.FC = () => {
   const isQcManager = currentUser.role === 'QC_MANAGER';
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2] dark:bg-[#121212] text-[#212121] dark:text-[#F5EFEB] flex flex-col font-sans selection:bg-[#C1A056] selection:text-white transition-colors duration-200">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#FAF7F2] dark:bg-[#121212] text-[#212121] dark:text-[#F5EFEB] flex flex-col font-sans selection:bg-[#C1A056] selection:text-white transition-colors duration-200">
       {/* Skip to Content for Accessibility */}
       <a
         href="#main-content"

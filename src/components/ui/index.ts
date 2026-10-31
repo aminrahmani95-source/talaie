@@ -11,3 +11,4 @@ export * from './Skeleton';
 export * from './Avatar';
 export * from './Field';
 export * from './Toast';
+export * from './DashboardSkeleton';

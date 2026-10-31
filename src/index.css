@@ -92,6 +92,9 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
   }
 
   body {
@@ -104,6 +107,9 @@
     min-height: 100vh;
     touch-action: manipulation;
     transition: background-color 0.2s ease, color 0.2s ease;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
   }
 
   @media (min-width: 1024px) {
