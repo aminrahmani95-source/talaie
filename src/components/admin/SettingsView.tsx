@@ -189,7 +189,7 @@ export const SettingsView: React.FC<Props> = ({
             <Sparkles className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
             حالت نمایشی سامانه (Theme Mode)
           </h3>
-          <span className="text-xs font-mono text-[#C1A056] font-bold">
+          <span className="text-xs text-[#C1A056] font-bold">
             {isDarkMode ? 'حالت شب فعال است' : 'حالت روز فعال است'}
           </span>
         </div>
@@ -252,7 +252,7 @@ export const SettingsView: React.FC<Props> = ({
             <div>
               <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                 <label htmlFor="settings-visibility-slider">پنجره دید تکنسین‌ها:</label>
-                <span className="font-bold text-[#A88738] dark:text-[#C1A056] font-mono">
+                <span className="font-bold text-[#A88738] dark:text-[#C1A056]">
                   {toPersianDigits(visibilityDays)} روز آینده
                 </span>
               </div>
@@ -279,7 +279,7 @@ export const SettingsView: React.FC<Props> = ({
               <Wrench className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
               بانک پیش‌فرض ابزارها (تجهیزات دکمه «فول ابزار»)
             </h3>
-            <span className="text-xs text-[#A88738] dark:text-[#C1A056] font-mono font-bold">
+            <span className="text-xs text-[#A88738] dark:text-[#C1A056] font-bold">
               {toPersianDigits(tools.length)} قلم ابزار
             </span>
           </div>
@@ -399,7 +399,7 @@ export const SettingsView: React.FC<Props> = ({
 
             {migrationProgress && (
               <div className="space-y-1">
-                <div className="flex justify-between text-xs font-mono text-[#C1A056]">
+                <div className="flex justify-between text-xs text-[#C1A056]">
                   <span>در حال انتقال تصویر {toPersianDigits(migrationProgress.current)} از {toPersianDigits(migrationProgress.total)}...</span>
                   <span>{Math.round((migrationProgress.current / migrationProgress.total) * 100)}%</span>
                 </div>

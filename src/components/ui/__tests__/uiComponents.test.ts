@@ -58,6 +58,32 @@ describe('Shared UI Components', () => {
       const rejected = renderToString(createElement(StatusPill, { qcStatus: 'REJECTED' }));
       expect(rejected).toContain('نیاز به اصلاح');
     });
+
+    it('prioritizes project status when qcStatus is NOT_STARTED', () => {
+      // status IN_PROGRESS + qcStatus NOT_STARTED renders «در حال نصب»
+      const inProgress = renderToString(
+        createElement(StatusPill, { status: 'IN_PROGRESS', qcStatus: 'NOT_STARTED' })
+      );
+      expect(inProgress).toContain('در حال نصب');
+
+      // status EN_ROUTE + qcStatus NOT_STARTED renders «در مسیر»
+      const enRoute = renderToString(
+        createElement(StatusPill, { status: 'EN_ROUTE', qcStatus: 'NOT_STARTED' })
+      );
+      expect(enRoute).toContain('در مسیر');
+
+      // status SCHEDULED + qcStatus NOT_STARTED renders «برنامه‌ریزی‌شده»
+      const scheduled = renderToString(
+        createElement(StatusPill, { status: 'SCHEDULED', qcStatus: 'NOT_STARTED' })
+      );
+      expect(scheduled).toContain('برنامه‌ریزی‌شده');
+
+      // qcStatus PENDING still renders «در انتظار QC»
+      const pendingWithStatus = renderToString(
+        createElement(StatusPill, { status: 'IN_PROGRESS', qcStatus: 'PENDING' })
+      );
+      expect(pendingWithStatus).toContain('در انتظار QC');
+    });
   });
 
   describe('SegmentedControl', () => {

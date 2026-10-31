@@ -83,8 +83,8 @@ export const ReportStuckModal: React.FC<Props> = ({
               <h3 id="report-stuck-title" className="font-black text-base sm:text-lg text-white">
                 ثبت توقف کار سر پروژه (پرونده استاک)
               </h3>
-              <p className="text-xs text-rose-300 font-mono mt-0.5">
-                {project.code} • {project.title}
+              <p className="text-xs text-rose-300 mt-0.5">
+                <span className="font-mono">{project.code}</span> • {project.title}
               </p>
             </div>
           </div>

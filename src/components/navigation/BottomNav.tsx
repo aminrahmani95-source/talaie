@@ -92,7 +92,7 @@ export const BottomNav: React.FC<Props> = ({
                   />
                   {item.badge !== undefined && (
                     <span
-                      className={`absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full text-xs font-mono font-bold flex items-center justify-center ${
+                      className={`absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full text-xs font-bold flex items-center justify-center ${
                         item.badgeColor || 'bg-[#C1A056] text-white'
                       }`}
                     >

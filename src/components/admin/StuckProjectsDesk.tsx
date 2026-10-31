@@ -231,7 +231,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
           <div className="text-xs text-[#69655F] dark:text-[#9E988D]">توقف‌های باز</div>
-          <div className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1 font-mono flex items-center gap-1.5">
+          <div className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1.5">
             <span>{toPersianDigits(openIncidentsCount)}</span>
             {openIncidentsCount > 0 && (
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
@@ -241,21 +241,21 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
 
         <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
           <div className="text-xs text-[#69655F] dark:text-[#9E988D]">حل در مهلت ۷۲ ساعت</div>
-          <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
+          <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
             {toPersianDigits(complianceRate)}٪
           </div>
         </div>
 
         <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
           <div className="text-xs text-[#69655F] dark:text-[#9E988D]">کل توقف‌ها</div>
-          <div className="text-xl font-black text-[#181818] dark:text-white mt-1 font-mono">
+          <div className="text-xl font-black text-[#181818] dark:text-white mt-1">
             {toPersianDigits(allIncidents.length)} مورد
           </div>
         </div>
 
         <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-3.5 border border-[#C1A056]/30 shadow-2xs">
           <div className="text-xs text-[#8E6F27] dark:text-[#E5CA8F] font-bold">مهلت رفع توقف</div>
-          <div className="text-xs text-[#181818] dark:text-white mt-2 font-mono font-bold">
+          <div className="text-xs text-[#181818] dark:text-white mt-2 font-bold">
             حداکثر ۷۲ ساعت
           </div>
         </div>
@@ -381,7 +381,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                     <Flame className="w-4 h-4 text-rose-500" />
                     <span>علت اعلام توقف:</span>
                   </div>
-                  <span className="font-mono text-xs">
+                  <span className="text-xs">
                     {activeIncident?.stuckAt ? formatJalaliDateTime(activeIncident.stuckAt) : ''}
                   </span>
                 </div>

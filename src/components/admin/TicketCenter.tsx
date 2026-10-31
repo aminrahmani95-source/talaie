@@ -172,7 +172,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
                       <span>اقدام انجام شده:</span>
                     </span>
                     {t.resolvedAt && (
-                      <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-normal font-mono">
+                      <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-normal">
                         {formatJalaliDateTime(t.resolvedAt)}
                       </span>
                     )}

@@ -76,7 +76,7 @@ export const ToolChecklistDrawer: React.FC<Props> = ({ project, onClose }) => {
         <div className="bg-[#FAF7F2] dark:bg-[#202020] px-6 py-3 border-b border-[#E8E4DC] dark:border-[#2D2D2D] shrink-0">
           <div className="flex items-center justify-between text-xs text-[#212121] dark:text-white font-bold mb-1.5">
             <span>وضعیت بارگیری در خودرو:</span>
-            <span className="font-mono text-[#A88738] dark:text-[#C1A056]">
+            <span className="text-[#A88738] dark:text-[#C1A056]">
               {toPersianDigits(checkedTools.length)} از {toPersianDigits(tools.length)} قلم ({toPersianDigits(progress)}٪)
             </span>
           </div>

@@ -30,7 +30,7 @@ export const StatusPill: React.FC<StatusPillProps> = ({
   const sizeClasses = size === 'sm' ? 'text-xs px-2.5 py-1 gap-1.5' : 'text-sm px-3 py-1.5 gap-2';
 
   // Handle QC Status if provided explicitly or alone
-  if (qcStatus) {
+  if (qcStatus && qcStatus !== 'NOT_STARTED') {
     switch (qcStatus) {
       case 'APPROVED':
         return (
@@ -59,16 +59,8 @@ export const StatusPill: React.FC<StatusPillProps> = ({
             <span>{customLabel || 'در انتظار QC'}</span>
           </span>
         );
-      case 'NOT_STARTED':
       default:
-        return (
-          <span
-            className={`inline-flex items-center font-medium rounded-full bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 ${sizeClasses} ${className}`}
-          >
-            <MinusCircle className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-            <span>{customLabel || 'شروع‌نشده'}</span>
-          </span>
-        );
+        break;
     }
   }
 
@@ -125,6 +117,16 @@ export const StatusPill: React.FC<StatusPillProps> = ({
       );
 
     default:
+      if (qcStatus === 'NOT_STARTED') {
+        return (
+          <span
+            className={`inline-flex items-center font-medium rounded-full bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 ${sizeClasses} ${className}`}
+          >
+            <MinusCircle className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+            <span>{customLabel || 'شروع‌نشده'}</span>
+          </span>
+        );
+      }
       return customLabel ? (
         <span
           className={`inline-flex items-center font-medium rounded-full bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 ${sizeClasses} ${className}`}

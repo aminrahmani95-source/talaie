@@ -273,7 +273,7 @@ export const QcDesk: React.FC<Props> = ({
               <Camera className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
               <span>عکس‌های قبل و بعد از نصب:</span>
             </h4>
-            <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-mono">
+            <span className="text-xs text-[#69655F] dark:text-[#9E988D]">
               {toPersianDigits(beforePhotos.length)} قبل / {toPersianDigits(afterPhotos.length)} بعد
             </span>
           </div>
@@ -394,7 +394,7 @@ export const QcDesk: React.FC<Props> = ({
                         }`}
                       />
                     ))}
-                    <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-bold mr-1 font-mono">
+                    <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-bold mr-1">
                       {selectedProject.customerSatisfaction
                         ? `${toPersianDigits(selectedProject.customerSatisfaction)} از 5`
                         : '—'}
@@ -509,7 +509,7 @@ export const QcDesk: React.FC<Props> = ({
                   }`}
                 />
               ))}
-              <span className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] mr-2 font-mono">
+              <span className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] mr-2">
                 {toPersianDigits(selectedProject.qcScore || 5)} از 5
               </span>
             </div>
@@ -555,7 +555,7 @@ export const QcDesk: React.FC<Props> = ({
                   </button>
                 ))}
                 {qcScore ? (
-                  <span className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] mr-2 font-mono">
+                  <span className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] mr-2">
                     {toPersianDigits(qcScore)} از 5
                   </span>
                 ) : (
@@ -690,7 +690,7 @@ export const QcDesk: React.FC<Props> = ({
                     {/* Metadata Pills */}
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap text-xs">
                       {totalPhotos > 0 && (
-                        <span className="inline-flex items-center gap-1 bg-[#FAF7F2] dark:bg-[#141414] text-[#4A4742] dark:text-[#BDB8AF] px-2 py-0.5 rounded-md border border-[#E2DDD4] dark:border-[#282828] font-mono">
+                        <span className="inline-flex items-center gap-1 bg-[#FAF7F2] dark:bg-[#141414] text-[#4A4742] dark:text-[#BDB8AF] px-2 py-0.5 rounded-md border border-[#E2DDD4] dark:border-[#282828]">
                           <Camera className="w-3 h-3 text-[#8E6F27] dark:text-[#E5CA8F]" />
                           <span>{toPersianDigits(totalPhotos)} عکس</span>
                         </span>
@@ -707,7 +707,7 @@ export const QcDesk: React.FC<Props> = ({
                         <Avatar name={leadName || 'سرپرست'} id={leadUser?.id} size="sm" />
                         <span className="truncate max-w-[90px]">{leadName || 'سرپرست'}</span>
                       </div>
-                      <span className="font-mono">
+                      <span>
                         {toPersianDigits(p.shadePanels)} شید / {toPersianDigits(p.curtainPanels)} پرده
                       </span>
                     </div>
@@ -759,7 +759,7 @@ export const QcDesk: React.FC<Props> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-full flex items-center justify-between text-white pb-3">
-              <span className="text-xs font-mono">
+              <span className="text-xs">
                 عکس {toPersianDigits(previewPhotoIndex + 1)} از {toPersianDigits(allProjectPhotos.length)}
               </span>
               <button

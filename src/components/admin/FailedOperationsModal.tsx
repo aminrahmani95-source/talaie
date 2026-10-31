@@ -175,14 +175,14 @@ export const FailedOperationsModal: React.FC<Props> = ({
                     )}
                   </div>
 
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1 font-mono">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-zinc-400" />
                     <span>{formatJalaliDateTime(new Date(op.failedAt))}</span>
                   </div>
                 </div>
 
                 {/* Error message */}
-                <div className="p-3 rounded-xl bg-white/80 dark:bg-black/40 border border-rose-500/20 text-rose-600 dark:text-rose-300 text-xs font-mono leading-relaxed break-all">
+                <div className="p-3 rounded-xl bg-white/80 dark:bg-black/40 border border-rose-500/20 text-rose-600 dark:text-rose-300 text-xs leading-relaxed break-all">
                   <span className="font-bold text-rose-700 dark:text-rose-400">علت خطا: </span>
                   {op.errorReason}
                 </div>
@@ -190,7 +190,7 @@ export const FailedOperationsModal: React.FC<Props> = ({
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-1 border-t border-rose-500/10">
                   <span className="text-xs text-zinc-500">
-                    تعداد تلاش‌ها: <strong className="font-mono text-zinc-700 dark:text-zinc-300">{toPersianDigits(op.retryCount)}</strong>
+                    تعداد تلاش‌ها: <strong className="text-zinc-700 dark:text-zinc-300">{toPersianDigits(op.retryCount)}</strong>
                   </span>
                   <div className="flex items-center gap-2">
                     <button

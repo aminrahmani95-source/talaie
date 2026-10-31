@@ -102,9 +102,9 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
               </div>
             </div>
 
-            <div className="text-left font-mono space-y-1">
+            <div className="text-left space-y-1">
               <div className="text-xs font-bold text-slate-500">شماره سفارش:</div>
-              <div className="text-sm font-black text-[#212121] bg-white border border-[#E8E4DC] px-2.5 py-1 rounded-lg">
+              <div className="text-sm font-black text-[#212121] bg-white border border-[#E8E4DC] px-2.5 py-1 rounded-lg font-mono">
                 {project.code || '—'}
               </div>
               <div className="text-xs text-slate-500 mt-1">
@@ -145,24 +145,24 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
           <div className="overflow-hidden rounded-2xl border border-[#E8E4DC] bg-white">
             <div className="bg-[#212121] px-4 py-2.5 text-white flex items-center justify-between text-xs font-bold">
               <span>مشخصات فنی و مقادیر تحویل‌شده پروژه:</span>
-              <span className="text-[#C1A056] font-mono">{project.title}</span>
+              <span className="text-[#C1A056] font-bold">{project.title}</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y divide-slate-100 text-center text-xs p-2">
               <div className="p-2.5">
                 <span className="text-slate-400 block text-xs">شیدهای هوشمند:</span>
-                <span className="font-black text-base text-[#212121] font-mono mt-1 block">
+                <span className="font-black text-base text-[#212121] mt-1 block">
                   {toPersianDigits(project.shadePanels)} لت
                 </span>
               </div>
               <div className="p-2.5">
                 <span className="text-slate-400 block text-xs">پرده و حریر دکوراتیو:</span>
-                <span className="font-black text-base text-[#C1A056] font-mono mt-1 block">
+                <span className="font-black text-base text-[#C1A056] mt-1 block">
                   {toPersianDigits(project.curtainPanels)} لت
                 </span>
               </div>
               <div className="p-2.5">
                 <span className="text-slate-400 block text-xs">متراژ تقریبی:</span>
-                <span className="font-black text-sm text-slate-700 font-mono mt-1 block">
+                <span className="font-black text-sm text-slate-700 mt-1 block">
                   {toPersianDigits(project.approximateArea || '—')} مترمربع
                 </span>
               </div>

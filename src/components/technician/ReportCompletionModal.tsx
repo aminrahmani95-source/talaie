@@ -237,7 +237,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
             <Camera className="w-4 h-4" />
             <span>۱. عکس‌ها</span>
             {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
-              <span className="bg-[#C1A056] text-[#212121] text-xs px-1.5 h-4 rounded-full inline-flex items-center justify-center font-mono font-bold">
+              <span className="bg-[#C1A056] text-[#212121] text-xs px-1.5 h-4 rounded-full inline-flex items-center justify-center font-bold">
                 {toPersianDigits(beforePhotos.length + afterPhotos.length)}
               </span>
             )}
@@ -580,7 +580,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     </button>
                   ))}
                   {satisfaction ? (
-                    <span className="text-xs font-bold text-[#181818] dark:text-white mr-2 font-mono">
+                    <span className="text-xs font-bold text-[#181818] dark:text-white mr-2">
                       {toPersianDigits(satisfaction)} از 5
                     </span>
                   ) : (

@@ -293,28 +293,28 @@ export const TechniciansManager: React.FC<Props> = ({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
           <div className="text-xs text-[#69655F] dark:text-[#9E988D]">کل اعضا</div>
-          <div className="text-xl font-black text-[#181818] dark:text-white mt-1 font-mono">
+          <div className="text-xl font-black text-[#181818] dark:text-white mt-1">
             {toPersianDigits(users.length)} نفر
           </div>
         </div>
 
         <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
           <div className="text-xs text-[#8E6F27] dark:text-[#E5CA8F] font-bold">مسئولین QC</div>
-          <div className="text-xl font-black text-[#181818] dark:text-white mt-1 font-mono">
+          <div className="text-xl font-black text-[#181818] dark:text-white mt-1">
             {toPersianDigits(qcLeads.length)} نفر
           </div>
         </div>
 
         <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
           <div className="text-xs text-[#8E6F27] dark:text-[#E5CA8F] font-bold">سرپرستان اکیپ</div>
-          <div className="text-xl font-black text-[#181818] dark:text-white mt-1 font-mono">
+          <div className="text-xl font-black text-[#181818] dark:text-white mt-1">
             {toPersianDigits(crewLeads.length)} نفر
           </div>
         </div>
 
         <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
           <div className="text-xs text-[#69655F] dark:text-[#9E988D]">تکنسین‌های نصب</div>
-          <div className="text-xl font-black text-[#181818] dark:text-white mt-1 font-mono">
+          <div className="text-xl font-black text-[#181818] dark:text-white mt-1">
             {toPersianDigits(crewMembers.length)} نفر
           </div>
         </div>

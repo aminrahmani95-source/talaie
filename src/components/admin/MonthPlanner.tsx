@@ -104,7 +104,7 @@ export const MonthPlanner: React.FC<Props> = ({
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
-                <span className="text-xs px-2 font-mono text-[#8E6F27] dark:text-[#E5CA8F] font-bold">
+                <span className="text-xs px-2 text-[#8E6F27] dark:text-[#E5CA8F] font-bold">
                   {toPersianDigits(startIndex + 1)} تا {toPersianDigits(startIndex + 4)}
                 </span>
                 <button
@@ -143,7 +143,7 @@ export const MonthPlanner: React.FC<Props> = ({
             <div className="flex items-center gap-2 text-rose-800 dark:text-rose-300 font-black text-xs sm:text-sm">
               <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" />
               <span>پروژه‌های نیازمند پیگیری فوری (معوق، متوقف یا برگشتی):</span>
-              <span className="text-xs bg-rose-600 text-white px-2 py-0.5 rounded-full font-bold font-mono">
+              <span className="text-xs bg-rose-600 text-white px-2 py-0.5 rounded-full font-bold">
                 {toPersianDigits(overdueOrReturnedProjects.length)}
               </span>
             </div>
@@ -231,7 +231,7 @@ export const MonthPlanner: React.FC<Props> = ({
                     <span className="font-bold text-xs text-[#181818] dark:text-[#F5F3EF]">
                       {day.isToday ? 'امروز' : day.dayOffset === 1 ? 'فردا' : day.persianDayName}
                     </span>
-                    <span className="text-xs opacity-80 font-mono text-[#69655F] dark:text-[#9E988D]">
+                    <span className="text-xs opacity-80 text-[#69655F] dark:text-[#9E988D]">
                       {day.persianDayNum} {day.persianMonthName}
                     </span>
                     <span className="text-xs text-[#8A857D] dark:text-[#807B72] mr-2">
@@ -273,7 +273,7 @@ export const MonthPlanner: React.FC<Props> = ({
                       <span className="font-black text-sm">
                         {day.isToday ? 'امروز' : day.dayOffset === 1 ? 'فردا' : day.persianDayName}
                       </span>
-                      <span className="text-xs opacity-80 font-mono">
+                      <span className="text-xs opacity-80">
                         {day.persianDayNum} {day.persianMonthName}
                       </span>
                     </div>
@@ -349,7 +349,7 @@ export const MonthPlanner: React.FC<Props> = ({
                   <span className="font-black text-sm">
                     {day.isToday ? 'امروز' : day.dayOffset === 1 ? 'فردا' : day.persianDayName}
                   </span>
-                  <span className="text-xs opacity-80 font-mono">
+                  <span className="text-xs opacity-80">
                     {day.persianDayNum} {day.persianMonthName}
                   </span>
                 </div>

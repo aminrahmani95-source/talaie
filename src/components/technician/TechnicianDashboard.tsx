@@ -124,7 +124,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
           </h2>
           <div className="text-xs text-[#BDB8AF] mt-0.5">
             {todayProjectsCount > 0 ? (
-              <span className="text-[#E5CA8F] font-bold font-mono">
+              <span className="text-[#E5CA8F] font-bold">
                 {toPersianDigits(todayProjectsCount)} مأموریت برای امروز دارید
               </span>
             ) : (
@@ -176,7 +176,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               </span>
               <span>کارهای فعال و نیازمند پیگیری:</span>
             </div>
-            <span className="text-xs bg-rose-600 text-white px-2.5 py-1 rounded-full font-bold font-mono">
+            <span className="text-xs bg-rose-600 text-white px-2.5 py-1 rounded-full font-bold">
               {toPersianDigits(openProjects.length)}
             </span>
           </div>
@@ -208,7 +208,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
             <Calendar className="w-3.5 h-3.5 text-[#8E6F27] dark:text-[#E5CA8F]" />
             <span>برنامه روزهای کاری:</span>
           </span>
-          <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-mono">
+          <span className="text-xs text-[#69655F] dark:text-[#9E988D]">
             (پنجره دید {toPersianDigits(settings.visibilityWindowDays)} روز آینده)
           </span>
         </div>
@@ -241,14 +241,14 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 <span className="text-xs font-bold">
                   {day.isToday ? 'امروز' : day.dayOffset === 1 ? 'فردا' : day.persianDayName}
                 </span>
-                <span className="text-sm font-black font-mono my-0.5">
+                <span className="text-sm font-black my-0.5">
                   {toPersianDigits(day.persianDayNum)}
                 </span>
                 <span className="text-xs opacity-75">{day.persianMonthName}</span>
 
                 {count > 0 && (
                   <span
-                    className={`mt-1 text-xs px-2 py-0.5 rounded-full font-bold font-mono ${
+                    className={`mt-1 text-xs px-2 py-0.5 rounded-full font-bold ${
                       isSelected
                         ? 'bg-[#C1A056] text-[#212121]'
                         : 'bg-[#FAF7F2] dark:bg-[#252525] text-[#8E6F27] dark:text-[#E5CA8F] border border-[#C1A056]/30'
@@ -270,7 +270,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
             مأموریت‌های {selectedDayInfo?.persianDayName} {selectedDayInfo?.persianDayNum}{' '}
             {selectedDayInfo?.persianMonthName}:
           </div>
-          <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-mono font-bold">
+          <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-bold">
             {toPersianDigits(filteredScheduledProjects.length)} مأموریت
           </span>
         </div>

@@ -99,7 +99,7 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
         <span className="font-bold text-[#212121] dark:text-white">{label}</span>
-        <span className="font-bold text-[#C1A056] font-mono">{toPersianDigits(value)} از 5</span>
+        <span className="font-bold text-[#C1A056]">{toPersianDigits(value)} از 5</span>
       </div>
       <p className="text-xs text-slate-500 dark:text-zinc-400">{subLabel}</p>
       <div className="flex items-center gap-1 pt-1">

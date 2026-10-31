@@ -900,7 +900,7 @@ export const App: React.FC = () => {
           </div>
           <div className="text-center">
             <div className="text-base font-black text-white">سامانه گالری طلایی</div>
-            <div className="text-xs text-[#C1A056] mt-1 font-mono">در حال بررسی نشست کاربری...</div>
+            <div className="text-xs text-[#C1A056] mt-1">در حال بررسی نشست کاربری...</div>
           </div>
         </div>
       </div>
