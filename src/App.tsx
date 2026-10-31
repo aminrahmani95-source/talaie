@@ -19,27 +19,65 @@ import {
   isValidStatusTransition,
 } from './utils/roleGuards';
 import { Header } from './components/Header';
-import { FailedOperationsModal } from './components/admin/FailedOperationsModal';
 import { LoginModal } from './components/LoginModal';
-import { ProposalViewerModal } from './components/ProposalViewerModal';
-import { TicketModal } from './components/TicketModal';
-import { MonthPlanner } from './components/admin/MonthPlanner';
-import { ProjectFormModal, ProjectFormSaveData } from './components/admin/ProjectFormModal';
-import { QcDesk } from './components/admin/QcDesk';
-import { TicketCenter } from './components/admin/TicketCenter';
-import { TechniciansManager } from './components/admin/TechniciansManager';
-import { SettingsView } from './components/admin/SettingsView';
-import { StuckProjectsDesk } from './components/admin/StuckProjectsDesk';
-import { PreInstallationModal } from './components/admin/PreInstallationModal';
-import { PersonnelEvaluationModal } from './components/admin/PersonnelEvaluationModal';
 import { TechnicianDashboard } from './components/technician/TechnicianDashboard';
-import { ToolChecklistDrawer } from './components/technician/ToolChecklistDrawer';
-import { ReportCompletionModal } from './components/technician/ReportCompletionModal';
-import { HandoverCertificateModal } from './components/HandoverCertificateModal';
-import { ReportStuckModal } from './components/technician/ReportStuckModal';
 import { Toast, ToastMessage } from './components/Toast';
 import { Sidebar } from './components/navigation/Sidebar';
 import { BottomNav, ManagerTab } from './components/navigation/BottomNav';
+import { DashboardSkeleton } from './components/ui/DashboardSkeleton';
+import type { ProjectFormSaveData } from './components/admin/ProjectFormModal';
+
+// Code-split Manager Screens so technicians never download manager JS
+const MonthPlanner = React.lazy(() =>
+  import('./components/admin/MonthPlanner').then((m) => ({ default: m.MonthPlanner }))
+);
+const QcDesk = React.lazy(() =>
+  import('./components/admin/QcDesk').then((m) => ({ default: m.QcDesk }))
+);
+const TicketCenter = React.lazy(() =>
+  import('./components/admin/TicketCenter').then((m) => ({ default: m.TicketCenter }))
+);
+const TechniciansManager = React.lazy(() =>
+  import('./components/admin/TechniciansManager').then((m) => ({ default: m.TechniciansManager }))
+);
+const SettingsView = React.lazy(() =>
+  import('./components/admin/SettingsView').then((m) => ({ default: m.SettingsView }))
+);
+const StuckProjectsDesk = React.lazy(() =>
+  import('./components/admin/StuckProjectsDesk').then((m) => ({ default: m.StuckProjectsDesk }))
+);
+const PreInstallationModal = React.lazy(() =>
+  import('./components/admin/PreInstallationModal').then((m) => ({ default: m.PreInstallationModal }))
+);
+const PersonnelEvaluationModal = React.lazy(() =>
+  import('./components/admin/PersonnelEvaluationModal').then((m) => ({ default: m.PersonnelEvaluationModal }))
+);
+const FailedOperationsModal = React.lazy(() =>
+  import('./components/admin/FailedOperationsModal').then((m) => ({ default: m.FailedOperationsModal }))
+);
+
+// Code-split Modals loaded on demand
+const ProjectFormModal = React.lazy(() =>
+  import('./components/admin/ProjectFormModal').then((m) => ({ default: m.ProjectFormModal }))
+);
+const ProposalViewerModal = React.lazy(() =>
+  import('./components/ProposalViewerModal').then((m) => ({ default: m.ProposalViewerModal }))
+);
+const TicketModal = React.lazy(() =>
+  import('./components/TicketModal').then((m) => ({ default: m.TicketModal }))
+);
+const ToolChecklistDrawer = React.lazy(() =>
+  import('./components/technician/ToolChecklistDrawer').then((m) => ({ default: m.ToolChecklistDrawer }))
+);
+const ReportCompletionModal = React.lazy(() =>
+  import('./components/technician/ReportCompletionModal').then((m) => ({ default: m.ReportCompletionModal }))
+);
+const HandoverCertificateModal = React.lazy(() =>
+  import('./components/HandoverCertificateModal').then((m) => ({ default: m.HandoverCertificateModal }))
+);
+const ReportStuckModal = React.lazy(() =>
+  import('./components/technician/ReportStuckModal').then((m) => ({ default: m.ReportStuckModal }))
+);
 
 export const App: React.FC = () => {
   // Session & Authentication via Supabase Auth
@@ -945,67 +983,69 @@ export const App: React.FC = () => {
             />
 
             <div className="flex-1 min-w-0">
-              {activeTab === 'planner' && (
-                <MonthPlanner
-                  projects={projects}
-                  users={users}
-                  settings={settings}
-                  onUpdateSettings={handleUpdateSettings}
-                  onNewProject={handleOpenNewProject}
-                  onEditProject={handleOpenEditProject}
-                  onDeleteProject={handleDeleteProject}
-                  onMoveProjectDate={handleMoveProjectDate}
-                  onViewProposal={(p) => setProposalModalProject(p)}
-                  onOpenPreInspection={(p) => setPreInspectionProject(p)}
-                />
-              )}
+              <React.Suspense fallback={<DashboardSkeleton />}>
+                {activeTab === 'planner' && (
+                  <MonthPlanner
+                    projects={projects}
+                    users={users}
+                    settings={settings}
+                    onUpdateSettings={handleUpdateSettings}
+                    onNewProject={handleOpenNewProject}
+                    onEditProject={handleOpenEditProject}
+                    onDeleteProject={handleDeleteProject}
+                    onMoveProjectDate={handleMoveProjectDate}
+                    onViewProposal={(p) => setProposalModalProject(p)}
+                    onOpenPreInspection={(p) => setPreInspectionProject(p)}
+                  />
+                )}
 
-              {activeTab === 'qc' && (
-                <QcDesk
-                  projects={projects}
-                  users={users}
-                  currentUser={currentUser}
-                  onPatchProject={handlePatchProject}
-                  onViewProposal={(p) => setProposalModalProject(p)}
-                  onOpenCertificate={(p) => setCertificateModalProject(p)}
-                  onOpenEvaluation={(p) => setEvaluationProject(p)}
-                />
-              )}
+                {activeTab === 'qc' && (
+                  <QcDesk
+                    projects={projects}
+                    users={users}
+                    currentUser={currentUser}
+                    onPatchProject={handlePatchProject}
+                    onViewProposal={(p) => setProposalModalProject(p)}
+                    onOpenCertificate={(p) => setCertificateModalProject(p)}
+                    onOpenEvaluation={(p) => setEvaluationProject(p)}
+                  />
+                )}
 
-              {activeTab === 'stuck' && (
-                <StuckProjectsDesk
-                  projects={projects}
-                  currentUser={currentUser}
-                  onPatchProject={handlePatchProject}
-                />
-              )}
+                {activeTab === 'stuck' && (
+                  <StuckProjectsDesk
+                    projects={projects}
+                    currentUser={currentUser}
+                    onPatchProject={handlePatchProject}
+                  />
+                )}
 
-              {activeTab === 'tickets' && (
-                <TicketCenter
-                  tickets={tickets}
-                  onUpdateTicket={handleUpdateTicket}
-                />
-              )}
+                {activeTab === 'tickets' && (
+                  <TicketCenter
+                    tickets={tickets}
+                    onUpdateTicket={handleUpdateTicket}
+                  />
+                )}
 
-              {activeTab === 'technicians' && (
-                <TechniciansManager
-                  users={users}
-                  onSaveUser={handleSaveUser}
-                  onDeleteUser={handleDeleteUser}
-                />
-              )}
+                {activeTab === 'technicians' && (
+                  <TechniciansManager
+                    users={users}
+                    onSaveUser={handleSaveUser}
+                    onDeleteUser={handleDeleteUser}
+                  />
+                )}
 
-              {activeTab === 'settings' && (
-                <SettingsView
-                  settings={settings}
-                  projects={projects}
-                  onUpdateProjects={setProjects}
-                  isDarkMode={isDarkMode}
-                  onToggleDarkMode={handleToggleDarkMode}
-                  onUpdateSettings={handleUpdateSettings}
-                  onResetData={handleResetData}
-                />
-              )}
+                {activeTab === 'settings' && (
+                  <SettingsView
+                    settings={settings}
+                    projects={projects}
+                    onUpdateProjects={setProjects}
+                    isDarkMode={isDarkMode}
+                    onToggleDarkMode={handleToggleDarkMode}
+                    onUpdateSettings={handleUpdateSettings}
+                    onResetData={handleResetData}
+                  />
+                )}
+              </React.Suspense>
             </div>
 
             <BottomNav
@@ -1036,102 +1076,104 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Modals */}
-      {isProjectFormOpen && (
-        <ProjectFormModal
-          project={editingProject}
-          defaultDate={presetDateKey}
-          users={users}
-          settings={settings}
-          onClose={() => {
-            setIsProjectFormOpen(false);
-            setEditingProject(null);
-            setPresetDateKey(undefined);
+      {/* Modals with Lazy Suspense */}
+      <React.Suspense fallback={null}>
+        {isProjectFormOpen && (
+          <ProjectFormModal
+            project={editingProject}
+            defaultDate={presetDateKey}
+            users={users}
+            settings={settings}
+            onClose={() => {
+              setIsProjectFormOpen(false);
+              setEditingProject(null);
+              setPresetDateKey(undefined);
+            }}
+            onSave={handleSaveProject}
+          />
+        )}
+
+        {proposalModalProject && (
+          <ProposalViewerModal
+            images={proposalModalProject.proposalImages}
+            projectTitle={proposalModalProject.title}
+            onClose={() => setProposalModalProject(null)}
+          />
+        )}
+
+        {toolChecklistProject && (
+          <ToolChecklistDrawer
+            project={toolChecklistProject}
+            onClose={() => setToolChecklistProject(null)}
+          />
+        )}
+
+        {ticketModalProject && (
+          <TicketModal
+            project={ticketModalProject}
+            currentUser={currentUser}
+            onClose={() => setTicketModalProject(null)}
+            onSubmit={handleCreateTicket}
+          />
+        )}
+
+        {completionModalProject && (
+          <ReportCompletionModal
+            project={completionModalProject}
+            onClose={() => setCompletionModalProject(null)}
+            onSubmit={handleReportCompletion}
+          />
+        )}
+
+        {certificateModalProject && (
+          <HandoverCertificateModal
+            project={certificateModalProject}
+            users={users}
+            onClose={() => setCertificateModalProject(null)}
+          />
+        )}
+
+        {preInspectionProject && (
+          <PreInstallationModal
+            project={preInspectionProject}
+            currentUser={currentUser}
+            isOpen={!!preInspectionProject}
+            onClose={() => setPreInspectionProject(null)}
+            onSaveInspection={handleSavePreInspection}
+          />
+        )}
+
+        {evaluationProject && (
+          <PersonnelEvaluationModal
+            project={evaluationProject}
+            users={users}
+            currentUser={currentUser}
+            isOpen={!!evaluationProject}
+            onClose={() => setEvaluationProject(null)}
+            onSaveEvaluation={handleSaveEvaluation}
+          />
+        )}
+
+        {stuckModalProject && (
+          <ReportStuckModal
+            project={stuckModalProject}
+            isOpen={!!stuckModalProject}
+            reporterName={currentUser.name}
+            onClose={() => setStuckModalProject(null)}
+            onSubmit={handleConfirmReportStuck}
+          />
+        )}
+
+        {/* Failed Operations Modal for QC Manager */}
+        <FailedOperationsModal
+          isOpen={isFailedOpsModalOpen}
+          onClose={() => setIsFailedOpsModalOpen(false)}
+          onActionComplete={() => {
+            OfflineQueue.getFailedCount().then(setFailedQueueCount);
+            OfflineQueue.getPendingCount().then(setPendingQueueCount);
           }}
-          onSave={handleSaveProject}
         />
-      )}
-
-      {proposalModalProject && (
-        <ProposalViewerModal
-          images={proposalModalProject.proposalImages}
-          projectTitle={proposalModalProject.title}
-          onClose={() => setProposalModalProject(null)}
-        />
-      )}
-
-      {toolChecklistProject && (
-        <ToolChecklistDrawer
-          project={toolChecklistProject}
-          onClose={() => setToolChecklistProject(null)}
-        />
-      )}
-
-      {ticketModalProject && (
-        <TicketModal
-          project={ticketModalProject}
-          currentUser={currentUser}
-          onClose={() => setTicketModalProject(null)}
-          onSubmit={handleCreateTicket}
-        />
-      )}
-
-      {completionModalProject && (
-        <ReportCompletionModal
-          project={completionModalProject}
-          onClose={() => setCompletionModalProject(null)}
-          onSubmit={handleReportCompletion}
-        />
-      )}
-
-      {certificateModalProject && (
-        <HandoverCertificateModal
-          project={certificateModalProject}
-          users={users}
-          onClose={() => setCertificateModalProject(null)}
-        />
-      )}
-
-      {preInspectionProject && (
-        <PreInstallationModal
-          project={preInspectionProject}
-          currentUser={currentUser}
-          isOpen={!!preInspectionProject}
-          onClose={() => setPreInspectionProject(null)}
-          onSaveInspection={handleSavePreInspection}
-        />
-      )}
-
-      {evaluationProject && (
-        <PersonnelEvaluationModal
-          project={evaluationProject}
-          users={users}
-          currentUser={currentUser}
-          isOpen={!!evaluationProject}
-          onClose={() => setEvaluationProject(null)}
-          onSaveEvaluation={handleSaveEvaluation}
-        />
-      )}
-
-      {stuckModalProject && (
-        <ReportStuckModal
-          project={stuckModalProject}
-          isOpen={!!stuckModalProject}
-          reporterName={currentUser.name}
-          onClose={() => setStuckModalProject(null)}
-          onSubmit={handleConfirmReportStuck}
-        />
-      )}
-
-      {/* Failed Operations Modal for QC Manager */}
-      <FailedOperationsModal
-        isOpen={isFailedOpsModalOpen}
-        onClose={() => setIsFailedOpsModalOpen(false)}
-        onActionComplete={() => {
-          OfflineQueue.getFailedCount().then(setFailedQueueCount);
-          OfflineQueue.getPendingCount().then(setPendingQueueCount);
-        }}
-      />
+      </React.Suspense>
 
       {/* Floating System Toast */}
       <Toast toast={toast} onClose={() => setToast(null)} />

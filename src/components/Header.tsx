@@ -3,7 +3,7 @@ import { User } from '../types';
 import { Moon, Sun, LogOut, X, Cloud, CloudOff, AlertOctagon, Check } from 'lucide-react';
 import { Avatar } from './ui/Avatar';
 import { IconButton } from './ui/IconButton';
-import { getDisplayName } from './admin/TechniciansManager';
+import { getDisplayName } from '../utils/technicianName';
 
 interface Props {
   currentUser: User;

@@ -25,6 +25,9 @@ import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { Sheet } from '../ui/Sheet';
+import { getDisplayName } from '../../utils/technicianName';
+
+export { getDisplayName };
 
 interface Props {
   users: User[];
@@ -33,11 +36,6 @@ interface Props {
 }
 
 type TabFilter = 'ALL' | 'QC_LEADS' | 'CREW_LEADS' | 'CREW';
-
-export const getDisplayName = (rawName?: string) => {
-  if (!rawName) return '';
-  return rawName.replace(/\s*\([^)]*\)\s*$/, '').trim();
-};
 
 export const TechniciansManager: React.FC<Props> = ({
   users,
