@@ -1,4 +1,35 @@
-@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/fonts/Vazirmatn-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/fonts/Vazirmatn-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/fonts/Vazirmatn-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/fonts/Vazirmatn-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 @import "tailwindcss";
 
 @variant dark (&:where(.dark, .dark *));
@@ -15,10 +46,39 @@
     --brand-border: #e8e4dc;
     --brand-border-dark: #2a2a2a;
     --brand-copper: #d5733a;
+
+    /* Theme tokens - Light */
+    --bg-base: #faf7f2;
+    --bg-surface: #ffffff;
+    --bg-elevated: #ffffff;
+    --bg-muted: #f4efe7;
+    --border-subtle: #efebe4;
+    --border-default: #e2ddd4;
+    --border-strong: #c8c2b5;
+    --text-primary: #181818;
+    --text-secondary: #4a4742;
+    --text-muted: #69655f;
+
     color-scheme: light;
   }
 
   .dark {
+    --brand-cream: #121212;
+    --brand-linen: #1b1b1b;
+    --brand-border: #2d2d2d;
+
+    /* Theme tokens - Dark */
+    --bg-base: #121212;
+    --bg-surface: #1b1b1b;
+    --bg-elevated: #242424;
+    --bg-muted: #1e1e1e;
+    --border-subtle: #262626;
+    --border-default: #333333;
+    --border-strong: #444444;
+    --text-primary: #f5f3ef;
+    --text-secondary: #bdb8af;
+    --text-muted: #9e988d;
+
     color-scheme: dark;
   }
 
@@ -35,18 +95,21 @@
   }
 
   body {
-    background-color: #faf7f2;
-    color: #1e1e1e;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-size: 15px;
+    line-height: 1.5;
     margin: 0;
     padding: 0;
     min-height: 100vh;
     touch-action: manipulation;
-    transition: background-color 0.25s ease, color 0.25s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
-  .dark body {
-    background-color: #0f0f0f;
-    color: #f5efeb;
+  @media (min-width: 1024px) {
+    body {
+      font-size: 14px;
+    }
   }
 
   /* Accessible focus visible styles */
@@ -57,8 +120,24 @@
 
   /* Prevent iOS zoom on input focus while maintaining clean sizing */
   input, select, textarea {
-    font-size: 14px;
+    font-size: 15px;
     touch-action: manipulation;
+  }
+
+  @media (min-width: 1024px) {
+    input, select, textarea {
+      font-size: 14px;
+    }
+  }
+
+  /* Subtle transitions, respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
