@@ -10,6 +10,7 @@ export interface SheetProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
   className?: string;
 }
 
@@ -20,10 +21,12 @@ export const Sheet: React.FC<SheetProps> = ({
   subtitle,
   children,
   footer,
-  maxWidth = 'md',
+  maxWidth,
+  size,
   className = '',
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
+  const effectiveMaxWidth = size ?? maxWidth ?? 'md';
 
   // Close on Escape & Lock body scroll
   useEffect(() => {
@@ -54,7 +57,7 @@ export const Sheet: React.FC<SheetProps> = ({
     xl: 'sm:max-w-3xl',
     '2xl': 'sm:max-w-4xl',
     full: 'sm:max-w-6xl',
-  }[maxWidth];
+  }[effectiveMaxWidth];
 
   return (
     <div

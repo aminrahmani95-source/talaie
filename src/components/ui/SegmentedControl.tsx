@@ -1,9 +1,11 @@
 import React from 'react';
 
 export interface SegmentedControlOption<T extends string = string> {
-  value: T;
+  value?: T;
+  id?: T;
   label: string;
-  count?: number;
+  count?: number | string;
+  badge?: number | string;
   icon?: React.ReactNode;
 }
 
@@ -34,14 +36,16 @@ export function SegmentedControl<T extends string = string>({
       className={`inline-flex items-center bg-[#EFEBE4] dark:bg-[#1C1C1C] rounded-2xl border border-[#E2DDD4] dark:border-[#2D2D2D] select-none max-w-full overflow-x-auto scrollbar-none ${sizeClasses} ${className}`}
     >
       {options.map((opt) => {
-        const isSelected = opt.value === value;
+        const optVal = (opt.value ?? opt.id) as T;
+        const countVal = opt.count ?? opt.badge;
+        const isSelected = optVal === value;
         return (
           <button
-            key={opt.value}
+            key={optVal}
             role="tab"
             type="button"
             aria-selected={isSelected}
-            onClick={() => onChange(opt.value)}
+            onClick={() => onChange(optVal)}
             className={`relative flex items-center justify-center gap-1.5 rounded-xl font-bold transition-all duration-150 shrink-0 cursor-pointer ${itemPadding} ${
               isSelected
                 ? 'bg-[#212121] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#181818] shadow-xs ring-1 ring-black/5 dark:ring-white/10'
@@ -50,7 +54,7 @@ export function SegmentedControl<T extends string = string>({
           >
             {opt.icon && <span className="shrink-0">{opt.icon}</span>}
             <span>{opt.label}</span>
-            {opt.count !== undefined && (
+            {countVal !== undefined && (
               <span
                 className={`text-[11px] px-1.5 py-0.2 rounded-full font-mono font-bold leading-none ${
                   isSelected
@@ -58,7 +62,7 @@ export function SegmentedControl<T extends string = string>({
                     : 'bg-[#E2DDD4] text-[#4A4742] dark:bg-[#2C2C2C] dark:text-[#BDB8AF]'
                 }`}
               >
-                {opt.count}
+                {countVal}
               </span>
             )}
           </button>

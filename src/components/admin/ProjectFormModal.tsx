@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Project, User, SystemSettings, ProposalImage } from '../../types';
 import {
   X,
@@ -14,12 +14,15 @@ import {
   AlertCircle,
   AlertTriangle,
   Loader2,
+  Search,
 } from 'lucide-react';
 import { getUpcomingDays, getTodayPersianString } from '../../utils/jalali';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { SupabaseSyncService } from '../../utils/supabase';
 import { CloudImage } from '../common/CloudImage';
 import { computeProjectDiff } from '../../utils/offlineQueue';
+import { Avatar } from '../ui/Avatar';
+import { Button } from '../ui/Button';
 
 export type ProjectFormSaveData =
   | { type: 'CREATE_PROJECT'; project: Project }
@@ -57,7 +60,9 @@ export const ProjectFormModal: React.FC<Props> = ({
   const [shadePanels, setShadePanels] = useState<number>(project?.shadePanels ?? 0);
   const [curtainPanels, setCurtainPanels] = useState<number>(project?.curtainPanels ?? 0);
   const [mechanismType, setMechanismType] = useState(project?.mechanismType || '');
-  const [approximateArea, setApproximateArea] = useState<string>(project?.approximateArea ? String(project.approximateArea) : '');
+  const [approximateArea, setApproximateArea] = useState<string>(
+    project?.approximateArea ? String(project.approximateArea) : ''
+  );
   const [specialNotes, setSpecialNotes] = useState(project?.specialNotes || '');
 
   // Scheduled date & time
@@ -73,6 +78,7 @@ export const ProjectFormModal: React.FC<Props> = ({
   const [leadTechnicianId, setLeadTechnicianId] = useState<string>(
     project?.leadTechnicianId || ''
   );
+  const [techSearchQuery, setTechSearchQuery] = useState('');
 
   // Tools checklist
   const [isFullTools, setIsFullTools] = useState<boolean>(project?.isFullTools ?? true);
@@ -192,7 +198,6 @@ export const ProjectFormModal: React.FC<Props> = ({
 
     try {
       if (project) {
-        // Editing existing project: calculate diff and send ONLY changed fields
         const newFields: Partial<Project> = {
           title: title.trim(),
           customerName: customerName.trim() || title.trim(),
@@ -220,7 +225,6 @@ export const ProjectFormModal: React.FC<Props> = ({
         const diff = computeProjectDiff(project, newFields);
         await onSave({ type: 'PATCH_PROJECT', id: project.id, patch: diff });
       } else {
-        // New project: fetch code now if not already set
         let finalCode = projectCode;
         if (!finalCode) {
           try {
@@ -274,92 +278,91 @@ export const ProjectFormModal: React.FC<Props> = ({
     }
   };
 
+  const nonQcUsers = users.filter((u) => u.role !== 'QC_MANAGER');
+  const filteredUsers = nonQcUsers.filter((u) => {
+    if (!techSearchQuery.trim()) return true;
+    return u.name.includes(techSearchQuery.trim());
+  });
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="project-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
     >
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl max-w-3xl w-full shadow-2xl border border-[#E8E4DC] dark:border-[#2D2D2D] overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150">
-        {/* Header in talaei.ir Obsidian & Gold */}
-        <div className="bg-[#212121] px-6 py-4 text-white flex items-center justify-between border-b-2 border-[#C1A056]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 rounded-xl text-[#C1A056]">
-              <Plus className="w-5 h-5" aria-hidden="true" />
+      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl max-w-2xl w-full shadow-2xl border border-[#E2DDD4] dark:border-[#2C2C2C] flex flex-col max-h-[92vh] overflow-hidden my-4">
+        {/* Modal Header */}
+        <div className="bg-[#212121] px-5 py-3.5 text-white flex items-center justify-between border-b border-[#C1A056]/40 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-[#C1A056]">
+              <Plus className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 id="project-modal-title" className="font-black text-lg text-white">
-                  {isEditing ? 'ویرایش مأموریت و پروژه' : 'ثبت مأموریت جدید گالری طلایی'}
+                <h3 id="project-modal-title" className="font-bold text-sm sm:text-base text-white">
+                  {isEditing ? 'ویرایش مأموریت' : 'ثبت مأموریت جدید'}
                 </h3>
-                {projectCode ? (
-                  <span className="text-xs bg-[#C1A056] text-black font-mono font-bold px-2 py-0.5 rounded-lg">
+                {projectCode && (
+                  <span className="text-xs bg-[#C1A056] text-black font-mono font-bold px-2 py-0.5 rounded-md">
                     {projectCode}
-                  </span>
-                ) : (
-                  <span className="text-[10px] bg-white/10 text-white/80 font-mono px-2 py-0.5 rounded-lg">
-                    (تولید خودکار پس از ثبت نهایی)
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[#E8E4DC]">
-                مشخصات فنی شید و پرده، تخصیص اکیپ، چک‌لیست ابزار و پیوست پروپوزال فروش
-              </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/20 text-white transition"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 text-white transition cursor-pointer"
             aria-label="بستن فرم"
           >
-            <X className="w-5 h-5" aria-hidden="true" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[82vh] overflow-y-auto">
+        {/* Scrollable Form Body */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           {/* Section 1: Customer & Address */}
-          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#E8E4DC] dark:border-[#2D2D2D] rounded-2xl p-4 space-y-3">
-            <h4 className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-              اطلاعات پروژه و نشانی کارفرما
+          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E2DDD4] dark:border-[#2C2C2C] rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+              <span>اطلاعات پروژه و محل نصب</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="project-title" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+              <div className="sm:col-span-2">
+                <label htmlFor="project-title" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
                   عنوان پروژه: *
                 </label>
                 <input
                   id="project-title"
                   type="text"
                   required
-                  placeholder="مثال: ویلای لواسان - سالن پذیرایی"
+                  placeholder="مثال: ویلای لواسان - سالن اصلی"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
                 />
               </div>
 
               <div>
-                <label htmlFor="customer-name" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="customer-name" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
                   نام کارفرما:
                 </label>
                 <input
                   id="customer-name"
                   type="text"
-                  placeholder="مثال: آقای دکتر پیروز"
+                  placeholder="مثال: آقای پیروز"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label htmlFor="customer-phone" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  شماره تماس مشتری (جهت تماس تکنسین):
+              <div>
+                <label htmlFor="customer-phone" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                  شماره تماس مشتری:
                 </label>
                 <input
                   id="customer-phone"
@@ -368,28 +371,28 @@ export const ProjectFormModal: React.FC<Props> = ({
                   autoComplete="tel"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500 font-mono text-left"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-mono text-left"
                   dir="ltr"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label htmlFor="project-address" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  آدرس دقیق محل نصب:
+                <label htmlFor="project-address" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                  نشانی دقیق محل نصب:
                 </label>
                 <textarea
                   id="project-address"
                   rows={2}
-                  placeholder="خیابان، کوچه، پلاک، طبقه و زنگ..."
+                  placeholder="خیابان، کوچه، پلاک، طبقه و واحد..."
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label htmlFor="location-url" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  لینک موقعیت مکانی (نشان، بلد یا گوگل‌مپ):
+                <label htmlFor="location-url" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                  لینک لوکیشن (نشان، بلد یا گوگل‌مپ):
                 </label>
                 <input
                   id="location-url"
@@ -397,7 +400,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="https://nshn.ir/... یا https://maps.google.com/..."
                   value={locationUrl}
                   onChange={(e) => setLocationUrl(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500 text-left font-mono"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white text-left font-mono"
                   dir="ltr"
                 />
               </div>
@@ -405,107 +408,103 @@ export const ProjectFormModal: React.FC<Props> = ({
           </div>
 
           {/* Section 2: Technical Specifications */}
-          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#E8E4DC] dark:border-[#2D2D2D] rounded-2xl p-4 space-y-3">
-            <h4 className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-              مشخصات فنی پرده و شید
+          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E2DDD4] dark:border-[#2C2C2C] rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+              <span>مشخصات فنی پرده و شید</span>
             </h4>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <label htmlFor="shade-panels" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="shade-panels" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
                   تعداد لت شید:
                 </label>
                 <input
                   id="shade-panels"
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   value={shadePanels}
                   onChange={(e) => setShadePanels(Number(e.target.value))}
-                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white text-center font-bold font-mono"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white text-center font-mono font-bold"
                 />
               </div>
 
               <div>
-                <label htmlFor="curtain-panels" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="curtain-panels" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
                   تعداد لت پرده:
                 </label>
                 <input
                   id="curtain-panels"
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   value={curtainPanels}
                   onChange={(e) => setCurtainPanels(Number(e.target.value))}
-                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white text-center font-bold font-mono"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white text-center font-mono font-bold"
                 />
               </div>
 
               <div className="col-span-2 sm:col-span-2">
-                <label htmlFor="mechanism-type" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="mechanism-type" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
                   نوع مکانیزم و موتور:
                 </label>
                 <input
                   id="mechanism-type"
                   type="text"
-                  placeholder="مثلاً موتور سامفی رادیویی + ریل برقی بی‌صدا"
+                  placeholder="موتور سامفی رادیویی + ریل برقی"
                   value={mechanismType}
                   onChange={(e) => setMechanismType(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
                 />
               </div>
 
               <div className="col-span-2 sm:col-span-4">
-                <label htmlFor="special-notes" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  توضیحات و نکات کلیدی فروش / کارفرما:
+                <label htmlFor="special-notes" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                  توضیحات و نکات کلیدی:
                 </label>
                 <textarea
                   id="special-notes"
                   rows={2}
-                  placeholder="نکات حساسیت مشتری، نوع سقف کاذب، زمان‌بندی ورود..."
+                  placeholder="نکات حساسیت مشتری، نوع سقف کاذب، زیرسازی..."
                   value={specialNotes}
                   onChange={(e) => setSpecialNotes(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
                 />
               </div>
             </div>
           </div>
 
-          {/* Section 3: Proposal Photos Attachment */}
-          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#C1A056]/40 rounded-2xl p-4 space-y-3">
+          {/* Section 3: Proposal Images */}
+          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#C1A056]/30 rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-2">
-                <Camera className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-                تصویر پروپوزال واحد فروش (برگه سفارش و نقشه)
+              <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+                <span>تصویر پروپوزال فروش (نقشه و برگه سفارش)</span>
               </h4>
-              <span className="text-[11px] text-[#A88738] dark:text-[#C1A056]">تکنسین‌ها سر پروژه می‌توانند زوم کنند</span>
             </div>
 
             <div className="flex flex-wrap gap-2 items-center">
               {proposalImages.map((img) => (
                 <div
                   key={img.id}
-                  className="relative w-20 h-24 rounded-xl overflow-hidden border border-[#C1A056] shadow-xs bg-white dark:bg-[#141414]"
+                  className="relative w-16 h-20 rounded-xl overflow-hidden border border-[#C1A056] shadow-2xs bg-white dark:bg-[#141414]"
                 >
                   <CloudImage src={img.url} alt="" className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => handleRemoveProposalImage(img.id)}
-                    className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 shadow hover:bg-red-700 transition"
-                    title="حذف"
-                    aria-label="حذف عکس پروپوزال"
+                    className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 shadow hover:bg-red-700 transition cursor-pointer"
+                    aria-label="حذف عکس"
                   >
                     <X className="w-3 h-3" />
                   </button>
-                  <div className="absolute bottom-0 inset-x-0 bg-black/70 text-white text-[9px] truncate px-1 py-0.5 text-center">
-                    {img.title}
-                  </div>
                 </div>
               ))}
 
-              <label className="flex flex-col items-center justify-center w-24 h-24 rounded-2xl border-2 border-dashed border-[#C1A056] hover:border-[#212121] dark:hover:border-white bg-white dark:bg-[#141414] cursor-pointer text-[#A88738] dark:text-[#C1A056] transition">
-                <Camera className="w-6 h-6 mb-1 text-[#C1A056]" aria-hidden="true" />
-                <span className="text-[11px] font-bold">پیوست عکس</span>
-                <span className="text-[9px] text-[#C1A056]/80">فروش / نقشه</span>
+              <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#C1A056] hover:border-[#212121] bg-white dark:bg-[#141414] cursor-pointer text-[#8E6F27] dark:text-[#E5CA8F] transition">
+                <Camera className="w-5 h-5 mb-1" />
+                <span className="text-[10px] font-bold">پیوست عکس</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -517,146 +516,148 @@ export const ProjectFormModal: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Section 4: Date, Time & Technicians Assignment */}
-          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#E8E4DC] dark:border-[#2D2D2D] rounded-2xl p-4 space-y-3">
-            <h4 className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-              زمان‌بندی و تعیین اکیپ تکنسین‌ها
+          {/* Section 4: Schedule & Team Assignment */}
+          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E2DDD4] dark:border-[#2C2C2C] rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+              <span>زمان‌بندی و تعیین اکیپ</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label htmlFor="scheduled-date" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  تاریخ اجرا (انتخاب از تقویم 30 روزه):
+                <label htmlFor="scheduled-date" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                  تاریخ اجرا:
                 </label>
                 <select
                   id="scheduled-date"
                   value={scheduledDate}
                   onChange={(e) => setScheduledDate(e.target.value)}
-                  className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white font-bold"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-bold"
                 >
                   {days.map((d) => (
                     <option key={d.dateKey} value={d.dateKey}>
                       {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
-                      {d.persianDayNum} {d.persianMonthName} ({d.persianDateStr})
+                      {d.persianDayNum} {d.persianMonthName}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label htmlFor="scheduled-time" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                <label htmlFor="scheduled-time" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
                   ساعت حضور در محل:
                 </label>
-                <div className="relative">
-                  <input
-                    id="scheduled-time"
-                    type="time"
-                    value={scheduledTime}
-                    onChange={(e) => setScheduledTime(e.target.value)}
-                    className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white text-center font-bold font-mono"
-                  />
-                  <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" aria-hidden="true" />
-                </div>
+                <input
+                  id="scheduled-time"
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white text-center font-bold font-mono"
+                />
               </div>
             </div>
 
-            {/* Technicians Multi-Select */}
-            <div className="pt-2">
+            {/* Technicians Multi-Select with Searchable Chip List */}
+            <div className="pt-1">
               {!hasLeadTechnician && (
-                <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                <div className="mb-2 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-200 flex items-center gap-1.5">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>ابتدا از بخش مدیریت تکنسینها حداقل یک سرپرست اکیپ تعریف کنید</span>
+                  <span>حداقل یک سرپرست اکیپ در پرسنل تعریف کنید</span>
                 </div>
               )}
-              <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-2">
-                تکنسین‌های حاضر در این مأموریت (حداقل یک نفر باید سرپرست باشد):
+
+              <label className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1.5">
+                تکنسین‌های حاضر در این مأموریت (سرپرست مشخص شود):
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {users
-                  .filter((u) => u.role !== 'QC_MANAGER')
-                  .map((u) => {
-                    const isSelected = assignedTechnicianIds.includes(u.id);
-                    const isLead = leadTechnicianId === u.id;
 
-                    return (
-                      <div
-                        key={u.id}
-                        onClick={() => handleTechnicianToggle(u.id)}
-                        className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition select-none active:scale-[0.99] ${
-                          isSelected
-                            ? 'border-[#C1A056] bg-white dark:bg-[#252525] text-[#212121] dark:text-white ring-1 ring-[#C1A056]/30 shadow-xs'
-                            : 'border-[#E8E4DC] dark:border-[#333333] bg-white/70 dark:bg-[#161616] hover:border-[#C1A056]/50 text-slate-600 dark:text-zinc-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            readOnly
-                            aria-label={`انتخاب ${u.name}`}
-                            className="rounded text-[#C1A056] focus:ring-[#C1A056] w-4 h-4 pointer-events-none accent-[#C1A056]"
-                          />
-                          <span className="text-sm font-bold">{u.name}</span>
-                        </div>
+              {nonQcUsers.length > 6 && (
+                <div className="relative mb-2">
+                  <Search className="w-3.5 h-3.5 text-[#8A857B] absolute right-2.5 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="جستجوی تکنسین..."
+                    value={techSearchQuery}
+                    onChange={(e) => setTechSearchQuery(e.target.value)}
+                    className="w-full text-xs pr-8 pl-2.5 py-1.5 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                  />
+                </div>
+              )}
 
-                        {isSelected && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setLeadTechnicianId(u.id);
-                            }}
-                            className={`text-[10px] px-2.5 py-1 rounded-full font-bold transition ${
-                              isLead
-                                ? 'bg-[#212121] dark:bg-[#C1A056] text-[#C1A056] dark:text-[#121212] shadow-xs'
-                                : 'bg-[#EAE6DD] dark:bg-[#333333] text-slate-700 dark:text-zinc-200 hover:bg-[#C1A056]/20'
-                            }`}
-                          >
-                            {isLead ? '⭐ سرپرست اکیپ' : 'تبدیل به سرپرست'}
-                          </button>
-                        )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto">
+                {filteredUsers.map((u) => {
+                  const isSelected = assignedTechnicianIds.includes(u.id);
+                  const isLead = leadTechnicianId === u.id;
+
+                  return (
+                    <div
+                      key={u.id}
+                      onClick={() => handleTechnicianToggle(u.id)}
+                      className={`flex items-center justify-between p-2 rounded-xl border cursor-pointer transition select-none ${
+                        isSelected
+                          ? 'border-[#C1A056] bg-white dark:bg-[#222222] ring-1 ring-[#C1A056]/30'
+                          : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-white/70 dark:bg-[#161616]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Avatar name={u.name} id={u.id} size="sm" />
+                        <span className="text-xs font-bold truncate">{u.name}</span>
                       </div>
-                    );
-                  })}
+
+                      {isSelected && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLeadTechnicianId(u.id);
+                          }}
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition cursor-pointer ${
+                            isLead
+                              ? 'bg-[#212121] text-[#E5CA8F]'
+                              : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200'
+                          }`}
+                        >
+                          {isLead ? '⭐ سرپرست' : 'سرپرست کن'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* Section 5: Smart Tools Checklist + Full Tools Button in Gold */}
-          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#E8E4DC] dark:border-[#2D2D2D] rounded-2xl p-4 space-y-3">
+          {/* Section 5: Tools Checklist */}
+          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E2DDD4] dark:border-[#2C2C2C] rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-                چک‌لیست ابزار و تجهیزات مورد نیاز
+              <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+                <Wrench className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+                <span>چک‌لیست ابزار و تجهیزات</span>
               </h4>
 
-              {/* Glowing Full Tools Button in Gold Gradient */}
               <button
                 type="button"
                 onClick={handleToggleFullTools}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black transition active:scale-95 ${
+                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
                   isFullTools
-                    ? 'bg-gradient-to-r from-[#C1A056] to-[#A88738] text-white shadow-md'
-                    : 'bg-[#EAE6DD] dark:bg-[#333333] hover:bg-[#C1A056]/20 text-slate-700 dark:text-zinc-200 hover:text-[#A88738]'
+                    ? 'bg-[#212121] text-[#E5CA8F]'
+                    : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>{isFullTools ? '✓ حالت فول ابزار (انتخاب همه)' : 'دکمه فول ابزار'}</span>
+                <Sparkles className="w-3 h-3" />
+                <span>{isFullTools ? '✓ حالت فول ابزار' : 'دکمه فول ابزار'}</span>
               </button>
             </div>
 
-            {/* Tools Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto">
               {settings.defaultTools.map((tool) => {
                 const checked = toolsRequired.includes(tool);
                 return (
                   <label
                     key={tool}
-                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition select-none ${
+                    className={`flex items-center gap-2 p-2 rounded-xl border text-xs cursor-pointer transition select-none ${
                       checked
-                        ? 'border-[#C1A056] bg-white dark:bg-[#252525] text-[#212121] dark:text-white font-bold'
-                        : 'border-[#E8E4DC] dark:border-[#333333] bg-white/70 dark:bg-[#161616] text-slate-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-[#202020]'
+                        ? 'border-[#C1A056] bg-white dark:bg-[#222222] font-bold'
+                        : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-white/70 dark:bg-[#161616]'
                     }`}
                   >
                     <input
@@ -670,107 +671,43 @@ export const ProjectFormModal: React.FC<Props> = ({
                 );
               })}
             </div>
-
-            <div>
-              <label htmlFor="custom-tools-notes" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                ابزار خاص یا قطعات غیراستاندارد (اختیاری):
-              </label>
-              <input
-                id="custom-tools-notes"
-                type="text"
-                placeholder="مثلاً: براکت دیواری تقویت‌شده 50 سانتی، رولپلاک پروانه‌ای کناف بلند..."
-                value={customToolsNotes}
-                onChange={(e) => setCustomToolsNotes(e.target.value)}
-                className="w-full text-sm p-2 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500"
-              />
-            </div>
           </div>
 
-          {/* Section 6: Status & QC Management */}
-          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#E8E4DC] dark:border-[#2D2D2D] rounded-2xl p-4 space-y-3">
-            <h4 className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-              وضعیت اجرای نصب و کنترل کیفیت (QC)
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="project-status" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  وضعیت اجرای پروژه:
-                </label>
-                <select
-                  id="project-status"
-                  value={status}
-                  onChange={(e) => {
-                    const nextStatus = e.target.value as Project['status'];
-                    setStatus(nextStatus);
-                    if (nextStatus === 'COMPLETED' && qcStatus === 'NOT_STARTED') {
-                      setQcStatus('PENDING');
-                    }
-                  }}
-                  className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white font-bold"
-                >
-                  <option value="MEASUREMENT_PENDING">در انتظار بازدید و اندازه‌گیری دوم</option>
-                  <option value="SCHEDULED">برنامه‌ریزی شده (هنوز اعزام نشده)</option>
-                  <option value="EN_ROUTE">در مسیر پروژه</option>
-                  <option value="IN_PROGRESS">در حال نصب سر صحنه</option>
-                  <option value="STUCK">متوقف / پرونده استاک (&lt;72h)</option>
-                  <option value="COMPLETED">نصب پایان یافته</option>
-                  <option value="CANCELLED">لغو شده</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="qc-status" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  وضعیت نظارت و بررسی QC:
-                </label>
-                <select
-                  id="qc-status"
-                  value={qcStatus}
-                  onChange={(e) => setQcStatus(e.target.value as Project['qcStatus'])}
-                  className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white font-bold"
-                >
-                  <option value="NOT_STARTED">هنوز نصب نشده</option>
-                  <option value="PENDING">در انتظار بررسی و تایید QC</option>
-                  <option value="APPROVED">تایید رسمی QC</option>
-                  <option value="REJECTED">عدم تایید / نیاز به اصلاح</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Inline Validation Error Message */}
+          {/* Inline Error */}
           {formError && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-900 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
               <span>{formError}</span>
             </div>
           )}
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-3 pt-4 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl border border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 font-medium hover:bg-slate-50 dark:hover:bg-[#252525] active:scale-[0.99] transition text-sm min-h-[44px] cursor-pointer"
-            >
-              انصراف
-            </button>
-            <button
-              type="submit"
-              disabled={!hasLeadTechnician || isSubmitting}
-              className="flex-1 py-3 px-4 rounded-xl bg-[#212121] hover:bg-[#333333] disabled:opacity-50 text-[#C1A056] font-bold transition shadow-lg text-sm flex items-center justify-center gap-2 border border-[#C1A056]/30 active:scale-[0.99] min-h-[44px] cursor-pointer"
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin text-[#C1A056]" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
-              )}
-              {isSubmitting ? 'در حال ثبت...' : isEditing ? 'ذخیره تغییرات مأموریت' : 'ثبت و ابلاغ مأموریت'}
-            </button>
-          </div>
         </form>
+
+        {/* Sticky Modal Footer */}
+        <div className="p-4 border-t border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#181818] flex items-center gap-3 shrink-0">
+          <Button
+            type="button"
+            variant="ghost"
+            size="md"
+            disabled={isSubmitting}
+            onClick={onClose}
+            className="flex-1"
+          >
+            انصراف
+          </Button>
+
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            loading={isSubmitting}
+            disabled={!hasLeadTechnician || isSubmitting}
+            onClick={handleSubmit}
+            className="flex-1"
+            icon={<CheckCircle2 className="w-4 h-4" />}
+          >
+            {isEditing ? 'ذخیره تغییرات' : 'ثبت مأموریت'}
+          </Button>
+        </div>
       </div>
     </div>
   );

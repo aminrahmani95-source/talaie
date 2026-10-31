@@ -5,6 +5,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
+  loading?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'start' | 'end';
 }
@@ -15,6 +16,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variant = 'primary',
       size = 'md',
       isLoading = false,
+      loading,
       icon,
       iconPosition = 'start',
       children,
@@ -25,6 +27,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
+    const isCurrentlyLoading = loading ?? isLoading;
     // Base styles: minimum 44px touch target, flex layout, focus ring
     const baseClasses =
       'relative inline-flex items-center justify-center font-bold select-none transition-all duration-150 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1A056] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#121212] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer';
@@ -52,16 +55,16 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         type={type}
-        disabled={disabled || isLoading}
+        disabled={disabled || isCurrentlyLoading}
         className={`${baseClasses} ${sizeClasses} ${variantClasses} ${className}`}
         {...props}
       >
-        {isLoading && <Loader2 className="w-4 h-4 animate-spin shrink-0 text-current" />}
-        {!isLoading && icon && iconPosition === 'start' && (
+        {isCurrentlyLoading && <Loader2 className="w-4 h-4 animate-spin shrink-0 text-current" />}
+        {!isCurrentlyLoading && icon && iconPosition === 'start' && (
           <span className="shrink-0">{icon}</span>
         )}
         {children && <span>{children}</span>}
-        {!isLoading && icon && iconPosition === 'end' && (
+        {!isCurrentlyLoading && icon && iconPosition === 'end' && (
           <span className="shrink-0">{icon}</span>
         )}
       </button>
