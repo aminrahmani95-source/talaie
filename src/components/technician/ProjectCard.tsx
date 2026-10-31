@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Project, User } from '../../types';
+import { Project, User, ProjectStatus } from '../../types';
 import {
   Clock,
   MapPin,
@@ -30,9 +30,10 @@ interface Props {
   onOpenToolChecklist: (project: Project) => void;
   onOpenTicketModal: (project: Project) => void;
   onOpenCompletionModal: (project: Project) => void;
-  onUpdateStatus: (projectId: string, newStatus: Project['status']) => void;
+  onUpdateStatus: (projectId: string, from: ProjectStatus, to: ProjectStatus) => void;
   onOpenCertificate?: (project: Project) => void;
   onReportStuck?: (project: Project) => void;
+  isTransitioning?: boolean;
 }
 
 export const ProjectCard: React.FC<Props> = ({
@@ -45,6 +46,7 @@ export const ProjectCard: React.FC<Props> = ({
   onUpdateStatus,
   onOpenCertificate,
   onReportStuck,
+  isTransitioning = false,
 }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
@@ -127,11 +129,36 @@ export const ProjectCard: React.FC<Props> = ({
         </span>
       </div>
 
+      {/* Rejected by QC Banner */}
+      {project.qcStatus === 'REJECTED' && (
+        <div className="bg-rose-500/15 dark:bg-rose-950/40 border-2 border-rose-500 rounded-2xl p-3.5 text-xs space-y-2 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between text-rose-700 dark:text-rose-200 font-black">
+            <span className="flex items-center gap-1.5 text-sm">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>رد شده توسط واحد کنترل کیفیت (QC) / بازکاری الزامی است</span>
+            </span>
+            <span className="text-[10px] bg-rose-600 text-white px-2 py-0.5 rounded-full font-bold">
+              دستور اصلاح
+            </span>
+          </div>
+          {project.qcNotes && (
+            <div className="bg-white/80 dark:bg-[#1C1C1C] p-2.5 rounded-xl border border-rose-300 dark:border-rose-900/60 text-slate-800 dark:text-zinc-200 font-medium leading-relaxed">
+              <span className="font-bold text-rose-700 dark:text-rose-400 block mb-0.5">ایرادهای مشخص‌شده توسط QC:</span>
+              «{project.qcNotes}»
+            </div>
+          )}
+          <p className="text-[11px] text-rose-600 dark:text-rose-300 font-medium">
+            لطفاً طبق نکات بالا نواقص را برطرف کرده و مجدداً عکس‌های اصلاحی را ثبت فرمایید.
+          </p>
+        </div>
+      )}
+
       {/* On-Site Active Job Timer (Shows live stopwatch during installation) */}
       <ActiveJobTimer
         status={project.status}
         startedAt={project.startedAt}
         completedAt={project.completedAt}
+        reworkStartedAt={project.reworkStartedAt}
       />
 
       {/* Project Title & Customer */}
@@ -232,22 +259,24 @@ export const ProjectCard: React.FC<Props> = ({
         {project.status === 'SCHEDULED' && (
           <button
             type="button"
-            onClick={() => onUpdateStatus(project.id, 'EN_ROUTE')}
-            className="w-full py-3.5 px-4 bg-[#1E1E1E] hover:bg-[#282828] text-[#C1A056] rounded-2xl text-xs font-black shadow-md transition flex items-center justify-center gap-2 border border-[#C1A056]/30 active:scale-[0.99] min-h-[48px] cursor-pointer"
+            disabled={isTransitioning}
+            onClick={() => onUpdateStatus(project.id, 'SCHEDULED', 'EN_ROUTE')}
+            className="w-full py-3.5 px-4 bg-[#1E1E1E] hover:bg-[#282828] disabled:opacity-50 text-[#C1A056] rounded-2xl text-xs font-black shadow-md transition flex items-center justify-center gap-2 border border-[#C1A056]/30 active:scale-[0.99] min-h-[48px] cursor-pointer"
           >
             <Car className="w-4 h-4" aria-hidden="true" />
-            <span>حرکت به سمت پروژه (اعلام شروع مسیر)</span>
+            <span>{isTransitioning ? 'در حال ثبت...' : 'حرکت به سمت پروژه (اعلام شروع مسیر)'}</span>
           </button>
         )}
 
         {project.status === 'EN_ROUTE' && (
           <button
             type="button"
-            onClick={() => onUpdateStatus(project.id, 'IN_PROGRESS')}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-[#C1A056] to-[#A88738] hover:from-[#D4B46A] hover:to-[#B8984B] text-[#121212] rounded-2xl text-xs font-black shadow-lg transition flex items-center justify-center gap-2 active:scale-[0.99] min-h-[48px] cursor-pointer"
+            disabled={isTransitioning}
+            onClick={() => onUpdateStatus(project.id, 'EN_ROUTE', 'IN_PROGRESS')}
+            className="w-full py-3.5 px-4 bg-gradient-to-r from-[#C1A056] to-[#A88738] hover:from-[#D4B46A] hover:to-[#B8984B] disabled:opacity-50 text-[#121212] rounded-2xl text-xs font-black shadow-lg transition flex items-center justify-center gap-2 active:scale-[0.99] min-h-[48px] cursor-pointer"
           >
             <Play className="w-4 h-4" aria-hidden="true" />
-            <span>رسیدم سر پروژه / شروع نصب</span>
+            <span>{isTransitioning ? 'در حال ثبت...' : 'رسیدم سر پروژه / شروع نصب'}</span>
           </button>
         )}
 
@@ -291,7 +320,7 @@ export const ProjectCard: React.FC<Props> = ({
               دلیل توقف: {project.stuckIncident?.description || 'کسری قطعه، آسیب پارچه یا عدم آمادگی بستر'}
             </p>
             <div className="text-[10px] text-zinc-500 dark:text-zinc-400 pt-1 border-t border-rose-500/20">
-              پرونده در دسک رفع استاک تحت پیگیری مسئولین فنی (امین رحمانی / امین زهری) قرار دارد.
+              پرونده در دسک رفع استاک تحت پیگیری مسئولین فنی قرار دارد.
             </div>
           </div>
         )}

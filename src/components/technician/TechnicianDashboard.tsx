@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Project, User, SystemSettings } from '../../types';
+import { Project, User, SystemSettings, ProjectStatus } from '../../types';
 import { ProjectCard } from './ProjectCard';
-import { Calendar, Users, ArrowLeft, Sparkles } from 'lucide-react';
+import { Calendar, Users, ArrowLeft, Sparkles, AlertOctagon } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits } from '../../utils/jalali';
 
 interface Props {
@@ -12,9 +12,10 @@ interface Props {
   onOpenToolChecklist: (project: Project) => void;
   onOpenTicketModal: (project: Project) => void;
   onOpenCompletionModal: (project: Project) => void;
-  onUpdateStatus: (projectId: string, newStatus: Project['status']) => void;
+  onUpdateStatus: (projectId: string, from: ProjectStatus, to: ProjectStatus) => void;
   onOpenCertificate?: (project: Project) => void;
   onReportStuck?: (project: Project) => void;
+  inFlightTransitions?: Set<string>;
 }
 
 export const TechnicianDashboard: React.FC<Props> = ({
@@ -28,6 +29,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
   onUpdateStatus,
   onOpenCertificate,
   onReportStuck,
+  inFlightTransitions,
 }) => {
   const isLead = currentUser.role === 'LEAD_TECHNICIAN';
   const allDays = getUpcomingDays(30);
@@ -53,6 +55,15 @@ export const TechnicianDashboard: React.FC<Props> = ({
     if (p.scheduledDate !== selectedDateKey) return false;
     if (isLead && viewScope === 'ALL_DAY_JOBS') return true;
     return isProjectAssignedToMe(p);
+  });
+
+  // Persistent Open Jobs (In-Flight, Stuck, or QC Rejected) regardless of scheduled date
+  const openProjects = projects.filter((p) => {
+    if (!isProjectAssignedToMe(p)) return false;
+    const isEnRouteOrInProgress = p.status === 'EN_ROUTE' || p.status === 'IN_PROGRESS';
+    const isStuck = p.status === 'STUCK';
+    const isQcRejected = p.qcStatus === 'REJECTED';
+    return isEnRouteOrInProgress || isStuck || isQcRejected;
   });
 
   const selectedDayInfo = visibleDays.find((d) => d.dateKey === selectedDateKey);
@@ -131,6 +142,42 @@ export const TechnicianDashboard: React.FC<Props> = ({
           </div>
         )}
       </div>
+
+      {/* Persistent Open Jobs Section (Always visible above Day Tabs) */}
+      {openProjects.length > 0 && (
+        <div className="space-y-3 bg-rose-50/40 dark:bg-rose-950/20 p-4 rounded-3xl border border-rose-200/80 dark:border-rose-900/40">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2 text-xs font-black text-rose-800 dark:text-rose-300">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+              </span>
+              <span>کارهای باز من (در حال اجرا، متوقف یا برگشتی از QC):</span>
+            </div>
+            <span className="text-[11px] bg-rose-600 text-white px-2.5 py-0.5 rounded-full font-bold font-mono shadow-2xs">
+              {toPersianDigits(openProjects.length)} مورد
+            </span>
+          </div>
+
+          <div className="space-y-4 pt-1">
+            {openProjects.map((proj) => (
+              <ProjectCard
+                key={`open-${proj.id}`}
+                project={proj}
+                currentUser={currentUser}
+                onViewProposal={onViewProposal}
+                onOpenToolChecklist={onOpenToolChecklist}
+                onOpenTicketModal={onOpenTicketModal}
+                onOpenCompletionModal={onOpenCompletionModal}
+                onUpdateStatus={onUpdateStatus}
+                onOpenCertificate={onOpenCertificate}
+                onReportStuck={onReportStuck}
+                isTransitioning={inFlightTransitions?.has(proj.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Horizontal Day Tabs (Restricted by Visibility Window) */}
       <div>
@@ -236,6 +283,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               onUpdateStatus={onUpdateStatus}
               onOpenCertificate={onOpenCertificate}
               onReportStuck={onReportStuck}
+              isTransitioning={inFlightTransitions?.has(proj.id)}
             />
           ))
         )}

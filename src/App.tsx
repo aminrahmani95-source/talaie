@@ -12,6 +12,11 @@ import {
 import { StorageService } from './utils/storage';
 import { SupabaseSyncService } from './utils/supabase';
 import { Outbox, OutboxMutation, OfflineQueue } from './utils/offlineQueue';
+import {
+  validateProjectPatchRoleGuards,
+  validateTicketRoleGuards,
+  isValidStatusTransition,
+} from './utils/roleGuards';
 import { Header } from './components/Header';
 import { FailedOperationsModal } from './components/admin/FailedOperationsModal';
 import { LoginModal } from './components/LoginModal';
@@ -331,6 +336,36 @@ export const App: React.FC = () => {
     onOptimisticApply: () => void
   ): Promise<boolean> => {
     if (!currentUser) return false;
+
+    // Client-side role guards: validate before pushing to outbox
+    if (currentUser.role !== 'QC_MANAGER') {
+      if (mutation.type === 'PATCH_PROJECT') {
+        const projectId = mutation.payload?.id || mutation.orderingKey.replace('project:', '');
+        const currentProject = projectsRef.current.find((p) => p.id === projectId);
+        if (currentProject) {
+          const patch = mutation.payload?.patch || mutation.payload;
+          try {
+            validateProjectPatchRoleGuards(currentUser, currentProject, patch);
+          } catch (err: any) {
+            showToast('error', err.message || 'خطای عدم دسترسی نقش.');
+            return false;
+          }
+        }
+      } else if (mutation.type === 'CREATE_PROJECT' || mutation.type === 'DELETE_PROJECT') {
+        showToast('error', 'تنها مدیر ارشد QC مجاز به ثبت یا حذف مستقیم پروژه است.');
+        return false;
+      } else if (mutation.type === 'CREATE_TICKET' || mutation.type === 'PATCH_TICKET') {
+        const ticket = mutation.payload?.ticket || mutation.payload;
+        const project = projectsRef.current.find((p) => p.id === ticket?.projectId);
+        try {
+          validateTicketRoleGuards(currentUser, project, ticket);
+        } catch (err: any) {
+          showToast('error', err.message || 'خطای عدم دسترسی به تیکت.');
+          return false;
+        }
+      }
+    }
+
     try {
       await Outbox.commit(mutation, currentUser.id, onOptimisticApply);
       return true;
@@ -458,31 +493,62 @@ export const App: React.FC = () => {
     );
   };
 
-  const handleUpdateStatus = async (projectId: string, newStatus: Project['status']) => {
+  const [inFlightTransitions, setInFlightTransitions] = useState<Set<string>>(new Set());
+
+  const transitionStatus = async (
+    projectId: string,
+    from: Project['status'],
+    to: Project['status']
+  ) => {
     if (!currentUser) return;
+    if (inFlightTransitions.has(projectId)) return;
+
     const current = projectsRef.current.find((p) => p.id === projectId);
+    if (!current) return;
+
+    // Check that current status matches the expected 'from'
+    if (current.status !== from) {
+      console.warn(`Transition ignored: expected status ${from}, but got ${current.status}`);
+      return;
+    }
+
+    if (!isValidStatusTransition(from, to)) {
+      showToast('error', `انتقال وضعیت از «${from}» به «${to}» مجاز نیست.`);
+      return;
+    }
+
+    setInFlightTransitions((prev) => new Set(prev).add(projectId));
+
     const patch: Partial<Project> = {
-      status: newStatus,
+      status: to,
       updatedAt: new Date().toISOString(),
     };
-    if (newStatus === 'IN_PROGRESS' && current && !current.startedAt) {
+    if (to === 'IN_PROGRESS' && !current.startedAt) {
       patch.startedAt = new Date().toISOString();
     }
 
-    await commit(
-      {
-        type: 'PATCH_PROJECT',
-        orderingKey: `project:${projectId}`,
-        payload: { id: projectId, patch },
-      },
-      () => {
-        const next = projectsRef.current.map((p) =>
-          p.id === projectId ? { ...p, ...patch } : p
-        );
-        setProjects(next);
-        projectsRef.current = next;
-      }
-    );
+    try {
+      await commit(
+        {
+          type: 'PATCH_PROJECT',
+          orderingKey: `project:${projectId}`,
+          payload: { id: projectId, patch },
+        },
+        () => {
+          const next = projectsRef.current.map((p) =>
+            p.id === projectId ? { ...p, ...patch } : p
+          );
+          setProjects(next);
+          projectsRef.current = next;
+        }
+      );
+    } finally {
+      setInFlightTransitions((prev) => {
+        const next = new Set(prev);
+        next.delete(projectId);
+        return next;
+      });
+    }
   };
 
   // Completion report from field
@@ -540,11 +606,15 @@ export const App: React.FC = () => {
     const current = projectsRef.current.find((p) => p.id === projectId);
 
     const patch: Partial<Project> = {
-      status: (inspection.status === 'APPROVED' ? 'SCHEDULED' : 'MEASUREMENT_PENDING') as Project['status'],
       scheduledDate: newScheduledDate || current?.scheduledDate,
       preInspection: inspection,
       updatedAt: new Date().toISOString(),
     };
+
+    // Only change status if current status is MEASUREMENT_PENDING or SCHEDULED
+    if (current && (current.status === 'MEASUREMENT_PENDING' || current.status === 'SCHEDULED')) {
+      patch.status = (inspection.status === 'APPROVED' ? 'SCHEDULED' : 'MEASUREMENT_PENDING') as Project['status'];
+    }
 
     await commit(
       {
@@ -601,10 +671,24 @@ export const App: React.FC = () => {
   const handleConfirmReportStuck = async (incident: StuckIncident) => {
     if (!stuckModalProject || !currentUser) return;
     const projectId = stuckModalProject.id;
+    const current = projectsRef.current.find((p) => p.id === projectId);
+
+    // Capture previous status
+    const previousStatus = incident.previousStatus || current?.status || 'IN_PROGRESS';
+    const incidentWithPrevious: StuckIncident = {
+      ...incident,
+      previousStatus,
+    };
+
+    // Append to stuckIncidents array while keeping stuckIncident for backward compatibility
+    const existingIncidents =
+      current?.stuckIncidents || (current?.stuckIncident ? [current.stuckIncident] : []);
+    const updatedIncidents = [...existingIncidents, incidentWithPrevious];
 
     const patch: Partial<Project> = {
       status: 'STUCK',
-      stuckIncident: incident,
+      stuckIncident: incidentWithPrevious,
+      stuckIncidents: updatedIncidents,
       updatedAt: new Date().toISOString(),
     };
 
@@ -866,6 +950,7 @@ export const App: React.FC = () => {
               <QcDesk
                 projects={projects}
                 users={users}
+                currentUser={currentUser}
                 onPatchProject={handlePatchProject}
                 onViewProposal={(p) => setProposalModalProject(p)}
                 onOpenCertificate={(p) => setCertificateModalProject(p)}
@@ -876,6 +961,7 @@ export const App: React.FC = () => {
             {activeTab === 'stuck' && (
               <StuckProjectsDesk
                 projects={projects}
+                currentUser={currentUser}
                 onPatchProject={handlePatchProject}
               />
             )}
@@ -917,7 +1003,8 @@ export const App: React.FC = () => {
             onOpenToolChecklist={(p) => setToolChecklistProject(p)}
             onOpenTicketModal={(p) => setTicketModalProject(p)}
             onOpenCompletionModal={(p) => setCompletionModalProject(p)}
-            onUpdateStatus={handleUpdateStatus}
+            onUpdateStatus={transitionStatus}
+            inFlightTransitions={inFlightTransitions}
             onOpenCertificate={(p) => setCertificateModalProject(p)}
             onReportStuck={handleReportStuck}
           />
@@ -927,17 +1014,14 @@ export const App: React.FC = () => {
       {/* Modals */}
       {isProjectFormOpen && (
         <ProjectFormModal
-          project={
-            editingProject ||
-            (presetDateKey
-              ? ({ scheduledDate: presetDateKey } as unknown as Project)
-              : null)
-          }
+          project={editingProject}
+          defaultDate={presetDateKey}
           users={users}
           settings={settings}
           onClose={() => {
             setIsProjectFormOpen(false);
             setEditingProject(null);
+            setPresetDateKey(undefined);
           }}
           onSave={handleSaveProject}
         />
@@ -986,6 +1070,7 @@ export const App: React.FC = () => {
       {preInspectionProject && (
         <PreInstallationModal
           project={preInspectionProject}
+          currentUser={currentUser}
           isOpen={!!preInspectionProject}
           onClose={() => setPreInspectionProject(null)}
           onSaveInspection={handleSavePreInspection}
@@ -996,6 +1081,7 @@ export const App: React.FC = () => {
         <PersonnelEvaluationModal
           project={evaluationProject}
           users={users}
+          currentUser={currentUser}
           isOpen={!!evaluationProject}
           onClose={() => setEvaluationProject(null)}
           onSaveEvaluation={handleSaveEvaluation}

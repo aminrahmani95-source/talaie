@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Project, StuckIncident, FmeaRootCause } from '../../types';
+import { Project, StuckIncident, FmeaRootCause, User, ProjectStatus } from '../../types';
 import {
   AlertOctagon,
   Clock,
@@ -16,26 +16,48 @@ import {
   Wrench,
   Search,
   Filter,
+  Calendar,
 } from 'lucide-react';
-import { toPersianDigits } from '../../utils/jalali';
+import { toPersianDigits, getUpcomingDays } from '../../utils/jalali';
 
 interface Props {
   projects: Project[];
+  currentUser?: User;
   onPatchProject: (id: string, patch: Partial<Project>) => void;
 }
 
-export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject }) => {
+export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPatchProject }) => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
+  const [newScheduledDate, setNewScheduledDate] = useState('');
   const [fmeaRootCause, setFmeaRootCause] = useState<FmeaRootCause>('SUPPLIER_DEFECT');
   const [filter, setFilter] = useState<'ALL' | 'OPEN' | 'RESOLVED'>('OPEN');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const upcomingDays = getUpcomingDays(30);
+
+  // Helper to extract all incidents for a project
+  const getProjectIncidents = (p: Project): StuckIncident[] => {
+    if (p.stuckIncidents && p.stuckIncidents.length > 0) {
+      return p.stuckIncidents;
+    }
+    if (p.stuckIncident) {
+      return [p.stuckIncident];
+    }
+    return [];
+  };
+
+  const getLatestIncident = (p: Project): StuckIncident | undefined => {
+    const list = getProjectIncidents(p);
+    return list.length > 0 ? list[list.length - 1] : undefined;
+  };
+
   // Collect all projects with stuck incidents
-  const stuckProjects = projects.filter((p) => p.stuckIncident || p.status === 'STUCK');
+  const stuckProjects = projects.filter((p) => getProjectIncidents(p).length > 0 || p.status === 'STUCK');
 
   const filteredProjects = stuckProjects.filter((p) => {
-    const isResolved = p.stuckIncident?.resolutionStatus === 'RESOLVED';
+    const latest = getLatestIncident(p);
+    const isResolved = p.status !== 'STUCK' && latest?.resolutionStatus === 'RESOLVED';
     if (filter === 'OPEN' && isResolved) return false;
     if (filter === 'RESOLVED' && !isResolved) return false;
     if (searchQuery.trim()) {
@@ -50,6 +72,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
   });
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId) || filteredProjects[0];
+  const activeIncident = selectedProject ? getLatestIncident(selectedProject) : undefined;
 
   // Helper to compute remaining hours out of the 72-hour KPI
   const getRemainingTime = (incident?: StuckIncident) => {
@@ -75,48 +98,76 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
       return;
     }
 
-    const updatedIncident: StuckIncident = {
-      ...(project.stuckIncident || {
-        id: `stuck-${Date.now()}`,
-        stuckAt: new Date().toISOString(),
-        category: 'HARDWARE_SHORTAGE',
-        description: 'رفع استاک سر پروژه',
-        reportedBy: 'مسئول QC',
-        photos: [],
-        targetMaxHours: 72,
-        resolutionStatus: 'OPEN',
-      }),
+    const incidents = getProjectIncidents(project);
+    const lastIndex = incidents.length - 1;
+    const baseIncident: StuckIncident =
+      lastIndex >= 0 && incidents[lastIndex].resolutionStatus !== 'RESOLVED'
+        ? incidents[lastIndex]
+        : incidents[lastIndex] || {
+            id: `stuck-${Date.now()}`,
+            stuckAt: new Date().toISOString(),
+            category: 'HARDWARE_SHORTAGE',
+            description: 'رفع استاک سر پروژه',
+            reportedBy: 'مسئول QC',
+            photos: [],
+            targetMaxHours: 72,
+            resolutionStatus: 'OPEN',
+          };
+
+    const resolvedIncident: StuckIncident = {
+      ...baseIncident,
       resolutionStatus: 'RESOLVED',
       resolvedAt: new Date().toISOString(),
-      resolvedBy: 'امین رحمانی (مسئول QC)',
+      resolvedBy: currentUser?.name || 'مسئول QC',
       resolutionNote: resolutionNote.trim(),
       rootCause: fmeaRootCause,
     };
 
-    onPatchProject(project.id, {
-      status: 'IN_PROGRESS',
-      stuckIncident: updatedIncident,
-    });
+    const updatedIncidents =
+      lastIndex >= 0 && incidents[lastIndex].resolutionStatus !== 'RESOLVED'
+        ? incidents.map((inc, idx) => (idx === lastIndex ? resolvedIncident : inc))
+        : [...incidents, resolvedIncident];
+
+    const targetStatus: ProjectStatus =
+      resolvedIncident.previousStatus && project.startedAt
+        ? resolvedIncident.previousStatus
+        : project.startedAt
+        ? 'IN_PROGRESS'
+        : 'SCHEDULED';
+
+    const patch: Partial<Project> = {
+      status: targetStatus,
+      stuckIncident: resolvedIncident,
+      stuckIncidents: updatedIncidents,
+      ...(newScheduledDate ? { scheduledDate: newScheduledDate } : {}),
+    };
+
+    onPatchProject(project.id, patch);
     setResolutionNote('');
+    setNewScheduledDate('');
     alert('پروژه با موفقیت از حالت استاک خارج شد و مجدداً به برنامه فعال اکیپ نصب بازگشت.');
   };
 
-  // KPI Calculations
-  const totalStuckCount = stuckProjects.length;
-  const openStuckCount = stuckProjects.filter(
-    (p) => p.stuckIncident?.resolutionStatus !== 'RESOLVED' || p.status === 'STUCK'
-  ).length;
-  const resolvedCount = totalStuckCount - openStuckCount;
-  const resolvedUnder72hCount = stuckProjects.filter((p) => {
-    if (!p.stuckIncident?.resolvedAt) return false;
+  // KPI Calculations across all incidents
+  const allIncidents: StuckIncident[] = [];
+  projects.forEach((p) => {
+    getProjectIncidents(p).forEach((inc) => {
+      allIncidents.push(inc);
+    });
+  });
+
+  const totalIncidentsCount = allIncidents.length;
+  const openIncidentsCount = allIncidents.filter((inc) => inc.resolutionStatus !== 'RESOLVED').length;
+  const resolvedIncidentsCount = allIncidents.filter((inc) => inc.resolutionStatus === 'RESOLVED').length;
+  const resolvedUnder72hCount = allIncidents.filter((inc) => {
+    if (inc.resolutionStatus !== 'RESOLVED' || !inc.resolvedAt) return false;
     const diff =
-      (new Date(p.stuckIncident.resolvedAt).getTime() -
-        new Date(p.stuckIncident.stuckAt).getTime()) /
+      (new Date(inc.resolvedAt).getTime() - new Date(inc.stuckAt).getTime()) /
       (1000 * 60 * 60);
-    return diff <= 72;
+    return diff <= (inc.targetMaxHours || 72);
   }).length;
   const complianceRate =
-    resolvedCount > 0 ? Math.round((resolvedUnder72hCount / resolvedCount) * 100) : 100;
+    resolvedIncidentsCount > 0 ? Math.round((resolvedUnder72hCount / resolvedIncidentsCount) * 100) : 100;
 
   const getRootCauseLabel = (cause?: FmeaRootCause) => {
     switch (cause) {
@@ -178,7 +229,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-400">مسئولین پیگیری:</span>
             <span className="text-xs bg-white/10 px-3 py-1 rounded-full font-bold text-white border border-white/10">
-              امین رحمانی | امین زهری | اردلان حیدری
+              مسئولین فنی و کنترل کیفیت
             </span>
           </div>
         </div>
@@ -187,10 +238,10 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs">
-          <div className="text-xs text-slate-500 dark:text-zinc-400">پروژه‌های باز (متوقف)</div>
+          <div className="text-xs text-slate-500 dark:text-zinc-400">توقف‌های باز (رویدادهای فعال)</div>
           <div className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1 font-mono flex items-center gap-2">
-            <span>{toPersianDigits(openStuckCount)}</span>
-            {openStuckCount > 0 && (
+            <span>{toPersianDigits(openIncidentsCount)}</span>
+            {openIncidentsCount > 0 && (
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
             )}
           </div>
@@ -204,9 +255,9 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
         </div>
 
         <div className="bg-[#212121] text-white rounded-2xl p-4 border border-[#C1A056]/40 shadow-xs">
-          <div className="text-xs text-[#C1A056] font-bold">کل موارد ثبت‌شده</div>
+          <div className="text-xs text-[#C1A056] font-bold">کل توقف‌های ثبت‌شده</div>
           <div className="text-2xl font-black text-white mt-1 font-mono">
-            {toPersianDigits(totalStuckCount)} پروژه
+            {toPersianDigits(totalIncidentsCount)} مورد
           </div>
         </div>
 
@@ -244,7 +295,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
                     : 'text-slate-600 dark:text-zinc-400'
                 }`}
               >
-                فعال ({toPersianDigits(openStuckCount)})
+                فعال ({toPersianDigits(openIncidentsCount)})
               </button>
               <button
                 type="button"
@@ -255,7 +306,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
                     : 'text-slate-600 dark:text-zinc-400'
                 }`}
               >
-                حل‌شده ({toPersianDigits(resolvedCount)})
+                حل‌شده ({toPersianDigits(resolvedIncidentsCount)})
               </button>
             </div>
           </div>
@@ -272,9 +323,10 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
             </div>
           ) : (
             filteredProjects.map((p) => {
-              const timing = getRemainingTime(p.stuckIncident);
+              const latestInc = getLatestIncident(p);
+              const timing = getRemainingTime(latestInc);
               const isSelected = selectedProject?.id === p.id;
-              const isResolved = p.stuckIncident?.resolutionStatus === 'RESOLVED';
+              const isResolved = p.status !== 'STUCK' && latestInc?.resolutionStatus === 'RESOLVED';
 
               return (
                 <div
@@ -317,7 +369,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
                       {p.title}
                     </h4>
                     <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                      {p.customerName} | {getCategoryTitle(p.stuckIncident?.category)}
+                      {p.customerName} | {getCategoryTitle(latestInc?.category)}
                     </p>
                   </div>
 
@@ -373,31 +425,31 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
                     <span>علت اعلام توقف توسط اکیپ نصب:</span>
                   </div>
                   <span className="font-mono">
-                    {selectedProject.stuckIncident?.stuckAt
-                      ? new Date(selectedProject.stuckIncident.stuckAt).toLocaleString('fa-IR')
+                    {activeIncident?.stuckAt
+                      ? new Date(activeIncident.stuckAt).toLocaleString('fa-IR')
                       : 'ثبت‌شده سر پروژه'}
                   </span>
                 </div>
 
                 <div className="text-xs text-slate-800 dark:text-zinc-200 bg-white dark:bg-[#202020] p-3 rounded-xl border border-rose-100 dark:border-rose-900/30 font-medium leading-relaxed">
-                  {selectedProject.stuckIncident?.description ||
+                  {activeIncident?.description ||
                     'کسری یراق‌آلات و براکت دیواری و عدم تطابق اندازه لت‌های شید با پنجره کناف.'}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600 dark:text-zinc-400">
                   <span>دسته‌بندی خطا:</span>
                   <span className="font-bold text-[#212121] dark:text-white bg-white dark:bg-[#242424] px-2 py-0.5 rounded-md border border-[#E8E4DC] dark:border-[#333333]">
-                    {getCategoryTitle(selectedProject.stuckIncident?.category)}
+                    {getCategoryTitle(activeIncident?.category)}
                   </span>
                   <span>گزارش‌دهنده:</span>
                   <span className="font-bold text-[#212121] dark:text-white">
-                    {selectedProject.stuckIncident?.reportedBy || 'سرپرست نصب'}
+                    {activeIncident?.reportedBy || 'سرپرست نصب'}
                   </span>
                 </div>
               </div>
 
               {/* If already resolved, display resolution details */}
-              {selectedProject.stuckIncident?.resolutionStatus === 'RESOLVED' ? (
+              {activeIncident?.resolutionStatus === 'RESOLVED' && selectedProject.status !== 'STUCK' ? (
                 <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800/40 rounded-2xl p-5 space-y-3">
                   <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-black text-sm">
                     <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -406,13 +458,13 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
 
                   <div className="text-xs text-slate-700 dark:text-zinc-300 leading-relaxed bg-white dark:bg-[#1A1A1A] p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/30">
                     <span className="font-bold block mb-1">اقدام ثبت‌شده توسط مسئول QC:</span>
-                    {selectedProject.stuckIncident.resolutionNote}
+                    {activeIncident.resolutionNote}
                   </div>
 
                   <div className="text-[11px] text-slate-500 dark:text-zinc-400 flex items-center justify-between">
                     <span>ثبت علت ریشه‌ای در ماتریس FMEA:</span>
                     <span className="font-bold text-[#C1A056]">
-                      {getRootCauseLabel(selectedProject.stuckIncident.rootCause)}
+                      {getRootCauseLabel(activeIncident.rootCause)}
                     </span>
                   </div>
                 </div>
@@ -442,6 +494,26 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
                     </select>
                   </div>
 
+                  {/* Optional New Scheduled Date */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-[#C1A056]" />
+                      <span>تاریخ برنامه‌ریزی مجدد پس از رفع استاک (اختیاری):</span>
+                    </label>
+                    <select
+                      value={newScheduledDate}
+                      onChange={(e) => setNewScheduledDate(e.target.value)}
+                      className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] bg-[#FAF7F2] dark:bg-[#161616] dark:text-white font-medium"
+                    >
+                      <option value="">بدون تغییر ({selectedProject.scheduledDate || 'تعیین‌نشده'})</option>
+                      {upcomingDays.map((d) => (
+                        <option key={d.dateKey} value={d.dateKey}>
+                          {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} - {d.persianDayNum} {d.persianMonthName} ({d.dateKey})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Action Note */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">
@@ -449,7 +521,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, onPatchProject })
                     </label>
                     <textarea
                       rows={3}
-                      placeholder="مثال: قطعه کسری از انبار مرکزی دفتر تهران تامین و با هماهنگی لجستیک (موسویان) با پیک اسنپ برای اکیپ آقای نقدعلیان ارسال شد. جهت تسریع، بستر کناف تقویت گردید."
+                      placeholder="مثال: قطعه کسری از انبار مرکزی تامین شد و جهت تسریع با پیک ارسال گردید. پروژه به روال عادی برگشت."
                       value={resolutionNote}
                       onChange={(e) => setResolutionNote(e.target.value)}
                       className="w-full text-xs p-3 rounded-xl border border-[#E8E4DC] dark:border-[#333333] bg-[#FAF7F2] dark:bg-[#161616] dark:text-white focus:ring-2 focus:ring-[#C1A056]"

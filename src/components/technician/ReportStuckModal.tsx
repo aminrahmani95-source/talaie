@@ -49,6 +49,7 @@ export const ReportStuckModal: React.FC<Props> = ({
       photos: [],
       targetMaxHours: 72,
       resolutionStatus: 'OPEN',
+      previousStatus: project.status,
     };
 
     onSubmit(incident);
@@ -151,7 +152,7 @@ export const ReportStuckModal: React.FC<Props> = ({
           </div>
 
           <div className="text-[11px] text-slate-500 dark:text-zinc-400 bg-[#FAF7F2] dark:bg-[#222222] p-3 rounded-xl border border-[#E8E4DC] dark:border-[#2D2D2D] leading-relaxed">
-            با ارسال این گزارش، پروژه بلافاصله در دسک رفع استاک تحت پیگیری امین رحمانی و امین زهری قرار گرفته و شمارش معکوس ۷۲ ساعته آغاز می‌شود.
+            با ارسال این گزارش، پروژه بلافاصله در دسک رفع استاک تحت پیگیری مسئولین فنی قرار گرفته و شمارش معکوس ۷۲ ساعته آغاز می‌شود.
           </div>
 
           {/* Action Buttons */}

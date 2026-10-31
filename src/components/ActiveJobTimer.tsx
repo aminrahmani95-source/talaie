@@ -7,6 +7,7 @@ interface Props {
   status: ProjectStatus;
   startedAt?: string;
   completedAt?: string;
+  reworkStartedAt?: string;
   compact?: boolean;
 }
 
@@ -14,16 +15,19 @@ export const ActiveJobTimer: React.FC<Props> = ({
   status,
   startedAt,
   completedAt,
+  reworkStartedAt,
   compact = false,
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+  const effectiveStartedAt = reworkStartedAt || startedAt;
+  const isRework = Boolean(reworkStartedAt);
 
   useEffect(() => {
-    if (status !== 'IN_PROGRESS' || !startedAt) {
+    if (status !== 'IN_PROGRESS' || !effectiveStartedAt) {
       return;
     }
 
-    const startTimestamp = new Date(startedAt).getTime();
+    const startTimestamp = new Date(effectiveStartedAt).getTime();
     if (isNaN(startTimestamp)) return;
 
     const updateTimer = () => {
@@ -35,9 +39,9 @@ export const ActiveJobTimer: React.FC<Props> = ({
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [status, startedAt]);
+  }, [status, effectiveStartedAt]);
 
-  if (status === 'IN_PROGRESS' && startedAt) {
+  if (status === 'IN_PROGRESS' && effectiveStartedAt) {
     const hours = Math.floor(elapsedSeconds / 3600);
     const minutes = Math.floor((elapsedSeconds % 3600) / 60);
     const seconds = elapsedSeconds % 60;
@@ -63,10 +67,10 @@ export const ActiveJobTimer: React.FC<Props> = ({
           <div>
             <div className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
               <Play className="w-3 h-3 fill-emerald-600 text-emerald-600" />
-              <span>زمان‌سنج کار در محل (فعال):</span>
+              <span>{isRework ? 'زمان‌سنج کار در محل (بازکاری / رفع نقص QC):' : 'زمان‌سنج کار در محل (فعال):'}</span>
             </div>
             <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
-              شروع کار: ساعت {formatTimeOnly(startedAt)}
+              {isRework ? 'شروع بازکاری:' : 'شروع کار:'} ساعت {formatTimeOnly(effectiveStartedAt)}
             </div>
           </div>
         </div>
@@ -78,9 +82,9 @@ export const ActiveJobTimer: React.FC<Props> = ({
     );
   }
 
-  if (status === 'COMPLETED' && startedAt) {
-    const durationText = formatDuration(startedAt, completedAt);
-    const startTimeStr = formatTimeOnly(startedAt);
+  if (status === 'COMPLETED' && effectiveStartedAt) {
+    const durationText = formatDuration(effectiveStartedAt, completedAt);
+    const startTimeStr = formatTimeOnly(effectiveStartedAt);
     const endTimeStr = formatTimeOnly(completedAt);
 
     if (compact) {

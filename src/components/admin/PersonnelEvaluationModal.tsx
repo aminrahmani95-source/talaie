@@ -15,6 +15,7 @@ import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 interface Props {
   project: Project;
   users: User[];
+  currentUser?: User;
   isOpen: boolean;
   onClose: () => void;
   onSaveEvaluation: (evaluation: PersonnelEvaluation) => void;
@@ -23,6 +24,7 @@ interface Props {
 export const PersonnelEvaluationModal: React.FC<Props> = ({
   project,
   users,
+  currentUser,
   isOpen,
   onClose,
   onSaveEvaluation,
@@ -61,7 +63,7 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
       behavioralScore,
       cleanlinessScore,
       criticalIncidentNote: criticalIncidentNote.trim(),
-      evaluatedBy: 'امین رحمانی (مسئول QC)',
+      evaluatedBy: currentUser?.name || 'مسئول QC',
       evaluatedAt: getTodayPersianString(),
     };
 

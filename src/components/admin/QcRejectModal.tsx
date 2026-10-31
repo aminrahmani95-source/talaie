@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Project } from '../../types';
-import { XCircle, X, AlertTriangle, Send } from 'lucide-react';
+import { XCircle, X, AlertTriangle, Send, Calendar } from 'lucide-react';
+import { getUpcomingDays } from '../../utils/jalali';
 
 interface Props {
   project: Project;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (reason: string) => void;
+  onSubmit: (reason: string, newScheduledDate?: string) => void;
 }
 
 export const QcRejectModal: React.FC<Props> = ({
@@ -17,9 +18,12 @@ export const QcRejectModal: React.FC<Props> = ({
 }) => {
   const [reason, setReason] = useState('');
   const [quickDefects, setQuickDefects] = useState<string[]>([]);
+  const [newScheduledDate, setNewScheduledDate] = useState(project.scheduledDate || '');
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
+
+  const upcomingDays = getUpcomingDays(30);
 
   const DEFECT_TEMPLATES = [
     'عدم تراز افقی و شاقول نبودن ریل یا لت‌ها',
@@ -53,7 +57,7 @@ export const QcRejectModal: React.FC<Props> = ({
       return;
     }
 
-    onSubmit(finalReason);
+    onSubmit(finalReason, newScheduledDate || undefined);
   };
 
   return (
@@ -142,6 +146,26 @@ export const QcRejectModal: React.FC<Props> = ({
               className="w-full text-xs p-3 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-rose-500 focus:border-rose-500 bg-[#FAF7F2] dark:bg-[#141414] dark:text-white leading-relaxed resize-none"
             />
             {error && <p className="text-rose-600 text-xs font-bold mt-1">{error}</p>}
+          </div>
+
+          <div>
+            <label htmlFor="qc-reject-date" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-rose-500" />
+              <span>تاریخ برنامه‌ریزی مجدد کارتابل (اختیاری):</span>
+            </label>
+            <select
+              id="qc-reject-date"
+              value={newScheduledDate}
+              onChange={(e) => setNewScheduledDate(e.target.value)}
+              className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-rose-500 focus:border-rose-500 bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
+            >
+              <option value="">بدون تغییر ({project.scheduledDate || 'تعیین‌نشده'})</option>
+              {upcomingDays.map((d) => (
+                <option key={d.dateKey} value={d.dateKey}>
+                  {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} - {d.persianDayNum} {d.persianMonthName} ({d.dateKey})
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Action Buttons */}

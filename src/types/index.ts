@@ -41,7 +41,7 @@ export interface HandoverChecklist {
   cleaned: boolean; // نظافت کامل محیط و جمع‌آوری تمام ضایعات و گرد و خاک
 }
 
-// بازدید پیش از نصب و اندازه‌گیری دوم (BPMN Step: کارشناس فنی / عابدی - علیمحمدی)
+// بازدید پیش از نصب و اندازه‌گیری دوم (BPMN Step: کارشناس فنی)
 export interface PreInstallationInspection {
   drywallStructureOk: boolean; // قوطی‌کشی کناف و مهاربندی سقف کاذب بررسی شد
   electricalWiringOk: boolean; // کابل‌کشی و تغذیه برق موتورهای برقی آماده است
@@ -83,6 +83,7 @@ export interface StuckIncident {
   resolutionNote?: string;
   resolvedBy?: string;
   targetMaxHours: number; // 72 hours KPI
+  previousStatus?: ProjectStatus; // وضعیت قبلی پروژه پیش از ورود به استاک
 }
 
 // ارزیابی ۳۶۰ درجه پرسنل توسط مسئولین فنی
@@ -143,6 +144,7 @@ export interface Project {
   // وضعیت چرخه عمر پروژه (BPMN Lifecycle)
   status: ProjectStatus;
   startedAt?: string;
+  reworkStartedAt?: string; // تاریخ و ساعت شروع اصلاح پس از رد QC
   completedAt?: string;
   completionNotes?: string; // گزارش نهایی سرپرست/تکنسین
   completionPhotos: string[]; // عکس‌های ارسالی بعد از نصب
@@ -157,8 +159,9 @@ export interface Project {
   // چک‌لیست استانداردهای طلایی تحویل
   handoverChecklist?: HandoverChecklist;
   
-  // پرونده استاک سر پروژه (در صورت توقف زیر 72 ساعت)
-  stuckIncident?: StuckIncident;
+  // پرونده‌های استاک سر پروژه (در صورت توقف زیر 72 ساعت)
+  stuckIncident?: StuckIncident; // سابقه تکی سازگار با گذشته
+  stuckIncidents?: StuckIncident[]; // آرایه کامل حوادث استاک پروژه
   
   // رضایت، امضا و نظرسنجی کارفرما
   customerSignature?: string;

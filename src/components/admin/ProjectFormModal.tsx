@@ -24,6 +24,7 @@ export type ProjectFormSaveData =
 
 interface Props {
   project?: Project | null;
+  defaultDate?: string;
   users: User[];
   settings: SystemSettings;
   onClose: () => void;
@@ -32,6 +33,7 @@ interface Props {
 
 export const ProjectFormModal: React.FC<Props> = ({
   project,
+  defaultDate,
   users,
   settings,
   onClose,
@@ -76,7 +78,9 @@ export const ProjectFormModal: React.FC<Props> = ({
   const [specialNotes, setSpecialNotes] = useState(project?.specialNotes || '');
 
   // Scheduled date & time
-  const [scheduledDate, setScheduledDate] = useState(project?.scheduledDate || days[0]?.dateKey);
+  const [scheduledDate, setScheduledDate] = useState(
+    project?.scheduledDate || defaultDate || days[0]?.dateKey || ''
+  );
   const [scheduledTime, setScheduledTime] = useState(project?.scheduledTime || '09:30');
 
   // Technician assignment
@@ -673,10 +677,13 @@ export const ProjectFormModal: React.FC<Props> = ({
                   }}
                   className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white font-bold"
                 >
+                  <option value="MEASUREMENT_PENDING">در انتظار بازدید و اندازه‌گیری دوم</option>
                   <option value="SCHEDULED">برنامه‌ریزی شده (هنوز اعزام نشده)</option>
                   <option value="EN_ROUTE">در مسیر پروژه</option>
                   <option value="IN_PROGRESS">در حال نصب سر صحنه</option>
+                  <option value="STUCK">متوقف / پرونده استاک (&lt;72h)</option>
                   <option value="COMPLETED">نصب پایان یافته</option>
+                  <option value="CANCELLED">لغو شده</option>
                 </select>
               </div>
 

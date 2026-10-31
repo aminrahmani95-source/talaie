@@ -57,6 +57,14 @@ export const MonthPlanner: React.FC<Props> = ({
       ? days.slice(startIndex, startIndex + 4)
       : days;
 
+  // Overdue, Stuck, or QC Rejected projects that need immediate attention
+  const overdueOrReturnedProjects = projects.filter((p) => {
+    const isEnRouteOrInProgress = p.status === 'EN_ROUTE' || p.status === 'IN_PROGRESS';
+    const isStuck = p.status === 'STUCK';
+    const isQcRejected = p.qcStatus === 'REJECTED';
+    return isEnRouteOrInProgress || isStuck || isQcRejected;
+  });
+
   const getUserName = (id?: string) => {
     if (!id) return '';
     return users.find((u) => u.id === id)?.name.split(' (')[0] || '';
@@ -171,6 +179,80 @@ export const MonthPlanner: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      {/* Overdue / Returned Projects Banner */}
+      {overdueOrReturnedProjects.length > 0 && (
+        <div className="bg-rose-50/70 dark:bg-rose-950/20 border border-rose-300 dark:border-rose-900/50 rounded-3xl p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-rose-800 dark:text-rose-300 font-black text-xs sm:text-sm">
+              <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>پروژه‌های معوق، متوقف یا برگشتی از کنترل کیفیت (QC Return):</span>
+            </div>
+            <span className="text-[11px] bg-rose-600 text-white px-2.5 py-0.5 rounded-full font-bold font-mono">
+              {toPersianDigits(overdueOrReturnedProjects.length)} پروژه
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {overdueOrReturnedProjects.map((proj) => {
+              const isStuck = proj.status === 'STUCK';
+              const isRejected = proj.qcStatus === 'REJECTED';
+              return (
+                <div
+                  key={`overdue-${proj.id}`}
+                  className="bg-white dark:bg-[#1A1A1A] p-3.5 rounded-2xl border border-rose-200 dark:border-rose-900/60 shadow-xs space-y-2 text-right relative"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-[#C1A056]">{proj.code}</span>
+                    <span
+                      className={`text-[9px] px-2 py-0.5 rounded-md font-bold ${
+                        isRejected
+                          ? 'bg-rose-600 text-white'
+                          : isStuck
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                      }`}
+                    >
+                      {isRejected
+                        ? 'رد شده در QC'
+                        : isStuck
+                        ? 'متوقف (استاک)'
+                        : proj.status === 'IN_PROGRESS'
+                        ? 'در حال اجرا'
+                        : 'در مسیر'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h5 className="font-bold text-xs text-[#212121] dark:text-white line-clamp-1">
+                      {proj.title}
+                    </h5>
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                      {proj.customerName} | {proj.scheduledDate || 'بدون تاریخ'}
+                    </p>
+                  </div>
+
+                  {isRejected && proj.qcNotes && (
+                    <div className="text-[10px] text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 p-1.5 rounded-lg line-clamp-2">
+                      ایراد QC: {proj.qcNotes}
+                    </div>
+                  )}
+
+                  <div className="pt-1 flex items-center justify-end gap-1.5 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
+                    <button
+                      type="button"
+                      onClick={() => onEditProject(proj)}
+                      className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-[#FAF7F2] dark:bg-[#252525] text-[#A88738] dark:text-[#C1A056] hover:bg-[#F2ECE1] transition cursor-pointer"
+                    >
+                      ویرایش و زمان‌بندی
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Columns Grid */}
       <div
@@ -336,7 +418,8 @@ export const MonthPlanner: React.FC<Props> = ({
                         </div>
 
                         {/* Pre-Installation Inspection (2nd Measurement / Site space) */}
-                        {onOpenPreInspection && (
+                        {onOpenPreInspection &&
+                          (proj.status === 'MEASUREMENT_PENDING' || proj.status === 'SCHEDULED') && (
                           <div>
                             {proj.preInspection ? (
                               <button

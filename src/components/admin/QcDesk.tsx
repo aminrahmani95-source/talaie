@@ -30,6 +30,7 @@ import { CloudImage } from '../common/CloudImage';
 interface Props {
   projects: Project[];
   users: User[];
+  currentUser?: User;
   onPatchProject: (id: string, patch: Partial<Project>) => void;
   onViewProposal: (project: Project) => void;
   onOpenCertificate?: (project: Project) => void;
@@ -39,6 +40,7 @@ interface Props {
 export const QcDesk: React.FC<Props> = ({
   projects,
   users,
+  currentUser,
   onPatchProject,
   onViewProposal,
   onOpenCertificate,
@@ -107,7 +109,7 @@ export const QcDesk: React.FC<Props> = ({
       qcScore,
       qcNotes: qcNotes.trim() || 'نصب با رعایت کامل استانداردهای گالری طلایی انجام و تایید شد.',
       qcReviewedAt: getTodayPersianString(),
-      qcReviewedBy: 'مدیر QC',
+      qcReviewedBy: currentUser?.name || 'مسئول QC',
     };
 
     onPatchProject(selectedProject.id, patch);
@@ -130,15 +132,17 @@ export const QcDesk: React.FC<Props> = ({
     setIsRejectModalOpen(true);
   };
 
-  const handleRejectSubmit = (reason: string) => {
+  const handleRejectSubmit = (reason: string, newScheduledDate?: string) => {
     if (!selectedProject) return;
 
     const patch: Partial<Project> = {
       status: 'IN_PROGRESS', // Send back to in progress so technician can fix
       qcStatus: 'REJECTED',
       qcNotes: reason,
+      reworkStartedAt: new Date().toISOString(),
       qcReviewedAt: getTodayPersianString(),
-      qcReviewedBy: 'مدیر QC',
+      qcReviewedBy: currentUser?.name || 'مسئول QC',
+      ...(newScheduledDate ? { scheduledDate: newScheduledDate } : {}),
     };
 
     onPatchProject(selectedProject.id, patch);
@@ -150,7 +154,8 @@ export const QcDesk: React.FC<Props> = ({
     const patch: Partial<Project> = {
       status: 'COMPLETED',
       qcStatus: 'PENDING',
-      completionNotes: p.completionNotes || 'تکمیل نصب تایید شده توسط مدیر QC جهت بررسی نهایی.',
+      completedAt: new Date().toISOString(),
+      completionNotes: p.completionNotes || 'تکمیل نصب تایید شده توسط مسئول QC جهت بررسی نهایی.',
     };
     onPatchProject(p.id, patch);
     alert(`پروژه ${p.title} به وضعیت «اتمام نصب / در انتظار QC» منتقل شد و هم‌اکنون آماده ارزیابی است.`);
@@ -681,12 +686,12 @@ export const QcDesk: React.FC<Props> = ({
                 </div>
               )}
 
-              {/* Action 1: If project is NOT yet completed, provide quick action for QC Manager */}
-              {!isAwaitingQc(selectedProject) && selectedProject.qcStatus !== 'APPROVED' && (
+              {/* Action 1: If project is IN_PROGRESS, provide quick action for QC Manager to mark ready for QC */}
+              {selectedProject.status === 'IN_PROGRESS' && (
                 <div className="bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <div className="font-bold text-xs text-amber-900 dark:text-amber-200">
-                      این پروژه هنوز به عنوان «اتمام نصب» اعلام نشده است
+                      این پروژه در حال حاضر «در حال نصب» است
                     </div>
                     <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5">
                       برای فعال‌شدن ارزیابی کیفی، می‌توانید مستقیماً آن را به وضعیت اتمام نصب و آماده QC ببرید.
@@ -741,7 +746,7 @@ export const QcDesk: React.FC<Props> = ({
                   )}
 
                   <div className="text-[10px] text-slate-500 dark:text-zinc-400">
-                    تایید شده توسط {selectedProject.qcReviewedBy || 'مدیر QC'} در تاریخ {selectedProject.qcReviewedAt}
+                    تایید شده توسط {selectedProject.qcReviewedBy || 'مسئول QC'} در تاریخ {selectedProject.qcReviewedAt}
                   </div>
                 </div>
               )}

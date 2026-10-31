@@ -256,8 +256,8 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                 </div>
                 <div className="mt-2 space-y-1 text-[11px] text-slate-700">
                   <div className="flex justify-between">
-                    <span>زمان شروع نصب:</span>
-                    <span className="font-mono font-bold">{formatTimeOnly(project.startedAt) || '—'}</span>
+                    <span>{project.reworkStartedAt ? 'زمان شروع بازکاری:' : 'زمان شروع نصب:'}</span>
+                    <span className="font-mono font-bold">{formatTimeOnly(project.reworkStartedAt || project.startedAt) || '—'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>زمان اتمام و تحویل:</span>
@@ -265,7 +265,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                   </div>
                   <div className="flex justify-between pt-1 border-t border-slate-100 font-bold text-[#A88738]">
                     <span>مدت زمان صرف‌شده:</span>
-                    <span>{formatDuration(project.startedAt, project.completedAt) || '—'}</span>
+                    <span>{formatDuration(project.reworkStartedAt || project.startedAt, project.completedAt) || '—'}</span>
                   </div>
                 </div>
               </div>
@@ -327,7 +327,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
               </div>
 
               <div className="text-[10px] text-slate-500">
-                مسئول کنترل کیفیت: {project.qcReviewedBy || 'مدیر QC'} ({toPersianDigits(project.qcReviewedAt || project.scheduledDate)})
+                مسئول کنترل کیفیت: {project.qcReviewedBy || 'مسئول QC'} ({toPersianDigits(project.qcReviewedAt || project.scheduledDate)})
               </div>
             </div>
           </div>

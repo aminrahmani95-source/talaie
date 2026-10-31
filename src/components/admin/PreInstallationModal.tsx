@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Project, PreInstallationInspection } from '../../types';
+import { Project, PreInstallationInspection, User } from '../../types';
 import {
   Ruler,
   CheckCircle2,
@@ -11,10 +11,11 @@ import {
   Calendar,
   FileCheck,
 } from 'lucide-react';
-import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
+import { toPersianDigits, getTodayPersianString, getUpcomingDays } from '../../utils/jalali';
 
 interface Props {
   project: Project;
+  currentUser?: User;
   isOpen: boolean;
   onClose: () => void;
   onSaveInspection: (inspection: PreInstallationInspection, newScheduledDate?: string) => void;
@@ -22,11 +23,13 @@ interface Props {
 
 export const PreInstallationModal: React.FC<Props> = ({
   project,
+  currentUser,
   isOpen,
   onClose,
   onSaveInspection,
 }) => {
   const existing = project.preInspection;
+  const days = getUpcomingDays(30);
 
   const [drywallStructureOk, setDrywallStructureOk] = useState(
     existing?.drywallStructureOk ?? true
@@ -58,11 +61,11 @@ export const PreInstallationModal: React.FC<Props> = ({
       measurementsMatched,
       status,
       notes: notes.trim(),
-      inspectedBy: 'تیم اندازه‌گیری و اصلاحات (عابدی / علیمحمدی)',
+      inspectedBy: currentUser?.name || 'کارشناس اندازه‌گیری و بازدید',
       inspectedAt: getTodayPersianString(),
     };
 
-    onSaveInspection(inspection, status === 'SPACE_NOT_READY' ? postponeDate : undefined);
+    onSaveInspection(inspection, status === 'SPACE_NOT_READY' && postponeDate ? postponeDate : undefined);
     onClose();
   };
 
@@ -212,16 +215,21 @@ export const PreInstallationModal: React.FC<Props> = ({
           {status === 'SPACE_NOT_READY' && (
             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/40 p-3 rounded-2xl space-y-1.5">
               <label className="block text-[11px] font-bold text-amber-900 dark:text-amber-200">
-                تاریخ پیشنهادی جهت موکول شدن نصب (طبق توافق با فروشنده):
+                تاریخ پیشنهادی جهت موکول شدن نصب (انتخاب از تقویم ۳۰ روزه):
               </label>
-              <input
-                type="text"
-                placeholder="مثال: 1405-08-05"
+              <select
                 value={postponeDate}
                 onChange={(e) => setPostponeDate(e.target.value)}
-                className="w-full text-xs p-2 rounded-xl border border-amber-200 bg-white dark:bg-[#151515] dark:text-white font-mono text-left"
-                dir="ltr"
-              />
+                className="w-full text-xs p-2.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-[#151515] dark:text-white font-bold"
+              >
+                <option value="">انتخاب تاریخ موکول‌شدن (اختیاری)...</option>
+                {days.map((d) => (
+                  <option key={d.dateKey} value={d.dateKey}>
+                    {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
+                    {d.persianDayNum} {d.persianMonthName} ({d.persianDateStr})
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 

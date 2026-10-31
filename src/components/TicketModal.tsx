@@ -201,7 +201,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
           {/* Description */}
           <div>
             <label htmlFor="ticket-description" className="block text-xs font-bold text-slate-700 dark:text-[#E8E4DC] mb-1.5">
-              توضیح دقیق مشکل (ویژه مدیر QC و بازرسی):
+              توضیح دقیق مشکل (ویژه مسئولین فنی و کنترل کیفیت):
             </label>
             <textarea
               id="ticket-description"
