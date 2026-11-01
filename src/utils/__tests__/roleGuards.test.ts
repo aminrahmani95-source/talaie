@@ -311,6 +311,110 @@ describe('Role Guards & State Machine Validation', () => {
         });
       }).not.toThrow();
     });
+
+    it('enforces multi-day PAUSED transitions and rules', () => {
+      expect(isValidStatusTransition('IN_PROGRESS', 'PAUSED')).toBe(true);
+      expect(isValidStatusTransition('PAUSED', 'EN_ROUTE')).toBe(true);
+      expect(isValidStatusTransition('PAUSED', 'IN_PROGRESS')).toBe(true);
+      expect(isValidStatusTransition('PAUSED', 'STUCK')).toBe(true);
+      expect(isValidStatusTransition('SCHEDULED', 'PAUSED')).toBe(false);
+
+      const inProgressProject: Project = { ...mockProject, status: 'IN_PROGRESS' };
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, inProgressProject, {
+          status: 'PAUSED',
+        });
+      }).not.toThrow();
+    });
+
+    it('enforces append-only rules on dailyLogs', () => {
+      const existingLog = {
+        id: 'log-1',
+        date: '2026-11-01',
+        note: 'روز اول نصب ریل‌ها انجام شد',
+        photos: [],
+        byUserId: technician.id,
+        byUserName: technician.name,
+        createdAt: '2026-11-01T15:00:00Z',
+      };
+      const projectWithLog: Project = {
+        ...mockProject,
+        status: 'PAUSED',
+        dailyLogs: [existingLog],
+      };
+
+      // Appending valid daily log by same technician
+      const newLog = {
+        id: 'log-2',
+        date: '2026-11-02',
+        note: 'روز دوم پارچه‌ها آویزان شدند',
+        photos: [],
+        byUserId: technician.id,
+        byUserName: technician.name,
+        createdAt: '2026-11-02T16:00:00Z',
+      };
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithLog, {
+          dailyLogs: [existingLog, newLog],
+        });
+      }).not.toThrow();
+
+      // Appending log with another user's ID
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithLog, {
+          dailyLogs: [existingLog, { ...newLog, byUserId: 'other-user' }],
+        });
+      }).toThrowError(/ثبت لاگ روزانه فقط با هویت خودتان مجاز است/);
+
+      // Mutating previous log
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithLog, {
+          dailyLogs: [{ ...existingLog, note: 'دستکاری شد' }, newLog],
+        });
+      }).toThrowError(/ویرایش لاگ‌های روزانه قبلی مجاز نیست/);
+    });
+
+    it('enforces open/close rules on workSessions', () => {
+      const openSession = {
+        date: '2026-11-01',
+        startedAt: '2026-11-01T08:00:00Z',
+        byUserId: technician.id,
+        byUserName: technician.name,
+      };
+      const projectWithOpenSession: Project = {
+        ...mockProject,
+        status: 'IN_PROGRESS',
+        workSessions: [openSession],
+      };
+
+      // Closing own open session
+      const closedSession = {
+        ...openSession,
+        endedAt: '2026-11-01T16:00:00Z',
+      };
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithOpenSession, {
+          workSessions: [closedSession],
+        });
+      }).not.toThrow();
+
+      // Trying to close someone else's session
+      const sessionByLead = {
+        ...openSession,
+        byUserId: leadTech.id,
+        byUserName: leadTech.name,
+      };
+      const projectWithLeadSession: Project = {
+        ...mockProject,
+        status: 'IN_PROGRESS',
+        workSessions: [sessionByLead],
+      };
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithLeadSession, {
+          workSessions: [{ ...sessionByLead, endedAt: '2026-11-01T16:00:00Z' }],
+        });
+      }).toThrowError(/شما فقط مجاز به بستن جلسه کاری خودتان هستید/);
+    });
   });
 
   describe('validateEvaluationRoleGuards', () => {

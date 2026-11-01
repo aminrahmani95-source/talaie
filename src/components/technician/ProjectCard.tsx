@@ -16,10 +16,12 @@ import {
   MoreVertical,
   Layers,
   Loader2,
+  Moon,
 } from 'lucide-react';
 import { toPersianDigits } from '../../utils/jalali';
 import { ActiveJobTimer } from '../ActiveJobTimer';
 import { StatusPill } from '../ui/StatusPill';
+import { getMultiDayProgress } from '../../utils/multiDay';
 
 interface Props {
   project: Project;
@@ -28,6 +30,7 @@ interface Props {
   onOpenToolChecklist: (project: Project) => void;
   onOpenTicketModal: (project: Project) => void;
   onOpenCompletionModal: (project: Project) => void;
+  onOpenDailyLogModal?: (project: Project) => void;
   onUpdateStatus: (projectId: string, from: ProjectStatus, to: ProjectStatus) => void;
   onOpenCertificate?: (project: Project) => void;
   onReportStuck?: (project: Project) => void;
@@ -41,6 +44,7 @@ export const ProjectCard: React.FC<Props> = ({
   onOpenToolChecklist,
   onOpenTicketModal,
   onOpenCompletionModal,
+  onOpenDailyLogModal,
   onUpdateStatus,
   onOpenCertificate,
   onReportStuck,
@@ -53,7 +57,12 @@ export const ProjectCard: React.FC<Props> = ({
   const isEnRoute = project.status === 'EN_ROUTE';
   const isCompleted = project.status === 'COMPLETED';
   const isScheduled = project.status === 'SCHEDULED';
+  const isPaused = project.status === 'PAUSED';
   const isRejected = project.qcStatus === 'REJECTED';
+
+  const multiDayProgress = getMultiDayProgress(project);
+  const todayYmd = new Date().toISOString().slice(0, 10);
+  const isBeforeEndDate = Boolean(project.endDate && todayYmd < project.endDate);
 
   return (
     <div
@@ -71,6 +80,11 @@ export const ProjectCard: React.FC<Props> = ({
           <span className="font-mono text-xs font-black bg-[#212121] text-[#E5CA8F] px-2 py-0.5 rounded-md">
             {project.code}
           </span>
+          {multiDayProgress && (
+            <span className="text-xs bg-[#C1A056]/20 text-[#8E6F27] dark:text-[#E5CA8F] font-bold px-2 py-0.5 rounded-md">
+              {multiDayProgress.badgeText}
+            </span>
+          )}
           <div className="flex items-center gap-1 text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF]">
             <Clock className="w-3.5 h-3.5 text-[#8E6F27] dark:text-[#E5CA8F]" />
             <span className="font-mono">{toPersianDigits(project.scheduledTime)}</span>
@@ -111,6 +125,7 @@ export const ProjectCard: React.FC<Props> = ({
         startedAt={project.startedAt}
         completedAt={project.completedAt}
         reworkStartedAt={project.reworkStartedAt}
+        workSessions={project.workSessions}
       />
 
       {/* Title, Customer, and Address */}
@@ -201,11 +216,11 @@ export const ProjectCard: React.FC<Props> = ({
 
       {/* ONE BIG OBVIOUS PRIMARY ACTION BUTTON (Unmissable in sunlight) */}
       <div className="pt-1">
-        {isScheduled && (
+        {(isScheduled || isPaused) && (
           <button
             type="button"
             disabled={isTransitioning}
-            onClick={() => onUpdateStatus(project.id, 'SCHEDULED', 'EN_ROUTE')}
+            onClick={() => onUpdateStatus(project.id, isPaused ? 'PAUSED' : 'SCHEDULED', 'EN_ROUTE')}
             className="w-full py-4 px-4 bg-[#212121] hover:bg-[#2D2D2D] disabled:opacity-50 text-[#C1A056] rounded-xl text-sm font-black shadow-md transition flex items-center justify-center gap-2.5 border-2 border-[#C1A056] active:scale-[0.98] min-h-[50px] cursor-pointer"
           >
             {isTransitioning ? (
@@ -213,7 +228,13 @@ export const ProjectCard: React.FC<Props> = ({
             ) : (
               <Car className="w-5 h-5" />
             )}
-            <span>{isTransitioning ? 'در حال ثبت...' : 'حرکت به محل نصب (اعلام حرکت)'}</span>
+            <span>
+              {isTransitioning
+                ? 'در حال ثبت...'
+                : isPaused
+                ? 'ادامه کار (اعلام حرکت به محل)'
+                : 'حرکت به محل نصب (اعلام حرکت)'}
+            </span>
           </button>
         )}
 
@@ -234,14 +255,35 @@ export const ProjectCard: React.FC<Props> = ({
         )}
 
         {isInProgress && (
-          <button
-            type="button"
-            onClick={() => onOpenCompletionModal(project)}
-            className="w-full py-4 px-4 bg-[#C1A056] hover:bg-[#D4B56C] text-[#181818] rounded-xl text-sm font-black shadow-lg transition flex items-center justify-center gap-2.5 active:scale-[0.98] min-h-[50px] cursor-pointer"
-          >
-            <CheckCircle2 className="w-5 h-5" />
-            <span>ثبت اتمام کار و ارسال به QC</span>
-          </button>
+          isBeforeEndDate ? (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => onOpenDailyLogModal?.(project)}
+                className="w-full py-4 px-4 bg-[#212121] hover:bg-[#2D2D2D] text-[#C1A056] border-2 border-[#C1A056] rounded-xl text-sm font-black shadow-md transition flex items-center justify-center gap-2.5 active:scale-[0.98] min-h-[50px] cursor-pointer"
+              >
+                <Moon className="w-5 h-5" />
+                <span>پایان کار امروز</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenCompletionModal(project)}
+                className="w-full py-2.5 px-3 text-xs font-bold text-[#69655F] dark:text-[#9E988D] hover:text-[#181818] dark:hover:text-white transition flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4 text-[#C1A056]" />
+                <span>کار تمام شد؟ ثبت اتمام و ارسال به QC</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onOpenCompletionModal(project)}
+              className="w-full py-4 px-4 bg-[#C1A056] hover:bg-[#D4B56C] text-[#181818] rounded-xl text-sm font-black shadow-lg transition flex items-center justify-center gap-2.5 active:scale-[0.98] min-h-[50px] cursor-pointer"
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              <span>ثبت اتمام کار و ارسال به QC</span>
+            </button>
+          )
         )}
 
         {isStuck && (

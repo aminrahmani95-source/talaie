@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Play, CheckCircle2 } from 'lucide-react';
 import { toPersianDigits, formatDuration, formatTimeOnly } from '../utils/jalali';
-import { ProjectStatus } from '../types';
+import { ProjectStatus, WorkSession } from '../types';
+import { calculateWorkSessionsSummary } from '../utils/multiDay';
 
 interface Props {
   status: ProjectStatus;
   startedAt?: string;
   completedAt?: string;
   reworkStartedAt?: string;
+  workSessions?: WorkSession[];
   compact?: boolean;
 }
 
@@ -16,10 +18,12 @@ export const ActiveJobTimer: React.FC<Props> = ({
   startedAt,
   completedAt,
   reworkStartedAt,
+  workSessions,
   compact = false,
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
-  const effectiveStartedAt = reworkStartedAt || startedAt;
+  const openSession = workSessions?.find((s) => !s.endedAt);
+  const effectiveStartedAt = openSession?.startedAt || reworkStartedAt || startedAt;
   const isRework = Boolean(reworkStartedAt);
 
   useEffect(() => {
@@ -40,6 +44,10 @@ export const ActiveJobTimer: React.FC<Props> = ({
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [status, effectiveStartedAt]);
+
+  const multiDaySummary = workSessions && workSessions.length > 0
+    ? calculateWorkSessionsSummary(workSessions, effectiveStartedAt, completedAt)
+    : null;
 
   if (status === 'IN_PROGRESS' && effectiveStartedAt) {
     const hours = Math.floor(elapsedSeconds / 3600);
@@ -75,15 +83,24 @@ export const ActiveJobTimer: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="font-mono font-black text-sm text-emerald-800 dark:text-emerald-200 bg-white dark:bg-[#161616] px-3 py-1 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-2xs">
-          {toPersianDigits(timeString)}
+        <div className="text-left">
+          <div className="font-mono font-black text-sm text-emerald-800 dark:text-emerald-200 bg-white dark:bg-[#161616] px-3 py-1 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-2xs">
+            {toPersianDigits(timeString)}
+          </div>
+          {multiDaySummary && (
+            <div className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 font-bold text-right">
+              مجموع: {toPersianDigits(Math.floor(multiDaySummary.totalSeconds / 3600))} ساعت در {toPersianDigits(multiDaySummary.uniqueDaysCount)} روز
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   if (status === 'COMPLETED' && effectiveStartedAt) {
-    const durationText = formatDuration(effectiveStartedAt, completedAt);
+    const durationText = multiDaySummary
+      ? multiDaySummary.formattedText
+      : formatDuration(effectiveStartedAt, completedAt);
     const startTimeStr = formatTimeOnly(effectiveStartedAt);
     const endTimeStr = formatTimeOnly(completedAt);
 

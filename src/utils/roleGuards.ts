@@ -18,6 +18,8 @@ export const ALLOWED_TECHNICIAN_PATCH_KEYS = new Set([
   'stuckIncidents',
   'updatedAt',
   'qcStatus',
+  'workSessions',
+  'dailyLogs',
 ]);
 
 export function isValidStatusTransition(from: ProjectStatus, to: ProjectStatus): boolean {
@@ -25,6 +27,11 @@ export function isValidStatusTransition(from: ProjectStatus, to: ProjectStatus):
   if (from === 'EN_ROUTE' && to === 'IN_PROGRESS') return true;
   if (from === 'IN_PROGRESS' && to === 'COMPLETED') return true;
   if ((from === 'EN_ROUTE' || from === 'IN_PROGRESS') && to === 'STUCK') return true;
+  // Multi-day PAUSED transitions
+  if (from === 'IN_PROGRESS' && to === 'PAUSED') return true;
+  if (from === 'PAUSED' && to === 'EN_ROUTE') return true;
+  if (from === 'PAUSED' && to === 'IN_PROGRESS') return true;
+  if (from === 'PAUSED' && to === 'STUCK') return true;
   return false;
 }
 
@@ -102,6 +109,82 @@ export function validateProjectPatchRoleGuards(
     const newlyAppended = newIncidents[newIncidents.length - 1];
     if (!newlyAppended || newlyAppended.resolutionStatus !== 'OPEN') {
       throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند.');
+    }
+  }
+
+  // ۶. بررسی dailyLogs: فقط الحاق مجاز است (append-only) و توسط کاربر جاری
+  if (patch.dailyLogs !== undefined) {
+    if (!Array.isArray(patch.dailyLogs)) {
+      throw new PermanentError('دسترسی غیرمجاز: لاگ روزانه باید آرایه باشد.');
+    }
+    const currentLogs = Array.isArray(project.dailyLogs) ? project.dailyLogs : [];
+    const newLogs = patch.dailyLogs;
+
+    if (newLogs.length !== currentLogs.length + 1) {
+      throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط می‌تواند لاگ روزانه جدید الصاق کند.');
+    }
+
+    for (let i = 0; i < currentLogs.length; i++) {
+      if (JSON.stringify(currentLogs[i]) !== JSON.stringify(newLogs[i])) {
+        throw new PermanentError('دسترسی غیرمجاز: ویرایش لاگ‌های روزانه قبلی مجاز نیست.');
+      }
+    }
+
+    const lastLog = newLogs[newLogs.length - 1];
+    if (!lastLog || lastLog.byUserId !== user.id) {
+      throw new PermanentError('دسترسی غیرمجاز: ثبت لاگ روزانه فقط با هویت خودتان مجاز است.');
+    }
+  }
+
+  // ۷. بررسی workSessions: الحاق جلسه جدید یا بستن جلسه جاری باز متعلق به خود کاربر
+  if (patch.workSessions !== undefined) {
+    if (!Array.isArray(patch.workSessions)) {
+      throw new PermanentError('دسترسی غیرمجاز: جلسات کاری باید آرایه باشد.');
+    }
+    const currentSessions = Array.isArray(project.workSessions) ? project.workSessions : [];
+    const newSessions = patch.workSessions;
+
+    if (newSessions.length === currentSessions.length && currentSessions.length > 0) {
+      // بستن آخرین جلسه باز
+      for (let i = 0; i < currentSessions.length - 1; i++) {
+        if (JSON.stringify(currentSessions[i]) !== JSON.stringify(newSessions[i])) {
+          throw new PermanentError('دسترسی غیرمجاز: جلسات کاری قبلی قابل ویرایش نیستند.');
+        }
+      }
+
+      const lastCurrent = currentSessions[currentSessions.length - 1];
+      const lastNew = newSessions[newSessions.length - 1];
+
+      if (lastCurrent.byUserId !== user.id) {
+        throw new PermanentError('دسترسی غیرمجاز: شما فقط مجاز به بستن جلسه کاری خودتان هستید.');
+      }
+      if (lastCurrent.endedAt) {
+        throw new PermanentError('دسترسی غیرمجاز: این جلسه کاری قبلاً بسته شده است.');
+      }
+      if (!lastNew.endedAt) {
+        throw new PermanentError('دسترسی غیرمجاز: زمان پایان کار جلسه تنظیم نشده است.');
+      }
+
+      // سایر فیلدهای جلسه نباید تغییر کرده باشند
+      const { endedAt: _e1, ...currRest } = lastCurrent;
+      const { endedAt: _e2, ...newRest } = lastNew;
+      if (JSON.stringify(currRest) !== JSON.stringify(newRest)) {
+        throw new PermanentError('دسترسی غیرمجاز: تغییر سایر مشخصات جلسه کاری مجاز نیست.');
+      }
+    } else if (newSessions.length === currentSessions.length + 1) {
+      // الحاق یک جلسه کاری جدید
+      for (let i = 0; i < currentSessions.length; i++) {
+        if (JSON.stringify(currentSessions[i]) !== JSON.stringify(newSessions[i])) {
+          throw new PermanentError('دسترسی غیرمجاز: جلسات کاری قبلی قابل تغییر نیستند.');
+        }
+      }
+
+      const newlyAppendedSession = newSessions[newSessions.length - 1];
+      if (!newlyAppendedSession || newlyAppendedSession.byUserId !== user.id) {
+        throw new PermanentError('دسترسی غیرمجاز: باز کردن جلسه فقط با هویت خودتان مجاز است.');
+      }
+    } else {
+      throw new PermanentError('دسترسی غیرمجاز: تعداد یا ترتیب جلسات کاری نامعتبر است.');
     }
   }
 }

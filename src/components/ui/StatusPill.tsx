@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   MinusCircle,
+  PauseCircle,
 } from 'lucide-react';
 
 export interface StatusPillProps {
@@ -93,6 +94,16 @@ export const StatusPill: React.FC<StatusPillProps> = ({
         >
           <Wrench className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
           <span>{customLabel || 'در حال نصب'}</span>
+        </span>
+      );
+
+    case 'PAUSED':
+      return (
+        <span
+          className={`inline-flex items-center font-bold rounded-full bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 ${sizeClasses} ${className}`}
+        >
+          <PauseCircle className="w-3.5 h-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+          <span>{customLabel || 'نیمه‌کاره — ادامه روز بعد'}</span>
         </span>
       );
 

@@ -14,6 +14,7 @@ export type ProjectStatus =
   | 'SCHEDULED'           // زمان‌بندی شده برای نصب (BPMN Step 2)
   | 'EN_ROUTE'            // در مسیر پروژه
   | 'IN_PROGRESS'         // در حال نصب سر پروژه
+  | 'PAUSED'              // نیمه‌کاره — ادامه روز بعد
   | 'STUCK'               // استاک / متوقف شده (گیت‌وی رفع استاک زیر 72 ساعت)
   | 'COMPLETED'           // نصب پایان یافته و در انتظار بررسی QC
   | 'CANCELLED';          // لغو شده
@@ -110,6 +111,26 @@ export interface CustomerSurvey {
   surveyedAt: string;
 }
 
+// ثبت جلسات کاری روزانه برای پروژه‌های چندروزه
+export interface WorkSession {
+  date: string; // YYYY-MM-DD
+  startedAt: string; // ISO timestamp
+  endedAt?: string; // ISO timestamp
+  byUserId: string;
+  byUserName: string;
+}
+
+// گزارش پیشرفت روزانه برای پروژه‌های چندروزه
+export interface DailyLog {
+  id: string;
+  date: string; // YYYY-MM-DD
+  note: string; // گزارش کار امروز
+  photos: string[]; // تصاویر ارسالی از پیشرفت امروز
+  byUserId: string;
+  byUserName: string;
+  createdAt: string; // ISO timestamp
+}
+
 export interface Project {
   id: string;
   code: string; // کد رهگیری یا شماره سفارش (مثلاً PRJ-104)
@@ -131,6 +152,7 @@ export interface Project {
   
   // زمان‌بندی
   scheduledDate: string; // YYYY-MM-DD (جلالی یا میلادی استاندارد)
+  endDate?: string; // YYYY-MM-DD (برای پروژه‌های چندروزه: endDate > scheduledDate)
   scheduledTime: string; // مثلاً 09:30 یا 14:00
   
   // اکیپ نصب
@@ -180,6 +202,10 @@ export interface Project {
   qcReviewedAt?: string;
   qcReviewedBy?: string;
   
+  // جلسات کاری و لاگ‌های روزانه برای پروژه‌های چندروزه
+  workSessions?: WorkSession[];
+  dailyLogs?: DailyLog[];
+
   createdAt: string;
   updatedAt: string;
   __fromCache?: boolean; // علامت‌گذاری موقت برای پروژه‌های خوانده‌شده از کش محلی

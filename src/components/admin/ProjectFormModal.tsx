@@ -16,7 +16,8 @@ import {
   Loader2,
   Search,
 } from 'lucide-react';
-import { getUpcomingDays, getTodayPersianString } from '../../utils/jalali';
+import { getUpcomingDays, getTodayPersianString, toPersianDigits } from '../../utils/jalali';
+import { getMultiDayTotalDays } from '../../utils/multiDay';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { SupabaseSyncService } from '../../utils/supabase';
 import { CloudImage } from '../common/CloudImage';
@@ -69,6 +70,9 @@ export const ProjectFormModal: React.FC<Props> = ({
   // Scheduled date & time
   const [scheduledDate, setScheduledDate] = useState(
     project?.scheduledDate || defaultDate || days[0]?.dateKey || ''
+  );
+  const [endDate, setEndDate] = useState(
+    project?.endDate || project?.scheduledDate || defaultDate || days[0]?.dateKey || ''
   );
   const [scheduledTime, setScheduledTime] = useState(project?.scheduledTime || '09:30');
 
@@ -212,6 +216,7 @@ export const ProjectFormModal: React.FC<Props> = ({
           specialNotes: specialNotes.trim(),
           proposalImages,
           scheduledDate,
+          endDate: endDate && endDate > scheduledDate ? endDate : undefined,
           scheduledTime,
           assignedTechnicianIds,
           leadTechnicianId: effectiveLead,
@@ -252,6 +257,7 @@ export const ProjectFormModal: React.FC<Props> = ({
           specialNotes: specialNotes.trim(),
           proposalImages,
           scheduledDate,
+          endDate: endDate && endDate > scheduledDate ? endDate : undefined,
           scheduledTime,
           assignedTechnicianIds,
           leadTechnicianId: effectiveLead,
@@ -533,7 +539,13 @@ export const ProjectFormModal: React.FC<Props> = ({
                 <select
                   id="scheduled-date"
                   value={scheduledDate}
-                  onChange={(e) => setScheduledDate(e.target.value)}
+                  onChange={(e) => {
+                    const newStart = e.target.value;
+                    setScheduledDate(newStart);
+                    if (!endDate || endDate < newStart) {
+                      setEndDate(newStart);
+                    }
+                  }}
                   className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-bold"
                 >
                   {days.map((d) => (
@@ -546,6 +558,34 @@ export const ProjectFormModal: React.FC<Props> = ({
               </div>
 
               <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="end-date" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF]">
+                    تاریخ پایان (برای پروژه‌های چندروزه):
+                  </label>
+                  {endDate && endDate > scheduledDate && (
+                    <span className="text-xs bg-[#C1A056]/20 text-[#8E6F27] dark:text-[#E5CA8F] font-bold px-2 py-0.5 rounded-full">
+                      پروژه {toPersianDigits(getMultiDayTotalDays(scheduledDate, endDate))} روزه
+                    </span>
+                  )}
+                </div>
+                <select
+                  id="end-date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-bold"
+                >
+                  {days
+                    .filter((d) => d.dateKey >= scheduledDate)
+                    .map((d) => (
+                      <option key={d.dateKey} value={d.dateKey}>
+                        {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
+                        {d.persianDayNum} {d.persianMonthName}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
                 <label htmlFor="scheduled-time" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
                   ساعت حضور در محل:
                 </label>

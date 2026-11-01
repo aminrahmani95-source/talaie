@@ -20,10 +20,13 @@ import {
   Award,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ArrowRight,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toPersianDigits, formatJalali } from '../../utils/jalali';
+import { calculateWorkSessionsSummary } from '../../utils/multiDay';
 import { ActiveJobTimer } from '../ActiveJobTimer';
 import { QcRejectModal } from './QcRejectModal';
 import { CloudImage } from '../common/CloudImage';
@@ -66,6 +69,7 @@ export const QcDesk: React.FC<Props> = ({
   const [isEditingApproved, setIsEditingApproved] = useState<boolean>(false);
   const [previewPhotoIndex, setPreviewPhotoIndex] = useState<number | null>(null);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState<boolean>(false);
+  const [isDailyLogsOpen, setIsDailyLogsOpen] = useState<boolean>(true);
 
   // Helper: check if project is strictly waiting for QC review
   const isAwaitingQc = (p: Project) => {
@@ -259,12 +263,83 @@ export const QcDesk: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Timer */}
+        {/* Timer & Multi-Day Work Summary */}
         <ActiveJobTimer
           status={selectedProject.status}
           startedAt={selectedProject.startedAt}
           completedAt={selectedProject.completedAt}
+          reworkStartedAt={selectedProject.reworkStartedAt}
+          workSessions={selectedProject.workSessions}
         />
+
+        {selectedProject.workSessions && selectedProject.workSessions.length > 0 && (() => {
+          const sessionSummary = calculateWorkSessionsSummary(selectedProject.workSessions);
+          return sessionSummary ? (
+            <div className="flex items-center justify-between bg-white dark:bg-[#1A1A1A] px-3.5 py-2.5 rounded-xl border border-[#C1A056]/30 text-xs font-bold text-[#8E6F27] dark:text-[#E5CA8F] shadow-2xs">
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-[#C1A056]" />
+                <span>مجموع زمان کار:</span>
+              </span>
+              <span>{sessionSummary.text}</span>
+            </div>
+          ) : null;
+        })()}
+
+        {/* Daily Logs Timeline (Collapsible) for Multi-Day Projects */}
+        {selectedProject.dailyLogs && selectedProject.dailyLogs.length > 0 && (
+          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-3">
+            <button
+              type="button"
+              onClick={() => setIsDailyLogsOpen((prev) => !prev)}
+              className="w-full flex items-center justify-between text-right cursor-pointer select-none"
+            >
+              <h4 className="text-xs font-black text-[#181818] dark:text-[#F5F3EF] flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+                <span>گزارش‌های روزانه کار ({toPersianDigits(selectedProject.dailyLogs.length)} روز ثبت‌شده):</span>
+              </h4>
+              <div className="text-[#69655F] dark:text-[#9E988D]">
+                {isDailyLogsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </div>
+            </button>
+
+            {isDailyLogsOpen && (
+              <div className="space-y-3 pt-1">
+                {selectedProject.dailyLogs.map((log, idx) => (
+                  <div
+                    key={log.id || idx}
+                    className="bg-white dark:bg-[#141414] p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-2 text-xs"
+                  >
+                    <div className="flex items-center justify-between text-[#69655F] dark:text-[#9E988D]">
+                      <span className="font-bold text-[#181818] dark:text-[#F5F3EF]">
+                        {formatJalali(log.date)}
+                      </span>
+                      <span>توسط: {log.byUserName}</span>
+                    </div>
+                    <p className="text-[#4A4742] dark:text-[#BDB8AF] leading-relaxed">
+                      {log.note}
+                    </p>
+                    {log.photos && log.photos.length > 0 && (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
+                        {log.photos.map((photo, pIdx) => (
+                          <div
+                            key={pIdx}
+                            className="relative h-20 rounded-lg overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C]"
+                          >
+                            <CloudImage
+                              src={photo}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Photos Grid: Before & After */}
         <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-3">

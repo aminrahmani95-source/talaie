@@ -15,6 +15,7 @@ import {
 import { toPersianDigits, formatDuration, formatTimeOnly, formatJalali } from '../utils/jalali';
 import { CloudImage } from './common/CloudImage';
 import { getDisplayName } from '../utils/technicianName';
+import { calculateWorkSessionsSummary } from '../utils/multiDay';
 
 interface Props {
   project: Project;
@@ -267,7 +268,11 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                   </div>
                   <div className="flex justify-between pt-1 border-t border-slate-100 font-bold text-[#A88738]">
                     <span>مدت زمان صرف‌شده:</span>
-                    <span>{formatDuration(project.reworkStartedAt || project.startedAt, project.completedAt) || '—'}</span>
+                    <span>
+                      {project.workSessions && project.workSessions.length > 0
+                        ? calculateWorkSessionsSummary(project.workSessions, project.reworkStartedAt || project.startedAt, project.completedAt)?.formattedText || '—'
+                        : (formatDuration(project.reworkStartedAt || project.startedAt, project.completedAt) || '—')}
+                    </span>
                   </div>
                 </div>
               </div>

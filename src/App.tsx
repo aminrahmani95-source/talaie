@@ -8,6 +8,8 @@ import {
   PreInstallationInspection,
   PersonnelEvaluation,
   StuckIncident,
+  DailyLog,
+  WorkSession,
 } from './types';
 import { StorageService } from './utils/storage';
 import { SupabaseSyncService } from './utils/supabase';
@@ -78,6 +80,9 @@ const HandoverCertificateModal = React.lazy(() =>
 );
 const ReportStuckModal = React.lazy(() =>
   import('./components/technician/ReportStuckModal').then((m) => ({ default: m.ReportStuckModal }))
+);
+const DailyLogModal = React.lazy(() =>
+  import('./components/technician/DailyLogModal').then((m) => ({ default: m.DailyLogModal }))
 );
 
 export const App: React.FC = () => {
@@ -346,6 +351,7 @@ export const App: React.FC = () => {
   const [preInspectionProject, setPreInspectionProject] = useState<Project | null>(null);
   const [evaluationProject, setEvaluationProject] = useState<Project | null>(null);
   const [stuckModalProject, setStuckModalProject] = useState<Project | null>(null);
+  const [dailyLogModalProject, setDailyLogModalProject] = useState<Project | null>(null);
 
   // Modern Toast notification system
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -575,8 +581,25 @@ export const App: React.FC = () => {
       status: to,
       updatedAt: new Date().toISOString(),
     };
-    if (to === 'IN_PROGRESS' && !current.startedAt) {
-      patch.startedAt = new Date().toISOString();
+    if (to === 'IN_PROGRESS') {
+      if (!current.startedAt) {
+        patch.startedAt = new Date().toISOString();
+      }
+      const existingSessions = current.workSessions || [];
+      const hasOpenSession = existingSessions.some((s) => !s.endedAt);
+      if (!hasOpenSession) {
+        const nowIso = new Date().toISOString();
+        const todayKey = nowIso.slice(0, 10);
+        patch.workSessions = [
+          ...existingSessions,
+          {
+            date: todayKey,
+            startedAt: nowIso,
+            byUserId: currentUser.id,
+            byUserName: currentUser.name,
+          },
+        ];
+      }
     }
 
     try {
@@ -616,6 +639,15 @@ export const App: React.FC = () => {
   }) => {
     if (!completionModalProject || !currentUser) return;
     const projectId = completionModalProject.id;
+    const nowIso = new Date().toISOString();
+
+    const existingSessions = completionModalProject.workSessions || [];
+    let updatedSessions = existingSessions;
+    if (existingSessions.length > 0 && !existingSessions[existingSessions.length - 1].endedAt) {
+      updatedSessions = existingSessions.map((s, idx) =>
+        idx === existingSessions.length - 1 ? { ...s, endedAt: nowIso } : s
+      );
+    }
 
     const patch: Partial<Project> = {
       status: 'COMPLETED',
@@ -627,8 +659,9 @@ export const App: React.FC = () => {
       handoverChecklist: completionData.handoverChecklist,
       customerSignature: completionData.customerSignature,
       customerSatisfaction: completionData.customerSatisfaction,
-      completedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      completedAt: nowIso,
+      updatedAt: nowIso,
+      workSessions: updatedSessions,
     };
 
     await commit(
@@ -647,6 +680,56 @@ export const App: React.FC = () => {
       }
     );
     showToast('success', 'گزارش اتمام کار با موفقیت ثبت شد و به بررسی QC ارسال گردید.');
+  };
+
+  // Daily log (temporary pause for multi-day project)
+  const handleEndDailyWork = async (data: { note: string; photos: string[] }) => {
+    if (!dailyLogModalProject || !currentUser) return;
+    const project = dailyLogModalProject;
+    const nowIso = new Date().toISOString();
+    const todayKey = nowIso.slice(0, 10);
+
+    const existingSessions = project.workSessions || [];
+    let updatedSessions = existingSessions;
+    if (existingSessions.length > 0 && !existingSessions[existingSessions.length - 1].endedAt) {
+      updatedSessions = existingSessions.map((s, idx) =>
+        idx === existingSessions.length - 1 ? { ...s, endedAt: nowIso } : s
+      );
+    }
+
+    const newDailyLog: DailyLog = {
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `log-${Date.now()}`,
+      date: todayKey,
+      note: data.note,
+      photos: data.photos,
+      byUserId: currentUser.id,
+      byUserName: currentUser.name,
+      createdAt: nowIso,
+    };
+
+    const patch: Partial<Project> = {
+      status: 'PAUSED',
+      workSessions: updatedSessions,
+      dailyLogs: [...(project.dailyLogs || []), newDailyLog],
+      updatedAt: nowIso,
+    };
+
+    await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${project.id}`,
+        payload: { id: project.id, patch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === project.id ? { ...p, ...patch } : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+        setDailyLogModalProject(null);
+      }
+    );
+    showToast('success', 'پایان کار امروز ثبت شد و پروژه در وضعیت نیمه‌کاره قرار گرفت.');
   };
 
   // Pre-Installation inspection & 2nd measurement handler
@@ -1068,6 +1151,7 @@ export const App: React.FC = () => {
               onOpenToolChecklist={(p) => setToolChecklistProject(p)}
               onOpenTicketModal={(p) => setTicketModalProject(p)}
               onOpenCompletionModal={(p) => setCompletionModalProject(p)}
+              onOpenDailyLogModal={(p) => setDailyLogModalProject(p)}
               onUpdateStatus={transitionStatus}
               inFlightTransitions={inFlightTransitions}
               onOpenCertificate={(p) => setCertificateModalProject(p)}
@@ -1123,6 +1207,15 @@ export const App: React.FC = () => {
             project={completionModalProject}
             onClose={() => setCompletionModalProject(null)}
             onSubmit={handleReportCompletion}
+          />
+        )}
+
+        {dailyLogModalProject && (
+          <DailyLogModal
+            project={dailyLogModalProject}
+            isOpen={!!dailyLogModalProject}
+            onClose={() => setDailyLogModalProject(null)}
+            onSubmit={handleEndDailyWork}
           />
         )}
 

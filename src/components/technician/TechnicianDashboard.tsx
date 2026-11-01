@@ -4,6 +4,7 @@ import { ProjectCard } from './ProjectCard';
 import { Calendar, Users, WifiOff, AlertOctagon } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
+import { isProjectScheduledOnDate } from '../../utils/multiDay';
 
 interface Props {
   currentUser: User;
@@ -13,6 +14,7 @@ interface Props {
   onOpenToolChecklist: (project: Project) => void;
   onOpenTicketModal: (project: Project) => void;
   onOpenCompletionModal: (project: Project) => void;
+  onOpenDailyLogModal?: (project: Project) => void;
   onUpdateStatus: (projectId: string, from: ProjectStatus, to: ProjectStatus) => void;
   onOpenCertificate?: (project: Project) => void;
   onReportStuck?: (project: Project) => void;
@@ -27,6 +29,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
   onOpenToolChecklist,
   onOpenTicketModal,
   onOpenCompletionModal,
+  onOpenDailyLogModal,
   onUpdateStatus,
   onOpenCertificate,
   onReportStuck,
@@ -47,7 +50,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
   // Find the first day with assigned jobs or fallback to first visible day
   const defaultDayKey =
     visibleDays.find((day) =>
-      projects.some((p) => p.scheduledDate === day.dateKey && isProjectAssignedToMe(p))
+      projects.some((p) => isProjectScheduledOnDate(p, day.dateKey) && isProjectAssignedToMe(p))
     )?.dateKey || visibleDays[0]?.dateKey || '';
 
   const [selectedDateKey, setSelectedDateKey] = useState<string>(defaultDayKey);
@@ -62,7 +65,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
           return prev;
         }
         const assignedDay = freshVisible.find((day) =>
-          projects.some((p) => p.scheduledDate === day.dateKey && isProjectAssignedToMe(p))
+          projects.some((p) => isProjectScheduledOnDate(p, day.dateKey) && isProjectAssignedToMe(p))
         );
         return assignedDay?.dateKey || freshVisible[0]?.dateKey || '';
       });
@@ -82,13 +85,14 @@ export const TechnicianDashboard: React.FC<Props> = ({
     };
   }, [settings.visibilityWindowDays, projects, currentUser.id]);
 
-  // PRIORITY JOBS: In-Flight, Stuck, or QC Rejected that need immediate attention
+  // PRIORITY JOBS: In-Flight, Stuck, Paused, or QC Rejected that need immediate attention
   const openProjects = projects.filter((p) => {
     if (!isProjectAssignedToMe(p)) return false;
     const isEnRouteOrInProgress = p.status === 'EN_ROUTE' || p.status === 'IN_PROGRESS';
     const isStuck = p.status === 'STUCK';
+    const isPaused = p.status === 'PAUSED';
     const isQcRejected = p.qcStatus === 'REJECTED';
-    return isEnRouteOrInProgress || isStuck || isQcRejected;
+    return isEnRouteOrInProgress || isStuck || isPaused || isQcRejected;
   });
 
   // OPEN PROJECT IDS for deduplication so no job ever appears twice!
@@ -96,13 +100,15 @@ export const TechnicianDashboard: React.FC<Props> = ({
 
   // TODAY'S JOBS (for greeting summary)
   const todayKey = visibleDays.find((d) => d.isToday)?.dateKey;
-  const todayProjectsCount = projects.filter(
-    (p) => p.scheduledDate === todayKey && isProjectAssignedToMe(p)
-  ).length;
+  const todayProjectsCount = todayKey
+    ? projects.filter(
+        (p) => isProjectScheduledOnDate(p, todayKey) && isProjectAssignedToMe(p)
+      ).length
+    : 0;
 
   // SCHEDULED JOBS for selected date (strictly excluding open projects already displayed above)
   const filteredScheduledProjects = projects.filter((p) => {
-    if (p.scheduledDate !== selectedDateKey) return false;
+    if (!isProjectScheduledOnDate(p, selectedDateKey)) return false;
     // DEDUPLICATION: if already shown in priority open projects, skip here!
     if (openProjectIds.has(p.id)) return false;
     if (isLead && viewScope === 'ALL_DAY_JOBS') return true;
@@ -191,6 +197,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 onOpenToolChecklist={onOpenToolChecklist}
                 onOpenTicketModal={onOpenTicketModal}
                 onOpenCompletionModal={onOpenCompletionModal}
+                onOpenDailyLogModal={onOpenDailyLogModal}
                 onUpdateStatus={onUpdateStatus}
                 onOpenCertificate={onOpenCertificate}
                 onReportStuck={onReportStuck}
@@ -294,6 +301,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               onOpenToolChecklist={onOpenToolChecklist}
               onOpenTicketModal={onOpenTicketModal}
               onOpenCompletionModal={onOpenCompletionModal}
+              onOpenDailyLogModal={onOpenDailyLogModal}
               onUpdateStatus={onUpdateStatus}
               onOpenCertificate={onOpenCertificate}
               onReportStuck={onReportStuck}

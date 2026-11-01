@@ -22,6 +22,7 @@ import { SegmentedControl } from '../ui/SegmentedControl';
 import { StatusPill } from '../ui/StatusPill';
 import { Avatar } from '../ui/Avatar';
 import { getDisplayName } from '../../utils/technicianName';
+import { isProjectScheduledOnDate, getMultiDayProgress } from '../../utils/multiDay';
 
 interface Props {
   projects: Project[];
@@ -56,12 +57,15 @@ export const MonthPlanner: React.FC<Props> = ({
   const displayedDays =
     viewMode === '4DAYS' ? days.slice(startIndex, startIndex + 4) : days;
 
+  const todayKey = days.find((d) => d.isToday)?.dateKey || new Date().toISOString().slice(0, 10);
+
   // Overdue, Stuck, or QC Rejected projects that need immediate attention
   const overdueOrReturnedProjects = projects.filter((p) => {
     const isEnRouteOrInProgress = p.status === 'EN_ROUTE' || p.status === 'IN_PROGRESS';
     const isStuck = p.status === 'STUCK';
     const isQcRejected = p.qcStatus === 'REJECTED';
-    return isEnRouteOrInProgress || isStuck || isQcRejected;
+    const isOverduePaused = p.status === 'PAUSED' && todayKey > (p.endDate || p.scheduledDate);
+    return isEnRouteOrInProgress || isStuck || isQcRejected || isOverduePaused;
   });
 
   const getUser = (id?: string) => {
@@ -157,15 +161,23 @@ export const MonthPlanner: React.FC<Props> = ({
               {overdueOrReturnedProjects.map((proj) => {
                 const isStuck = proj.status === 'STUCK';
                 const isRejected = proj.qcStatus === 'REJECTED';
+                const multiDayProgress = getMultiDayProgress(proj);
                 return (
                   <div
                     key={`overdue-${proj.id}`}
                     className="bg-white dark:bg-[#1A1A1A] p-3 rounded-xl border border-rose-200 dark:border-rose-900/60 shadow-2xs space-y-2 text-right relative"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-black text-[#8E6F27] dark:text-[#E5CA8F]">
-                        {proj.code}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs font-black text-[#8E6F27] dark:text-[#E5CA8F]">
+                          {proj.code}
+                        </span>
+                        {multiDayProgress && (
+                          <span className="text-xs bg-[#C1A056]/20 text-[#8E6F27] dark:text-[#E5CA8F] font-bold px-1.5 py-0.5 rounded-md">
+                            {multiDayProgress.badgeText}
+                          </span>
+                        )}
+                      </div>
                       <StatusPill status={proj.status} qcStatus={proj.qcStatus} size="sm" />
                     </div>
 
@@ -210,7 +222,7 @@ export const MonthPlanner: React.FC<Props> = ({
         }`}
       >
         {displayedDays.map((day) => {
-          const dayProjects = projects.filter((p) => p.scheduledDate === day.dateKey);
+          const dayProjects = projects.filter((p) => isProjectScheduledOnDate(p, day.dateKey));
           const isVisibleToTechnicians = day.dayOffset < settings.visibilityWindowDays;
           const isEmpty = dayProjects.length === 0;
 
@@ -385,6 +397,7 @@ export const MonthPlanner: React.FC<Props> = ({
                 {dayProjects.map((proj) => {
                   const leadUser = getUser(proj.leadTechnicianId);
                   const leadName = getUserName(proj.leadTechnicianId);
+                  const multiDayProgress = getMultiDayProgress(proj);
 
                   return (
                     <div
@@ -393,9 +406,16 @@ export const MonthPlanner: React.FC<Props> = ({
                     >
                       {/* Status & Code */}
                       <div className="flex items-center justify-between text-xs gap-2">
-                        <span className="font-mono font-black text-xs bg-[#212121] text-[#E5CA8F] px-2 py-0.5 rounded-md">
-                          {proj.code}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-black text-xs bg-[#212121] text-[#E5CA8F] px-2 py-0.5 rounded-md">
+                            {proj.code}
+                          </span>
+                          {multiDayProgress && (
+                            <span className="text-xs bg-[#C1A056]/20 text-[#8E6F27] dark:text-[#E5CA8F] font-bold px-1.5 py-0.5 rounded-md">
+                              {multiDayProgress.badgeText}
+                            </span>
+                          )}
+                        </div>
                         <StatusPill status={proj.status} qcStatus={proj.qcStatus} size="sm" />
                       </div>
 
