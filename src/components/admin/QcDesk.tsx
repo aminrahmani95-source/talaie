@@ -23,6 +23,7 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowRight,
+  Settings2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toPersianDigits, formatJalali } from '../../utils/jalali';
@@ -46,6 +47,7 @@ interface Props {
   onViewProposal: (project: Project) => void;
   onOpenCertificate?: (project: Project) => void;
   onOpenEvaluation?: (project: Project) => void;
+  onManageProject?: (project: Project) => void;
 }
 
 type FilterTab = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL';
@@ -58,6 +60,7 @@ export const QcDesk: React.FC<Props> = ({
   onViewProposal,
   onOpenCertificate,
   onOpenEvaluation,
+  onManageProject,
 }) => {
   const [filter, setFilter] = useState<FilterTab>('PENDING');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -228,6 +231,16 @@ export const QcDesk: React.FC<Props> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {onManageProject && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onManageProject(selectedProject)}
+                icon={<Settings2 className="w-4 h-4" />}
+              >
+                مدیریت کامل
+              </Button>
+            )}
             {onOpenEvaluation && (
               <Button
                 variant="secondary"

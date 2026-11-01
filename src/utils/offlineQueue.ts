@@ -636,7 +636,9 @@ export const Outbox = {
         if (id && patch) {
           const idx = result.findIndex((x) => x.id === id);
           if (idx >= 0) {
-            result[idx] = { ...result[idx], ...patch };
+            // _auditReason فقط برای تاریخچه‌ی سرور است و نباید روی خود پروژه بماند
+            const { _auditReason: _ignored, ...rest } = patch as Record<string, unknown>;
+            result[idx] = { ...result[idx], ...(rest as Partial<Project>) };
           }
         }
       } else if (op.type === 'APPEND_PROJECT_EVALUATION') {
@@ -899,13 +901,23 @@ export const Outbox = {
                   const fStore = tx.objectStore(STORE_FAILED);
 
                   pStore.delete(op.id);
+                  let errorReason = err?.message || String(err);
+                  if (
+                    errorReason.includes('پروژه مورد نظر یافت نشد') ||
+                    errorReason.toLowerCase().includes('not found') ||
+                    errorReason.includes('این پروژه توسط مدیر تغییر کرده یا حذف شده است') ||
+                    (errorReason.includes('انتقال وضعیت') && errorReason.includes('مجاز نیست'))
+                  ) {
+                    errorReason = 'این پروژه توسط مدیر تغییر کرده یا حذف شده است';
+                  }
+
                   const failedOp: FailedOperation = {
                     id: op.id,
                     orderingKey: op.orderingKey,
                     userId: op.userId,
                     type: op.type,
                     payload: op.payload,
-                    errorReason: err?.message || String(err),
+                    errorReason,
                     failedAt: Date.now(),
                     retryCount: op.retryCount + 1,
                     originalCreatedAt: op.createdAt,

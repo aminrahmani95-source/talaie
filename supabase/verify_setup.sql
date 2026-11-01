@@ -5,7 +5,7 @@
 -- ==============================================================================
 
 with expected_tables as (
-  select unnest(array['profiles', 'projects', 'tickets', 'talaie_sync']) as tbl
+  select unnest(array['profiles', 'projects', 'tickets', 'talaie_sync', 'project_audit']) as tbl
 ),
 table_checks as (
   select
@@ -27,7 +27,8 @@ expected_functions as (
     ('admin_create_personnel', 'new_name text, new_phone text, new_password text, new_role text'),
     ('admin_update_personnel', 'target_id uuid, new_name text, new_phone text, new_role text, new_active boolean'),
     ('admin_reset_personnel_password', 'target_id uuid, new_password text'),
-    ('admin_delete_personnel', 'target_id uuid')
+    ('admin_delete_personnel', 'target_id uuid'),
+    ('admin_delete_project', 'p_id text, p_reason text, p_delete_tickets boolean')
   ) as t(func_name, func_args)
 ),
 function_checks as (
@@ -70,6 +71,7 @@ expected_policies as (
     ('public', 'tickets', 'Authorized users insert tickets'),
     ('public', 'tickets', 'Authorized users update tickets'),
     ('public', 'tickets', 'QC Managers delete tickets'),
+    ('public', 'project_audit', 'QC Managers read audit'),
     ('storage', 'objects', 'Active users upload photos'),
     ('storage', 'objects', 'Active users read photos'),
     ('storage', 'objects', 'QC Managers delete photos')

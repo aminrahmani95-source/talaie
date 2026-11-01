@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient, User as SupabaseAuthUser } from '@supabase/supabase-js';
-import { Project, Ticket, User, SystemSettings, PersonnelEvaluation } from '../types';
+import { Project, Ticket, User, SystemSettings, PersonnelEvaluation, ProjectAuditRecord } from '../types';
 import { toEnglishDigits } from './jalali';
 import { Outbox, OutboxOperation, PendingUpload, PermanentError } from './offlineQueue';
 
@@ -672,17 +672,89 @@ export const SupabaseSyncService = {
     }
   },
 
-  async deleteProject(projectId: string): Promise<void> {
+  async deleteProject(
+    projectId: string,
+    options: { reason?: string; deleteTickets?: boolean } = {}
+  ): Promise<void> {
     const client = this.getClient();
     if (!client) {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
-    const { error, status } = await client.from('projects').delete().eq('id', projectId);
-    if (error) {
+    // مسیر اصلی: تابع سروری admin_delete_project (دلیل حذف در تاریخچه ثبت می‌شود و تیکت‌ها در همان تراکنش پاک می‌شوند)
+    const { error, status } = await client.rpc('admin_delete_project', {
+      p_id: projectId,
+      p_reason: options.reason || null,
+      p_delete_tickets: !!options.deleteTickets,
+    });
+
+    if (!error) return;
+
+    // اگر مایگریشن ۰۰۸ هنوز اجرا نشده باشد، تابع وجود ندارد → حذف مستقیم (روش قبلی)
+    const missingFn = (error as any).code === 'PGRST202' || status === 404;
+    if (!missingFn) {
       (error as any).status = status;
       console.warn(`Failed to delete project ${projectId}:`, error);
       throw error;
+    }
+
+    if (options.deleteTickets) {
+      const { error: tErr, status: tStatus } = await client
+        .from('tickets')
+        .delete()
+        .eq('data->>projectId', projectId);
+      if (tErr) {
+        (tErr as any).status = tStatus;
+        throw tErr;
+      }
+    }
+    const { error: pErr, status: pStatus } = await client.from('projects').delete().eq('id', projectId);
+    if (pErr) {
+      (pErr as any).status = pStatus;
+      console.warn(`Failed to delete project ${projectId}:`, pErr);
+      throw pErr;
+    }
+  },
+
+  async fetchProjectAudit(projectId: string): Promise<ProjectAuditRecord[]> {
+    const client = this.getClient();
+    if (!client) return [];
+    try {
+      const { data, error } = await client
+        .from('project_audit')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('changed_at', { ascending: false });
+      if (error) {
+        console.warn('Failed to fetch project audit:', error);
+        return [];
+      }
+      return data || [];
+    } catch {
+      return [];
+    }
+  },
+
+  /** Best-effort removal of every file under projects/<id>/ (never throws). */
+  async deleteProjectStorageFolder(projectId: string): Promise<void> {
+    const client = this.getClient();
+    if (!client) return;
+    const folder = `projects/${projectId}`;
+    try {
+      // فایل‌ها را صفحه‌به‌صفحه فهرست و حذف می‌کنیم تا چیزی جا نماند
+      for (let guard = 0; guard < 50; guard++) {
+        const { data: files, error } = await client.storage
+          .from('talaie-photos')
+          .list(folder, { limit: 100, offset: 0 });
+        if (error || !files || files.length === 0) break;
+        const paths = files.filter((f) => f.name).map((f) => `${folder}/${f.name}`);
+        if (paths.length === 0) break;
+        const { error: rmErr } = await client.storage.from('talaie-photos').remove(paths);
+        if (rmErr) break;
+        if (files.length < 100) break;
+      }
+    } catch (err) {
+      console.warn('Failed to delete project storage folder:', err);
     }
   },
 
@@ -1009,7 +1081,14 @@ export const SupabaseSyncService = {
       }
       case 'DELETE_PROJECT': {
         const projectId = op.payload?.id || op.orderingKey.replace('project:', '');
-        await this.deleteProject(projectId);
+        const deleteTicketsAndFiles = !!op.payload?.deleteTicketsAndFiles;
+        await this.deleteProject(projectId, {
+          reason: op.payload?.reason,
+          deleteTickets: deleteTicketsAndFiles,
+        });
+        if (deleteTicketsAndFiles) {
+          await this.deleteProjectStorageFolder(projectId);
+        }
         break;
       }
       case 'CREATE_TICKET': {

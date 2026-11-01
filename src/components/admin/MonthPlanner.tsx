@@ -5,7 +5,7 @@ import {
   Clock,
   Plus,
   Edit2,
-  Trash2,
+  Settings2,
   ChevronRight,
   ChevronLeft,
   Eye,
@@ -15,7 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { getUpcomingDays, toPersianDigits, formatJalali } from '../../utils/jalali';
+import { getUpcomingDays, toPersianDigits, formatJalali, localDateKey } from '../../utils/jalali';
 import { PageHeader } from '../ui/PageHeader';
 import { Button } from '../ui/Button';
 import { SegmentedControl } from '../ui/SegmentedControl';
@@ -31,7 +31,7 @@ interface Props {
   onUpdateSettings?: (settings: SystemSettings) => void;
   onNewProject: (dateKey?: string) => void;
   onEditProject: (project: Project) => void;
-  onDeleteProject: (projectId: string) => void;
+  onManageProject: (project: Project) => void;
   onMoveProjectDate?: (projectId: string, newDateKey: string) => void;
   onViewProposal: (project: Project) => void;
   onOpenPreInspection?: (project: Project) => void;
@@ -43,7 +43,7 @@ export const MonthPlanner: React.FC<Props> = ({
   settings,
   onNewProject,
   onEditProject,
-  onDeleteProject,
+  onManageProject,
   onViewProposal,
   onOpenPreInspection,
 }) => {
@@ -57,7 +57,7 @@ export const MonthPlanner: React.FC<Props> = ({
   const displayedDays =
     viewMode === '4DAYS' ? days.slice(startIndex, startIndex + 4) : days;
 
-  const todayKey = days.find((d) => d.isToday)?.dateKey || new Date().toISOString().slice(0, 10);
+  const todayKey = days.find((d) => d.isToday)?.dateKey || localDateKey();
 
   // Overdue, Stuck, or QC Rejected projects that need immediate attention
   const overdueOrReturnedProjects = projects.filter((p) => {
@@ -203,6 +203,14 @@ export const MonthPlanner: React.FC<Props> = ({
                         className="px-3 py-2 min-h-[44px] text-xs font-bold rounded-lg bg-[#FAF7F2] dark:bg-[#252525] text-[#8E6F27] dark:text-[#E5CA8F] hover:bg-[#EFEBE4] transition cursor-pointer flex items-center justify-center"
                       >
                         ویرایش و زمان‌بندی
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onManageProject(proj)}
+                        className="px-3 py-2 min-h-[44px] text-xs font-bold rounded-lg bg-[#FAF7F2] dark:bg-[#252525] text-[#69655F] dark:text-[#C9C3B8] hover:bg-[#EFEBE4] transition cursor-pointer flex items-center justify-center gap-1"
+                      >
+                        <Settings2 className="w-3.5 h-3.5" />
+                        مدیریت کامل
                       </button>
                     </div>
                   </div>
@@ -506,16 +514,12 @@ export const MonthPlanner: React.FC<Props> = ({
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              if (confirm(`آیا از حذف مأموریت ${proj.title} اطمینان دارید؟`)) {
-                                onDeleteProject(proj.id);
-                              }
-                            }}
-                            className="w-11 h-11 flex items-center justify-center text-[#69655F] dark:text-[#9E988D] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition cursor-pointer"
-                            title="حذف مأموریت"
-                            aria-label={`حذف مأموریت ${proj.title}`}
+                            onClick={() => onManageProject(proj)}
+                            className="w-11 h-11 flex items-center justify-center text-[#69655F] dark:text-[#9E988D] hover:text-[#8E6F27] hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition cursor-pointer"
+                            title="مدیریت کامل (وضعیت، مدارک، تاریخچه، حذف)"
+                            aria-label={`مدیریت کامل پروژه ${proj.title}`}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Settings2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>

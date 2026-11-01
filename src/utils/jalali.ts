@@ -205,3 +205,8 @@ export function formatJalali(isoOrDateKey?: string | null, fallback = '—'): st
   if (isNaN(d.getTime())) return str;
   return formatToPersianDateString(d);
 }
+
+/** Local (device time zone) calendar date as YYYY-MM-DD — never use toISOString().slice(0,10), which is UTC. */
+export function localDateKey(date: Date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}

@@ -21,6 +21,7 @@ import {
   isValidStatusTransition,
 } from './utils/roleGuards';
 import { getDisplayName } from './utils/technicianName';
+import { localDateKey } from './utils/jalali';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
 import { TechnicianDashboard } from './components/technician/TechnicianDashboard';
@@ -83,6 +84,9 @@ const ReportStuckModal = React.lazy(() =>
 );
 const DailyLogModal = React.lazy(() =>
   import('./components/technician/DailyLogModal').then((m) => ({ default: m.DailyLogModal }))
+);
+const ProjectManagerSheet = React.lazy(() =>
+  import('./components/admin/ProjectManagerSheet').then((m) => ({ default: m.ProjectManagerSheet }))
 );
 
 export const App: React.FC = () => {
@@ -352,6 +356,7 @@ export const App: React.FC = () => {
   const [evaluationProject, setEvaluationProject] = useState<Project | null>(null);
   const [stuckModalProject, setStuckModalProject] = useState<Project | null>(null);
   const [dailyLogModalProject, setDailyLogModalProject] = useState<Project | null>(null);
+  const [managedProjectId, setManagedProjectId] = useState<string | null>(null);
 
   // Modern Toast notification system
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -503,6 +508,65 @@ export const App: React.FC = () => {
     );
   };
 
+  // ---- Full manager control (QC_MANAGER only) ----
+  const handleManagerPatch = async (
+    projectId: string,
+    patch: Record<string, unknown>,
+    successMessage: string
+  ) => {
+    if (!currentUser || currentUser.role !== 'QC_MANAGER') return;
+    if (!projectsRef.current.some((p) => p.id === projectId)) {
+      showToast('error', 'این پروژه دیگر وجود ندارد.');
+      setManagedProjectId(null);
+      return;
+    }
+    const cleanPatch: Record<string, unknown> = { ...patch, updatedAt: new Date().toISOString() };
+    const { _auditReason: _reason, ...localPatch } = cleanPatch;
+    const ok = await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, patch: cleanPatch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId ? ({ ...p, ...localPatch } as Project) : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+      }
+    );
+    if (ok) showToast('success', successMessage);
+  };
+
+  const handleManagerDelete = async (
+    projectId: string,
+    options: { reason: string; deleteTicketsAndFiles: boolean }
+  ) => {
+    if (!currentUser || currentUser.role !== 'QC_MANAGER') return;
+    if (!isSyncedWithServer) {
+      showToast('warning', 'اطلاعات در حال دریافت از سرور است، لطفاً شکیبا باشید.');
+      return;
+    }
+    const ok = await commit(
+      {
+        type: 'DELETE_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, reason: options.reason, deleteTicketsAndFiles: options.deleteTicketsAndFiles },
+      },
+      () => {
+        const next = projectsRef.current.filter((p) => p.id !== projectId);
+        setProjects(next);
+        projectsRef.current = next;
+        if (options.deleteTicketsAndFiles) {
+          setTickets((prev) => prev.filter((t) => t.projectId !== projectId));
+        }
+        setManagedProjectId(null);
+      }
+    );
+    if (ok) showToast('success', 'پروژه به‌طور کامل حذف شد.');
+  };
+
   const handleDeleteProject = async (projectId: string) => {
     if (!currentUser) return;
     if (!isSyncedWithServer) {
@@ -589,7 +653,7 @@ export const App: React.FC = () => {
       const hasOpenSession = existingSessions.some((s) => !s.endedAt);
       if (!hasOpenSession) {
         const nowIso = new Date().toISOString();
-        const todayKey = nowIso.slice(0, 10);
+        const todayKey = localDateKey();
         patch.workSessions = [
           ...existingSessions,
           {
@@ -685,9 +749,20 @@ export const App: React.FC = () => {
   // Daily log (temporary pause for multi-day project)
   const handleEndDailyWork = async (data: { note: string; photos: string[] }) => {
     if (!dailyLogModalProject || !currentUser) return;
-    const project = dailyLogModalProject;
+    // Use the freshest copy (realtime may have changed it while the modal was open)
+    const project = projectsRef.current.find((p) => p.id === dailyLogModalProject.id);
+    if (!project) {
+      setDailyLogModalProject(null);
+      showToast('error', 'این پروژه توسط مدیر تغییر کرده یا حذف شده است.');
+      return;
+    }
+    if (project.status !== 'IN_PROGRESS') {
+      setDailyLogModalProject(null);
+      showToast('error', 'فقط پروژه‌ی در حال اجرا را می‌توان برای امروز متوقف کرد.');
+      return;
+    }
     const nowIso = new Date().toISOString();
-    const todayKey = nowIso.slice(0, 10);
+    const todayKey = localDateKey();
 
     const existingSessions = project.workSessions || [];
     let updatedSessions = existingSessions;
@@ -1076,7 +1151,7 @@ export const App: React.FC = () => {
                     onUpdateSettings={handleUpdateSettings}
                     onNewProject={handleOpenNewProject}
                     onEditProject={handleOpenEditProject}
-                    onDeleteProject={handleDeleteProject}
+                    onManageProject={(p) => setManagedProjectId(p.id)}
                     onMoveProjectDate={handleMoveProjectDate}
                     onViewProposal={(p) => setProposalModalProject(p)}
                     onOpenPreInspection={(p) => setPreInspectionProject(p)}
@@ -1092,6 +1167,7 @@ export const App: React.FC = () => {
                     onViewProposal={(p) => setProposalModalProject(p)}
                     onOpenCertificate={(p) => setCertificateModalProject(p)}
                     onOpenEvaluation={(p) => setEvaluationProject(p)}
+                    onManageProject={(p) => setManagedProjectId(p.id)}
                   />
                 )}
 
@@ -1100,6 +1176,7 @@ export const App: React.FC = () => {
                     projects={projects}
                     currentUser={currentUser}
                     onPatchProject={handlePatchProject}
+                    onManageProject={(p) => setManagedProjectId(p.id)}
                   />
                 )}
 
@@ -1209,6 +1286,27 @@ export const App: React.FC = () => {
             onSubmit={handleReportCompletion}
           />
         )}
+
+        {isQcManager && managedProjectId && currentUser && (() => {
+          const managed = projects.find((p) => p.id === managedProjectId);
+          if (!managed) return null;
+          return (
+            <ProjectManagerSheet
+              project={managed}
+              users={users}
+              tickets={tickets}
+              currentUser={currentUser}
+              isOnline={typeof navigator === 'undefined' || navigator.onLine}
+              onClose={() => setManagedProjectId(null)}
+              onEditInfo={(p) => handleOpenEditProject(p)}
+              onApplyPatch={handleManagerPatch}
+              onDeleteProject={handleManagerDelete}
+              onOpenCertificate={(p) => setCertificateModalProject(p)}
+              onViewProposal={(p) => setProposalModalProject(p)}
+              fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}
+            />
+          );
+        })()}
 
         {dailyLogModalProject && (
           <DailyLogModal

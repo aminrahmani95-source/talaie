@@ -1,5 +1,5 @@
 import { Project, WorkSession } from '../types';
-import { toPersianDigits } from './jalali';
+import { toPersianDigits, localDateKey } from './jalali';
 
 /**
  * Checks if a project is configured as a multi-day installation.
@@ -68,7 +68,7 @@ export function getMultiDayProgress(
   if (!isProjectMultiDay(project)) return null;
 
   const totalDays = getMultiDayTotalDays(project.scheduledDate, project.endDate);
-  const refDate = viewDateKey || new Date().toISOString().slice(0, 10);
+  const refDate = viewDateKey || localDateKey();
 
   if (refDate > (project.endDate as string)) {
     return {

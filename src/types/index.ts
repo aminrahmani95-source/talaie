@@ -242,3 +242,15 @@ export interface SystemSettings {
   companyName: string;
   defaultTools: string[];
 }
+
+export interface ProjectAuditRecord {
+  id: string;
+  project_id: string;
+  action: 'INSERT' | 'UPDATE' | 'DELETE' | string;
+  changed_by?: string;
+  changed_by_name?: string;
+  changed_at: string;
+  old_data?: Partial<Project> | null;
+  new_data?: Partial<Project> | null;
+  reason?: string | null;
+}

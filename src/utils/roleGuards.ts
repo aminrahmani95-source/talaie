@@ -120,23 +120,26 @@ export function validateProjectPatchRoleGuards(
     const currentLogs = Array.isArray(project.dailyLogs) ? project.dailyLogs : [];
     const newLogs = patch.dailyLogs;
 
-    if (newLogs.length !== currentLogs.length + 1) {
+    const logsUnchanged = JSON.stringify(newLogs) === JSON.stringify(currentLogs);
+    if (!logsUnchanged && newLogs.length !== currentLogs.length + 1) {
       throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط می‌تواند لاگ روزانه جدید الصاق کند.');
     }
 
-    for (let i = 0; i < currentLogs.length; i++) {
-      if (JSON.stringify(currentLogs[i]) !== JSON.stringify(newLogs[i])) {
-        throw new PermanentError('دسترسی غیرمجاز: ویرایش لاگ‌های روزانه قبلی مجاز نیست.');
+    if (!logsUnchanged) {
+      for (let i = 0; i < currentLogs.length; i++) {
+        if (JSON.stringify(currentLogs[i]) !== JSON.stringify(newLogs[i])) {
+          throw new PermanentError('دسترسی غیرمجاز: ویرایش لاگ‌های روزانه قبلی مجاز نیست.');
+        }
       }
-    }
 
-    const lastLog = newLogs[newLogs.length - 1];
-    if (!lastLog || lastLog.byUserId !== user.id) {
-      throw new PermanentError('دسترسی غیرمجاز: ثبت لاگ روزانه فقط با هویت خودتان مجاز است.');
+      const lastLog = newLogs[newLogs.length - 1];
+      if (!lastLog || lastLog.byUserId !== user.id) {
+        throw new PermanentError('دسترسی غیرمجاز: ثبت لاگ روزانه فقط با هویت خودتان مجاز است.');
+      }
     }
   }
 
-  // ۷. بررسی workSessions: الحاق جلسه جدید یا بستن جلسه جاری باز متعلق به خود کاربر
+  // ۷. بررسی workSessions: الحاق جلسه جدید (با هویت خود کاربر) یا بستن جلسه‌ی باز آخر
   if (patch.workSessions !== undefined) {
     if (!Array.isArray(patch.workSessions)) {
       throw new PermanentError('دسترسی غیرمجاز: جلسات کاری باید آرایه باشد.');
@@ -144,7 +147,9 @@ export function validateProjectPatchRoleGuards(
     const currentSessions = Array.isArray(project.workSessions) ? project.workSessions : [];
     const newSessions = patch.workSessions;
 
-    if (newSessions.length === currentSessions.length && currentSessions.length > 0) {
+    if (JSON.stringify(newSessions) === JSON.stringify(currentSessions)) {
+      // بدون تغییر
+    } else if (newSessions.length === currentSessions.length && currentSessions.length > 0) {
       // بستن آخرین جلسه باز
       for (let i = 0; i < currentSessions.length - 1; i++) {
         if (JSON.stringify(currentSessions[i]) !== JSON.stringify(newSessions[i])) {
@@ -155,9 +160,7 @@ export function validateProjectPatchRoleGuards(
       const lastCurrent = currentSessions[currentSessions.length - 1];
       const lastNew = newSessions[newSessions.length - 1];
 
-      if (lastCurrent.byUserId !== user.id) {
-        throw new PermanentError('دسترسی غیرمجاز: شما فقط مجاز به بستن جلسه کاری خودتان هستید.');
-      }
+      // هر عضو تخصیص‌یافته‌ی اکیپ می‌تواند جلسه‌ی باز را ببندد (مثلاً سرپرست جلسه‌ی کمک‌نصاب را)
       if (lastCurrent.endedAt) {
         throw new PermanentError('دسترسی غیرمجاز: این جلسه کاری قبلاً بسته شده است.');
       }

@@ -18,7 +18,7 @@ import {
   Loader2,
   Moon,
 } from 'lucide-react';
-import { toPersianDigits } from '../../utils/jalali';
+import { toPersianDigits, localDateKey } from '../../utils/jalali';
 import { ActiveJobTimer } from '../ActiveJobTimer';
 import { StatusPill } from '../ui/StatusPill';
 import { getMultiDayProgress } from '../../utils/multiDay';
@@ -61,7 +61,7 @@ export const ProjectCard: React.FC<Props> = ({
   const isRejected = project.qcStatus === 'REJECTED';
 
   const multiDayProgress = getMultiDayProgress(project);
-  const todayYmd = new Date().toISOString().slice(0, 10);
+  const todayYmd = localDateKey();
   const isBeforeEndDate = Boolean(project.endDate && todayYmd < project.endDate);
 
   return (

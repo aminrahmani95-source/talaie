@@ -8,6 +8,7 @@ import {
   Flame,
   Search,
   Calendar,
+  Settings2,
 } from 'lucide-react';
 import { toPersianDigits, getUpcomingDays, formatJalaliDateTime } from '../../utils/jalali';
 import { PageHeader } from '../ui/PageHeader';
@@ -20,9 +21,10 @@ interface Props {
   projects: Project[];
   currentUser?: User;
   onPatchProject: (id: string, patch: Partial<Project>) => void;
+  onManageProject?: (project: Project) => void;
 }
 
-export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPatchProject }) => {
+export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPatchProject, onManageProject }) => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [newScheduledDate, setNewScheduledDate] = useState('');
@@ -372,6 +374,16 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                     کارفرما: {selectedProject.customerName} | نشانی: {selectedProject.address}
                   </p>
                 </div>
+                {onManageProject && (
+                  <button
+                    type="button"
+                    onClick={() => onManageProject(selectedProject)}
+                    className="shrink-0 px-3 min-h-[44px] text-xs font-bold rounded-xl bg-[#FAF7F2] dark:bg-[#252525] text-[#8E6F27] dark:text-[#E5CA8F] hover:bg-[#EFEBE4] flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Settings2 className="w-4 h-4" />
+                    مدیریت کامل
+                  </button>
+                )}
               </div>
 
               {/* Incident Details Card */}

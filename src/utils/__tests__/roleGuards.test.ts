@@ -398,7 +398,7 @@ describe('Role Guards & State Machine Validation', () => {
         });
       }).not.toThrow();
 
-      // Trying to close someone else's session
+      // A teammate may close the lead's open session (e.g. finishing the job for the crew)
       const sessionByLead = {
         ...openSession,
         byUserId: leadTech.id,
@@ -413,7 +413,22 @@ describe('Role Guards & State Machine Validation', () => {
         validateProjectPatchRoleGuards(technician, projectWithLeadSession, {
           workSessions: [{ ...sessionByLead, endedAt: '2026-11-01T16:00:00Z' }],
         });
-      }).toThrowError(/شما فقط مجاز به بستن جلسه کاری خودتان هستید/);
+      }).not.toThrow();
+
+      // ...but cannot rewrite its start time while closing it
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithLeadSession, {
+          workSessions: [{ ...sessionByLead, startedAt: '2026-11-01T01:00:00Z', endedAt: '2026-11-01T16:00:00Z' }],
+        });
+      }).toThrowError(/تغییر سایر مشخصات جلسه کاری مجاز نیست/);
+
+      // Unchanged arrays (no-op) are allowed
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithLeadSession, {
+          workSessions: [sessionByLead],
+          dailyLogs: [],
+        });
+      }).not.toThrow();
     });
   });
 
