@@ -291,20 +291,19 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-200">
       {/* هدر کنترل سنتر */}
-      <div className="rounded-3xl bg-gradient-to-l from-[#212121] via-[#1A1A1A] to-[#141414] border-2 border-[#C1A056]/30 p-5 sm:p-6 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#C1A056]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-lg bg-[#151B23] border border-[#212835] p-5 sm:p-6 text-[#F0F4F8] shadow-none relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-[#C1A056] text-[#141414]">
+              <span className="px-2.5 py-0.5 rounded text-[11px] font-bold bg-[#C5A059] text-[#0D1117]">
                 {isQcManager ? 'مرکز فرماندهی مدیریت QC' : 'میز هماهنگی و زمان‌بندی فنی'}
               </span>
-              <span className="text-xs text-[#E5CA8F] font-semibold">{todayPersian}</span>
+              <span className="text-xs text-[#C5A059] font-medium">{todayPersian}</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#F0F4F8] tracking-tight">
               مرکز کنترل و پایش عملیات فنی
             </h1>
-            <p className="text-xs text-neutral-400 mt-1 max-w-xl">
+            <p className="text-xs text-[#9BA7B6] mt-1 max-w-xl">
               دیده‌بانی لحظه‌ای ماموریت‌های ۴ اکیپ نصب، کنترل تعهدات زمانی ۷۲ ساعته SLA، و مانیتورینگ بلادرنگ پروژه‌ها
             </p>
           </div>
@@ -313,19 +312,19 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               onClick={() => onNavigateTab('planner')}
-              className="px-3.5 py-2 rounded-xl bg-[#C1A056] hover:bg-[#D4B56A] text-[#141414] font-black text-xs transition flex items-center gap-1.5 cursor-pointer shadow-md"
+              className="px-3.5 py-2 rounded-md bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-bold text-xs transition flex items-center gap-1.5 cursor-pointer min-h-[38px]"
             >
               <Calendar className="w-4 h-4" />
               تقویم و برنامه‌ریزی
             </button>
             <button
               onClick={() => onNavigateTab('tickets')}
-              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition flex items-center gap-1.5 border border-white/15 cursor-pointer"
+              className="px-3.5 py-2 rounded-md bg-[#1C232D] hover:bg-[#252F3D] text-[#F0F4F8] font-semibold text-xs transition flex items-center gap-1.5 border border-[#2D3748] cursor-pointer min-h-[38px]"
             >
               <AlertCircle className="w-4 h-4 text-amber-400" />
               مرکز تیکت و SLA
               {slaMetrics.openOverdue > 0 && (
-                <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
+                <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded animate-pulse tabular-nums">
                   {toPersianDigits(slaMetrics.openOverdue)}
                 </span>
               )}
@@ -333,12 +332,12 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             {isQcManager && (
               <button
                 onClick={() => onNavigateTab('qc')}
-                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition flex items-center gap-1.5 border border-white/15 cursor-pointer"
+                className="px-3.5 py-2 rounded-md bg-[#1C232D] hover:bg-[#252F3D] text-[#F0F4F8] font-semibold text-xs transition flex items-center gap-1.5 border border-[#2D3748] cursor-pointer min-h-[38px]"
               >
-                <ShieldCheck className="w-4 h-4 text-[#C1A056]" />
+                <ShieldCheck className="w-4 h-4 text-[#C5A059]" />
                 میز تایید QC
                 {projectMetrics.awaitingQc > 0 && (
-                  <span className="bg-[#C1A056] text-[#141414] text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                  <span className="bg-[#C5A059] text-[#0D1117] text-[10px] font-bold px-1.5 py-0.2 rounded tabular-nums">
                     {toPersianDigits(projectMetrics.awaitingQc)}
                   </span>
                 )}
@@ -349,15 +348,15 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
       </div>
 
       {/* سوییچر نمای زنده / گزارش‌های تحلیلی P4 */}
-      <div className="flex items-center justify-between border-b border-[#E2DDD4] dark:border-[#2C2C2C] pb-3">
+      <div className="flex items-center justify-between border-b border-[#212835] pb-3">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveSubView('LIVE')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-md text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 min-h-[38px] ${
               activeSubView === 'LIVE'
-                ? 'bg-[#212121] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#141414] shadow-sm'
-                : 'bg-white dark:bg-[#1A1A1A] text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white border border-[#E2DDD4] dark:border-[#2C2C2C]'
+                ? 'bg-[#C5A059] text-[#0D1117] font-bold shadow-xs'
+                : 'bg-[#151B23] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#212835]'
             }`}
           >
             <Activity className="w-3.5 h-3.5" />
@@ -366,10 +365,10 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           <button
             type="button"
             onClick={() => setActiveSubView('ANALYTICS')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-md text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 min-h-[38px] ${
               activeSubView === 'ANALYTICS'
-                ? 'bg-[#212121] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#141414] shadow-sm'
-                : 'bg-white dark:bg-[#1A1A1A] text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white border border-[#E2DDD4] dark:border-[#2C2C2C]'
+                ? 'bg-[#C5A059] text-[#0D1117] font-bold shadow-xs'
+                : 'bg-[#151B23] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#212835]'
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
@@ -377,7 +376,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           </button>
         </div>
 
-        <span className="text-xs text-neutral-500 hidden sm:inline">
+        <span className="text-xs text-[#637184] hidden sm:inline">
           {activeSubView === 'LIVE' ? 'دید لحظه‌ای اکیپ‌ها و هشدارها' : 'تحلیل کیفی، راندمان و هوش تجاری'}
         </span>
       </div>
@@ -387,11 +386,11 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           {/* ۱. کارت‌های پایش عملیاتی کلی (Operational Overview) */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-black text-[#212121] dark:text-white flex items-center gap-2">
-            <Activity className="w-4 h-4 text-[#C1A056]" />
+          <h2 className="text-sm font-bold text-[#F0F4F8] flex items-center gap-2">
+            <Activity className="w-4 h-4 text-[#C5A059]" />
             نمای کلی چرخه عملیات دپارتمان فنی
           </h2>
-          <span className="text-xs text-neutral-500">
+          <span className="text-xs text-[#9BA7B6] tabular-nums">
             مجموع {toPersianDigits(projects.length)} پروژه ثبت‌شده
           </span>
         </div>
@@ -400,124 +399,124 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           {/* آماده زمان‌بندی (گیت تایید شده) */}
           <div
             onClick={() => onNavigateTab('planner')}
-            className="p-3.5 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] hover:border-[#C1A056] transition cursor-pointer shadow-sm group"
+            className="p-3.5 rounded-lg bg-[#151B23] border border-[#212835] hover:border-[#2D3748] transition cursor-pointer shadow-none group"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400">آماده زمان‌بندی</span>
-              <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center">
+              <span className="text-[11px] font-medium text-[#9BA7B6]">آماده زمان‌بندی</span>
+              <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-400 flex items-center justify-center">
                 <CheckCircle2 className="w-3.5 h-3.5" />
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-[#212121] dark:text-white">
+            <div className="text-xl sm:text-2xl font-bold text-[#F0F4F8] tabular-nums">
               {toPersianDigits(projectMetrics.readyToSchedule)}
             </div>
-            <p className="text-[10px] text-neutral-400 mt-1 line-clamp-1">گیت تحویل انبار تایید</p>
+            <p className="text-[10px] text-[#637184] mt-1 line-clamp-1">گیت تحویل انبار تایید</p>
           </div>
 
           {/* زمان‌بندی‌شده */}
           <div
             onClick={() => onNavigateTab('planner')}
-            className="p-3.5 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] hover:border-[#C1A056] transition cursor-pointer shadow-sm"
+            className="p-3.5 rounded-lg bg-[#151B23] border border-[#212835] hover:border-[#2D3748] transition cursor-pointer shadow-none"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400">زمان‌بندی‌شده</span>
-              <div className="w-6 h-6 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+              <span className="text-[11px] font-medium text-[#9BA7B6]">زمان‌بندی‌شده</span>
+              <div className="w-6 h-6 rounded-md bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
                 <Calendar className="w-3.5 h-3.5" />
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-[#212121] dark:text-white">
+            <div className="text-xl sm:text-2xl font-bold text-[#F0F4F8] tabular-nums">
               {toPersianDigits(projectMetrics.scheduled)}
             </div>
-            <p className="text-[10px] text-neutral-400 mt-1 line-clamp-1">در انتظار تاریخ اجرا</p>
+            <p className="text-[10px] text-[#637184] mt-1 line-clamp-1">در انتظار تاریخ اجرا</p>
           </div>
 
           {/* در حال نصب امروز */}
           <div
             onClick={() => onNavigateTab('planner')}
-            className="p-3.5 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] hover:border-[#C1A056] transition cursor-pointer shadow-sm"
+            className="p-3.5 rounded-lg bg-[#151B23] border border-[#212835] hover:border-[#2D3748] transition cursor-pointer shadow-none"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400">در حال نصب</span>
-              <div className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
+              <span className="text-[11px] font-medium text-[#9BA7B6]">در حال نصب</span>
+              <div className="w-6 h-6 rounded-md bg-amber-500/10 text-amber-400 flex items-center justify-center">
                 <Flame className="w-3.5 h-3.5" />
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400">
+            <div className="text-xl sm:text-2xl font-bold text-amber-400 tabular-nums">
               {toPersianDigits(projectMetrics.inProgress)}
             </div>
-            <p className="text-[10px] text-neutral-400 mt-1 line-clamp-1">اکیپ‌ها مستقر در محل</p>
+            <p className="text-[10px] text-[#637184] mt-1 line-clamp-1">اکیپ‌ها مستقر در محل</p>
           </div>
 
           {/* پروژه‌های چندروزه فعال */}
           <div
             onClick={() => onNavigateTab('planner')}
-            className="p-3.5 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] hover:border-[#C1A056] transition cursor-pointer shadow-sm"
+            className="p-3.5 rounded-lg bg-[#151B23] border border-[#212835] hover:border-[#2D3748] transition cursor-pointer shadow-none"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400">چندروزه فعال</span>
-              <div className="w-6 h-6 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center">
+              <span className="text-[11px] font-medium text-[#9BA7B6]">چندروزه فعال</span>
+              <div className="w-6 h-6 rounded-md bg-teal-500/10 text-teal-400 flex items-center justify-center">
                 <Layers className="w-3.5 h-3.5" />
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-teal-600 dark:text-teal-400">
+            <div className="text-xl sm:text-2xl font-bold text-teal-400 tabular-nums">
               {toPersianDigits(projectMetrics.multiDayActive)}
             </div>
-            <p className="text-[10px] text-neutral-400 mt-1 line-clamp-1">عملیات متوالی چند روزه</p>
+            <p className="text-[10px] text-[#637184] mt-1 line-clamp-1">عملیات متوالی چند روزه</p>
           </div>
 
           {/* پروژه‌های تاخیردار / بحرانی */}
           <div
             onClick={() => onNavigateTab('planner')}
-            className={`p-3.5 rounded-2xl border transition cursor-pointer shadow-sm ${
+            className={`p-3.5 rounded-lg border transition cursor-pointer shadow-none ${
               projectMetrics.overdueProjects > 0
                 ? 'bg-rose-500/10 border-rose-500/30'
-                : 'bg-white dark:bg-[#1A1A1A] border-[#E8E4DC] dark:border-[#2D2D2D]'
+                : 'bg-[#151B23] border-[#212835] hover:border-[#2D3748]'
             }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400">دارای تاخیر</span>
-              <div className="w-6 h-6 rounded-lg bg-rose-500/15 text-rose-600 flex items-center justify-center">
+              <span className="text-[11px] font-medium text-rose-400">دارای تاخیر</span>
+              <div className="w-6 h-6 rounded-md bg-rose-500/15 text-rose-400 flex items-center justify-center">
                 <AlertTriangle className="w-3.5 h-3.5" />
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400">
+            <div className="text-xl sm:text-2xl font-bold text-rose-400 tabular-nums">
               {toPersianDigits(projectMetrics.overdueProjects)}
             </div>
-            <p className="text-[10px] text-neutral-400 mt-1 line-clamp-1">عبور از تاریخ مقرر</p>
+            <p className="text-[10px] text-[#637184] mt-1 line-clamp-1">عبور از تاریخ مقرر</p>
           </div>
 
           {/* در انتظار تایید QC */}
           <div
             onClick={() => onNavigateTab('qc')}
-            className="p-3.5 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] hover:border-[#C1A056] transition cursor-pointer shadow-sm"
+            className="p-3.5 rounded-lg bg-[#151B23] border border-[#212835] hover:border-[#2D3748] transition cursor-pointer shadow-none"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400">در انتظار QC</span>
-              <div className="w-6 h-6 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center">
+              <span className="text-[11px] font-medium text-[#9BA7B6]">در انتظار QC</span>
+              <div className="w-6 h-6 rounded-md bg-purple-500/10 text-purple-400 flex items-center justify-center">
                 <ShieldCheck className="w-3.5 h-3.5" />
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400">
+            <div className="text-xl sm:text-2xl font-bold text-purple-400 tabular-nums">
               {toPersianDigits(projectMetrics.awaitingQc)}
             </div>
-            <p className="text-[10px] text-neutral-400 mt-1 line-clamp-1">نصب پایان‌یافته</p>
+            <p className="text-[10px] text-[#637184] mt-1 line-clamp-1">نصب پایان‌یافته</p>
           </div>
 
           {/* تایید شده نهایی */}
           <div
             onClick={() => onNavigateTab('qc')}
-            className="p-3.5 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] hover:border-[#C1A056] transition cursor-pointer shadow-sm"
+            className="p-3.5 rounded-lg bg-[#151B23] border border-[#212835] hover:border-[#2D3748] transition cursor-pointer shadow-none"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400">تایید نهایی QC</span>
-              <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+              <span className="text-[11px] font-medium text-[#9BA7B6]">تایید نهایی QC</span>
+              <div className="w-6 h-6 rounded-md bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
                 <CheckCircle2 className="w-3.5 h-3.5" />
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
+            <div className="text-xl sm:text-2xl font-bold text-emerald-400 tabular-nums">
               {toPersianDigits(projectMetrics.completed)}
             </div>
-            <p className="text-[10px] text-neutral-400 mt-1 line-clamp-1">مهر تایید کیفی</p>
+            <p className="text-[10px] text-[#637184] mt-1 line-clamp-1">مهر تایید کیفی</p>
           </div>
         </div>
       </section>
@@ -526,17 +525,17 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-black text-[#212121] dark:text-white flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#C1A056]" />
+            <h2 className="text-sm font-bold text-[#F0F4F8] flex items-center gap-2">
+              <Users className="w-4 h-4 text-[#C5A059]" />
               ظرفیت، ماموریت و بار کاری ۴ اکیپ نصب
             </h2>
-            <p className="text-xs text-neutral-400 mt-0.5">
+            <p className="text-xs text-[#9BA7B6] mt-0.5">
               وضعیت استقرار، حجم کار اختصاص‌یافته و ظرفیت در دسترس هر اکیپ در تاریخ امروز
             </p>
           </div>
           <button
             onClick={() => onNavigateTab('technicians')}
-            className="text-xs font-bold text-[#C1A056] hover:underline flex items-center gap-1 cursor-pointer"
+            className="text-xs font-semibold text-[#C5A059] hover:underline flex items-center gap-1 cursor-pointer"
           >
             مدیریت ترکیب اکیپ‌ها
             <ChevronLeft className="w-3.5 h-3.5" />
@@ -548,27 +547,27 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             const statusConfig = {
               AVAILABLE: {
                 label: 'در دسترس و آماده',
-                badgeCls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+                badgeCls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
               },
               ON_MISSION: {
                 label: 'در حال اجرای ماموریت',
-                badgeCls: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 animate-pulse',
+                badgeCls: 'bg-amber-500/15 text-amber-300 border-amber-500/30 animate-pulse',
               },
               STANDBY: {
                 label: 'برنامه‌ریزی‌شده / آماده‌باش',
-                badgeCls: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30',
+                badgeCls: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
               },
               OVERLOADED: {
                 label: 'تراکم بیش از ظرفیت',
-                badgeCls: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40 font-black',
+                badgeCls: 'bg-rose-500/15 text-rose-300 border-rose-500/40 font-bold',
               },
               UNCONFIGURED: {
                 label: 'ظرفیت نامشخص',
-                badgeCls: 'bg-neutral-500/15 text-neutral-600 dark:text-neutral-400 border-neutral-500/30 font-bold',
+                badgeCls: 'bg-neutral-500/15 text-[#9BA7B6] border-neutral-500/30 font-medium',
               },
             }[ts.status] || {
               label: 'نامشخص',
-              badgeCls: 'bg-neutral-500/10 text-neutral-500 border-neutral-500/20',
+              badgeCls: 'bg-neutral-500/10 text-[#637184] border-neutral-500/20',
             };
 
             const loadPercentage =
@@ -579,34 +578,34 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             return (
               <div
                 key={ts.team.id}
-                className="bg-white dark:bg-[#1A1A1A] rounded-2xl border border-[#E8E4DC] dark:border-[#2D2D2D] p-4 flex flex-col justify-between shadow-sm relative overflow-hidden"
+                className="bg-[#151B23] rounded-lg border border-[#212835] p-4 flex flex-col justify-between shadow-none relative overflow-hidden"
               >
                 <div>
                   {/* سربرگ اکیپ */}
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-black text-sm text-[#212121] dark:text-white">
+                        <span className="font-bold text-sm text-[#F0F4F8]">
                           {ts.team.name}
                         </span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#1C232D] text-[#9BA7B6]">
                           {ts.team.code}
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-400 mt-0.5">
+                      <p className="text-xs text-[#9BA7B6] mt-0.5">
                         سرپرست: {ts.supervisor ? ts.supervisor.name : 'فاقد سرپرست'}
                       </p>
                     </div>
                     <span
-                      className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${statusConfig.badgeCls}`}
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${statusConfig.badgeCls}`}
                     >
                       {statusConfig.label}
                     </span>
                   </div>
 
                   {/* اعضای اکیپ */}
-                  <div className="flex items-center gap-1.5 mb-3 text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-900/60 p-2 rounded-xl">
-                    <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                  <div className="flex items-center gap-1.5 mb-3 text-xs text-[#9BA7B6] bg-[#111620] p-2 rounded-md border border-[#212835]">
+                    <span className="font-semibold text-[#F0F4F8]">
                       تکنسین‌ها ({toPersianDigits(ts.technicians.length)} نفر):
                     </span>
                     <span className="truncate">
@@ -618,26 +617,26 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
 
                   {/* ماموریت جاری */}
                   <div className="mb-3">
-                    <div className="text-[11px] font-bold text-neutral-400 mb-1">ماموریت امروز:</div>
+                    <div className="text-[11px] font-medium text-[#637184] mb-1">ماموریت امروز:</div>
                     {ts.currentMission ? (
-                      <div className="p-2.5 rounded-xl border border-[#C1A056]/30 bg-[#FAF8F5] dark:bg-[#161616]">
-                        <div className="flex items-center justify-between text-xs font-bold text-[#212121] dark:text-white">
+                      <div className="p-2.5 rounded-md border border-[#C5A059]/30 bg-[#111620]">
+                        <div className="flex items-center justify-between text-xs font-semibold text-[#F0F4F8]">
                           <span className="truncate">{ts.currentMission.projectTitle}</span>
-                          <span className="font-mono text-[#C1A056] shrink-0 text-[11px]">
+                          <span className="font-mono text-[#C5A059] shrink-0 text-[11px]">
                             {ts.currentMission.projectCode}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-[11px] text-neutral-500 mt-1">
+                        <div className="flex items-center justify-between text-[11px] text-[#9BA7B6] mt-1">
                           <span>{ts.currentMission.customerName}</span>
                           {ts.currentMission.isMultiDay && (
-                            <span className="text-teal-600 font-bold text-[10px] bg-teal-500/10 px-1 rounded">
+                            <span className="text-teal-400 font-bold text-[10px] bg-teal-500/10 px-1 rounded">
                               پروژه چندروزه
                             </span>
                           )}
                         </div>
                       </div>
                     ) : (
-                      <div className="text-xs text-neutral-400 italic p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/40 text-center">
+                      <div className="text-xs text-[#637184] italic p-2.5 rounded-md bg-[#111620] border border-[#212835] text-center">
                         هیچ پروژه‌ای برای امروز اختصاص نیافته
                       </div>
                     )}
@@ -645,32 +644,32 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                 </div>
 
                 {/* گیج بار کاری روزانه */}
-                <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                <div className="pt-2 border-t border-[#212835]">
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="font-bold text-neutral-600 dark:text-neutral-300">
+                    <span className="font-medium text-[#9BA7B6]">
                       بار کاری امروز:
                     </span>
-                    <span className="font-mono font-black text-[#212121] dark:text-white">
+                    <span className="font-mono font-bold text-[#F0F4F8] tabular-nums">
                       {ts.maxCapacityHours !== null
                         ? `${toPersianDigits(ts.currentWorkloadHours)} / ${toPersianDigits(ts.maxCapacityHours)} ساعت`
                         : `${toPersianDigits(ts.currentWorkloadHours)} ساعت (سقف نامشخص)`}
                     </span>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                  <div className="w-full h-1.5 rounded bg-[#1C232D] overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-300 ${
+                      className={`h-full rounded transition-all duration-300 ${
                         loadPercentage > 100
                           ? 'bg-rose-500'
                           : loadPercentage > 75
                           ? 'bg-amber-500'
-                          : 'bg-[#C1A056]'
+                          : 'bg-[#C5A059]'
                       }`}
                       style={{ width: `${loadPercentage}%` }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-[10px] text-neutral-400 mt-1">
+                  <div className="flex items-center justify-between text-[10px] text-[#637184] mt-1">
                     <span>ظرفیت باقیمانده:</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="font-semibold text-emerald-400 tabular-nums">
                       {ts.remainingCapacityHours !== null
                         ? `${toPersianDigits(ts.remainingCapacityHours)} ساعت آزاد`
                         : 'نامشخص'}
@@ -686,20 +685,20 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
       {/* ۳. بخش هشدارها و فوریت‌های عملیاتی (Issues & Alerts) */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* پنل شاخص‌های انضباط و رعایت ۷۲ ساعت SLA */}
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl border border-[#E8E4DC] dark:border-[#2D2D2D] p-5 shadow-sm space-y-4">
+        <div className="bg-[#151B23] rounded-lg border border-[#212835] p-5 shadow-none space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-black text-[#212121] dark:text-white flex items-center gap-2">
-                <Clock className="w-4 h-4 text-amber-500" />
+              <h3 className="text-sm font-bold text-[#F0F4F8] flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-400" />
                 پایش زمان پاسخ و تعهد ۷۲ ساعته (SLA)
               </h3>
-              <p className="text-xs text-neutral-400 mt-0.5">
+              <p className="text-xs text-[#9BA7B6] mt-0.5">
                 تعهد سازمانی حل کلیه موانع فنی ظرف حداکثر ۷۲ ساعت از زمان گزارش
               </p>
             </div>
             <button
               onClick={() => onNavigateTab('tickets')}
-              className="text-xs font-bold text-[#C1A056] hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-xs font-semibold text-[#C5A059] hover:underline flex items-center gap-1 cursor-pointer"
             >
               مشاهده تیکت‌ها
               <ChevronLeft className="w-3.5 h-3.5" />
@@ -708,27 +707,27 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
 
           {/* کارت‌های خلاصه نرخ رعایت SLA */}
           <div className="grid grid-cols-3 gap-2.5">
-            <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 text-center">
-              <span className="text-[10px] text-neutral-500 block mb-1">درصد رعایت موعد مقرر</span>
+            <div className="p-3 rounded-md bg-[#111620] border border-[#212835] text-center">
+              <span className="text-[10px] text-[#9BA7B6] block mb-1">درصد رعایت موعد مقرر</span>
               <span
-                className={`text-xl font-black ${
-                  slaMetrics.onTimeRate >= 80 ? 'text-emerald-600' : 'text-rose-600'
+                className={`text-xl font-bold tabular-nums ${
+                  slaMetrics.onTimeRate >= 80 ? 'text-emerald-400' : 'text-rose-400'
                 }`}
               >
                 {toPersianDigits(slaMetrics.onTimeRate)}٪
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 text-center">
-              <span className="text-[10px] text-neutral-500 block mb-1">میانگین زمان حل</span>
-              <span className="text-xl font-black text-[#212121] dark:text-white">
+            <div className="p-3 rounded-md bg-[#111620] border border-[#212835] text-center">
+              <span className="text-[10px] text-[#9BA7B6] block mb-1">میانگین زمان حل</span>
+              <span className="text-xl font-bold text-[#F0F4F8] tabular-nums">
                 {toPersianDigits(slaMetrics.averageResolutionHours)} ساعت
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-center">
-              <span className="text-[10px] text-rose-700 dark:text-rose-400 block mb-1">تیکت‌های تاخیردار</span>
-              <span className="text-xl font-black text-rose-600 dark:text-rose-400">
+            <div className="p-3 rounded-md bg-rose-500/10 border border-rose-500/20 text-center">
+              <span className="text-[10px] text-rose-300 block mb-1">تیکت‌های تاخیردار</span>
+              <span className="text-xl font-bold text-rose-400 tabular-nums">
                 {toPersianDigits(slaMetrics.openOverdue)}
               </span>
             </div>
@@ -736,33 +735,33 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
 
           {/* تفکیک تیکت‌ها به وضعیت ۴ گانه */}
           <div className="space-y-2 text-xs">
-            <div className="flex items-center justify-between p-2 rounded-lg bg-neutral-50 dark:bg-neutral-900/40">
-              <span className="text-neutral-600 dark:text-neutral-300">در جریان (زیر ۷۲ ساعت):</span>
-              <span className="font-bold text-amber-600">{toPersianDigits(slaMetrics.openInSla)} مورد</span>
+            <div className="flex items-center justify-between p-2 rounded-md bg-[#111620] border border-[#212835]">
+              <span className="text-[#9BA7B6]">در جریان (زیر ۷۲ ساعت):</span>
+              <span className="font-semibold text-amber-400 tabular-nums">{toPersianDigits(slaMetrics.openInSla)} مورد</span>
             </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-rose-500/10">
-              <span className="font-bold text-rose-700 dark:text-rose-400">بحرانی باز (بیش از ۷۲ ساعت):</span>
-              <span className="font-black text-rose-700 dark:text-rose-400">{toPersianDigits(slaMetrics.openOverdue)} مورد</span>
+            <div className="flex items-center justify-between p-2 rounded-md bg-rose-500/10 border border-rose-500/20">
+              <span className="font-bold text-rose-300">بحرانی باز (بیش از ۷۲ ساعت):</span>
+              <span className="font-bold text-rose-400 tabular-nums">{toPersianDigits(slaMetrics.openOverdue)} مورد</span>
             </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/10">
-              <span className="text-emerald-700 dark:text-emerald-400">حل شده در موعد مقرر:</span>
-              <span className="font-bold text-emerald-700 dark:text-emerald-400">{toPersianDigits(slaMetrics.resolvedInSla)} مورد</span>
+            <div className="flex items-center justify-between p-2 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+              <span className="text-emerald-300">حل شده در موعد مقرر:</span>
+              <span className="font-semibold text-emerald-400 tabular-nums">{toPersianDigits(slaMetrics.resolvedInSla)} مورد</span>
             </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-purple-500/10">
-              <span className="text-purple-700 dark:text-purple-400">حل شده با تاخیر:</span>
-              <span className="font-bold text-purple-700 dark:text-purple-400">{toPersianDigits(slaMetrics.resolvedOverdue)} مورد</span>
+            <div className="flex items-center justify-between p-2 rounded-md bg-purple-500/10 border border-purple-500/20">
+              <span className="text-purple-300">حل شده با تاخیر:</span>
+              <span className="font-semibold text-purple-400 tabular-nums">{toPersianDigits(slaMetrics.resolvedOverdue)} مورد</span>
             </div>
           </div>
         </div>
 
         {/* پنل هشدارها و نیازمند اقدام فوری */}
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl border border-[#E8E4DC] dark:border-[#2D2D2D] p-5 shadow-sm space-y-4">
+        <div className="bg-[#151B23] rounded-lg border border-[#212835] p-5 shadow-none space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black text-[#212121] dark:text-white flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-500" />
+            <h3 className="text-sm font-bold text-[#F0F4F8] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-400" />
               هشدارهای عملیاتی و موارد نیازمند اقدام فوری
             </h3>
-            <span className="text-xs font-mono font-bold bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded text-neutral-600">
+            <span className="text-xs font-mono font-bold bg-[#1C232D] px-2 py-0.5 rounded text-[#C5A059] tabular-nums">
               {toPersianDigits(
                 conflicts.length +
                   blockingTickets.length +
@@ -779,17 +778,17 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               <div
                 key={t.id}
                 onClick={() => onNavigateTab('tickets')}
-                className="p-3 rounded-xl border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/20 text-xs flex items-start gap-2.5 cursor-pointer hover:bg-rose-100/70 transition"
+                className="p-3 rounded-md border border-rose-500/30 bg-[#1F1315] text-xs flex items-start gap-2.5 cursor-pointer hover:bg-rose-950/40 transition"
               >
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <div className="grow min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="font-black text-rose-900 dark:text-rose-300">
+                    <span className="font-bold text-rose-300">
                       توقف عملیات نصب: {t.projectTitle}
                     </span>
-                    <span className="font-mono text-[10px] text-rose-600 font-bold">{t.projectCode}</span>
+                    <span className="font-mono text-[10px] text-rose-400 font-bold">{t.projectCode}</span>
                   </div>
-                  <p className="text-rose-800 dark:text-rose-400 text-[11px] mt-1 line-clamp-1">
+                  <p className="text-rose-300/80 text-[11px] mt-1 line-clamp-1">
                     علت توقف: {t.blockingReason || t.description}
                   </p>
                 </div>
@@ -804,19 +803,19 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                   if (onReviewScheduleRequest) onReviewScheduleRequest(r);
                   else if (onOpenScheduleRequests) onOpenScheduleRequests();
                 }}
-                className="p-3 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20 text-xs flex items-start gap-2.5 cursor-pointer hover:bg-blue-100/70 transition"
+                className="p-3 rounded-md border border-blue-500/30 bg-[#121D2F] text-xs flex items-start gap-2.5 cursor-pointer hover:bg-blue-950/40 transition"
               >
-                <Calendar className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <Calendar className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
                 <div className="grow min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-blue-900 dark:text-blue-300">
+                    <span className="font-bold text-blue-300">
                       درخواست تغییر تاریخ: {r.projectTitle}
                     </span>
-                    <span className="text-[10px] bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-200 px-1.5 py-0.2 rounded font-bold">
+                    <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.2 rounded font-bold">
                       {isQcManager ? 'نیازمند تایید شما' : 'در انتظار تایید QC'}
                     </span>
                   </div>
-                  <p className="text-blue-800 dark:text-blue-400 text-[11px] mt-1">
+                  <p className="text-blue-300/80 text-[11px] mt-1">
                     از {r.previousScheduledDate} به {r.proposedScheduledDate} — علت: {r.reason}
                   </p>
                 </div>
@@ -828,17 +827,17 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               <div
                 key={p.id}
                 onClick={() => onOpenProject(p)}
-                className="p-3 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 text-xs flex items-start gap-2.5 cursor-pointer hover:bg-amber-100/70 transition"
+                className="p-3 rounded-md border border-amber-500/30 bg-[#241A0E] text-xs flex items-start gap-2.5 cursor-pointer hover:bg-amber-950/40 transition"
               >
-                <FileText className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <FileText className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <div className="grow min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-amber-900 dark:text-amber-300">
+                    <span className="font-bold text-amber-300">
                       عدم ثبت گزارش روزانه: {p.title}
                     </span>
-                    <span className="font-mono text-[10px] text-amber-600 font-bold">{p.code}</span>
+                    <span className="font-mono text-[10px] text-amber-400 font-bold">{p.code}</span>
                   </div>
-                  <p className="text-amber-800 dark:text-amber-400 text-[11px] mt-0.5">
+                  <p className="text-amber-300/80 text-[11px] mt-0.5">
                     پروژه چندروزه فعال است اما هنوز گزارش پیشرفت کاری امروز برای آن ثبت نشده است.
                   </p>
                 </div>
@@ -850,16 +849,16 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               <div
                 key={c.id}
                 onClick={() => onNavigateTab('planner')}
-                className={`p-3 rounded-xl text-xs flex items-start gap-2.5 cursor-pointer transition ${
+                className={`p-3 rounded-md text-xs flex items-start gap-2.5 cursor-pointer transition ${
                   c.severity === 'ERROR'
-                    ? 'border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300'
-                    : 'border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300'
+                    ? 'border border-rose-500/30 bg-[#1F1315] text-rose-300'
+                    : 'border border-amber-500/30 bg-[#241A0E] text-amber-300'
                 }`}
               >
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div className="grow min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold">{c.projectTitle}</span>
+                    <span className="font-semibold">{c.projectTitle}</span>
                     <span className="font-mono text-[10px] opacity-75">{c.projectCode}</span>
                   </div>
                   <p className="text-[11px] mt-0.5 opacity-90">{c.message}</p>
@@ -871,12 +870,12 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               pendingScheduleRequests.length === 0 &&
               missingDailyLogs.length === 0 &&
               conflicts.length === 0 && (
-                <div className="p-8 text-center text-neutral-400 space-y-2">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                  <p className="text-xs font-bold text-neutral-600 dark:text-neutral-300">
+                <div className="p-8 text-center text-[#637184] space-y-2 border border-dashed border-[#212835] rounded-md">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+                  <p className="text-xs font-semibold text-[#F0F4F8]">
                     هیچ هشدار یا مانع بحرانی در عملیات فنی وجود ندارد
                   </p>
-                  <p className="text-[11px] text-neutral-400">
+                  <p className="text-[11px] text-[#637184]">
                     کلیه ماموریت‌ها و تعهدات زمانی در شرایط استاندارد هستند.
                   </p>
                 </div>
@@ -891,71 +890,71 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           {/* ۱. کارت‌های شاخص‌های کلیدی عملکرد (Top KPI Ribbon) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {/* میانگین نمره کیفی QC */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-1">
-              <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold">
+            <div className="p-4 rounded-lg bg-[#151B23] border border-[#212835] shadow-none space-y-1">
+              <div className="flex items-center justify-between text-[#9BA7B6] text-[11px] font-semibold">
                 <span>میانگین نمره QC</span>
-                <Star className="w-4 h-4 text-[#C1A056] fill-[#C1A056]" />
+                <Star className="w-4 h-4 text-[#C5A059] fill-[#C5A059]" />
               </div>
-              <div className="text-2xl font-black text-[#212121] dark:text-white flex items-baseline gap-1">
+              <div className="text-2xl font-bold text-[#F0F4F8] flex items-baseline gap-1 tabular-nums">
                 <span>{toPersianDigits(analytics.avgQcScore || '—')}</span>
-                <span className="text-xs text-neutral-400 font-normal">از ۵</span>
+                <span className="text-xs text-[#637184] font-normal">از ۵</span>
               </div>
-              <p className="text-[10px] text-neutral-400">
+              <p className="text-[10px] text-[#637184] tabular-nums">
                 بر مبنای {toPersianDigits(analytics.approvedProjectsCount)} پروژه تاییدشده
               </p>
             </div>
 
             {/* نرخ قبولی بار اول */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-1">
-              <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold">
+            <div className="p-4 rounded-lg bg-[#151B23] border border-[#212835] shadow-none space-y-1">
+              <div className="flex items-center justify-between text-[#9BA7B6] text-[11px] font-semibold">
                 <span>قبولی نوبت اول</span>
-                <Percent className="w-4 h-4 text-emerald-500" />
+                <Percent className="w-4 h-4 text-emerald-400" />
               </div>
-              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+              <div className="text-2xl font-bold text-emerald-400 tabular-nums">
                 %{toPersianDigits(analytics.firstTimePassRate)}
               </div>
-              <p className="text-[10px] text-neutral-400">
+              <p className="text-[10px] text-[#637184] tabular-nums">
                 بر مبنای {toPersianDigits(analytics.inspectedProjectsCount)} پروژه بازرسی‌شده
               </p>
             </div>
 
             {/* کل پنل‌های نصب‌شده */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-1">
-              <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold">
+            <div className="p-4 rounded-lg bg-[#151B23] border border-[#212835] shadow-none space-y-1">
+              <div className="flex items-center justify-between text-[#9BA7B6] text-[11px] font-semibold">
                 <span>مجموع لت‌های نصب‌شده</span>
-                <Layers className="w-4 h-4 text-[#C1A056]" />
+                <Layers className="w-4 h-4 text-[#C5A059]" />
               </div>
-              <div className="text-2xl font-black text-[#212121] dark:text-white">
+              <div className="text-2xl font-bold text-[#F0F4F8] tabular-nums">
                 {toPersianDigits(analytics.totalPanels)} <span className="text-xs font-normal">لت</span>
               </div>
-              <p className="text-[10px] text-neutral-400">
+              <p className="text-[10px] text-[#637184] tabular-nums">
                 {toPersianDigits(analytics.totalShadePanels)} شید • {toPersianDigits(analytics.totalCurtainPanels)} پرده
               </p>
             </div>
 
             {/* تعهد زمانی SLA */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-1">
-              <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold">
+            <div className="p-4 rounded-lg bg-[#151B23] border border-[#212835] shadow-none space-y-1">
+              <div className="flex items-center justify-between text-[#9BA7B6] text-[11px] font-semibold">
                 <span>نرخ رعایت SLA</span>
-                <Clock className="w-4 h-4 text-blue-500" />
+                <Clock className="w-4 h-4 text-blue-400" />
               </div>
-              <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
+              <div className="text-2xl font-bold text-blue-400 tabular-nums">
                 %{toPersianDigits(slaMetrics.onTimeRate)}
               </div>
-              <p className="text-[10px] text-neutral-400">حل تیکت‌ها زیر ۷۲ ساعت</p>
+              <p className="text-[10px] text-[#637184]">حل تیکت‌ها زیر ۷۲ ساعت</p>
             </div>
 
             {/* رضایت کارفرما */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-1">
-              <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold">
+            <div className="p-4 rounded-lg bg-[#151B23] border border-[#212835] shadow-none space-y-1">
+              <div className="flex items-center justify-between text-[#9BA7B6] text-[11px] font-semibold">
                 <span>رضایت کارفرمایان</span>
-                <Star className="w-4 h-4 text-amber-500" />
+                <Star className="w-4 h-4 text-amber-400" />
               </div>
-              <div className="text-2xl font-black text-amber-600 dark:text-amber-400 flex items-baseline gap-1">
+              <div className="text-2xl font-bold text-amber-400 flex items-baseline gap-1 tabular-nums">
                 <span>{toPersianDigits(analytics.avgSatisfaction || '—')}</span>
-                <span className="text-xs text-neutral-400 font-normal">از ۵ ستاره</span>
+                <span className="text-xs text-[#637184] font-normal">از ۵ ستاره</span>
               </div>
-              <p className="text-[10px] text-neutral-400">
+              <p className="text-[10px] text-[#637184] tabular-nums">
                 {toPersianDigits(analytics.signedProjectsCount)} امضای دیجیتال
               </p>
             </div>
@@ -963,20 +962,20 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
 
           {/* ۲. تحلیل عدم‌انطباق‌ها و عیوب کیفی QC (Defect Breakdown) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="p-5 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
+            <div className="p-5 rounded-lg bg-[#151B23] border border-[#212835] shadow-none space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-black text-sm text-[#212121] dark:text-white flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-[#C1A056]" />
+                  <h3 className="font-bold text-sm text-[#F0F4F8] flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-[#C5A059]" />
                     <span>تحلیل عیوب و عدم‌انطباق‌های کیفی بازرسی (QC Defects)</span>
                   </h3>
-                  <p className="text-xs text-neutral-400 mt-0.5">
+                  <p className="text-xs text-[#9BA7B6] mt-0.5">
                     تفکیک فراوانی اشکالات ثبت‌شده در نوبت‌های بازرسی به تفکیک دسته فنی
                   </p>
                 </div>
                 <div className="text-left">
-                  <span className="text-xs font-bold text-neutral-500">مجموع عیوب: </span>
-                  <span className="text-xs font-black text-[#212121] dark:text-white font-mono">
+                  <span className="text-xs font-semibold text-[#9BA7B6]">مجموع عیوب: </span>
+                  <span className="text-xs font-bold text-[#F0F4F8] font-mono tabular-nums">
                     {toPersianDigits(analytics.totalDefectsCount)}
                   </span>
                 </div>
@@ -1001,16 +1000,16 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                     return (
                       <div key={cat.key} className="space-y-1">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-neutral-700 dark:text-neutral-300 font-medium">
+                          <span className="text-[#F0F4F8] font-medium">
                             {cat.label}
                           </span>
-                          <span className="font-mono text-neutral-500 dark:text-neutral-400 text-[11px]">
+                          <span className="font-mono text-[#9BA7B6] text-[11px] tabular-nums">
                             {toPersianDigits(count)} مورد ({toPersianDigits(pct)}٪)
                           </span>
                         </div>
-                        <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-2 rounded-full overflow-hidden">
+                        <div className="w-full bg-[#1C232D] h-1.5 rounded overflow-hidden">
                           <div
-                            className={`${cat.color} h-full transition-all duration-300 rounded-full`}
+                            className={`${cat.color} h-full transition-all duration-300 rounded`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
@@ -1019,12 +1018,12 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                   })}
                 </div>
               ) : (
-                <div className="p-8 text-center text-neutral-400 space-y-1.5 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                  <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                <div className="p-8 text-center text-[#637184] space-y-1.5 border border-dashed border-[#212835] rounded-md">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+                  <p className="text-xs font-semibold text-[#F0F4F8]">
                     هیچ عدم‌انطباق یا نقصی ثبت نشده است
                   </p>
-                  <p className="text-[11px] text-neutral-400">
+                  <p className="text-[11px] text-[#637184]">
                     تمام پروژه‌ها با رعایت استانداردهای گالری طلایی تایید شده‌اند.
                   </p>
                 </div>
@@ -1032,13 +1031,13 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             </div>
 
             {/* ۳. راندمان و خروجی ۴ اکیپ نصب (Team Performance & Output) */}
-            <div className="p-5 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
+            <div className="p-5 rounded-lg bg-[#151B23] border border-[#212835] shadow-none space-y-4">
               <div>
-                <h3 className="font-black text-sm text-[#212121] dark:text-white flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[#C1A056]" />
+                <h3 className="font-bold text-sm text-[#F0F4F8] flex items-center gap-2">
+                  <Users className="w-4 h-4 text-[#C5A059]" />
                   <span>راندمان و حجم کار تحویلی ۴ اکیپ نصب</span>
                 </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">
+                <p className="text-xs text-[#9BA7B6] mt-0.5">
                   تعداد پروژه‌های تکمیل‌شده و حجم لت‌های نصب‌شده توسط هر اکیپ
                 </p>
               </div>
@@ -1047,38 +1046,38 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                 {analytics.teamOutputs.map((team) => (
                   <div
                     key={team.teamId}
-                    className="p-3.5 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/40 space-y-2"
+                    className="p-3.5 rounded-md border border-[#212835] bg-[#111620] space-y-2"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="font-black text-xs text-[#212121] dark:text-white">
+                        <span className="font-bold text-xs text-[#F0F4F8]">
                           {team.teamName}
                         </span>
-                        <span className="text-[10px] text-neutral-400">
+                        <span className="text-[10px] text-[#637184]">
                           (سرپرست: {team.supervisorName})
                         </span>
                       </div>
-                      <span className="text-xs font-black text-[#C1A056] font-mono">
+                      <span className="text-xs font-bold text-[#C5A059] font-mono tabular-nums">
                         {toPersianDigits(team.completedProjectsCount)} پروژه تکمیل
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1 border-t border-neutral-200 dark:border-neutral-800/60">
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1 border-t border-[#212835]">
                       <div>
-                        <span className="text-[10px] text-neutral-400 block">شید</span>
-                        <span className="font-mono font-bold text-neutral-800 dark:text-neutral-200">
+                        <span className="text-[10px] text-[#637184] block">شید</span>
+                        <span className="font-mono font-semibold text-[#F0F4F8] tabular-nums">
                           {toPersianDigits(team.totalShades)} لت
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-neutral-400 block">پرده</span>
-                        <span className="font-mono font-bold text-neutral-800 dark:text-neutral-200">
+                        <span className="text-[10px] text-[#637184] block">پرده</span>
+                        <span className="font-mono font-semibold text-[#F0F4F8] tabular-nums">
                           {toPersianDigits(team.totalCurtains)} لت
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-neutral-400 block">مجموع پنل‌ها</span>
-                        <span className="font-mono font-bold text-[#C1A056]">
+                        <span className="text-[10px] text-[#637184] block">مجموع پنل‌ها</span>
+                        <span className="font-mono font-bold text-[#C5A059] tabular-nums">
                           {toPersianDigits(team.totalPanels)} لت
                         </span>
                       </div>
@@ -1092,36 +1091,36 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           {/* ۴. کارت‌های لجستیک متریال و تجربه مشتریان */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* لجستیک و تامین متریال */}
-            <div className="p-5 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-3">
-              <h3 className="font-black text-sm text-[#212121] dark:text-white flex items-center gap-2">
-                <Package className="w-4 h-4 text-purple-600" />
+            <div className="p-5 rounded-lg bg-[#151B23] border border-[#212835] shadow-none space-y-3">
+              <h3 className="font-bold text-sm text-[#F0F4F8] flex items-center gap-2">
+                <Package className="w-4 h-4 text-purple-400" />
                 <span>گزارش لجستیک و تامین متریال سر کارگاه (P2.3)</span>
               </h3>
-              <p className="text-xs text-neutral-400 leading-relaxed">
+              <p className="text-xs text-[#9BA7B6] leading-relaxed">
                 ارسال و تحویل قطعات و یراق‌آلات اضطراری جهت جلوگیری از توقف عملیات نصب.
               </p>
               <div className="grid grid-cols-3 gap-2 pt-2 text-center">
-                <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                  <span className="text-[10px] text-purple-700 dark:text-purple-300 block mb-0.5">
+                <div className="p-3 rounded-md bg-purple-500/10 border border-purple-500/20">
+                  <span className="text-[10px] text-purple-300 block mb-0.5">
                     کل درخواست‌ها
                   </span>
-                  <span className="text-lg font-black text-purple-800 dark:text-purple-200">
+                  <span className="text-lg font-bold text-purple-200 tabular-nums">
                     {toPersianDigits(analytics.totalMaterials)}
                   </span>
                 </div>
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                  <span className="text-[10px] text-amber-700 dark:text-amber-300 block mb-0.5">
+                <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/20">
+                  <span className="text-[10px] text-amber-300 block mb-0.5">
                     در مسیر پیک
                   </span>
-                  <span className="text-lg font-black text-amber-800 dark:text-amber-200">
+                  <span className="text-lg font-bold text-amber-200 tabular-nums">
                     {toPersianDigits(analytics.inTransitMaterials)}
                   </span>
                 </div>
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                  <span className="text-[10px] text-emerald-700 dark:text-emerald-300 block mb-0.5">
+                <div className="p-3 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                  <span className="text-[10px] text-emerald-300 block mb-0.5">
                     تحویل تاییدشده
                   </span>
-                  <span className="text-lg font-black text-emerald-800 dark:text-emerald-200">
+                  <span className="text-lg font-bold text-emerald-200 tabular-nums">
                     {toPersianDigits(analytics.deliveredMaterials)}
                   </span>
                 </div>
@@ -1129,36 +1128,36 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             </div>
 
             {/* تجربه و پذیرش کارفرما */}
-            <div className="p-5 rounded-2xl bg-white dark:bg-[#1A1A1A] border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-3">
-              <h3 className="font-black text-sm text-[#212121] dark:text-white flex items-center gap-2">
-                <Star className="w-4 h-4 text-[#C1A056]" />
+            <div className="p-5 rounded-lg bg-[#151B23] border border-[#212835] shadow-none space-y-3">
+              <h3 className="font-bold text-sm text-[#F0F4F8] flex items-center gap-2">
+                <Star className="w-4 h-4 text-[#C5A059]" />
                 <span>پذیرش و رضایت‌مندی کارفرمایان (P3)</span>
               </h3>
-              <p className="text-xs text-neutral-400 leading-relaxed">
+              <p className="text-xs text-[#9BA7B6] leading-relaxed">
                 وضعیت مستندسازی تحویل فیزیکی، امضای دیجیتال و معافیت‌های مستند عدم حضور کارفرما.
               </p>
               <div className="grid grid-cols-3 gap-2 pt-2 text-center">
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                  <span className="text-[10px] text-emerald-700 dark:text-emerald-300 block mb-0.5">
+                <div className="p-3 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                  <span className="text-[10px] text-emerald-300 block mb-0.5">
                     امضای حضوری
                   </span>
-                  <span className="text-lg font-black text-emerald-800 dark:text-emerald-200">
+                  <span className="text-lg font-bold text-emerald-200 tabular-nums">
                     {toPersianDigits(analytics.signedProjectsCount)}
                   </span>
                 </div>
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                  <span className="text-[10px] text-amber-700 dark:text-amber-300 block mb-0.5">
+                <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/20">
+                  <span className="text-[10px] text-amber-300 block mb-0.5">
                     معافیت عدم حضور
                   </span>
-                  <span className="text-lg font-black text-amber-800 dark:text-amber-200">
+                  <span className="text-lg font-bold text-amber-200 tabular-nums">
                     {toPersianDigits(analytics.unavailableExemptCount)}
                   </span>
                 </div>
-                <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                  <span className="text-[10px] text-blue-700 dark:text-blue-300 block mb-0.5">
+                <div className="p-3 rounded-md bg-blue-500/10 border border-blue-500/20">
+                  <span className="text-[10px] text-blue-300 block mb-0.5">
                     میانگین رضایت
                   </span>
-                  <span className="text-lg font-black text-blue-800 dark:text-blue-200">
+                  <span className="text-lg font-bold text-blue-200 tabular-nums">
                     {toPersianDigits(analytics.avgSatisfaction || '—')} <span className="text-[10px]">/۵</span>
                   </span>
                 </div>

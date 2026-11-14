@@ -86,7 +86,7 @@ export const Sidebar: React.FC<Props> = ({
   return (
     <aside
       aria-label="منوی اصلی مدیریت"
-      className="hidden lg:flex flex-col w-56 shrink-0 py-4 pl-4 border-l border-[#E2DDD4] dark:border-[#262626] sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto"
+      className="hidden lg:flex flex-col w-56 shrink-0 py-4 pl-4 border-l border-[#212835] sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto"
     >
       <div className="space-y-1">
         {navItems.map((item) => {
@@ -99,10 +99,10 @@ export const Sidebar: React.FC<Props> = ({
               type="button"
               onClick={() => onSelectTab(item.id)}
               aria-current={isSelected ? 'page' : undefined}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-sm transition-all duration-150 cursor-pointer select-none ${
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-md font-bold text-xs transition-all duration-150 cursor-pointer select-none ${
                 isSelected
-                  ? 'bg-[#212121] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#181818] shadow-xs'
-                  : 'text-[#4A4742] dark:text-[#BDB8AF] hover:text-[#181818] dark:hover:text-[#F5F3EF] hover:bg-[#EFEBE4]/60 dark:hover:bg-[#252525]'
+                  ? 'bg-[#1C232D] text-[#C5A059] border border-[#C5A059]/40 shadow-xs'
+                  : 'text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#151B23] border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2.5 min-w-0">
@@ -112,10 +112,10 @@ export const Sidebar: React.FC<Props> = ({
 
               {item.badge !== undefined && (
                 <span
-                  className={`min-w-[18px] h-4.5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center ${
+                  className={`min-w-[18px] h-4 px-1.5 rounded text-[11px] font-bold flex items-center justify-center ${
                     isSelected
-                      ? 'bg-[#C1A056] text-[#212121] dark:bg-[#181818] dark:text-[#C1A056]'
-                      : item.badgeColor || 'bg-[#E2DDD4] text-[#4A4742]'
+                      ? 'bg-[#C5A059] text-[#0D1117]'
+                      : item.badgeColor || 'bg-[#2D3748] text-[#9BA7B6]'
                   }`}
                 >
                   {item.badge}

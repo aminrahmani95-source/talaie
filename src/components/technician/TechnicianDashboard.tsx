@@ -132,18 +132,18 @@ export const TechnicianDashboard: React.FC<Props> = ({
 
   return (
     <div className="space-y-4 max-w-xl mx-auto pb-12">
-      {/* Technician Greeting Header (Clean, mobile-first, high contrast) */}
-      <div className="bg-[#212121] rounded-2xl p-4 text-white shadow-md border border-[#C1A056]/30 flex items-center justify-between">
+      {/* Technician Greeting Header (Industrial dark surface, clean hierarchy) */}
+      <div className="bg-[#151B23] rounded-lg p-4 sm:p-5 text-[#F0F4F8] border border-[#212835] flex items-center justify-between">
         <div>
-          <div className="text-xs text-[#E5CA8F] font-bold">
+          <div className="text-xs text-[#C5A059] font-medium tracking-wide">
             {getTodayPersianString()}
           </div>
-          <h2 className="font-black text-base sm:text-lg text-white mt-0.5">
+          <h2 className="font-bold text-base sm:text-lg text-[#F0F4F8] mt-0.5">
             سلام، {getDisplayName(currentUser.name)}
           </h2>
-          <div className="text-xs text-[#BDB8AF] mt-0.5">
+          <div className="text-xs text-[#9BA7B6] mt-0.5">
             {todayProjectsCount > 0 ? (
-              <span className="text-[#E5CA8F] font-bold">
+              <span className="text-[#E5CA8F] font-semibold">
                 {toPersianDigits(todayProjectsCount)} مأموریت برای امروز دارید
               </span>
             ) : (
@@ -155,15 +155,15 @@ export const TechnicianDashboard: React.FC<Props> = ({
         {/* Lead Scope Toggle */}
         {isLead && (
           <div className="flex flex-col items-end gap-1 shrink-0">
-            <span className="text-xs text-zinc-400">نمایش:</span>
-            <div className="flex items-center gap-1 bg-white/10 p-1 rounded-2xl border border-white/10 text-xs">
+            <span className="text-[11px] text-[#637184]">نمایش:</span>
+            <div className="flex items-center gap-1 bg-[#0D1117] p-1 rounded-md border border-[#212835] text-xs">
               <button
                 type="button"
                 onClick={() => setViewScope('MY_JOBS')}
-                className={`min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-xl font-bold transition cursor-pointer flex items-center justify-center ${
+                className={`min-h-[36px] min-w-[36px] px-3 py-1.5 rounded font-semibold transition cursor-pointer flex items-center justify-center ${
                   viewScope === 'MY_JOBS'
-                    ? 'bg-[#C1A056] text-[#212121]'
-                    : 'text-zinc-300 hover:text-white'
+                    ? 'bg-[#C5A059] text-[#0D1117]'
+                    : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
                 }`}
               >
                 اکیپ من
@@ -171,10 +171,10 @@ export const TechnicianDashboard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setViewScope('ALL_DAY_JOBS')}
-                className={`min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-xl font-bold transition cursor-pointer flex items-center justify-center ${
+                className={`min-h-[36px] min-w-[36px] px-3 py-1.5 rounded font-semibold transition cursor-pointer flex items-center justify-center ${
                   viewScope === 'ALL_DAY_JOBS'
-                    ? 'bg-[#C1A056] text-[#212121]'
-                    : 'text-zinc-300 hover:text-white'
+                    ? 'bg-[#C5A059] text-[#0D1117]'
+                    : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
                 }`}
               >
                 همه
@@ -186,16 +186,16 @@ export const TechnicianDashboard: React.FC<Props> = ({
 
       {/* PRIORITY JOBS: Open, in-flight, stuck, or QC-rejected jobs (Show FIRST) */}
       {openProjects.length > 0 && (
-        <div className="space-y-3 bg-rose-500/10 dark:bg-rose-950/20 p-3.5 rounded-2xl border border-rose-500/30">
+        <div className="space-y-3 bg-[#1F1315] p-3.5 sm:p-4 rounded-lg border border-rose-500/30">
           <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2 text-xs font-black text-rose-800 dark:text-rose-300">
-              <span className="relative flex h-2.5 w-2.5">
+            <div className="flex items-center gap-2 text-xs font-bold text-rose-300">
+              <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
               </span>
               <span>کارهای فعال و نیازمند پیگیری:</span>
             </div>
-            <span className="text-xs bg-rose-600 text-white px-2.5 py-1 rounded-full font-bold">
+            <span className="text-xs bg-rose-600/90 text-white px-2 py-0.5 rounded font-bold tabular-nums">
               {toPersianDigits(openProjects.length)}
             </span>
           </div>
@@ -228,12 +228,12 @@ export const TechnicianDashboard: React.FC<Props> = ({
 
       {/* Horizontal Day Tabs */}
       <div>
-        <div className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] mb-2 px-1 flex items-center justify-between">
+        <div className="text-xs font-semibold text-[#F0F4F8] mb-2 px-1 flex items-center justify-between">
           <span className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-[#8E6F27] dark:text-[#E5CA8F]" />
+            <Calendar className="w-3.5 h-3.5 text-[#C5A059]" />
             <span>برنامه روزهای کاری:</span>
           </span>
-          <span className="text-xs text-[#69655F] dark:text-[#9E988D]">
+          <span className="text-xs text-[#9BA7B6] tabular-nums">
             (پنجره دید {toPersianDigits(settings.visibilityWindowDays)} روز آینده)
           </span>
         </div>
@@ -257,26 +257,26 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setSelectedDateKey(day.dateKey)}
-                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[72px] min-h-[64px] py-2 px-2.5 rounded-xl border transition text-center active:scale-95 cursor-pointer ${
+                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[72px] min-h-[64px] py-2 px-2.5 rounded-md border transition text-center active:scale-95 cursor-pointer ${
                   isSelected
-                    ? 'bg-[#212121] text-[#E5CA8F] border-[#C1A056] shadow-xs font-bold ring-1 ring-[#C1A056]/30'
-                    : 'bg-white dark:bg-[#1A1A1A] text-[#4A4742] dark:text-[#BDB8AF] border-[#E2DDD4] dark:border-[#2C2C2C] hover:border-[#C1A056]/50'
+                    ? 'bg-[#1C232D] text-[#E5CA8F] border-[#C5A059] ring-1 ring-[#C5A059]/40 font-bold'
+                    : 'bg-[#151B23] text-[#9BA7B6] border-[#212835] hover:border-[#2D3748] hover:text-[#F0F4F8]'
                 }`}
               >
-                <span className="text-xs font-bold">
+                <span className="text-xs font-medium">
                   {day.isToday ? 'امروز' : day.dayOffset === 1 ? 'فردا' : day.persianDayName}
                 </span>
-                <span className="text-sm font-black my-0.5">
+                <span className="text-sm font-bold my-0.5 tabular-nums">
                   {toPersianDigits(day.persianDayNum)}
                 </span>
-                <span className="text-xs opacity-75">{day.persianMonthName}</span>
+                <span className="text-[11px] opacity-75">{day.persianMonthName}</span>
 
                 {count > 0 && (
                   <span
-                    className={`mt-1 text-xs px-2 py-0.5 rounded-full font-bold ${
+                    className={`mt-1 text-[11px] px-1.5 py-0.2 rounded font-bold tabular-nums ${
                       isSelected
-                        ? 'bg-[#C1A056] text-[#212121]'
-                        : 'bg-[#FAF7F2] dark:bg-[#252525] text-[#8E6F27] dark:text-[#E5CA8F] border border-[#C1A056]/30'
+                        ? 'bg-[#C5A059] text-[#0D1117]'
+                        : 'bg-[#1C232D] text-[#C5A059] border border-[#C5A059]/30'
                     }`}
                   >
                     {toPersianDigits(count)}
@@ -291,21 +291,21 @@ export const TechnicianDashboard: React.FC<Props> = ({
       {/* Selected Day Scheduled Jobs */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <div className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF]">
+          <div className="text-xs font-semibold text-[#F0F4F8]">
             مأموریت‌های {selectedDayInfo?.persianDayName} {selectedDayInfo?.persianDayNum}{' '}
             {selectedDayInfo?.persianMonthName}:
           </div>
-          <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-bold">
+          <span className="text-xs text-[#9BA7B6] font-medium tabular-nums">
             {toPersianDigits(filteredScheduledProjects.length)} مأموریت
           </span>
         </div>
 
         {filteredScheduledProjects.length === 0 ? (
-          <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-6 text-center border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-1">
-            <h4 className="font-bold text-xs sm:text-sm text-[#181818] dark:text-white">
+          <div className="bg-[#151B23] rounded-lg p-6 text-center border border-[#212835] space-y-1">
+            <h4 className="font-semibold text-xs sm:text-sm text-[#F0F4F8]">
               مأموریتی برای این روز برنامه‌ریزی نشده است
             </h4>
-            <p className="text-xs text-[#69655F] dark:text-[#9E988D]">
+            <p className="text-xs text-[#9BA7B6]">
               پروژه‌های باز و در حال اجرای شما در بالای صفحه نمایش داده شده‌اند.
             </p>
           </div>

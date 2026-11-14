@@ -72,18 +72,18 @@ export const ReportStuckModal: React.FC<Props> = ({
       aria-labelledby="report-stuck-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl max-w-lg w-full shadow-2xl border border-rose-500/40 overflow-hidden my-6 transition-all animate-in fade-in zoom-in-95 duration-200">
-        {/* Header in Rose & Obsidian */}
-        <div className="bg-[#212121] px-6 py-4 text-white flex items-center justify-between border-b-2 border-rose-500">
+      <div className="bg-[#151B23] rounded-lg max-w-lg w-full shadow-2xl border border-rose-500/30 overflow-hidden my-6 transition-all animate-in fade-in zoom-in-95 duration-200">
+        {/* Header in Rose & Graphite */}
+        <div className="bg-[#0D1117] px-6 py-4 text-[#F0F4F8] flex items-center justify-between border-b border-[#212835]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center shrink-0">
-              <AlertOctagon className="w-5 h-5" aria-hidden="true" />
+            <div className="w-8 h-8 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center shrink-0">
+              <AlertOctagon className="w-4 h-4" aria-hidden="true" />
             </div>
             <div>
-              <h3 id="report-stuck-title" className="font-black text-base sm:text-lg text-white">
+              <h3 id="report-stuck-title" className="font-bold text-base sm:text-lg text-[#F0F4F8]">
                 ثبت توقف کار سر پروژه (پرونده استاک)
               </h3>
-              <p className="text-xs text-rose-300 mt-0.5">
+              <p className="text-xs text-rose-400 mt-0.5">
                 <span className="font-mono">{project.code}</span> • {project.title}
               </p>
             </div>
@@ -91,28 +91,28 @@ export const ReportStuckModal: React.FC<Props> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
+            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
             aria-label="بستن پنجره"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Warning Banner */}
-        <div className="bg-rose-500/10 dark:bg-rose-950/40 border-b border-rose-500/20 p-4 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200 font-bold">
-            <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
+        <div className="bg-rose-500/10 border-b border-rose-500/20 p-3.5 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-rose-300 font-semibold">
+            <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
             <span>مهلت رفع توقف زیر ۷۲ ساعت (دفتر مرکزی)</span>
           </div>
-          <span className="bg-rose-600 text-white text-xs font-mono px-2 py-0.5 rounded-full font-black">
+          <span className="bg-rose-600/90 text-white text-xs font-mono px-2 py-0.5 rounded font-bold">
             &lt; 72h
           </span>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-2">
+            <label className="block text-xs font-semibold text-[#F0F4F8] mb-2">
               دسته‌بندی مانع و علت توقف:
             </label>
             <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
@@ -126,17 +126,17 @@ export const ReportStuckModal: React.FC<Props> = ({
                       setCategory(cat.key);
                       setError('');
                     }}
-                    className={`w-full text-right p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition cursor-pointer border ${
+                    className={`w-full text-right p-2.5 rounded-md text-xs font-medium flex items-center justify-between transition cursor-pointer border ${
                       isSelected
-                        ? 'bg-rose-500/15 border-rose-500 text-rose-700 dark:text-rose-200 font-black shadow-2xs'
-                        : 'bg-[#FAF7F2] dark:bg-[#222222] border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 hover:border-rose-300'
+                        ? 'bg-rose-500/15 border-rose-500/50 text-rose-300 font-bold'
+                        : 'bg-[#111620] border-[#212835] text-[#9BA7B6] hover:border-[#2D3748] hover:text-[#F0F4F8]'
                     }`}
                   >
                     <span className="flex items-center gap-2">
                       <span className="text-sm">{cat.icon}</span>
                       <span>{cat.label}</span>
                     </span>
-                    {isSelected && <span className="text-rose-600 font-bold">✓</span>}
+                    {isSelected && <span className="text-rose-400 font-bold">✓</span>}
                   </button>
                 );
               })}
@@ -144,7 +144,7 @@ export const ReportStuckModal: React.FC<Props> = ({
           </div>
 
           <div>
-            <label htmlFor="stuck-description" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
+            <label htmlFor="stuck-description" className="block text-xs font-semibold text-[#F0F4F8] mb-1.5">
               شرح دقیق کسری یا مانع فنی جهت اقدام مسئولین فنی: *
             </label>
             <textarea
@@ -156,29 +156,29 @@ export const ReportStuckModal: React.FC<Props> = ({
                 setError('');
               }}
               placeholder="مثال: کسری ۲ عدد پایه دوبل سقفی تقویتی برای لت‌های ۴ متری و عدم وجود سیم‌کشی برق در لبه شرقی کناف..."
-              className="w-full text-xs p-3 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-rose-500 focus:border-rose-500 bg-[#FAF7F2] dark:bg-[#141414] dark:text-white leading-relaxed resize-none"
+              className="w-full text-xs p-3 rounded-md border border-[#212835] focus:ring-1 focus:ring-rose-500 focus:border-rose-500 bg-[#0D1117] text-[#F0F4F8] leading-relaxed resize-none"
             />
-            {error && <p className="text-rose-600 text-xs font-bold mt-1">{error}</p>}
+            {error && <p className="text-rose-400 text-xs font-semibold mt-1">{error}</p>}
           </div>
 
-          <div className="text-xs text-slate-500 dark:text-zinc-400 bg-[#FAF7F2] dark:bg-[#222222] p-3 rounded-xl border border-[#E8E4DC] dark:border-[#2D2D2D] leading-relaxed">
+          <div className="text-xs text-[#9BA7B6] bg-[#111620] p-3 rounded-md border border-[#212835] leading-relaxed">
             با ارسال این گزارش، پروژه بلافاصله در فهرست پروژه‌های متوقف‌شده تحت پیگیری مسئولین فنی قرار گرفته و شمارش معکوس ۷۲ ساعته آغاز می‌شود.
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#212835]">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#FAF7F2] dark:bg-[#252525] hover:bg-[#EAE6DD] text-slate-700 dark:text-zinc-300 transition disabled:opacity-50 min-h-[44px] cursor-pointer"
+              className="px-4 py-2.5 rounded-md text-xs font-semibold bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] transition disabled:opacity-50 min-h-[44px] cursor-pointer"
             >
               انصراف
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 shadow-md active:scale-95 transition disabled:opacity-50 min-h-[44px] cursor-pointer"
+              className="px-5 py-2.5 rounded-md text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 active:scale-95 transition disabled:opacity-50 min-h-[44px] cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
               <span>{isSubmitting ? 'در حال ارسال...' : 'ارسال گزارش توقف'}</span>

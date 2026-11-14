@@ -52,11 +52,11 @@ export const Avatar: React.FC<AvatarProps> = ({
   const colorClass = getAvatarColor(id || name);
 
   const sizeClasses = {
-    xs: 'w-6 h-6 text-xs rounded-lg',
-    sm: 'w-8 h-8 text-xs rounded-xl',
-    md: 'w-10 h-10 text-sm rounded-xl',
-    lg: 'w-12 h-12 text-base rounded-2xl',
-    xl: 'w-14 h-14 text-lg rounded-2xl',
+    xs: 'w-6 h-6 text-[10px] rounded',
+    sm: 'w-7 h-7 text-xs rounded',
+    md: 'w-8 h-8 text-xs rounded-md',
+    lg: 'w-10 h-10 text-sm rounded-md',
+    xl: 'w-12 h-12 text-base rounded-md',
   }[size];
 
   return (

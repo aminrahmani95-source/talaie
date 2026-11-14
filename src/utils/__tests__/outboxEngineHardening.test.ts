@@ -1480,7 +1480,8 @@ describe('M1-B1 Outbox Engine Hardening Tests', () => {
     });
 
     expect(pendingOps.length).toBe(2);
-    expect(pendingOps[0].lastError).toContain('IN_FLIGHT_PERSIST_FAILED');
+    const failedOp = pendingOps.find((op: any) => op.payload?.patch?.notes === 'first op') || pendingOps[0];
+    expect(failedOp.lastError).toContain('IN_FLIGHT_PERSIST_FAILED');
 
     vi.restoreAllMocks();
   });

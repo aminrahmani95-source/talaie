@@ -53,8 +53,8 @@ export const LoginModal: React.FC<Props> = ({
   };
 
   const containerClasses = isStandalone
-    ? 'min-h-screen w-full flex items-center justify-center bg-[#0D0D0D] p-4 relative overflow-hidden'
-    : 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto';
+    ? 'min-h-screen w-full flex items-center justify-center bg-[#0D1117] p-4 relative overflow-hidden'
+    : 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 overflow-y-auto';
 
   return (
     <div
@@ -63,26 +63,22 @@ export const LoginModal: React.FC<Props> = ({
       aria-labelledby="login-modal-title"
       className={containerClasses}
     >
-      {/* Decorative luxury gold ambient glow */}
-      <div className="absolute top-1/4 -right-24 w-96 h-96 bg-[#C1A056]/15 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 -left-24 w-96 h-96 bg-[#C1A056]/10 rounded-full blur-[120px] pointer-events-none" />
-
-      <div className="bg-[#181818] text-white rounded-3xl max-w-lg w-full shadow-2xl border border-[#C1A056]/30 overflow-hidden my-6 relative transition-all animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-[#151B23] text-[#F0F4F8] rounded-lg max-w-md w-full shadow-2xl border border-[#2D3748] overflow-hidden my-6 relative transition-all animate-in fade-in zoom-in-95 duration-150">
         {/* Brand Banner Header */}
-        <div className="bg-gradient-to-b from-[#212121] to-[#181818] px-6 pt-8 pb-6 text-white text-center relative border-b border-[#C1A056]/20">
+        <div className="bg-[#111620] px-6 pt-7 pb-5 text-center relative border-b border-[#212835]">
           {onClose && !isStandalone && (
             <button
               type="button"
               onClick={onClose}
               aria-label="بستن پنجره ورود"
-              className="absolute left-4 top-4 w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1A056]"
+              className="absolute left-3 top-3 w-8 h-8 flex items-center justify-center rounded-md bg-[#1C232D] hover:bg-[#27313F] text-[#9BA7B6] hover:text-[#F0F4F8] transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] border border-[#2D3748] cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           )}
 
           <div className="flex justify-center mb-3">
-            <div className="w-16 h-16 rounded-2xl bg-[#121212] border-2 border-[#C1A056] flex items-center justify-center p-2.5 shadow-lg shadow-black/40">
+            <div className="w-12 h-12 rounded-md bg-[#151B23] border border-[#C5A059]/40 flex items-center justify-center p-2 shadow-xs">
               <img
                 src="./talaei-lion-gold.png"
                 alt="نشان گالری طلایی"
@@ -90,22 +86,22 @@ export const LoginModal: React.FC<Props> = ({
               />
             </div>
           </div>
-          <h2 id="login-modal-title" className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            سامانه عملیات و QC گالری طلایی
+          <h2 id="login-modal-title" className="text-base sm:text-lg font-black text-[#F0F4F8] tracking-tight">
+            سامانه عملیات و کنترل کیفیت گالری طلایی
           </h2>
-          <p className="text-xs text-[#C1A056] mt-1 font-bold tracking-widest uppercase">
-            TALAEI GALLERY | LUXURY CURTAIN & SMART SHADES
+          <p className="text-[11px] text-[#C5A059] mt-1 font-semibold tracking-wide">
+            TALAEI GALLERY | QC & FIELD OPERATIONS
           </p>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-4">
           {/* Error Message */}
           {error && (
             <div
               role="alert"
-              className="p-3.5 bg-rose-950/70 border border-rose-500/60 text-rose-200 text-xs rounded-2xl font-medium flex items-center gap-2 animate-in fade-in duration-150"
+              className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs rounded-md font-medium flex items-center gap-2 animate-in fade-in duration-150"
             >
-              <span className="font-bold shrink-0">⚠️ خطا:</span>
+              <span className="font-bold shrink-0">خطا:</span>
               <span>{error}</span>
             </div>
           )}
@@ -114,7 +110,7 @@ export const LoginModal: React.FC<Props> = ({
             <div>
               <label
                 htmlFor="login-phone"
-                className="block text-xs font-bold text-[#E8E4DC] mb-2"
+                className="block text-xs font-bold text-[#F0F4F8] mb-1.5"
               >
                 شماره موبایل سازمانی:
               </label>
@@ -129,17 +125,17 @@ export const LoginModal: React.FC<Props> = ({
                   placeholder="مثال: 09124339038"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-3 pr-11 py-3.5 text-sm rounded-xl border border-[#383838] focus:border-[#C1A056] focus:outline-none focus:ring-2 focus:ring-[#C1A056]/30 text-left font-mono bg-[#121212] text-white placeholder-zinc-500 transition"
+                  className="w-full pl-3 pr-10 py-2.5 text-xs sm:text-sm rounded-md border border-[#2D3748] focus:border-[#C5A059] focus:outline-none focus:ring-1 focus:ring-[#C5A059] text-left font-mono bg-[#0D1117] text-[#F0F4F8] placeholder-[#637184] transition"
                   dir="ltr"
                 />
-                <Phone className="w-4 h-4 text-[#C1A056] absolute right-3.5 top-4" aria-hidden="true" />
+                <Phone className="w-4 h-4 text-[#C5A059] absolute right-3 top-3" aria-hidden="true" />
               </div>
             </div>
 
             <div>
               <label
                 htmlFor="login-password"
-                className="block text-xs font-bold text-[#E8E4DC] mb-2"
+                className="block text-xs font-bold text-[#F0F4F8] mb-1.5"
               >
                 رمز عبور امن:
               </label>
@@ -154,14 +150,14 @@ export const LoginModal: React.FC<Props> = ({
                   placeholder="رمز عبور خود را وارد کنید"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-11 py-3.5 text-sm rounded-xl border border-[#383838] focus:border-[#C1A056] focus:outline-none focus:ring-2 focus:ring-[#C1A056]/30 text-left font-mono bg-[#121212] text-white placeholder-zinc-500 transition"
+                  className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm rounded-md border border-[#2D3748] focus:border-[#C5A059] focus:outline-none focus:ring-1 focus:ring-[#C5A059] text-left font-mono bg-[#0D1117] text-[#F0F4F8] placeholder-[#637184] transition"
                   dir="ltr"
                 />
-                <KeyRound className="w-4 h-4 text-[#C1A056] absolute right-3.5 top-4" aria-hidden="true" />
+                <KeyRound className="w-4 h-4 text-[#C5A059] absolute right-3 top-3" aria-hidden="true" />
                 <button
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
-                  className="absolute left-3 top-4 text-zinc-400 hover:text-white transition cursor-pointer"
+                  className="absolute left-3 top-3 text-[#637184] hover:text-[#F0F4F8] transition cursor-pointer"
                   tabIndex={-1}
                   aria-label={showPassword ? 'مخفی کردن رمز' : 'نمایش رمز'}
                 >
@@ -173,25 +169,25 @@ export const LoginModal: React.FC<Props> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full min-h-[48px] py-3.5 mt-2 bg-gradient-to-r from-[#C1A056] to-[#A88738] hover:from-[#D4B369] hover:to-[#BFA051] text-[#121212] font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full min-h-[42px] py-2.5 mt-2 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-bold rounded-md shadow-xs transition flex items-center justify-center gap-2 text-xs sm:text-sm active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-[#C5A059]"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-[#121212]" />
+                  <Loader2 className="w-4 h-4 animate-spin text-[#0D1117]" />
                   <span>در حال بررسی اعتبار...</span>
                 </>
               ) : (
                 <>
-                  <UserCheck className="w-4 h-4 text-[#121212]" />
+                  <UserCheck className="w-4 h-4 text-[#0D1117]" />
                   <span>ورود به سامانه</span>
                 </>
               )}
             </button>
           </form>
 
-          <div className="pt-3 border-t border-[#262626] text-center">
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              مرکز پشتیبانی فنی و مدیریت QC گالری طلایی | طراحی، پرده و شید هوشمند (talaei.ir)
+          <div className="pt-3 border-t border-[#212835] text-center">
+            <p className="text-[11px] text-[#637184] leading-relaxed">
+              مرکز پشتیبانی فنی و مدیریت کنترل کیفیت گالری طلایی | طراحی، پرده و شید هوشمند
             </p>
           </div>
         </div>

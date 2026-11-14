@@ -26,14 +26,14 @@ export function SegmentedControl<T extends string = string>({
   className = '',
   ariaLabel = 'انتخاب دسته‌بندی',
 }: SegmentedControlProps<T>) {
-  const sizeClasses = size === 'sm' ? 'text-xs p-1' : 'text-xs sm:text-sm p-1';
-  const itemPadding = size === 'sm' ? 'px-3 py-2 min-h-[44px] min-w-[44px]' : 'px-3.5 py-2.5 min-h-[44px] min-w-[44px]';
+  const sizeClasses = size === 'sm' ? 'text-xs p-0.5' : 'text-xs sm:text-sm p-1';
+  const itemPadding = size === 'sm' ? 'px-2.5 py-1.5 min-h-[36px]' : 'px-3 py-2 min-h-[40px]';
 
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`inline-flex items-center bg-[#EFEBE4] dark:bg-[#1C1C1C] rounded-2xl border border-[#E2DDD4] dark:border-[#2D2D2D] select-none max-w-full overflow-x-auto scrollbar-none ${sizeClasses} ${className}`}
+      className={`inline-flex items-center bg-[#111620] rounded-md border border-[#212835] select-none max-w-full overflow-x-auto scrollbar-none ${sizeClasses} ${className}`}
     >
       {options.map((opt) => {
         const optVal = (opt.value ?? opt.id) as T;
@@ -46,20 +46,20 @@ export function SegmentedControl<T extends string = string>({
             type="button"
             aria-selected={isSelected}
             onClick={() => onChange(optVal)}
-            className={`relative flex items-center justify-center gap-1.5 rounded-xl font-bold transition-all duration-150 shrink-0 cursor-pointer ${itemPadding} ${
+            className={`relative flex items-center justify-center gap-1.5 rounded font-bold transition-all duration-150 shrink-0 cursor-pointer ${itemPadding} ${
               isSelected
-                ? 'bg-[#212121] text-[#C1A056] dark:bg-[#C1A056] dark:text-[#181818] shadow-xs ring-1 ring-black/5 dark:ring-white/10'
-                : 'text-[#4A4742] dark:text-[#BDB8AF] hover:text-[#181818] dark:hover:text-[#F5F3EF] hover:bg-white/40 dark:hover:bg-white/5'
+                ? 'bg-[#1C232D] text-[#C5A059] border border-[#C5A059]/40 shadow-xs'
+                : 'text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#151B23] border border-transparent'
             }`}
           >
             {opt.icon && <span className="shrink-0">{opt.icon}</span>}
             <span>{opt.label}</span>
             {countVal !== undefined && (
               <span
-                className={`text-xs px-1.5 py-0.2 rounded-full font-bold leading-none ${
+                className={`text-[11px] px-1.5 py-0.5 rounded font-bold leading-none ${
                   isSelected
-                    ? 'bg-[#C1A056] text-[#212121] dark:bg-[#181818] dark:text-[#C1A056]'
-                    : 'bg-[#E2DDD4] text-[#4A4742] dark:bg-[#2C2C2C] dark:text-[#BDB8AF]'
+                    ? 'bg-[#C5A059] text-[#0D1117]'
+                    : 'bg-[#1C232D] text-[#9BA7B6] border border-[#2D3748]'
                 }`}
               >
                 {countVal}

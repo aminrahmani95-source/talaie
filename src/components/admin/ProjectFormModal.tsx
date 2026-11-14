@@ -402,11 +402,11 @@ export const ProjectFormModal: React.FC<Props> = ({
       aria-labelledby="project-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
     >
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl max-w-2xl w-full shadow-2xl border border-[#E2DDD4] dark:border-[#2C2C2C] flex flex-col max-h-[92vh] overflow-hidden my-4">
+      <div className="bg-[#151B23] rounded-lg max-w-2xl w-full shadow-2xl border border-[#212835] flex flex-col max-h-[92vh] overflow-hidden my-4">
         {/* Modal Header */}
-        <div className="bg-[#212121] px-5 py-3.5 text-white flex items-center justify-between border-b border-[#C1A056]/40 shrink-0">
+        <div className="bg-[#0D1117] px-5 py-3.5 text-white flex items-center justify-between border-b border-[#C5A059]/40 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-[#C1A056]">
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-[#C5A059]">
               <Plus className="w-4 h-4" />
             </div>
             <div>
@@ -435,15 +435,15 @@ export const ProjectFormModal: React.FC<Props> = ({
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           {/* Section 1: Customer & Address */}
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E2DDD4] dark:border-[#2C2C2C] rounded-2xl p-4 space-y-3">
-            <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+          <div className="bg-[#111620] border border-[#212835] rounded-lg p-4 space-y-3">
+            <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-[#C5A059]" />
               <span>اطلاعات پروژه و محل نصب</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
-                <label htmlFor="project-title" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="project-title" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   عنوان پروژه: *
                 </label>
                 <input
@@ -453,12 +453,12 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="مثال: ویلای لواسان - سالن اصلی"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                 />
               </div>
 
               <div>
-                <label htmlFor="customer-name" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="customer-name" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   نام کارفرما:
                 </label>
                 <input
@@ -467,12 +467,12 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="مثال: آقای پیروز"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                 />
               </div>
 
               <div>
-                <label htmlFor="customer-phone" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="customer-phone" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   شماره تماس مشتری:
                 </label>
                 <input
@@ -482,13 +482,13 @@ export const ProjectFormModal: React.FC<Props> = ({
                   autoComplete="tel"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-mono text-left"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white font-mono text-left"
                   dir="ltr"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label htmlFor="project-address" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="project-address" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   نشانی دقیق محل نصب:
                 </label>
                 <textarea
@@ -497,12 +497,12 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="خیابان، کوچه، پلاک، طبقه و واحد..."
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label htmlFor="location-url" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="location-url" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   لینک لوکیشن (نشان، بلد یا گوگل‌مپ):
                 </label>
                 <input
@@ -511,7 +511,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="https://nshn.ir/... یا https://maps.google.com/..."
                   value={locationUrl}
                   onChange={(e) => setLocationUrl(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white text-left font-mono"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white text-left font-mono"
                   dir="ltr"
                 />
               </div>
@@ -519,10 +519,10 @@ export const ProjectFormModal: React.FC<Props> = ({
           </div>
 
           {/* Section: Official Handover Gate */}
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#C1A056]/40 rounded-2xl p-4 space-y-3">
+          <div className="bg-[#111620] border border-[#C5A059]/40 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-                <CheckSquare className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+              <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                <CheckSquare className="w-4 h-4 text-[#C5A059]" />
                 <span>گیت تحویل رسمی به واحد فنی (پیش‌نیاز زمان‌بندی و اعزام)</span>
               </h4>
               <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
@@ -535,7 +535,7 @@ export const ProjectFormModal: React.FC<Props> = ({
             </div>
 
             {!isHandoverComplete && (
-              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-2">
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-md text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>پروژه تا زمان ثبت و تأیید هر دو پیش‌نیاز اتمام تولید و تحویل به انبار، قابل زمان‌بندی و اعزام اکیپ نیست.</span>
               </div>
@@ -543,10 +543,10 @@ export const ProjectFormModal: React.FC<Props> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* 1. Production Confirmation Card */}
-              <div className={`p-3.5 rounded-xl border transition-all ${
+              <div className={`p-3.5 rounded-md border transition-all ${
                 prodConfirmed
                   ? 'border-emerald-500/40 bg-emerald-500/5'
-                  : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#151515]'
+                  : 'border-[#212835] bg-white dark:bg-[#151515]'
               }`}>
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
@@ -559,11 +559,11 @@ export const ProjectFormModal: React.FC<Props> = ({
                         setProdConfirmedBy('کارشناس واحد تولید');
                       }
                     }}
-                    className="mt-0.5 w-4 h-4 rounded text-[#C1A056] focus:ring-[#C1A056] accent-[#C1A056]"
+                    className="mt-0.5 w-4 h-4 rounded text-[#C5A059] focus:ring-[#C1A056] accent-[#C1A056]"
                   />
                   <div className="text-xs space-y-0.5">
-                    <span className="font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-                      <Factory className="w-3.5 h-3.5 text-[#C1A056]" />
+                    <span className="font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                      <Factory className="w-3.5 h-3.5 text-[#C5A059]" />
                       <span>۱. تأیید اتمام تولید کارگاهی</span>
                     </span>
                     <span className="text-slate-500 dark:text-zinc-400 block text-[11px]">
@@ -585,17 +585,17 @@ export const ProjectFormModal: React.FC<Props> = ({
                       placeholder="نکات کیفی ساخت و تولید (اختیاری)..."
                       value={prodNotes}
                       onChange={(e) => setProdNotes(e.target.value)}
-                      className="w-full text-xs p-2 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#121212] dark:text-white"
+                      className="w-full text-xs p-2 rounded-lg border border-[#212835] bg-white dark:bg-[#121212] dark:text-white"
                     />
                   </div>
                 )}
               </div>
 
               {/* 2. Warehouse Confirmation Card */}
-              <div className={`p-3.5 rounded-xl border transition-all ${
+              <div className={`p-3.5 rounded-md border transition-all ${
                 whConfirmed
                   ? 'border-emerald-500/40 bg-emerald-500/5'
-                  : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#151515]'
+                  : 'border-[#212835] bg-white dark:bg-[#151515]'
               }`}>
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
@@ -608,11 +608,11 @@ export const ProjectFormModal: React.FC<Props> = ({
                         setWhConfirmedBy('مسئول انبار مرکزی');
                       }
                     }}
-                    className="mt-0.5 w-4 h-4 rounded text-[#C1A056] focus:ring-[#C1A056] accent-[#C1A056]"
+                    className="mt-0.5 w-4 h-4 rounded text-[#C5A059] focus:ring-[#C1A056] accent-[#C1A056]"
                   />
                   <div className="text-xs space-y-0.5">
-                    <span className="font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-                      <Warehouse className="w-3.5 h-3.5 text-[#C1A056]" />
+                    <span className="font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                      <Warehouse className="w-3.5 h-3.5 text-[#C5A059]" />
                       <span>۲. تأیید ورود کالا به انبار</span>
                     </span>
                     <span className="text-slate-500 dark:text-zinc-400 block text-[11px]">
@@ -634,7 +634,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                       placeholder="شماره حواله انبار یا یادداشت تحویل..."
                       value={whNotes}
                       onChange={(e) => setWhNotes(e.target.value)}
-                      className="w-full text-xs p-2 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#121212] dark:text-white"
+                      className="w-full text-xs p-2 rounded-lg border border-[#212835] bg-white dark:bg-[#121212] dark:text-white"
                     />
                   </div>
                 )}
@@ -643,15 +643,15 @@ export const ProjectFormModal: React.FC<Props> = ({
           </div>
 
           {/* Section 2: Technical Specifications */}
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E2DDD4] dark:border-[#2C2C2C] rounded-2xl p-4 space-y-3">
-            <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+          <div className="bg-[#111620] border border-[#212835] rounded-lg p-4 space-y-3">
+            <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-[#C5A059]" />
               <span>مشخصات فنی پرده و شید</span>
             </h4>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <label htmlFor="shade-panels" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="shade-panels" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   تعداد لت شید:
                 </label>
                 <input
@@ -661,12 +661,12 @@ export const ProjectFormModal: React.FC<Props> = ({
                   min="0"
                   value={shadePanels}
                   onChange={(e) => setShadePanels(Number(e.target.value))}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white text-center font-mono font-bold"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white text-center font-mono font-bold"
                 />
               </div>
 
               <div>
-                <label htmlFor="curtain-panels" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="curtain-panels" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   تعداد لت پرده:
                 </label>
                 <input
@@ -676,12 +676,12 @@ export const ProjectFormModal: React.FC<Props> = ({
                   min="0"
                   value={curtainPanels}
                   onChange={(e) => setCurtainPanels(Number(e.target.value))}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white text-center font-mono font-bold"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white text-center font-mono font-bold"
                 />
               </div>
 
               <div className="col-span-2 sm:col-span-2">
-                <label htmlFor="mechanism-type" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="mechanism-type" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   نوع مکانیزم و موتور:
                 </label>
                 <input
@@ -690,12 +690,12 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="موتور سامفی رادیویی + ریل برقی"
                   value={mechanismType}
                   onChange={(e) => setMechanismType(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                 />
               </div>
 
               <div className="col-span-2 sm:col-span-4">
-                <label htmlFor="special-notes" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="special-notes" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   توضیحات و نکات کلیدی:
                 </label>
                 <textarea
@@ -704,17 +704,17 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="نکات حساسیت مشتری، نوع سقف کاذب، زیرسازی..."
                   value={specialNotes}
                   onChange={(e) => setSpecialNotes(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                 />
               </div>
             </div>
           </div>
 
           {/* Section 3: Proposal Images */}
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#C1A056]/30 rounded-2xl p-4 space-y-3">
+          <div className="bg-[#111620] border border-[#C5A059]/30 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-                <Camera className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+              <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-[#C5A059]" />
                 <span>تصویر پروپوزال فروش (نقشه و برگه سفارش)</span>
               </h4>
             </div>
@@ -723,7 +723,7 @@ export const ProjectFormModal: React.FC<Props> = ({
               {proposalImages.map((img) => (
                 <div
                   key={img.id}
-                  className="relative w-16 h-20 rounded-xl overflow-hidden border border-[#C1A056] shadow-2xs bg-white dark:bg-[#141414]"
+                  className="relative w-16 h-20 rounded-md overflow-hidden border border-[#C5A059]  bg-[#0D1117]"
                 >
                   <CloudImage src={img.url} alt="" className="w-full h-full object-cover" />
                   <button
@@ -737,7 +737,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                 </div>
               ))}
 
-              <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#C1A056] hover:border-[#212121] bg-white dark:bg-[#141414] cursor-pointer text-[#8E6F27] dark:text-[#E5CA8F] transition">
+              <label className="flex flex-col items-center justify-center w-20 h-20 rounded-md border-2 border-dashed border-[#C5A059] hover:border-[#212121] bg-[#0D1117] cursor-pointer text-[#C5A059] transition">
                 <Camera className="w-5 h-5 mb-1" />
                 <span className="text-xs font-bold">پیوست عکس</span>
                 <input
@@ -752,16 +752,16 @@ export const ProjectFormModal: React.FC<Props> = ({
           </div>
 
           {/* Section 4: Schedule & Team Assignment */}
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E2DDD4] dark:border-[#2C2C2C] rounded-2xl p-4 space-y-3">
-            <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+          <div className="bg-[#111620] border border-[#212835] rounded-lg p-4 space-y-3">
+            <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-[#C5A059]" />
               <span>زمان‌بندی، انتساب اکیپ و برآورد فنی</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Assigned Installation Team */}
               <div className="sm:col-span-2">
-                <label htmlFor="assigned-team" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="assigned-team" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   اکیپ تخصیص‌یافته (از ۴ اکیپ رسمی نصب):
                 </label>
                 <select
@@ -779,7 +779,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                       }
                     }
                   }}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-bold"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white font-bold"
                 >
                   <option value="">بدون اکیپ (تعیین نشده)</option>
                   {effectiveTeams.map((t) => (
@@ -792,7 +792,7 @@ export const ProjectFormModal: React.FC<Props> = ({
 
               {/* Workload & Duration Estimates */}
               <div>
-                <label htmlFor="estimated-workload" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="estimated-workload" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   حجم کار تخمینی (متر طول / مساحت):
                 </label>
                 <input
@@ -803,12 +803,12 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="مثال: ۲۴.۵"
                   value={estimatedWorkload}
                   onChange={(e) => setEstimatedWorkload(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-bold text-center font-mono"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white font-bold text-center font-mono"
                 />
               </div>
 
               <div>
-                <label htmlFor="required-duration" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="required-duration" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   تخمین مدت کار (ساعت):
                 </label>
                 <input
@@ -819,12 +819,12 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="مثال: ۴"
                   value={requiredDurationHours}
                   onChange={(e) => setRequiredDurationHours(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-bold text-center font-mono"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white font-bold text-center font-mono"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label htmlFor="second-measurement-doc" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="second-measurement-doc" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   سند قطعی اندازه‌گیری دوم (شماره فرم یا توضیحات ابعاد تاییدشده):
                 </label>
                 <input
@@ -833,12 +833,12 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="مثال: فرم اندازه‌گیری دوم شماره ۱۰۸ — ابعاد کف‌سازی با کناف مطابقت دارد"
                   value={secondMeasurementDoc}
                   onChange={(e) => setSecondMeasurementDoc(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                 />
               </div>
 
               <div>
-                <label htmlFor="scheduled-date" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="scheduled-date" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   تاریخ اجرا:
                 </label>
                 <select
@@ -851,7 +851,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                       setEndDate(newStart);
                     }
                   }}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-bold"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white font-bold"
                 >
                   {days.map((d) => (
                     <option key={d.dateKey} value={d.dateKey}>
@@ -864,11 +864,11 @@ export const ProjectFormModal: React.FC<Props> = ({
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="end-date" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF]">
+                  <label htmlFor="end-date" className="block text-xs font-semibold text-[#9BA7B6]">
                     تاریخ پایان (برای پروژه‌های چندروزه):
                   </label>
                   {endDate && endDate > scheduledDate && (
-                    <span className="text-xs bg-[#C1A056]/20 text-[#8E6F27] dark:text-[#E5CA8F] font-bold px-2 py-0.5 rounded-full">
+                    <span className="text-xs bg-[#C1A056]/20 text-[#C5A059] font-bold px-2 py-0.5 rounded-full">
                       پروژه {toPersianDigits(getMultiDayTotalDays(scheduledDate, endDate))} روزه
                     </span>
                   )}
@@ -877,7 +877,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   id="end-date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-bold"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white font-bold"
                 >
                   {days
                     .filter((d) => d.dateKey >= scheduledDate)
@@ -891,7 +891,7 @@ export const ProjectFormModal: React.FC<Props> = ({
               </div>
 
               <div className="sm:col-span-2">
-                <label htmlFor="scheduled-time" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="scheduled-time" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                   ساعت حضور در محل:
                 </label>
                 <input
@@ -899,7 +899,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   type="time"
                   value={scheduledTime}
                   onChange={(e) => setScheduledTime(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white text-center font-bold font-mono"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white text-center font-bold font-mono"
                 />
               </div>
             </div>
@@ -907,13 +907,13 @@ export const ProjectFormModal: React.FC<Props> = ({
             {/* Technicians Multi-Select with Searchable Chip List */}
             <div className="pt-1">
               {!hasLeadTechnician && (
-                <div className="mb-2 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-200 flex items-center gap-1.5">
+                <div className="mb-2 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-md text-xs font-bold text-amber-800 dark:text-amber-200 flex items-center gap-1.5">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>حداقل یک سرپرست اکیپ در پرسنل تعریف کنید</span>
                 </div>
               )}
 
-              <label className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1.5">
+              <label className="block text-xs font-semibold text-[#9BA7B6] mb-1.5">
                 تکنسین‌های حاضر در این مأموریت (سرپرست مشخص شود):
               </label>
 
@@ -925,7 +925,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                     placeholder="جستجوی تکنسین..."
                     value={techSearchQuery}
                     onChange={(e) => setTechSearchQuery(e.target.value)}
-                    className="w-full text-xs pr-8 pl-2.5 py-1.5 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                    className="w-full text-xs pr-8 pl-2.5 py-1.5 rounded-lg border border-[#212835] bg-[#0D1117] dark:text-white"
                   />
                 </div>
               )}
@@ -939,10 +939,10 @@ export const ProjectFormModal: React.FC<Props> = ({
                     <div
                       key={u.id}
                       onClick={() => handleTechnicianToggle(u.id)}
-                      className={`flex items-center justify-between p-2 rounded-xl border cursor-pointer transition select-none ${
+                      className={`flex items-center justify-between p-2 rounded-md border cursor-pointer transition select-none ${
                         isSelected
-                          ? 'border-[#C1A056] bg-white dark:bg-[#222222] ring-1 ring-[#C1A056]/30'
-                          : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-white/70 dark:bg-[#161616]'
+                          ? 'border-[#C5A059] bg-white dark:bg-[#222222] ring-1 ring-[#C1A056]/30'
+                          : 'border-[#212835] bg-white/70 dark:bg-[#161616]'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -959,7 +959,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                           }}
                           className={`text-xs px-2.5 py-0.5 rounded-full font-bold transition cursor-pointer ${
                             isLead
-                              ? 'bg-[#212121] text-[#E5CA8F]'
+                              ? 'bg-[#0D1117] text-[#E5CA8F]'
                               : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200'
                           }`}
                         >
@@ -974,10 +974,10 @@ export const ProjectFormModal: React.FC<Props> = ({
           </div>
 
           {/* Section 5: Tools Checklist */}
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E2DDD4] dark:border-[#2C2C2C] rounded-2xl p-4 space-y-3">
+          <div className="bg-[#111620] border border-[#212835] rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-                <Wrench className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+              <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                <Wrench className="w-4 h-4 text-[#C5A059]" />
                 <span>چک‌لیست ابزار و تجهیزات</span>
               </h4>
 
@@ -986,7 +986,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                 onClick={handleToggleFullTools}
                 className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
                   isFullTools
-                    ? 'bg-[#212121] text-[#E5CA8F]'
+                    ? 'bg-[#0D1117] text-[#E5CA8F]'
                     : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200'
                 }`}
               >
@@ -1001,17 +1001,17 @@ export const ProjectFormModal: React.FC<Props> = ({
                 return (
                   <label
                     key={tool}
-                    className={`flex items-center gap-2 p-2 rounded-xl border text-xs cursor-pointer transition select-none ${
+                    className={`flex items-center gap-2 p-2 rounded-md border text-xs cursor-pointer transition select-none ${
                       checked
-                        ? 'border-[#C1A056] bg-white dark:bg-[#222222] font-bold'
-                        : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-white/70 dark:bg-[#161616]'
+                        ? 'border-[#C5A059] bg-white dark:bg-[#222222] font-bold'
+                        : 'border-[#212835] bg-white/70 dark:bg-[#161616]'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => handleToolCheckbox(tool)}
-                      className="rounded text-[#C1A056] focus:ring-[#C1A056] w-4 h-4 accent-[#C1A056]"
+                      className="rounded text-[#C5A059] focus:ring-[#C1A056] w-4 h-4 accent-[#C1A056]"
                     />
                     <span>{tool}</span>
                   </label>
@@ -1022,7 +1022,7 @@ export const ProjectFormModal: React.FC<Props> = ({
 
           {/* Inline Error */}
           {formError && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
               <span>{formError}</span>
             </div>
@@ -1030,7 +1030,7 @@ export const ProjectFormModal: React.FC<Props> = ({
         </form>
 
         {/* Sticky Modal Footer */}
-        <div className="p-4 border-t border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#181818] flex items-center gap-3 shrink-0">
+        <div className="p-4 border-t border-[#212835] bg-[#FAF7F2] dark:bg-[#181818] flex items-center gap-3 shrink-0">
           <Button
             type="button"
             variant="ghost"

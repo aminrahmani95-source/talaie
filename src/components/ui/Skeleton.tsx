@@ -10,14 +10,14 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   ...props
 }) => {
   const variantClasses = {
-    text: 'h-4 w-full rounded-md',
+    text: 'h-4 w-full rounded',
     circular: 'rounded-full',
-    rectangular: 'rounded-xl',
+    rectangular: 'rounded-md',
   }[variant];
 
   return (
     <div
-      className={`animate-pulse bg-[#E8E4DC] dark:bg-[#252525] ${variantClasses} ${className}`}
+      className={`animate-pulse bg-[#1C232D] ${variantClasses} ${className}`}
       {...props}
     />
   );

@@ -73,19 +73,19 @@ export const Sheet: React.FC<SheetProps> = ({
     >
       <div
         ref={contentRef}
-        className={`w-full ${maxWidthClasses} bg-white dark:bg-[#1C1C1C] rounded-t-3xl sm:rounded-3xl shadow-2xl border border-[#E2DDD4] dark:border-[#333333] flex flex-col max-h-[92vh] sm:max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-4 sm:zoom-in-95 duration-200 ${className}`}
+        className={`w-full ${maxWidthClasses} bg-[#151B23] rounded-t-lg sm:rounded-lg shadow-2xl border border-[#2D3748] flex flex-col max-h-[92vh] sm:max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-4 sm:zoom-in-95 duration-200 ${className}`}
       >
         {/* Mobile Pull Handle Indicator */}
-        <div className="w-12 h-1 bg-[#E2DDD4] dark:bg-[#333333] rounded-full mx-auto mt-2.5 sm:hidden shrink-0" />
+        <div className="w-10 h-1 bg-[#2D3748] rounded mx-auto mt-2 sm:hidden shrink-0" />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#E2DDD4] dark:border-[#2D2D2D] bg-[#FAF7F2] dark:bg-[#181818] shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-[#212835] bg-[#111620] shrink-0">
           <div className="min-w-0 pr-1">
-            <h2 id="sheet-title" className="font-bold text-base text-[#181818] dark:text-[#F5F3EF] truncate">
+            <h2 id="sheet-title" className="font-bold text-sm sm:text-base text-[#F0F4F8] truncate">
               {title}
             </h2>
             {subtitle && (
-              <p className="text-xs text-[#69655F] dark:text-[#9E988D] truncate mt-0.5">
+              <p className="text-xs text-[#9BA7B6] truncate mt-0.5">
                 {subtitle}
               </p>
             )}
@@ -94,19 +94,19 @@ export const Sheet: React.FC<SheetProps> = ({
             variant="ghost"
             size="sm"
             aria-label="بستن پنجره"
-            icon={<X className="w-5 h-5" />}
+            icon={<X className="w-4 h-4" />}
             onClick={onClose}
           />
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4 overscroll-contain">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 overscroll-contain">
           {children}
         </div>
 
         {/* Sticky Footer */}
         {footer && (
-          <div className="px-5 py-3.5 border-t border-[#E2DDD4] dark:border-[#2D2D2D] bg-[#FAF7F2] dark:bg-[#181818] shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
+          <div className="px-4 sm:px-5 py-3 border-t border-[#212835] bg-[#111620] shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {footer}
           </div>
         )}

@@ -177,46 +177,46 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
       role="dialog"
       aria-modal="true"
       aria-labelledby="ticket-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl my-8 border border-[#E8E4DC] dark:border-[#2D2D2D] transition-colors animate-in fade-in zoom-in-95 duration-200">
-        {/* Header with Terracotta/Obsidian Theme */}
-        <div className="bg-[#212121] dark:bg-[#151515] px-6 py-4 text-white flex items-center justify-between border-b-2 border-[#D5733A]">
+      <div className="bg-[#151B23] rounded-lg max-w-lg w-full overflow-hidden shadow-2xl my-8 border border-[#212835] transition-colors animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="bg-[#0D1117] px-6 py-4 text-[#F0F4F8] flex items-center justify-between border-b border-[#212835]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#D5733A]/20 border border-[#D5733A]/40 flex items-center justify-center text-[#D5733A]">
-              <AlertTriangle className="w-5 h-5" aria-hidden="true" />
+            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#C5A059]/30 flex items-center justify-center text-[#C5A059]">
+              <AlertTriangle className="w-4 h-4" aria-hidden="true" />
             </div>
             <div>
-              <h3 id="ticket-modal-title" className="font-black text-base sm:text-lg text-white">
+              <h3 id="ticket-modal-title" className="font-bold text-base sm:text-lg text-[#F0F4F8]">
                 ثبت تیکت کسری یا خرابی سر پروژه
               </h3>
-              <p className="text-xs text-[#E8E4DC]/80 line-clamp-1">{project.title}</p>
+              <p className="text-xs text-[#9BA7B6] line-clamp-1">{project.title}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="بستن پنجره تیکت"
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D5733A]"
+            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {ticketError && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md text-xs font-semibold text-rose-300 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
               <span>{ticketError}</span>
             </div>
           )}
           {/* Ticket Type Picker */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-[#E8E4DC] mb-2.5">
+            <label className="block text-xs font-semibold text-[#F0F4F8] mb-2">
               نوع ایراد یا کسری را انتخاب کنید:
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {TICKET_TYPES.map((t) => {
                 const isSelected = selectedType === t.type;
                 const IconComponent = t.icon;
@@ -225,24 +225,24 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                     key={t.type}
                     type="button"
                     onClick={() => handleSelectType(t.type, t.category)}
-                    className={`flex items-start gap-2.5 p-3 rounded-2xl border text-right transition-all min-h-[52px] ${
+                    className={`flex items-start gap-2.5 p-2.5 rounded-md border text-right transition cursor-pointer min-h-[48px] ${
                       isSelected
-                        ? 'border-[#D5733A] bg-[#D5733A]/10 text-[#D5733A] dark:bg-[#D5733A]/20 dark:text-[#ff955c] ring-2 ring-[#D5733A]/30 shadow-sm'
-                        : 'border-slate-200 dark:border-[#2D2D2D] hover:border-slate-300 dark:hover:border-[#3D3D3D] bg-slate-50 dark:bg-[#222222] text-slate-700 dark:text-slate-300'
+                        ? 'border-[#C5A059] bg-[#1C232D] text-[#E5CA8F] ring-1 ring-[#C5A059]/40 font-bold'
+                        : 'border-[#212835] bg-[#111620] text-[#9BA7B6] hover:bg-[#1C232D] hover:text-[#F0F4F8]'
                     }`}
                   >
                     <div
-                      className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                      className={`p-1.5 rounded shrink-0 mt-0.5 ${
                         isSelected
-                          ? 'bg-[#D5733A] text-white'
-                          : 'bg-slate-200/80 dark:bg-[#2E2E2E] text-slate-600 dark:text-slate-400'
+                          ? 'bg-[#C5A059] text-[#0D1117]'
+                          : 'bg-[#1C232D] text-[#9BA7B6]'
                       }`}
                     >
                       <IconComponent className="w-4 h-4" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold text-xs leading-snug">{t.label}</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 leading-tight mt-0.5 line-clamp-2">
+                      <div className="font-semibold text-xs leading-snug">{t.label}</div>
+                      <div className="text-[11px] opacity-75 leading-tight mt-0.5 line-clamp-2">
                         {t.desc}
                       </div>
                     </div>
@@ -254,13 +254,13 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
           {/* Issue Category (8 Official Categories) */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-[#E8E4DC] mb-1.5">
+            <label className="block text-xs font-semibold text-[#F0F4F8] mb-1.5">
               دسته‌بندی استاندارد ایراد (جهت پایش کیفیت و ریشه‌یابی):
             </label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value as IssueCategory)}
-              className="w-full text-xs p-3 rounded-xl border border-slate-300 dark:border-[#333333] bg-white dark:bg-[#222222] text-slate-800 dark:text-white"
+              className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059]"
             >
               {Object.entries(ISSUE_CATEGORY_LABELS).map(([catKey, catLabel]) => (
                 <option key={catKey} value={catKey}>
@@ -271,28 +271,28 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
           </div>
 
           {/* Blocking Toggle */}
-          <div className="p-3.5 rounded-2xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 space-y-2.5">
+          <div className="p-3.5 rounded-md border border-rose-500/30 bg-rose-500/10 space-y-2.5">
             <label className="flex items-start gap-2.5 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isBlocking}
                 onChange={(e) => setIsBlocking(e.target.checked)}
-                className="mt-0.5 rounded border-rose-300 text-rose-600 focus:ring-rose-500 w-4 h-4"
+                className="mt-0.5 rounded border-rose-500/40 text-rose-500 focus:ring-rose-500 w-4 h-4"
               />
               <div>
-                <span className="text-xs font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
-                  <AlertOctagon className="w-3.5 h-3.5 text-rose-600" />
+                <span className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                  <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
                   این مشکل مانع پیشرفت و ادامه عملیات نصب است (مسدودکننده / Blocking)
                 </span>
-                <span className="text-[11px] text-rose-700/80 dark:text-rose-400/80 block mt-0.5">
+                <span className="text-[11px] text-rose-400/80 block mt-0.5">
                   تیکت‌های مسدودکننده در دسک کنترل توقف با اولویت بحرانی پیگیری می‌شوند.
                 </span>
               </div>
             </label>
 
             {isBlocking && (
-              <div className="pt-2 border-t border-rose-200 dark:border-rose-900/30">
-                <label className="block text-xs font-bold text-rose-900 dark:text-rose-300 mb-1">
+              <div className="pt-2 border-t border-rose-500/30">
+                <label className="block text-xs font-semibold text-rose-300 mb-1">
                   علت توقف کار و مانع موجود:
                 </label>
                 <input
@@ -300,7 +300,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                   value={blockingReason}
                   onChange={(e) => setBlockingReason(e.target.value)}
                   placeholder="مثال: عدم امکان ادامه به دلیل نبود برق / شکستگی بازو حین نصب"
-                  className="w-full text-xs p-2.5 rounded-xl border border-rose-300 dark:border-rose-800 bg-white dark:bg-[#1A1A1A] text-slate-800 dark:text-white"
+                  className="w-full text-xs p-2 rounded-md border border-rose-500/40 bg-[#0D1117] text-[#F0F4F8] focus:ring-1 focus:ring-rose-500"
                   required={isBlocking}
                 />
               </div>
@@ -309,7 +309,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
           {/* Description */}
           <div>
-            <label htmlFor="ticket-description" className="block text-xs font-bold text-slate-700 dark:text-[#E8E4DC] mb-1.5">
+            <label htmlFor="ticket-description" className="block text-xs font-semibold text-[#F0F4F8] mb-1.5">
               توضیح دقیق مشکل (ویژه مسئولین فنی و کنترل کیفیت):
             </label>
             <textarea
@@ -319,39 +319,39 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="مثال: پارچه شید لت سوم دارای پارگی 5 سانتی‌متری است یا ریل پرده برای قاب سمت راست 15 سانتی‌متر کوتاه است..."
-              className="w-full text-sm p-3.5 rounded-2xl border border-slate-300 dark:border-[#333333] bg-white dark:bg-[#222222] text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#D5733A] focus:border-[#D5733A] transition"
+              className="w-full text-xs p-3 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] placeholder:text-[#637184] focus:outline-none focus:border-[#C5A059] transition"
             />
           </div>
 
           {/* Photo attachments */}
           <div>
-            <label htmlFor="ticket-photo-upload" className="block text-xs font-bold text-slate-700 dark:text-[#E8E4DC] mb-2">
+            <label className="block text-xs font-semibold text-[#F0F4F8] mb-2">
               بارگذاری عکس از محل ایراد یا برچسب قطعه (اختیاری):
             </label>
             <div className="flex flex-wrap gap-2.5 items-center">
               {photos.map((p, idx) => (
                 <div
                   key={idx}
-                  className="relative w-18 h-18 rounded-2xl overflow-hidden border border-slate-300 dark:border-[#333333] shadow-xs group"
+                  className="relative w-16 h-16 rounded-md overflow-hidden border border-[#212835] shadow-xs group"
                 >
                   <CloudImage src={p} alt={`تصویر ایراد ${idx + 1}`} className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => handleRemovePhoto(idx)}
                     aria-label={`حذف تصویر شماره ${idx + 1}`}
-                    className="absolute top-1 right-1 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-700 transition"
+                    className="absolute top-1 right-1 w-5 h-5 bg-rose-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-rose-700 transition text-xs"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               ))}
 
               {/* Camera Button (with capture) */}
               <label
-                className="flex flex-col items-center justify-center w-18 h-18 rounded-2xl border-2 border-dashed border-[#D5733A]/50 bg-[#D5733A]/10 hover:bg-[#D5733A]/20 cursor-pointer text-[#D5733A] transition min-h-[72px] min-w-[72px]"
+                className="flex flex-col items-center justify-center w-16 h-16 rounded-md border border-dashed border-[#C5A059]/60 bg-[#C5A059]/10 hover:bg-[#C5A059]/20 cursor-pointer text-[#C5A059] transition min-h-[64px] min-w-[64px]"
               >
-                <Camera className="w-5 h-5 mb-1" aria-hidden="true" />
-                <span className="text-xs font-bold">دوربین</span>
+                <Camera className="w-4 h-4 mb-0.5" aria-hidden="true" />
+                <span className="text-[10px] font-semibold">دوربین</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -363,10 +363,10 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
               {/* Gallery Button (without capture) */}
               <label
-                className="flex flex-col items-center justify-center w-18 h-18 rounded-2xl border-2 border-dashed border-slate-300 dark:border-[#3A3A3A] hover:border-[#D5733A] dark:hover:border-[#D5733A] bg-slate-50 dark:bg-[#222222] cursor-pointer text-slate-500 dark:text-slate-400 hover:text-[#D5733A] dark:hover:text-[#D5733A] transition min-h-[72px] min-w-[72px]"
+                className="flex flex-col items-center justify-center w-16 h-16 rounded-md border border-dashed border-[#2D3748] hover:border-[#C5A059] bg-[#111620] hover:bg-[#1C232D] cursor-pointer text-[#9BA7B6] hover:text-[#F0F4F8] transition min-h-[64px] min-w-[64px]"
               >
-                <Upload className="w-5 h-5 mb-1" aria-hidden="true" />
-                <span className="text-xs font-bold">گالری</span>
+                <Upload className="w-4 h-4 mb-0.5" aria-hidden="true" />
+                <span className="text-[10px] font-semibold">گالری</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -379,19 +379,19 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
           </div>
 
           {/* Action buttons with minimum 44px touch targets */}
-          <div className="flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-[#2D2D2D]">
+          <div className="flex items-center gap-3 pt-4 border-t border-[#212835]">
             <button
               type="button"
               disabled={submitting}
               onClick={onClose}
-              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl border border-slate-300 dark:border-[#333333] text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-100 dark:hover:bg-[#252525] transition text-sm active:scale-[0.98] disabled:opacity-50"
+              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-md border border-[#212835] bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] font-semibold transition text-xs cursor-pointer disabled:opacity-50"
             >
               انصراف
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl bg-[#D5733A] hover:bg-[#b85e2b] text-white font-black transition shadow-lg shadow-[#D5733A]/25 text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60"
+              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-md bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-bold transition text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
             >
               <CheckCircle2 className="w-4 h-4" />
               {submitting ? 'در حال ارسال تیکت...' : 'ارسال فوری تیکت به QC'}

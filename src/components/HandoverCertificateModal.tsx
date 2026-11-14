@@ -44,18 +44,18 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
       aria-labelledby="cert-title"
       className="certificate-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="certificate-modal-container bg-white rounded-3xl max-w-3xl w-full shadow-2xl my-6 border border-[#E8E4DC] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="certificate-modal-container bg-[#151B23] rounded-lg max-w-3xl w-full shadow-2xl my-6 border border-[#212835] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Top Action Bar (Screen Only - Hidden in Print) */}
-        <div className="no-print bg-[#212121] px-6 py-4 text-white flex items-center justify-between border-b-2 border-[#C1A056]">
+        <div className="no-print bg-[#0D1117] px-6 py-4 text-[#F0F4F8] flex items-center justify-between border-b border-[#212835]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 text-[#C1A056] border border-[#C1A056]/30 flex items-center justify-center">
-              <FileCheck2 className="w-6 h-6" />
+            <div className="w-8 h-8 rounded-md bg-[#1C232D] text-[#C5A059] border border-[#C5A059]/30 flex items-center justify-center">
+              <FileCheck2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 id="cert-title" className="font-black text-base sm:text-lg text-white">
+              <h3 id="cert-title" className="font-bold text-base sm:text-lg text-[#F0F4F8]">
                 شناسنامه رسمی تحویل و تاییدیه کیفی
               </h3>
-              <p className="text-xs text-[#C1A056]">{project.title}</p>
+              <p className="text-xs text-[#C5A059]">{project.title}</p>
             </div>
           </div>
 
@@ -63,7 +63,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             <button
               type="button"
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#C1A056] hover:bg-[#a88738] text-[#212121] rounded-xl text-xs font-black transition shadow-md active:scale-95"
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-md text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer"
             >
               <Printer className="w-4 h-4" />
               <span>چاپ / ذخیره PDF</span>
@@ -71,10 +71,10 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             <button
               type="button"
               onClick={onClose}
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
+              className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
               aria-label="بستن"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>

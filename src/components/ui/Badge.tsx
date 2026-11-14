@@ -14,26 +14,26 @@ export const Badge: React.FC<BadgeProps> = ({
   children,
   ...props
 }) => {
-  const sizeClasses = size === 'sm' ? 'text-xs px-2.5 py-0.5 gap-1' : 'text-sm px-3 py-1 gap-1.5';
+  const sizeClasses = size === 'sm' ? 'text-[11px] px-2 py-0.5 gap-1' : 'text-xs px-2.5 py-1 gap-1.5';
 
   const variantClasses = {
     default:
-      'bg-[#EFEBE4] dark:bg-[#2A2A2A] text-[#4A4742] dark:text-[#D1CCC2] border border-[#E2DDD4] dark:border-[#383838]',
+      'bg-[#1C232D] text-[#9BA7B6] border border-[#2D3748]',
     gold:
-      'bg-[#C1A056]/15 text-[#8E6F27] dark:text-[#E5CA8F] border border-[#C1A056]/30',
+      'bg-[#C5A059]/15 text-[#E5CA8F] border border-[#C5A059]/30',
     success:
-      'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50',
+      'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
     warning:
-      'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50',
+      'bg-amber-500/10 text-amber-300 border border-amber-500/30',
     danger:
-      'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50',
+      'bg-rose-500/15 text-rose-300 border border-rose-500/40',
     info:
-      'bg-sky-50 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50',
+      'bg-sky-500/10 text-sky-400 border border-sky-500/30',
   }[variant];
 
   return (
     <span
-      className={`inline-flex items-center font-bold rounded-full select-none ${sizeClasses} ${variantClasses} ${className}`}
+      className={`inline-flex items-center font-bold rounded select-none tracking-tight ${sizeClasses} ${variantClasses} ${className}`}
       {...props}
     >
       {icon && <span className="shrink-0">{icon}</span>}

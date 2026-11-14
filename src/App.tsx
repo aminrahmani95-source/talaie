@@ -483,14 +483,15 @@ export const App: React.FC = () => {
   // Navigation tab for QC Manager / Coordinator
   const [activeTab, setActiveTab] = useState<ManagerTab>('control');
 
-  // Dark Mode state with persistence and system detection
+  // Dark Mode state with persistence and system detection - default to Dark Graphite foundation
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('talaie_theme');
     if (saved) return saved === 'dark';
     if (typeof window !== 'undefined') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+      if (prefersLight) return false;
     }
-    return false;
+    return true;
   });
 
   useEffect(() => {
@@ -1633,11 +1634,11 @@ export const App: React.FC = () => {
   const isManagerOrCoordinator = isQcManager || isCoordinator;
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#FAF7F2] dark:bg-[#121212] text-[#212121] dark:text-[#F5EFEB] flex flex-col font-sans selection:bg-[#C1A056] selection:text-white transition-colors duration-200">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#0D1117] text-[#F0F4F8] flex flex-col font-sans selection:bg-[#C5A059] selection:text-[#0D1117] transition-colors duration-150">
       {/* Skip to Content for Accessibility */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:right-3 focus:z-50 focus:px-4 focus:py-2.5 focus:bg-[#C1A056] focus:text-[#212121] focus:font-black focus:rounded-xl focus:shadow-xl focus:ring-2 focus:ring-[#212121]"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:right-3 focus:z-50 focus:px-3.5 focus:py-2 focus:bg-[#C5A059] focus:text-[#0D1117] focus:font-black focus:rounded-md focus:shadow-xl focus:ring-1 focus:ring-[#C5A059]"
       >
         پرش به محتوای اصلی صفحه
       </a>
@@ -1656,13 +1657,13 @@ export const App: React.FC = () => {
 
       {/* Offline state or syncing banner */}
       {isOfflineMode ? (
-        <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs py-2 px-4 text-center font-bold flex items-center justify-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-500" />
+        <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-300 text-xs py-2 px-4 text-center font-bold flex items-center justify-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
           <span>حالت آفلاین — اطلاعات ممکن است قدیمی باشد. تغییرات تکنسین‌ها در صف ذخیره شده و پس از برقراری اینترنت به سرور ارسال خواهد شد.</span>
         </div>
       ) : !isSyncedWithServer ? (
-        <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs py-2 px-4 text-center font-bold flex items-center justify-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+        <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-300 text-xs py-2 px-4 text-center font-bold flex items-center justify-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
           <span>در حال دریافت و همگام‌سازی اطلاعات با سرور ابری... انجام ویرایش کلی پروژه‌ها پس از همگام‌سازی کامل فعال می‌گردد.</span>
         </div>
       ) : null}

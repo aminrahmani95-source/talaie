@@ -311,39 +311,39 @@ export const ReportCompletionModal: React.FC<Props> = ({
       aria-labelledby="report-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
     >
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#E2DDD4] dark:border-[#2C2C2C] flex flex-col max-h-[92vh] my-4">
+      <div className="bg-[#151B23] rounded-lg max-w-lg w-full overflow-hidden shadow-2xl border border-[#212835] flex flex-col max-h-[92vh] my-4">
         {/* Header */}
-        <div className="bg-[#212121] px-5 py-3.5 text-white flex items-center justify-between border-b border-[#C1A056]/30 shrink-0">
+        <div className="bg-[#0D1117] px-5 py-3.5 text-[#F0F4F8] flex items-center justify-between border-b border-[#212835] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white/10 text-[#C1A056] border border-[#C1A056]/30 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-md bg-[#1C232D] text-[#C5A059] border border-[#C5A059]/30 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <h3 id="report-modal-title" className="font-bold text-sm sm:text-base text-white">
+              <h3 id="report-modal-title" className="font-bold text-sm sm:text-base text-[#F0F4F8]">
                 ثبت اتمام نصب و تحویل QC
               </h3>
-              <p className="text-xs text-[#E5CA8F] line-clamp-1">{project.title}</p>
+              <p className="text-xs text-[#C5A059] line-clamp-1">{project.title}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 text-white transition cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
             aria-label="بستن پنجره"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="grid grid-cols-3 border-b border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#181818] text-xs font-bold text-center shrink-0">
+        <div className="grid grid-cols-3 border-b border-[#212835] bg-[#0D1117] text-xs font-semibold text-center shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('PHOTOS')}
-            className={`py-3 transition border-b-2 ${
+            className={`py-3 transition border-b-2 cursor-pointer ${
               activeTab === 'PHOTOS'
-                ? 'border-[#C1A056] text-[#8E6F27] dark:text-[#E5CA8F] bg-white dark:bg-[#1A1A1A]'
-                : 'border-transparent text-[#69655F] dark:text-[#9E988D]'
+                ? 'border-[#C5A059] text-[#C5A059] bg-[#151B23]'
+                : 'border-transparent text-[#9BA7B6] hover:text-[#F0F4F8]'
             }`}
           >
             ۱. عکس‌های کار ({toPersianDigits(beforePhotos.length + afterPhotos.length)})
@@ -351,10 +351,10 @@ export const ReportCompletionModal: React.FC<Props> = ({
           <button
             type="button"
             onClick={() => setActiveTab('CHECKLIST')}
-            className={`py-3 transition border-b-2 ${
+            className={`py-3 transition border-b-2 cursor-pointer ${
               activeTab === 'CHECKLIST'
-                ? 'border-[#C1A056] text-[#8E6F27] dark:text-[#E5CA8F] bg-white dark:bg-[#1A1A1A]'
-                : 'border-transparent text-[#69655F] dark:text-[#9E988D]'
+                ? 'border-[#C5A059] text-[#C5A059] bg-[#151B23]'
+                : 'border-transparent text-[#9BA7B6] hover:text-[#F0F4F8]'
             }`}
           >
             ۲. چک‌لیست تحویل
@@ -362,10 +362,10 @@ export const ReportCompletionModal: React.FC<Props> = ({
           <button
             type="button"
             onClick={() => setActiveTab('SIGNATURE')}
-            className={`py-3 transition border-b-2 ${
+            className={`py-3 transition border-b-2 cursor-pointer ${
               activeTab === 'SIGNATURE'
-                ? 'border-[#C1A056] text-[#8E6F27] dark:text-[#E5CA8F] bg-white dark:bg-[#1A1A1A]'
-                : 'border-transparent text-[#69655F] dark:text-[#9E988D]'
+                ? 'border-[#C5A059] text-[#C5A059] bg-[#151B23]'
+                : 'border-transparent text-[#9BA7B6] hover:text-[#F0F4F8]'
             }`}
           >
             ۳. تحویل و امضا
@@ -375,24 +375,24 @@ export const ReportCompletionModal: React.FC<Props> = ({
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto flex-1 space-y-4">
           {uploadError && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md text-xs font-semibold text-rose-300 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
               <span>{uploadError}</span>
             </div>
           )}
 
           {/* Original Plan & Completed Items Verification (P2.1) */}
-          <div className="p-3.5 rounded-2xl bg-[#FAF8F5] dark:bg-[#141414] border border-[#E8E4DC] dark:border-[#2C2C2C] space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-[#181818] dark:text-white">
+          <div className="p-3.5 rounded-lg bg-[#111620] border border-[#212835] space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-[#F0F4F8]">
               <span className="flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-[#C1A056]" />
+                <Layers className="w-4 h-4 text-[#C5A059]" />
                 <span>بررسی تطبیق طرح اولیه و نصب نهایی:</span>
               </span>
               <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                className={`text-[11px] font-semibold px-2 py-0.5 rounded ${
                   !incompleteReport.hasIncomplete
-                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                    : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                    ? 'bg-emerald-500/20 text-emerald-300'
+                    : 'bg-amber-500/20 text-amber-300'
                 }`}
               >
                 {!incompleteReport.hasIncomplete
@@ -404,20 +404,20 @@ export const ReportCompletionModal: React.FC<Props> = ({
             {activityProgress.map((act) => (
               <div
                 key={act.activityId}
-                className="flex items-center justify-between text-xs py-1 border-b border-dashed border-[#E2DDD4] dark:border-[#282828] last:border-0"
+                className="flex items-center justify-between text-xs py-1 border-b border-dashed border-[#212835] last:border-0"
               >
                 <div>
-                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">{act.title}</span>
-                  <span className="text-[10px] text-neutral-400 mr-1.5 font-mono">
+                  <span className="font-medium text-[#F0F4F8]">{act.title}</span>
+                  <span className="text-[11px] text-[#9BA7B6] mr-1.5 font-mono tabular-nums">
                     (طرح: {toPersianDigits(act.effectivePlannedQuantity)} {act.unit})
                   </span>
                 </div>
-                <div className="text-left font-mono">
-                  <span className="text-neutral-700 dark:text-neutral-300">
+                <div className="text-left font-mono tabular-nums">
+                  <span className="text-[#9BA7B6]">
                     {toPersianDigits(act.totalCompletedQuantity)} نصب‌شده
                   </span>
                   {act.remainingQuantity > 0 && (
-                    <span className="text-amber-600 dark:text-amber-400 font-bold mr-1.5">
+                    <span className="text-amber-400 font-bold mr-1.5">
                       ({toPersianDigits(act.remainingQuantity)} مانده)
                     </span>
                   )}
@@ -426,35 +426,35 @@ export const ReportCompletionModal: React.FC<Props> = ({
             ))}
 
             {incompleteReport.hasIncomplete && (
-              <div className="pt-2.5 border-t border-[#E8E4DC] dark:border-[#2C2C2C] space-y-2.5">
-                <div className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <div className="pt-2.5 border-t border-[#212835] space-y-2.5">
+                <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                   <span>تعیین تکلیف اقلام باقیمانده برای اتمام پروژه:</span>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="flex items-start gap-2 p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#1E1E1E] cursor-pointer text-xs">
+                  <label className="flex items-start gap-2 p-2.5 rounded-md border border-[#212835] bg-[#151B23] cursor-pointer text-xs">
                     <input
                       type="radio"
                       name="completionMode"
                       checked={completionMode === 'FULL_COMPLETED_TODAY'}
                       onChange={() => setCompletionMode('FULL_COMPLETED_TODAY')}
-                      className="mt-0.5 accent-[#C1A056]"
+                      className="mt-0.5 accent-[#C5A059]"
                     />
                     <div className="space-y-1 flex-1">
-                      <span className="font-bold text-[#181818] dark:text-[#F5F3EF] block">
+                      <span className="font-semibold text-[#F0F4F8] block">
                         ۱. تمام اقلام باقیمانده امروز به طور کامل نصب شدند
                       </span>
-                      <p className="text-[11px] text-[#69655F] dark:text-[#9E988D]">
+                      <p className="text-[11px] text-[#9BA7B6]">
                         کار نصب ۱۰۰٪ تکمیل شده است و هیچ موردی ناتمام باقی نمانده است.
                       </p>
                       {completionMode === 'FULL_COMPLETED_TODAY' && (
-                        <label className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] cursor-pointer text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">
+                        <label className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed border-[#212835] cursor-pointer text-[11px] text-emerald-400 font-medium">
                           <input
                             type="checkbox"
                             checked={confirmFinishedToday}
                             onChange={(e) => setConfirmFinishedToday(e.target.checked)}
-                            className="rounded text-[#C1A056] focus:ring-[#C1A056]"
+                            className="rounded text-[#C5A059] focus:ring-[#C5A059]"
                           />
                           <span>اقرار و تایید می‌نمایم که تمام لت‌های باقیمانده در محل نصب شدند.</span>
                         </label>
@@ -462,24 +462,24 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-2 p-2.5 rounded-xl border border-rose-300 dark:border-rose-900 bg-rose-50/60 dark:bg-rose-950/20 cursor-pointer text-xs">
+                  <label className="flex items-start gap-2 p-2.5 rounded-md border border-rose-500/30 bg-rose-500/10 cursor-pointer text-xs">
                     <input
                       type="radio"
                       name="completionMode"
                       checked={completionMode === 'EXCEPTIONAL_PARTIAL'}
                       onChange={() => setCompletionMode('EXCEPTIONAL_PARTIAL')}
-                      className="mt-0.5 accent-rose-600"
+                      className="mt-0.5 accent-rose-500"
                     />
                     <div className="space-y-1.5 flex-1">
-                      <span className="font-bold text-rose-800 dark:text-rose-300 block">
+                      <span className="font-semibold text-rose-300 block">
                         ۲. اتمام استثنایی با کسری اقلام اجرایی (تحویل ناقص پروژه)
                       </span>
-                      <p className="text-[11px] text-rose-700 dark:text-rose-400">
+                      <p className="text-[11px] text-rose-400">
                         به دلیل موانع کناف، عدم آمادگی بستر ساختمانی یا دستور کارفرما، اقلام فوق نصب نشدند و با تایید سرپرست پرونده بسته می‌شود.
                       </p>
                       {completionMode === 'EXCEPTIONAL_PARTIAL' && (
                         <div className="space-y-1 pt-1">
-                          <label className="block text-[11px] font-bold text-rose-900 dark:text-rose-200">
+                          <label className="block text-[11px] font-semibold text-rose-300">
                             علت مستند عدم اجرای اقلام باقیمانده (الزامی - حداقل ۱۰ کاراکتر):
                           </label>
                           <textarea
@@ -487,7 +487,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                             value={exceptionalReason}
                             onChange={(e) => setExceptionalReason(e.target.value)}
                             placeholder="مثال: کناف سقف اتاق خواب مستر تکمیل نبوده و کارفرما تحویل اقلام بدون نصب را پذیرفت"
-                            className="w-full text-xs p-2 rounded-lg border border-rose-300 dark:border-rose-900 bg-white dark:bg-[#141414] dark:text-white leading-relaxed focus:ring-2 focus:ring-rose-500"
+                            className="w-full text-xs p-2 rounded-md border border-rose-500/40 bg-[#0D1117] text-[#F0F4F8] leading-relaxed focus:ring-1 focus:ring-rose-500"
                           />
                         </div>
                       )}
@@ -503,15 +503,15 @@ export const ReportCompletionModal: React.FC<Props> = ({
             <div className="space-y-4">
               {/* After Photos */}
               <div>
-                <label className="block text-xs font-black text-[#181818] dark:text-white mb-1.5 flex items-center gap-1.5">
-                  <Camera className="w-4 h-4 text-emerald-600" />
+                <label className="block text-xs font-bold text-[#F0F4F8] mb-1.5 flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-emerald-400" />
                   <span>عکس‌های اتمام نصب (بعد از کار) — الزامی:</span>
                 </label>
                 <div className="flex items-center gap-2 flex-wrap">
                   {afterPhotos.map((photo, index) => (
                     <div
                       key={index}
-                      className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C] group"
+                      className="relative w-20 h-20 rounded-md overflow-hidden border border-[#212835] group"
                     >
                       <CloudImage src={photo} alt="" className="w-full h-full object-cover" />
                       <button
@@ -524,9 +524,9 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     </div>
                   ))}
 
-                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#C1A056] bg-[#C1A056]/5 hover:bg-[#C1A056]/10 cursor-pointer text-[#8E6F27] dark:text-[#E5CA8F] transition min-h-[80px]">
+                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-md border border-dashed border-[#C5A059]/60 bg-[#C5A059]/5 hover:bg-[#C5A059]/10 cursor-pointer text-[#C5A059] transition min-h-[80px]">
                     <Camera className="w-5 h-5 mb-1" />
-                    <span className="text-xs font-bold">دوربین</span>
+                    <span className="text-xs font-semibold">دوربین</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -536,9 +536,9 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     />
                   </label>
 
-                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-[#69655F] dark:text-[#9E988D] transition min-h-[80px]">
-                    <Upload className="w-5 h-5 mb-1 text-slate-400" />
-                    <span className="text-xs font-bold">گالری</span>
+                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-md border border-dashed border-[#2D3748] bg-[#111620] hover:bg-[#1C232D] cursor-pointer text-[#9BA7B6] hover:text-[#F0F4F8] transition min-h-[80px]">
+                    <Upload className="w-5 h-5 mb-1 text-[#637184]" />
+                    <span className="text-xs font-semibold">گالری</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -551,16 +551,16 @@ export const ReportCompletionModal: React.FC<Props> = ({
               </div>
 
               {/* Before Photos */}
-              <div className="pt-3 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
-                <label className="block text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF] mb-1.5 flex items-center gap-1.5">
-                  <Camera className="w-4 h-4 text-slate-400" />
+              <div className="pt-3 border-t border-[#212835]">
+                <label className="block text-xs font-medium text-[#9BA7B6] mb-1.5 flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-[#637184]" />
                   <span>عکس‌های قبل از شروع کار (اختیاری):</span>
                 </label>
                 <div className="flex items-center gap-2 flex-wrap">
                   {beforePhotos.map((photo, index) => (
                     <div
                       key={index}
-                      className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C] group"
+                      className="relative w-20 h-20 rounded-md overflow-hidden border border-[#212835] group"
                     >
                       <CloudImage src={photo} alt="" className="w-full h-full object-cover" />
                       <button
@@ -573,9 +573,9 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     </div>
                   ))}
 
-                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-[#69655F] dark:text-[#9E988D] transition min-h-[80px]">
-                    <Camera className="w-5 h-5 mb-1 text-slate-400" />
-                    <span className="text-xs font-bold">دوربین</span>
+                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-md border border-dashed border-[#2D3748] bg-[#111620] hover:bg-[#1C232D] cursor-pointer text-[#9BA7B6] hover:text-[#F0F4F8] transition min-h-[80px]">
+                    <Camera className="w-5 h-5 mb-1 text-[#637184]" />
+                    <span className="text-xs font-semibold">دوربین</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -585,9 +585,9 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     />
                   </label>
 
-                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-[#69655F] dark:text-[#9E988D] transition min-h-[80px]">
-                    <Upload className="w-5 h-5 mb-1 text-slate-400" />
-                    <span className="text-xs font-bold">گالری</span>
+                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-md border border-dashed border-[#2D3748] bg-[#111620] hover:bg-[#1C232D] cursor-pointer text-[#9BA7B6] hover:text-[#F0F4F8] transition min-h-[80px]">
+                    <Upload className="w-5 h-5 mb-1 text-[#637184]" />
+                    <span className="text-xs font-semibold">گالری</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -601,7 +601,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
 
               {/* Technician Notes */}
               <div>
-                <label htmlFor="completion-notes" className="block text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                <label htmlFor="completion-notes" className="block text-xs font-medium text-[#9BA7B6] mb-1">
                   توضیحات تکنسین نصب:
                 </label>
                 <textarea
@@ -610,7 +610,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                   placeholder="مثال: تمام لت‌ها تراز شد و موتور تست گردید..."
                   value={completionNotes}
                   onChange={(e) => setCompletionNotes(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                  className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059]"
                 />
               </div>
 
@@ -629,13 +629,13 @@ export const ReportCompletionModal: React.FC<Props> = ({
           {activeTab === 'CHECKLIST' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-[#181818] dark:text-white">
+                <span className="text-xs font-bold text-[#F0F4F8]">
                   چک‌لیست استانداردهای تحویل (۶ مورد):
                 </span>
                 <button
                   type="button"
                   onClick={selectAllChecklist}
-                  className="text-xs font-bold text-[#8E6F27] dark:text-[#E5CA8F] hover:underline cursor-pointer"
+                  className="text-xs font-medium text-[#C5A059] hover:underline cursor-pointer"
                 >
                   تایید همه
                 </button>
@@ -685,10 +685,10 @@ export const ReportCompletionModal: React.FC<Props> = ({
                   return (
                     <div
                       key={item.key}
-                      className={`p-3 rounded-xl border transition ${
+                      className={`p-3 rounded-md border transition ${
                         isChecked
-                          ? 'border-emerald-500/50 bg-emerald-500/5'
-                          : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414]'
+                          ? 'border-emerald-500/40 bg-emerald-500/10'
+                          : 'border-[#212835] bg-[#111620]'
                       }`}
                     >
                       <div
@@ -699,22 +699,22 @@ export const ReportCompletionModal: React.FC<Props> = ({
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => {}}
-                          className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5 accent-emerald-600 cursor-pointer"
+                          className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500 mt-0.5 accent-emerald-500 cursor-pointer"
                         />
                         <div className="flex-1">
-                          <div className="text-xs font-bold flex items-center gap-1.5 text-[#181818] dark:text-[#F5F3EF]">
-                            <Icon className="w-3.5 h-3.5 text-emerald-600" />
+                          <div className="text-xs font-semibold flex items-center gap-1.5 text-[#F0F4F8]">
+                            <Icon className="w-3.5 h-3.5 text-emerald-400" />
                             <span>{item.title}</span>
                           </div>
-                          <p className="text-xs text-[#69655F] dark:text-[#9E988D] mt-0.5">
+                          <p className="text-[11px] text-[#9BA7B6] mt-0.5">
                             {item.desc}
                           </p>
                         </div>
                       </div>
 
                       {!isChecked && (
-                        <div className="mt-2 pt-2 border-t border-[#E2DDD4] dark:border-[#2C2C2C]" onClick={(e) => e.stopPropagation()}>
-                          <label className="block text-xs font-bold text-amber-700 dark:text-amber-400 mb-1">
+                        <div className="mt-2 pt-2 border-t border-[#212835]" onClick={(e) => e.stopPropagation()}>
+                          <label className="block text-xs font-medium text-amber-400 mb-1">
                             علت عدم اجرا (الزامی):
                           </label>
                           <input
@@ -724,7 +724,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                               setChecklistNotes((prev) => ({ ...prev, [item.key]: e.target.value }))
                             }
                             placeholder="دلیل عدم انجام این بند..."
-                            className="w-full text-xs p-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-500/5 text-[#181818] dark:text-white"
+                            className="w-full text-xs p-2 rounded-md border border-amber-500/30 bg-[#0D1117] text-[#F0F4F8]"
                           />
                         </div>
                       )}
@@ -759,7 +759,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
             <div className="space-y-4">
               {/* Signee Type Segmented Selector */}
               <div>
-                <label className="block text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF] mb-1.5">
+                <label className="block text-xs font-medium text-[#9BA7B6] mb-1.5">
                   طرف تحویل‌گیرنده کارگاه / پروژه:
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -775,10 +775,10 @@ export const ReportCompletionModal: React.FC<Props> = ({
                         key={opt.id}
                         type="button"
                         onClick={() => setSigneeType(opt.id as HandoverSigneeType)}
-                        className={`p-2.5 rounded-xl border text-center transition flex flex-col items-center gap-1.5 ${
+                        className={`p-2.5 rounded-md border text-center transition flex flex-col items-center gap-1.5 cursor-pointer ${
                           isSelected
-                            ? 'border-[#C1A056] bg-[#C1A056]/15 text-[#8E6F27] dark:text-[#E5CA8F] font-bold shadow-xs'
-                            : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#141414] text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100'
+                            ? 'border-[#C5A059] bg-[#1C232D] text-[#E5CA8F] font-bold'
+                            : 'border-[#212835] bg-[#111620] text-[#9BA7B6] hover:bg-[#1C232D] hover:text-[#F0F4F8]'
                         }`}
                       >
                         <Icon className="w-4 h-4" />
@@ -792,18 +792,18 @@ export const ReportCompletionModal: React.FC<Props> = ({
               {/* Sub-form 1: RESIDENTIAL CUSTOMER */}
               {signeeType === 'RESIDENTIAL_CUSTOMER' && (
                 <div className="space-y-3.5">
-                  <div className="p-3 rounded-xl bg-[#FAF7F2] dark:bg-[#141414] border border-[#E2DDD4] dark:border-[#2C2C2C] text-xs">
-                    <span className="font-bold block text-neutral-800 dark:text-white">
+                  <div className="p-3 rounded-md bg-[#111620] border border-[#212835] text-xs">
+                    <span className="font-semibold block text-[#F0F4F8]">
                       تحویل مستقیم به مشتری: {project.customerName}
                     </span>
-                    <span className="text-[11px] text-neutral-500 block mt-0.5">
+                    <span className="text-[11px] text-[#9BA7B6] block mt-0.5">
                       شماره تماس ثبت‌شده: {project.customerPhone}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1.5">
-                      <PenTool className="w-3.5 h-3.5 text-[#C1A056]" />
+                    <label className="block text-xs font-medium text-[#9BA7B6] mb-1 flex items-center gap-1.5">
+                      <PenTool className="w-3.5 h-3.5 text-[#C5A059]" />
                       امضای دیجیتال کارفرما روی صفحه:
                     </label>
                     <SignaturePad
@@ -813,16 +813,16 @@ export const ReportCompletionModal: React.FC<Props> = ({
                   </div>
 
                   {/* Optional Satisfaction Rating */}
-                  <div className="p-3 rounded-xl bg-[#FAF7F2] dark:bg-[#141414] border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-1.5">
+                  <div className="p-3 rounded-md bg-[#111620] border border-[#212835] space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                      <label className="text-xs font-medium text-[#9BA7B6]">
                         میزان رضایت کارفرما (اختیاری):
                       </label>
                       {satisfaction && (
                         <button
                           type="button"
                           onClick={() => setSatisfaction(undefined)}
-                          className="text-[10px] text-neutral-400 hover:underline"
+                          className="text-[10px] text-[#637184] hover:text-[#9BA7B6] hover:underline"
                         >
                           پاک کردن
                         </button>
@@ -834,20 +834,20 @@ export const ReportCompletionModal: React.FC<Props> = ({
                           key={s}
                           type="button"
                           onClick={() => setSatisfaction(s)}
-                          className="min-w-[40px] min-h-[40px] w-10 h-10 flex items-center justify-center rounded-xl hover:scale-110 active:scale-95 transition cursor-pointer"
+                          className="min-w-[40px] min-h-[40px] w-10 h-10 flex items-center justify-center rounded-md hover:bg-[#1C232D] transition cursor-pointer"
                           aria-label={`${s} ستاره`}
                         >
                           <Star
                             className={`w-6 h-6 ${
                               satisfaction && s <= satisfaction
-                                ? 'text-[#C1A056] fill-[#C1A056]'
-                                : 'text-neutral-300 dark:text-neutral-700'
+                                ? 'text-[#C5A059] fill-[#C5A059]'
+                                : 'text-[#2D3748]'
                             }`}
                           />
                         </button>
                       ))}
                       {satisfaction && (
-                        <span className="text-xs font-bold text-[#8E6F27] dark:text-[#E5CA8F] mr-2">
+                        <span className="text-xs font-semibold text-[#E5CA8F] mr-2 tabular-nums">
                           {toPersianDigits(satisfaction)} از ۵ ستاره
                         </span>
                       )}
@@ -861,7 +861,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                 <div className="space-y-3.5">
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                      <label className="block text-xs font-medium text-[#9BA7B6] mb-1">
                         نام نماینده کارگاه (الزامی):
                       </label>
                       <input
@@ -869,12 +869,12 @@ export const ReportCompletionModal: React.FC<Props> = ({
                         value={representativeName}
                         onChange={(e) => setRepresentativeName(e.target.value)}
                         placeholder="مثال: مهندس راد"
-                        className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                        className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059]"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                      <label className="block text-xs font-medium text-[#9BA7B6] mb-1">
                         سمت در پروژه:
                       </label>
                       <input
@@ -882,14 +882,14 @@ export const ReportCompletionModal: React.FC<Props> = ({
                         value={representativeRole}
                         onChange={(e) => setRepresentativeRole(e.target.value)}
                         placeholder="مثال: ناظر مقیم / سرپرست کارگاه"
-                        className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                        className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059]"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1">
-                      <Phone className="w-3.5 h-3.5 text-neutral-400" />
+                    <label className="block text-xs font-medium text-[#9BA7B6] mb-1 flex items-center gap-1">
+                      <Phone className="w-3.5 h-3.5 text-[#637184]" />
                       شماره تماس نماینده (الزامی):
                     </label>
                     <input
@@ -898,14 +898,14 @@ export const ReportCompletionModal: React.FC<Props> = ({
                       value={representativePhone}
                       onChange={(e) => setRepresentativePhone(e.target.value)}
                       placeholder="0912..."
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white text-left font-mono"
+                      className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] text-left font-mono focus:border-[#C5A059]"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1.5">
-                      <PenTool className="w-3.5 h-3.5 text-[#C1A056]" />
+                    <label className="block text-xs font-medium text-[#9BA7B6] mb-1 flex items-center gap-1.5">
+                      <PenTool className="w-3.5 h-3.5 text-[#C5A059]" />
                       امضای نماینده کارگاه:
                     </label>
                     <SignaturePad
@@ -915,8 +915,8 @@ export const ReportCompletionModal: React.FC<Props> = ({
                   </div>
 
                   {/* Optional Satisfaction */}
-                  <div className="p-3 rounded-xl bg-[#FAF7F2] dark:bg-[#141414] border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block">
+                  <div className="p-3 rounded-md bg-[#111620] border border-[#212835] space-y-1.5">
+                    <label className="text-xs font-medium text-[#9BA7B6] block">
                       ارزیابی کیفی نماینده (اختیاری):
                     </label>
                     <div className="flex items-center gap-2">
@@ -925,14 +925,14 @@ export const ReportCompletionModal: React.FC<Props> = ({
                           key={s}
                           type="button"
                           onClick={() => setSatisfaction(s)}
-                          className="min-w-[40px] min-h-[40px] w-10 h-10 flex items-center justify-center rounded-xl hover:scale-110 active:scale-95 transition cursor-pointer"
+                          className="min-w-[40px] min-h-[40px] w-10 h-10 flex items-center justify-center rounded-md hover:bg-[#1C232D] transition cursor-pointer"
                           aria-label={`${s} ستاره`}
                         >
                           <Star
                             className={`w-6 h-6 ${
                               satisfaction && s <= satisfaction
-                                ? 'text-[#C1A056] fill-[#C1A056]'
-                                : 'text-neutral-300 dark:text-neutral-700'
+                                ? 'text-[#C5A059] fill-[#C5A059]'
+                                : 'text-[#2D3748]'
                             }`}
                           />
                         </button>
@@ -945,18 +945,18 @@ export const ReportCompletionModal: React.FC<Props> = ({
               {/* Sub-form 3: UNAVAILABLE EXEMPT */}
               {signeeType === 'UNAVAILABLE_EXEMPT' && (
                 <div className="space-y-3.5">
-                  <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
-                    <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="p-3.5 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-300">
+                    <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     <div className="space-y-1 leading-relaxed">
                       <span className="font-bold block">معافیت مستند عدم حضور کارفرما</span>
-                      <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                      <p className="text-[11px] text-amber-400">
                         در صورت عدم حضور کارفرما یا اتمام کار پس از ساعات اداری، با شرح مستند دلایل و الصاق تصویر درب بسته یا پیامک هماهنگی، گزارش بدون امضا ثبت شده و توسط مدیر QC ارزیابی خواهد شد.
                       </p>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    <label className="block text-xs font-medium text-[#9BA7B6] mb-1">
                       علت عدم امکان اخذ امضا و شرایط ترک کارگاه (الزامی):
                     </label>
                     <textarea
@@ -964,20 +964,20 @@ export const ReportCompletionModal: React.FC<Props> = ({
                       value={unavailabilityReason}
                       onChange={(e) => setUnavailabilityReason(e.target.value)}
                       placeholder="مثال: کارفرما طبق تماس تلفنی ساعت ۱۸ امکان حضور نداشتند و هماهنگ شد کلید به نگهبانی تحویل گردد..."
-                      className="w-full text-xs p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white leading-relaxed"
+                      className="w-full text-xs p-3 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] leading-relaxed focus:border-[#C5A059]"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    <label className="block text-xs font-medium text-[#9BA7B6] mb-1">
                       مدارک تصویری ترک ایمن کارگاه (عکس کلید، درب قفل‌شده یا پیامک):
                     </label>
                     <div className="flex items-center gap-2 flex-wrap">
                       {unavailabilityPhotos.map((photo, index) => (
                         <div
                           key={index}
-                          className="relative w-16 h-16 rounded-xl overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C]"
+                          className="relative w-16 h-16 rounded-md overflow-hidden border border-[#212835]"
                         >
                           <CloudImage src={photo} alt="" className="w-full h-full object-cover" />
                           <button
@@ -992,9 +992,9 @@ export const ReportCompletionModal: React.FC<Props> = ({
                         </div>
                       ))}
 
-                      <label className="flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer text-neutral-400 transition">
-                        <Camera className="w-4 h-4 mb-0.5" />
-                        <span className="text-[10px] font-bold">دوربین</span>
+                      <label className="flex flex-col items-center justify-center w-16 h-16 rounded-md border border-dashed border-[#2D3748] bg-[#111620] hover:bg-[#1C232D] cursor-pointer text-[#9BA7B6] hover:text-[#F0F4F8] transition">
+                        <Camera className="w-4 h-4 mb-0.5 text-[#C5A059]" />
+                        <span className="text-[10px] font-semibold">دوربین</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -1004,9 +1004,9 @@ export const ReportCompletionModal: React.FC<Props> = ({
                         />
                       </label>
 
-                      <label className="flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer text-neutral-400 transition">
-                        <Upload className="w-4 h-4 mb-0.5" />
-                        <span className="text-[10px] font-bold">گالری</span>
+                      <label className="flex flex-col items-center justify-center w-16 h-16 rounded-md border border-dashed border-[#2D3748] bg-[#111620] hover:bg-[#1C232D] cursor-pointer text-[#9BA7B6] hover:text-[#F0F4F8] transition">
+                        <Upload className="w-4 h-4 mb-0.5 text-[#C5A059]" />
+                        <span className="text-[10px] font-semibold">گالری</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -1033,7 +1033,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
         </form>
 
         {/* Sticky Footer */}
-        <div className="p-4 border-t border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#181818] flex items-center gap-3 shrink-0">
+        <div className="p-4 border-t border-[#212835] bg-[#0D1117] flex items-center gap-3 shrink-0">
           <Button
             type="button"
             variant="ghost"

@@ -25,19 +25,19 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
 
     const variantClasses = {
       default:
-        'bg-white dark:bg-[#1B1B1B] border border-[#E2DDD4] dark:border-[#2D2D2D] shadow-2xs',
+        'bg-[#151B23] border border-[#212835] shadow-xs text-[#F0F4F8]',
       elevated:
-        'bg-white dark:bg-[#202020] border border-[#E2DDD4] dark:border-[#333333] shadow-md',
+        'bg-[#1C232D] border border-[#2D3748] shadow-sm text-[#F0F4F8]',
       muted:
-        'bg-[#F7F4EE] dark:bg-[#161616] border border-[#E8E4DC] dark:border-[#262626]',
+        'bg-[#111620] border border-[#212835] text-[#9BA7B6]',
       interactive:
-        'bg-white dark:bg-[#1B1B1B] border border-[#E2DDD4] dark:border-[#2D2D2D] shadow-2xs hover:border-[#C1A056] dark:hover:border-[#C1A056] hover:shadow-xs cursor-pointer transition-all duration-150 active:scale-[0.99]',
+        'bg-[#151B23] border border-[#212835] hover:border-[#C5A059]/60 hover:bg-[#1A222C] cursor-pointer transition-all duration-150 active:scale-[0.995] text-[#F0F4F8]',
     }[variant];
 
     return (
       <div
         ref={ref}
-        className={`rounded-2xl transition-colors duration-150 ${paddingClasses} ${variantClasses} ${className}`}
+        className={`rounded-lg transition-colors duration-150 ${paddingClasses} ${variantClasses} ${className}`}
         {...props}
       >
         {children}

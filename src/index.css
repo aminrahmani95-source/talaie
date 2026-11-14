@@ -36,54 +36,57 @@
 
 @layer base {
   :root {
-    --brand-gold: #c1a056;
-    --brand-gold-hover: #a8883b;
-    --brand-gold-light: #f7eed8;
-    --brand-charcoal: #1e1e1e;
-    --brand-obsidian: #121212;
-    --brand-cream: #faf7f2;
-    --brand-linen: #f5efeb;
-    --brand-border: #e8e4dc;
-    --brand-border-dark: #2a2a2a;
-    --brand-copper: #d5733a;
+    --brand-gold: #c5a059;
+    --brand-gold-hover: #d4af37;
+    --brand-gold-light: #231e14;
+    --brand-gold-text: #e5ca8f;
+    --brand-charcoal: #151b23;
+    --brand-obsidian: #0d1117;
+    --brand-cream: #0d1117;
+    --brand-linen: #151b23;
+    --brand-border: #212835;
+    --brand-border-dark: #2d3748;
+    --brand-copper: #c5783f;
 
-    /* Theme tokens - Light */
-    --bg-base: #faf7f2;
-    --bg-surface: #ffffff;
-    --bg-elevated: #ffffff;
-    --bg-muted: #f4efe7;
-    --border-subtle: #efebe4;
-    --border-default: #e2ddd4;
-    --border-strong: #c8c2b5;
-    --text-primary: #181818;
-    --text-secondary: #4a4742;
-    --text-muted: #69655f;
-
-    color-scheme: light;
-  }
-
-  .dark {
-    --brand-cream: #121212;
-    --brand-linen: #1b1b1b;
-    --brand-border: #2d2d2d;
-
-    /* Theme tokens - Dark */
-    --bg-base: #121212;
-    --bg-surface: #1b1b1b;
-    --bg-elevated: #242424;
-    --bg-muted: #1e1e1e;
-    --border-subtle: #262626;
-    --border-default: #333333;
-    --border-strong: #444444;
-    --text-primary: #f5f3ef;
-    --text-secondary: #bdb8af;
-    --text-muted: #9e988d;
+    /* Theme tokens - Dark Graphite Foundation by Default */
+    --bg-base: #0d1117;
+    --bg-surface: #151b23;
+    --bg-elevated: #1c232d;
+    --bg-muted: #111620;
+    --border-subtle: #212835;
+    --border-default: #2d3748;
+    --border-strong: #3e4c63;
+    --text-primary: #f0f4f8;
+    --text-secondary: #9ba7b6;
+    --text-muted: #637184;
 
     color-scheme: dark;
   }
 
+  html:not(.dark) {
+    --brand-cream: #f8fafc;
+    --brand-linen: #f1f5f9;
+    --brand-border: #e2e8f0;
+    --brand-gold-text: #96752c;
+
+    /* Theme tokens - Clean Enterprise Light Mode */
+    --bg-base: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-elevated: #ffffff;
+    --bg-muted: #f1f5f9;
+    --border-subtle: #e2e8f0;
+    --border-default: #cbd5e1;
+    --border-strong: #94a3b8;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+
+    color-scheme: light;
+  }
+
   * {
     font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-feature-settings: 'tnum' 1, 'ss01' 1;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -100,40 +103,28 @@
   body {
     background-color: var(--bg-base);
     color: var(--text-primary);
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.5;
     margin: 0;
     padding: 0;
     min-height: 100vh;
     touch-action: manipulation;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
     overflow-x: hidden;
     width: 100%;
     max-width: 100%;
   }
 
-  @media (min-width: 1024px) {
-    body {
-      font-size: 14px;
-    }
-  }
-
   /* Accessible focus visible styles */
   :focus-visible {
-    outline: 2px solid #c1a056;
+    outline: 2px solid #c5a059;
     outline-offset: 2px;
   }
 
   /* Prevent iOS zoom on input focus while maintaining clean sizing */
   input, select, textarea {
-    font-size: 15px;
+    font-size: 14px;
     touch-action: manipulation;
-  }
-
-  @media (min-width: 1024px) {
-    input, select, textarea {
-      font-size: 14px;
-    }
   }
 
   /* Subtle transitions, respect reduced motion */
@@ -147,92 +138,84 @@
   }
 }
 
-/* Luxury UI Glass & Elevation Utilities */
+/* Industrial Operational Panel Utilities */
 .luxury-glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(232, 228, 220, 0.8);
+  background: rgba(21, 27, 35, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
 }
 
-.dark .luxury-glass {
-  background: rgba(24, 24, 24, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+html:not(.dark) .luxury-glass {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border-subtle);
 }
 
-.luxury-card {
+.luxury-card, .op-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+html:not(.dark) .luxury-card, html:not(.dark) .op-card {
   background: #ffffff;
-  border: 1px solid #e8e4dc;
-  border-radius: 1.5rem;
-  box-shadow: 0 4px 20px -2px rgba(33, 33, 33, 0.03), 0 2px 6px -1px rgba(33, 33, 33, 0.02);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-.dark .luxury-card {
-  background: #181818;
-  border: 1px solid #282828;
-  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-
-.luxury-card-hover:hover {
-  transform: translateY(-2px);
-  border-color: rgba(193, 160, 86, 0.5);
-  box-shadow: 0 12px 30px -4px rgba(193, 160, 86, 0.12), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
-}
-
-.dark .luxury-card-hover:hover {
-  border-color: rgba(193, 160, 86, 0.4);
-  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(193, 160, 86, 0.3);
+.luxury-card-hover:hover, .op-card-hover:hover {
+  border-color: var(--border-strong);
 }
 
 .gold-glow {
-  box-shadow: 0 0 25px -4px rgba(193, 160, 86, 0.35);
+  box-shadow: 0 0 16px -2px rgba(197, 160, 89, 0.2);
 }
 
 .gold-gradient-btn {
-  background: linear-gradient(135deg, #c1a056 0%, #a8883b 100%);
-  color: #121212;
-  font-weight: 800;
-  box-shadow: 0 4px 14px -1px rgba(193, 160, 86, 0.3);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #c5a059;
+  color: #0d1117;
+  font-weight: 700;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
 }
 
 .gold-gradient-btn:hover {
-  background: linear-gradient(135deg, #d4b46a 0%, #b8984b 100%);
-  box-shadow: 0 6px 20px -2px rgba(193, 160, 86, 0.45);
-  transform: translateY(-1px);
+  background: #d4af37;
+  box-shadow: 0 2px 6px rgba(197, 160, 89, 0.3);
 }
 
 .gold-gradient-btn:active {
-  transform: scale(0.98);
+  transform: translateY(1px);
 }
 
-/* Elegant luxury scrollbar matching talaei.ir */
+/* Sleek precision industrial scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #f5efeb;
+  background: #0d1117;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4ccbe;
-  border-radius: 9999px;
+  background: #212835;
+  border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #c1a056;
+  background: #3e4c63;
 }
 
-.dark ::-webkit-scrollbar-track {
-  background: #141414;
+html:not(.dark) ::-webkit-scrollbar-track {
+  background: #f1f5f9;
 }
-.dark ::-webkit-scrollbar-thumb {
-  background: #2e2e2e;
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
 }
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #c1a056;
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Mobile safe area utility */

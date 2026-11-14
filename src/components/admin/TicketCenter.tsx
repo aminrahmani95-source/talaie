@@ -149,18 +149,18 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
       {/* KPI Performance Banner */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Metric 1: SLA Compliance */}
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-2">
+        <div className="bg-[#151B23] rounded-lg p-4 border border-[#212835]  space-y-2">
           <div className="flex items-center justify-between text-neutral-500">
             <span className="text-xs font-bold">نرخ رعایت SLA ۷۲h</span>
-            <Activity className="w-4 h-4 text-[#C1A056]" />
+            <Activity className="w-4 h-4 text-[#C5A059]" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-[#181818] dark:text-[#F5F3EF]">
+            <span className="text-2xl font-black text-[#F0F4F8]">
               %{toPersianDigits(slaMetrics.onTimeRate.toFixed(1))}
             </span>
             <span className="text-[10px] text-neutral-400">انطباق کلی</span>
           </div>
-          <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+          <div className="w-full bg-[#111620] border border-[#212835] rounded-full h-1.5 overflow-hidden">
             <div
               className={`h-full transition-all duration-500 ${
                 slaMetrics.onTimeRate >= 90
@@ -175,7 +175,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
         </div>
 
         {/* Metric 2: Open Overdue */}
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-2">
+        <div className="bg-[#151B23] rounded-lg p-4 border border-[#212835]  space-y-2">
           <div className="flex items-center justify-between text-neutral-500">
             <span className="text-xs font-bold">تیکت‌های بحرانی منقضی</span>
             <Flame className="w-4 h-4 text-rose-500" />
@@ -198,13 +198,13 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
         </div>
 
         {/* Metric 3: Avg Resolution Hours */}
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-2">
+        <div className="bg-[#151B23] rounded-lg p-4 border border-[#212835]  space-y-2">
           <div className="flex items-center justify-between text-neutral-500">
             <span className="text-xs font-bold">میانگین زمان حل</span>
             <Clock className="w-4 h-4 text-sky-500" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-[#181818] dark:text-[#F5F3EF]">
+            <span className="text-2xl font-black text-[#F0F4F8]">
               {toPersianDigits(slaMetrics.averageResolutionHours.toFixed(1))}
             </span>
             <span className="text-[10px] text-neutral-400">ساعت</span>
@@ -215,7 +215,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
         </div>
 
         {/* Metric 4: Blocking Issues */}
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-2">
+        <div className="bg-[#151B23] rounded-lg p-4 border border-[#212835]  space-y-2">
           <div className="flex items-center justify-between text-neutral-500">
             <span className="text-xs font-bold">مسدودکننده‌های عملیات</span>
             <AlertOctagon className="w-4 h-4 text-amber-500" />
@@ -231,7 +231,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-3">
+      <div className="bg-[#151B23] rounded-lg p-4 border border-[#212835]  space-y-3">
         {/* SLA Status Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
           {[
@@ -247,10 +247,10 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                 key={tab.id}
                 type="button"
                 onClick={() => setFilter(tab.id as SlaFilterTab)}
-                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-md font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
                   isActive
-                    ? 'bg-[#212121] dark:bg-[#C1A056] text-white dark:text-[#141414] shadow-xs'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200'
+                    ? 'bg-[#212121] dark:bg-[#C1A056] text-white dark:text-[#141414] '
+                    : 'bg-[#111620] border border-[#212835] text-[#9BA7B6] hover:bg-[#1C232D] hover:text-[#F0F4F8]'
                 }`}
               >
                 <span>{tab.label}</span>
@@ -271,13 +271,13 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
         </div>
 
         {/* Category & Search Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-[#212835]">
           {/* Category Dropdown */}
           <div>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full text-xs p-2 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
+              className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#111620] dark:text-white"
             >
               <option value="ALL">همه دسته‌بندی‌های ایراد (۸ گانه)</option>
               {Object.entries(ISSUE_CATEGORY_LABELS).map(([catKey, catLabel]) => (
@@ -295,7 +295,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="جستجو بر اساس پروژه، کد یا فرستنده..."
-              className="w-full text-xs p-2 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
+              className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#111620] dark:text-white"
             />
           </div>
 
@@ -319,10 +319,10 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
 
       {/* Ticket List */}
       {filteredTickets.length === 0 ? (
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-10 text-center border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs max-w-md mx-auto">
-          <CheckCircle2 className="w-12 h-12 text-[#8E6F27] dark:text-[#E5CA8F] mx-auto mb-2 opacity-50" />
-          <h3 className="font-bold text-sm text-[#181818] dark:text-white">هیچ تیکتی با این فیلتر یافت نشد</h3>
-          <p className="text-xs text-[#69655F] dark:text-[#9E988D] mt-1">
+        <div className="bg-[#151B23] rounded-lg p-10 text-center border border-[#212835]  max-w-md mx-auto">
+          <CheckCircle2 className="w-12 h-12 text-[#C5A059] mx-auto mb-2 opacity-50" />
+          <h3 className="font-bold text-sm text-[#F0F4F8]">هیچ تیکتی با این فیلتر یافت نشد</h3>
+          <p className="text-xs text-[#637184] mt-1">
             همه موارد پیگیری شده یا معیارهای جستجو را تغییر دهید.
           </p>
         </div>
@@ -337,17 +337,17 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
             return (
               <div
                 key={t.id}
-                className={`bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border shadow-2xs space-y-3.5 transition ${
+                className={`bg-[#151B23] rounded-lg p-4 border  space-y-3.5 transition ${
                   slaStatus === 'OPEN_OVERDUE'
                     ? 'border-rose-400 dark:border-rose-800 ring-2 ring-rose-500/15'
                     : t.isBlocking
                     ? 'border-amber-400 dark:border-amber-800 ring-1 ring-amber-500/20'
-                    : 'border-[#E2DDD4] dark:border-[#2C2C2C]'
+                    : 'border-[#212835]'
                 }`}
               >
                 {/* Header: Category Badge + SLA Badge */}
                 <div className="flex items-start justify-between gap-2">
-                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#FAF7F2] dark:bg-[#202020] text-[#181818] dark:text-[#F5F3EF] border border-[#E2DDD4] dark:border-[#2C2C2C] line-clamp-1">
+                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#111620] text-[#F0F4F8] border border-[#212835] line-clamp-1">
                     {getCategoryTitle(t)}
                   </span>
                   <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold border shrink-0 ${slaConfig.badgeCls}`}>
@@ -358,12 +358,12 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                 {/* Project Title and Author */}
                 <div>
                   <div className="flex items-baseline justify-between gap-2">
-                    <h4 className="font-bold text-sm text-[#181818] dark:text-[#F5F3EF] leading-tight">
+                    <h4 className="font-bold text-sm text-[#F0F4F8] leading-tight">
                       {t.projectTitle}
                     </h4>
                     <span className="font-mono text-xs text-neutral-400 shrink-0">{t.projectCode}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-[#69655F] dark:text-[#9E988D] mt-1">
+                  <div className="flex items-center gap-2 text-xs text-[#637184] mt-1">
                     <span className="flex items-center gap-1">
                       <UserIcon className="w-3 h-3 text-neutral-400" />
                       {getDisplayName(t.authorName)}
@@ -375,7 +375,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
 
                 {/* Blocking Alert Pill */}
                 {t.isBlocking && (
-                  <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-start gap-2 text-xs text-rose-700 dark:text-rose-300">
+                  <div className="p-2.5 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-start gap-2 text-xs text-rose-700 dark:text-rose-300">
                     <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                     <div>
                       <span className="font-bold block">مسدودکننده عملیات نصب (Blocking)</span>
@@ -389,7 +389,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                 )}
 
                 {/* SLA Countdown / Time Elapsed Banner */}
-                <div className="p-2 rounded-xl bg-[#FAF7F2] dark:bg-[#141414] border border-[#E2DDD4] dark:border-[#2C2C2C] flex items-center justify-between text-xs">
+                <div className="p-2 rounded-md bg-[#111620] border border-[#212835] flex items-center justify-between text-xs">
                   <span className="text-neutral-500 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-neutral-400" />
                     <span>وضعیت مهلت ۷۲h:</span>
@@ -412,7 +412,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                 </div>
 
                 {/* Description */}
-                <p className="text-xs text-[#4A4742] dark:text-[#BDB8AF] bg-[#FAF7F2] dark:bg-[#141414] p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] leading-relaxed">
+                <p className="text-xs text-[#9BA7B6] bg-[#111620] p-3 rounded-md border border-[#212835] leading-relaxed">
                   {t.description}
                 </p>
 
@@ -426,7 +426,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                           key={i}
                           type="button"
                           onClick={() => setPreviewPhoto(p)}
-                          className="relative w-14 h-14 rounded-xl overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C] block group cursor-pointer"
+                          className="relative w-14 h-14 rounded-md overflow-hidden border border-[#212835] block group cursor-pointer"
                           aria-label="مشاهده تصویر ضمیمه"
                         >
                           <CloudImage
@@ -444,19 +444,19 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
 
                 {/* Action History / Resolution Details */}
                 {t.status === 'RESOLVED' && (
-                  <div className="bg-[#FAF7F2] dark:bg-[#141414] rounded-xl p-3 border border-[#C1A056]/30 text-xs text-[#181818] dark:text-[#F5F3EF] space-y-1">
-                    <div className="font-bold flex items-center justify-between text-[#8E6F27] dark:text-[#E5CA8F]">
+                  <div className="bg-[#111620] rounded-md p-3 border border-[#C5A059]/30 text-xs text-[#F0F4F8] space-y-1">
+                    <div className="font-bold flex items-center justify-between text-[#C5A059]">
                       <span className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>اقدام انجام شده:</span>
                       </span>
                       {t.resolvedAt && (
-                        <span className="text-[11px] text-[#69655F] dark:text-[#9E988D] font-normal">
+                        <span className="text-[11px] text-[#637184] font-normal">
                           {formatJalaliDateTime(t.resolvedAt)}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-[#4A4742] dark:text-[#BDB8AF]">{t.resolutionNote}</p>
+                    <p className="text-xs text-[#9BA7B6]">{t.resolutionNote}</p>
                     {t.verifiedByUserName && (
                       <span className="text-[10px] text-neutral-400 block pt-1">
                         تایید توسط: {t.verifiedByUserName}
@@ -467,7 +467,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
 
                 {/* Action Form for Open Tickets */}
                 {t.status === 'OPEN' && (
-                  <div className="pt-2 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
+                  <div className="pt-2 border-t border-[#212835]">
                     {resolvingId === t.id ? (
                       <div className="space-y-2">
                         <textarea
@@ -475,7 +475,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                           value={resolutionNote}
                           onChange={(e) => setResolutionNote(e.target.value)}
                           placeholder="اقدام انجام شده جهت رفع مشکل و بستن تیکت را شرح دهید..."
-                          className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                          className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                         />
                         <div className="flex items-center gap-2">
                           <Button
@@ -531,7 +531,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
             <CloudImage
               src={previewPhoto}
               alt="عکس تیکت"
-              className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain bg-black"
+              className="max-h-[85vh] max-w-full rounded-lg shadow-2xl object-contain bg-black"
             />
           </div>
         </div>

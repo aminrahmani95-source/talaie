@@ -80,14 +80,14 @@ export interface ProjectManagerSheetProps {
 }
 
 const sectionCls =
-  'rounded-2xl border border-[#E2DDD4] dark:border-[#333333] bg-[#FAF8F5] dark:bg-[#161616] p-4 space-y-3';
+  'rounded-lg border border-[#212835] bg-[#111620] p-4 space-y-3';
 const inputCls =
-  'w-full rounded-xl border border-[#E2DDD4] dark:border-[#333333] bg-white dark:bg-[#121212] px-3 py-2.5 text-sm text-[#181818] dark:text-[#F5F3EF] focus:outline-none focus:ring-2 focus:ring-[#C1A056]';
+  'w-full rounded-md border border-[#212835] bg-[#0D1117] px-3 py-2.5 text-sm text-[#F0F4F8] focus:outline-none focus:ring-2 focus:ring-[#C5A059] focus:border-[#C5A059]';
 
 const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="flex items-start justify-between gap-3 text-sm py-1.5 border-b border-dashed border-[#E2DDD4] dark:border-[#2A2A2A] last:border-0">
-    <span className="text-[#6B6459] dark:text-[#A39E93] shrink-0">{label}</span>
-    <span className="font-bold text-[#181818] dark:text-[#F5F3EF] text-left break-words min-w-0">{children}</span>
+  <div className="flex items-start justify-between gap-3 text-sm py-1.5 border-b border-dashed border-[#212835] last:border-0">
+    <span className="text-[#637184] shrink-0">{label}</span>
+    <span className="font-bold text-[#F0F4F8] text-left break-words min-w-0">{children}</span>
   </div>
 );
 
@@ -275,7 +275,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
 
   const reasonBox = (required: boolean) => (
     <div className="space-y-1.5">
-      <label htmlFor="pm-reason" className="block text-xs font-bold text-[#181818] dark:text-[#F5F3EF]">
+      <label htmlFor="pm-reason" className="block text-xs font-bold text-[#F0F4F8]">
         دلیل تغییر {required ? <span className="text-rose-500">*</span> : <span className="font-normal text-[#8A8378]">(اختیاری)</span>}
       </label>
       <textarea
@@ -331,7 +331,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
       <div className={sectionCls}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 font-bold text-sm">
-            <Layers className="w-4 h-4 text-[#C1A056]" /> اقلام اجرایی طرح و پیشرفت واقعی
+            <Layers className="w-4 h-4 text-[#C5A059]" /> اقلام اجرایی طرح و پیشرفت واقعی
           </div>
           {isQcManager && (
             <Button
@@ -347,8 +347,8 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
 
         {/* Add Amendment Form (QC Manager only) */}
         {showAddAmendment && (
-          <div className="rounded-xl border border-[#C1A056]/40 bg-[#FAF7F2] dark:bg-[#1E1E1E] p-3 space-y-3">
-            <div className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF]">ثبت اصلاحیه طرح نصب (کنترل کیفی)</div>
+          <div className="rounded-md border border-[#C5A059]/40 bg-[#111620] p-3 space-y-3">
+            <div className="text-xs font-bold text-[#F0F4F8]">ثبت اصلاحیه طرح نصب (کنترل کیفی)</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               <label className="space-y-1">
                 <span className="font-bold">انتخاب فعالیت:</span>
@@ -416,7 +416,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-right border-collapse">
             <thead>
-              <tr className="border-b border-[#E2DDD4] dark:border-[#333] text-[#6B6459] dark:text-[#A39E93]">
+              <tr className="border-b border-[#E2DDD4] dark:border-[#333] text-[#637184]">
                 <th className="py-2 px-1">فعالیت</th>
                 <th className="py-2 px-1">طرح مبنا</th>
                 <th className="py-2 px-1">اصلاحیه</th>
@@ -428,7 +428,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
             <tbody className="divide-y divide-[#E2DDD4]/60 dark:divide-[#282828]">
               {progressList.map((item) => (
                 <tr key={item.activityId} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
-                  <td className="py-2 px-1 font-bold text-[#181818] dark:text-[#F5F3EF]">
+                  <td className="py-2 px-1 font-bold text-[#F0F4F8]">
                     {item.title}
                   </td>
                   <td className="py-2 px-1 font-mono">
@@ -443,7 +443,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
                       '—'
                     )}
                   </td>
-                  <td className="py-2 px-1 font-mono font-bold text-[#C1A056]">
+                  <td className="py-2 px-1 font-mono font-bold text-[#C5A059]">
                     {toPersianDigits(item.effectivePlannedQuantity)}
                   </td>
                   <td className="py-2 px-1 font-mono font-bold text-emerald-600">
@@ -457,7 +457,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
                     ) : item.remainingQuantity === 0 ? (
                       <span className="text-emerald-600 font-bold">تکمیل ✓</span>
                     ) : (
-                      <span className="text-[#6B6459] dark:text-[#A39E93]">
+                      <span className="text-[#637184]">
                         {toPersianDigits(item.remainingQuantity)}
                       </span>
                     )}
@@ -470,10 +470,10 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
 
         {/* Amendments List (if any) */}
         {(project.planAmendments || []).length > 0 && (
-          <div className="pt-2 border-t border-[#E2DDD4] dark:border-[#2A2A2A] space-y-2">
-            <div className="text-xs font-bold text-[#6B6459] dark:text-[#A39E93]">سوابق اصلاحیه‌های طرح:</div>
+          <div className="pt-2 border-t border-[#212835] space-y-2">
+            <div className="text-xs font-bold text-[#637184]">سوابق اصلاحیه‌های طرح:</div>
             {(project.planAmendments || []).map((am) => (
-              <div key={am.id} className="rounded-xl bg-white dark:bg-[#1E1E1E] p-2.5 border border-[#E2DDD4] dark:border-[#333] text-xs space-y-1">
+              <div key={am.id} className="rounded-md bg-white dark:bg-[#1E1E1E] p-2.5 border border-[#E2DDD4] dark:border-[#333] text-xs space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="font-bold">
                     {am.activityTitle}: {toPersianDigits(am.previousQuantity)} ← {toPersianDigits(am.newQuantity)}
@@ -482,7 +482,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
                     {am.status === 'APPROVED' ? 'تایید شده' : am.status === 'REJECTED' ? 'رد شده' : 'در انتظار بررسی QC'}
                   </Badge>
                 </div>
-                <div className="text-[11px] text-[#6B6459] dark:text-[#A39E93]">
+                <div className="text-[11px] text-[#637184]">
                   علت: {am.reason} ({getDisplayName(am.requestedByUserName)} در {formatJalaliDateTime(am.requestedAt)})
                 </div>
                 {am.status === 'PENDING' && isQcManager && (
@@ -505,32 +505,32 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
       {(project.teamTransfers || []).length > 0 && (
         <div className={sectionCls}>
           <div className="flex items-center gap-2 font-bold text-sm">
-            <ArrowRightLeft className="w-4 h-4 text-[#C1A056]" /> سابقه انتقال بین اکیپ‌ها (فاز P2.2)
+            <ArrowRightLeft className="w-4 h-4 text-[#C5A059]" /> سابقه انتقال بین اکیپ‌ها (فاز P2.2)
           </div>
           <div className="space-y-2">
             {(project.teamTransfers || []).map((trf) => (
               <div
                 key={trf.id}
-                className="rounded-xl bg-white dark:bg-[#1E1E1E] p-3 border border-[#E2DDD4] dark:border-[#333] text-xs space-y-1.5"
+                className="rounded-md bg-white dark:bg-[#1E1E1E] p-3 border border-[#E2DDD4] dark:border-[#333] text-xs space-y-1.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#181818] dark:text-[#F5F3EF]">
+                  <span className="font-bold text-[#F0F4F8]">
                     از «{trf.fromTeamName}» ← به «{trf.toTeamName}»
                   </span>
                   <Badge variant={trf.receivingLeadConfirmed ? 'gold' : 'default'}>
                     {trf.receivingLeadConfirmed ? 'تایید سرپرست مقصد ✓' : 'در انتظار تایید تحویل'}
                   </Badge>
                 </div>
-                <div className="text-[#6B6459] dark:text-[#A39E93]">
+                <div className="text-[#637184]">
                   علت: {trf.reason} (توسط {getDisplayName(trf.transferredByUserName)} در {formatJalaliDateTime(trf.transferredAt)})
                 </div>
                 {trf.notes && (
-                  <div className="text-[#6B6459] dark:text-[#A39E93] text-[11px]">
+                  <div className="text-[#637184] text-[11px]">
                     یادداشت فنی: {trf.notes}
                   </div>
                 )}
                 {trf.handoverInventory && trf.handoverInventory.length > 0 && (
-                  <div className="text-[11px] text-[#8A8378] pt-1 border-t border-dashed border-[#E2DDD4] dark:border-[#2A2A2A]">
+                  <div className="text-[11px] text-[#8A8378] pt-1 border-t border-dashed border-[#212835]">
                     صورت‌جلسه اقلام تحویلی: {trf.handoverInventory.map((i) => `${i.activityTitle} (${toPersianDigits(i.remainingQuantity)} ${i.unit})`).join('، ')}
                   </div>
                 )}
@@ -545,7 +545,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
   const statusTab = (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-[#6B6459] dark:text-[#A39E93]">وضعیت فعلی:</span>
+        <span className="text-xs text-[#637184]">وضعیت فعلی:</span>
         <StatusPill status={project.status} size="md" />
         <StatusPill status={project.status} qcStatus={project.qcStatus} size="md" />
       </div>
@@ -555,9 +555,9 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
       {canRevertOneStep(project) && (
         <div className={sectionCls}>
           <div className="flex items-center gap-2 font-bold text-sm">
-            <Undo2 className="w-4 h-4 text-[#C1A056]" /> برگرداندن به مرحله قبل
+            <Undo2 className="w-4 h-4 text-[#C5A059]" /> برگرداندن به مرحله قبل
           </div>
-          <p className="text-xs text-[#6B6459] dark:text-[#A39E93]">{revert.description}</p>
+          <p className="text-xs text-[#637184]">{revert.description}</p>
           <Button
             variant="secondary"
             disabled={busy}
@@ -576,7 +576,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
 
       <div className={sectionCls}>
         <div className="flex items-center gap-2 font-bold text-sm">
-          <RotateCcw className="w-4 h-4 text-[#C1A056]" /> بازنشانی کامل به «برنامه‌ریزی‌شده»
+          <RotateCcw className="w-4 h-4 text-[#C5A059]" /> بازنشانی کامل به «برنامه‌ریزی‌شده»
         </div>
         <div className="space-y-2 text-sm">
           <label className="flex items-start gap-2 cursor-pointer">
@@ -605,7 +605,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
             بازنشانی کامل
           </Button>
         ) : (
-          <div className="rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 p-3 space-y-2">
+          <div className="rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 p-3 space-y-2">
             <p className="text-xs font-bold text-rose-800 dark:text-rose-300">
               {resetMode === 'CLEAR_ALL'
                 ? 'همه‌ی گزارش‌ها، عکس‌ها، امضا و زمان‌های کار این پروژه پاک می‌شود. مطمئنید؟'
@@ -640,7 +640,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         <div className={sectionCls}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 font-bold text-sm">
-              <ArrowRightLeft className="w-4 h-4 text-[#C1A056]" /> انتقال رسمی به اکیپ دیگر (فاز P2.2)
+              <ArrowRightLeft className="w-4 h-4 text-[#C5A059]" /> انتقال رسمی به اکیپ دیگر (فاز P2.2)
             </div>
             <Button
               variant={showTransferForm ? 'ghost' : 'secondary'}
@@ -652,13 +652,13 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
             </Button>
           </div>
 
-          <p className="text-xs text-[#6B6459] dark:text-[#A39E93]">
-            اکیپ جاری: <span className="font-bold text-[#181818] dark:text-[#F5F3EF]">{project.assignedTeamName || 'بدون اکیپ'}</span>
+          <p className="text-xs text-[#637184]">
+            اکیپ جاری: <span className="font-bold text-[#F0F4F8]">{project.assignedTeamName || 'بدون اکیپ'}</span>
           </p>
 
           {showTransferForm && (
-            <div className="rounded-xl border border-[#C1A056]/40 bg-[#FAF7F2] dark:bg-[#1E1E1E] p-3 space-y-3">
-              <div className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF]">
+            <div className="rounded-md border border-[#C5A059]/40 bg-[#111620] p-3 space-y-3">
+              <div className="text-xs font-bold text-[#F0F4F8]">
                 انتقال رسمی پروژه و صورت‌جلسه تحویل اقلام باقیمانده (فاز P2.2)
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -713,15 +713,15 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
               </label>
 
               {/* Preview of remaining inventory */}
-              <div className="rounded-lg bg-white dark:bg-[#161616] p-2.5 border border-[#E2DDD4] dark:border-[#2C2C2C] text-xs space-y-1.5">
-                <div className="font-bold text-[#6B6459] dark:text-[#A39E93]">
+              <div className="rounded-lg bg-white dark:bg-[#161616] p-2.5 border border-[#212835] text-xs space-y-1.5">
+                <div className="font-bold text-[#637184]">
                   صورت‌جلسه اقلام باقیمانده کار تحویلی به اکیپ جدید:
                 </div>
                 <div className="space-y-1">
                   {calculateActivityProgress(project).map((act) => (
                     <div key={act.activityId} className="flex justify-between text-[11px]">
                       <span>{act.title}:</span>
-                      <span className="font-bold text-[#C1A056]">
+                      <span className="font-bold text-[#C5A059]">
                         {toPersianDigits(Math.max(0, act.remainingQuantity))} {act.unit} باقیمانده
                       </span>
                     </div>
@@ -758,18 +758,18 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
 
       <div className={sectionCls}>
         <div className="flex items-center gap-2 font-bold text-sm">
-          <ShieldCheck className="w-4 h-4 text-[#C1A056]" /> کنترل کیفی (QC)
+          <ShieldCheck className="w-4 h-4 text-[#C5A059]" /> کنترل کیفی (QC)
         </div>
         {project.isExceptionalCompletion && project.exceptionalCompletionDetails && (
-          <div className="p-3 bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/30 rounded-xl text-xs space-y-1 text-rose-800 dark:text-rose-200">
+          <div className="p-3 bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/30 rounded-md text-xs space-y-1 text-rose-800 dark:text-rose-200">
             <div className="font-bold flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4 text-rose-600" />
               <span>پروژه دارای اعلام «اتمام استثنایی با کسری اقلام» است</span>
             </div>
-            <p className="text-[11px] text-[#4A4742] dark:text-[#BDB8AF]">
+            <p className="text-[11px] text-[#9BA7B6]">
               دلیل تکنسین: «{project.exceptionalCompletionDetails.documentedReason}»
             </p>
-            <div className="text-[11px] text-[#69655F] dark:text-[#9E988D] pt-0.5">
+            <div className="text-[11px] text-[#637184] pt-0.5">
               اقلام کسری: {project.exceptionalCompletionDetails.remainingActivities.map(a => `${a.title} (${toPersianDigits(a.remainingQuantity)} ${a.unit})`).join('، ')}
             </div>
           </div>
@@ -860,12 +860,12 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
     if (list.length === 0) return null;
     return (
       <div className="space-y-2">
-        <div className="text-xs font-bold text-[#6B6459] dark:text-[#A39E93]">
+        <div className="text-xs font-bold text-[#637184]">
           {title} ({toPersianDigits(list.length)})
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {list.map((src, i) => (
-            <div key={`${field}-${i}`} className="relative aspect-square rounded-xl overflow-hidden bg-[#EFEBE4] dark:bg-[#222]">
+            <div key={`${field}-${i}`} className="relative aspect-square rounded-md overflow-hidden bg-[#EFEBE4] dark:bg-[#222]">
               <CloudImage src={src} alt={title} className="w-full h-full object-cover" />
               <button
                 type="button"
@@ -887,11 +887,11 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
     <div className="space-y-4">
       <div className={sectionCls}>
         <div className="flex items-center gap-2 font-bold text-sm">
-          <Clock className="w-4 h-4 text-[#C1A056]" /> زمان کار
+          <Clock className="w-4 h-4 text-[#C5A059]" /> زمان کار
         </div>
         <p className="text-sm">{work && work.totalSeconds > 0 ? work.text : 'هنوز زمانی ثبت نشده است.'}</p>
         {(project.workSessions || []).length > 0 && (
-          <ul className="text-xs space-y-1 text-[#6B6459] dark:text-[#A39E93]">
+          <ul className="text-xs space-y-1 text-[#637184]">
             {(project.workSessions || []).map((s, i) => (
               <li key={i}>
                 {formatJalali(s.date)} — {getDisplayName(s.byUserName)}: {formatJalaliDateTime(s.startedAt)} تا{' '}
@@ -905,10 +905,10 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
       {(project.dailyLogs || []).length > 0 && (
         <div className={sectionCls}>
           <div className="flex items-center gap-2 font-bold text-sm">
-            <CalendarRange className="w-4 h-4 text-[#C1A056]" /> گزارش‌های روزانه
+            <CalendarRange className="w-4 h-4 text-[#C5A059]" /> گزارش‌های روزانه
           </div>
           {(project.dailyLogs || []).map((log) => (
-            <div key={log.id} className="rounded-xl bg-white dark:bg-[#1C1C1C] border border-[#E2DDD4] dark:border-[#2A2A2A] p-3 space-y-2">
+            <div key={log.id} className="rounded-md bg-white dark:bg-[#1C1C1C] border border-[#212835] p-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-bold">
                   {formatJalali(log.date)} — {getDisplayName(log.byUserName)}
@@ -930,7 +930,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
               </div>
               {log.activityProgress && log.activityProgress.length > 0 && (
                 <div className="bg-[#FAF7F2] dark:bg-[#141414] rounded-lg p-2.5 border border-[#E2DDD4]/60 dark:border-[#282828] space-y-1.5">
-                  <div className="text-[11px] font-bold text-[#6B6459] dark:text-[#A39E93]">پیشرفت کار ثبت‌شده در این شیفت:</div>
+                  <div className="text-[11px] font-bold text-[#637184]">پیشرفت کار ثبت‌شده در این شیفت:</div>
                   <div className="flex flex-wrap gap-2 text-xs">
                     {log.activityProgress.map((ap) => (
                       <span key={ap.activityId} className="bg-white dark:bg-[#1E1E1E] px-2 py-0.5 rounded border border-[#E2DDD4] dark:border-[#333] font-mono font-bold text-[#181818] dark:text-zinc-200">
@@ -984,19 +984,19 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
 
       <div className={sectionCls}>
         <div className="flex items-center gap-2 font-bold text-sm">
-          <FileText className="w-4 h-4 text-[#C1A056]" /> گزارش اتمام کار
+          <FileText className="w-4 h-4 text-[#C5A059]" /> گزارش اتمام کار
         </div>
         {project.isExceptionalCompletion && project.exceptionalCompletionDetails && (
-          <div className="bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/40 rounded-xl p-3 text-xs space-y-1.5 animate-in fade-in duration-150">
+          <div className="bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/40 rounded-md p-3 text-xs space-y-1.5 animate-in fade-in duration-150">
             <div className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-300">
               <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
               <span>اتمام استثنایی با کسری اقلام اجرایی (تحویل ناقص پروژه)</span>
             </div>
-            <p className="text-xs text-[#181818] dark:text-[#F5F3EF] leading-relaxed">
+            <p className="text-xs text-[#F0F4F8] leading-relaxed">
               <span className="font-bold text-rose-600 block mb-0.5">علت مستند عدم اجرای اقلام باقیمانده:</span>
               «{project.exceptionalCompletionDetails.documentedReason}»
             </p>
-            <div className="pt-1 text-[11px] text-[#6B6459] dark:text-[#A39E93]">
+            <div className="pt-1 text-[11px] text-[#637184]">
               اقلام اجرا‌نشده: {project.exceptionalCompletionDetails.remainingActivities.map(a => `${a.title} (${toPersianDigits(a.remainingQuantity)} ${a.unit})`).join('، ')}
             </div>
           </div>
@@ -1015,7 +1015,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         {photoGroup('completionPhotos', 'عکس‌های اتمام کار')}
         {project.customerSignature && (
           <div className="space-y-2">
-            <div className="text-xs font-bold text-[#6B6459] dark:text-[#A39E93]">امضای مشتری</div>
+            <div className="text-xs font-bold text-[#637184]">امضای مشتری</div>
             <CloudImage src={project.customerSignature} alt="امضای مشتری" className="h-20 bg-white rounded-lg border border-[#E2DDD4] p-1" />
           </div>
         )}
@@ -1043,7 +1043,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         </div>
       )}
       {!auditLoading && audit && audit.length === 0 && (
-        <p className="text-sm text-[#6B6459] dark:text-[#A39E93]">
+        <p className="text-sm text-[#637184]">
           هنوز تغییری ثبت نشده است. (تاریخچه از زمان اجرای مایگریشن ۰۰۸ ثبت می‌شود.)
         </p>
       )}
@@ -1052,7 +1052,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
           {audit.map((rec) => (
             <li key={rec.id} className="relative">
               <span className="absolute -right-[23px] top-1.5 w-3 h-3 rounded-full bg-[#C1A056] ring-4 ring-white dark:ring-[#1C1C1C]" />
-              <div className="text-xs text-[#6B6459] dark:text-[#A39E93]">
+              <div className="text-xs text-[#637184]">
                 {formatJalaliDateTime(rec.changed_at)} — <span className="font-bold">{getDisplayName(rec.changed_by_name || undefined) || 'سیستم'}</span>
               </div>
               <ul className="mt-1 text-sm list-disc pr-4 space-y-0.5">
@@ -1076,7 +1076,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
   );
 
   const deletePanel = (
-    <div className="rounded-2xl border-2 border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 p-4 space-y-3">
+    <div className="rounded-lg border-2 border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 p-4 space-y-3">
       <div className="flex items-center gap-2 font-bold text-rose-800 dark:text-rose-300">
         <AlertTriangle className="w-5 h-5" /> حذف کامل پروژه — قابل برگشت نیست
       </div>

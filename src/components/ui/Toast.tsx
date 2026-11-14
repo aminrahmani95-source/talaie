@@ -41,31 +41,31 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
 
   const config = {
     success: {
-      icon: <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />,
+      icon: <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />,
       classes:
-        'bg-white dark:bg-[#1E1E1E] text-slate-800 dark:text-white border border-emerald-200 dark:border-emerald-800/60 shadow-lg',
+        'bg-[#151B23]/95 text-[#F0F4F8] border border-emerald-500/40 shadow-xl backdrop-blur-md',
     },
     error: {
-      icon: <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />,
+      icon: <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />,
       classes:
-        'bg-white dark:bg-[#1E1E1E] text-slate-800 dark:text-white border border-rose-300 dark:border-rose-800/60 shadow-lg',
+        'bg-[#1F1315]/95 text-rose-100 border border-rose-500/40 shadow-xl backdrop-blur-md',
     },
     warning: {
-      icon: <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />,
+      icon: <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />,
       classes:
-        'bg-white dark:bg-[#1E1E1E] text-slate-800 dark:text-white border border-amber-300 dark:border-amber-800/60 shadow-lg',
+        'bg-[#221B10]/95 text-amber-100 border border-amber-500/40 shadow-xl backdrop-blur-md',
     },
     info: {
-      icon: <Info className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />,
+      icon: <Info className="w-4 h-4 text-sky-400 shrink-0" />,
       classes:
-        'bg-white dark:bg-[#1E1E1E] text-slate-800 dark:text-white border border-sky-300 dark:border-sky-800/60 shadow-lg',
+        'bg-[#151B23]/95 text-[#F0F4F8] border border-sky-500/40 shadow-xl backdrop-blur-md',
     },
   }[toast.type];
 
   return (
     <div
       role="alert"
-      className={`pointer-events-auto flex items-center justify-between gap-3 p-3.5 rounded-2xl animate-in slide-in-from-bottom-2 duration-200 ${config.classes}`}
+      className={`pointer-events-auto flex items-center justify-between gap-3 p-3.5 rounded-md animate-in slide-in-from-bottom-2 duration-150 ${config.classes}`}
     >
       <div className="flex items-center gap-2.5 min-w-0">
         {config.icon}
@@ -77,7 +77,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
         type="button"
         onClick={() => onDismiss(toast.id)}
         aria-label="بستن پیام"
-        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-white transition shrink-0"
+        className="w-7 h-7 flex items-center justify-center rounded hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition shrink-0 cursor-pointer"
       >
         <X className="w-3.5 h-3.5" />
       </button>

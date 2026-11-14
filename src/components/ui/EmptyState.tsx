@@ -25,24 +25,24 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   return (
     <div
-      className={`flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-[#E2DDD4] dark:border-[#2D2D2D] bg-[#FAF7F2]/50 dark:bg-[#181818]/50 ${
+      className={`flex flex-col items-center justify-center text-center rounded-lg border border-dashed border-[#2D3748] bg-[#111620]/60 ${
         compact ? 'p-4 sm:p-5' : 'p-6 sm:p-8'
       } ${className}`}
     >
       {icon && (
         <div
-          className={`rounded-2xl bg-white dark:bg-[#202020] border border-[#E2DDD4] dark:border-[#2E2E2E] flex items-center justify-center text-[#8E6F27] dark:text-[#C1A056] shadow-2xs mb-2.5 ${
+          className={`rounded-md bg-[#1C232D] border border-[#2D3748] flex items-center justify-center text-[#C5A059] shadow-xs mb-2.5 ${
             compact ? 'w-10 h-10' : 'w-12 h-12'
           }`}
         >
           {icon}
         </div>
       )}
-      <h3 className="text-sm sm:text-base font-bold text-[#181818] dark:text-[#F5F3EF]">
+      <h3 className="text-sm sm:text-base font-bold text-[#F0F4F8]">
         {title}
       </h3>
       {description && (
-        <p className="text-xs text-[#69655F] dark:text-[#9E988D] max-w-sm mt-1 leading-relaxed">
+        <p className="text-xs text-[#9BA7B6] max-w-sm mt-1 leading-relaxed">
           {description}
         </p>
       )}

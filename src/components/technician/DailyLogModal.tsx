@@ -204,18 +204,18 @@ export const DailyLogModal: React.FC<Props> = ({
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl max-w-lg w-full shadow-2xl border border-[#E2DDD4] dark:border-[#2C2C2C] overflow-hidden my-6 transition-all max-h-[92vh] flex flex-col">
+      <div className="bg-[#151B23] rounded-lg max-w-lg w-full shadow-2xl border border-[#212835] overflow-hidden my-6 transition-all max-h-[92vh] flex flex-col">
         {/* Header - Auto-populated metadata */}
-        <div className="bg-[#212121] px-5 py-4 text-white flex items-center justify-between border-b border-[#C1A056]/40 shrink-0">
+        <div className="bg-[#0D1117] px-5 py-4 text-[#F0F4F8] flex items-center justify-between border-b border-[#212835] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#C1A056]/20 text-[#C1A056] border border-[#C1A056]/40 flex items-center justify-center">
-              <Moon className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-md bg-[#1C232D] text-[#C5A059] border border-[#C5A059]/30 flex items-center justify-center">
+              <Moon className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-black text-sm sm:text-base text-white">
+              <h3 className="font-bold text-sm sm:text-base text-[#F0F4F8]">
                 ثبت پیشرفت روزانه و پایان شیفت کاری
               </h3>
-              <p className="text-xs text-[#E5CA8F] mt-0.5">
+              <p className="text-xs text-[#C5A059] mt-0.5">
                 <span className="font-mono">{project.code}</span> • {project.title} • {project.assignedTeamName || 'اکیپ نصب'}
               </p>
             </div>
@@ -223,17 +223,17 @@ export const DailyLogModal: React.FC<Props> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 text-white transition cursor-pointer"
+            className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
             aria-label="بستن"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
           {error && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md text-xs font-semibold text-rose-300 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
               <span>{error}</span>
             </div>
@@ -242,14 +242,14 @@ export const DailyLogModal: React.FC<Props> = ({
           {/* Planned Activities vs Today's Progress */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-[#C1A056]" />
+              <span className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-[#C5A059]" />
                 اقلام کار و پیشرفت امروز:
               </span>
               <button
                 type="button"
                 onClick={handleQuickFillRemaining}
-                className="text-[11px] font-bold text-[#C1A056] hover:text-[#9A7D37] flex items-center gap-1 cursor-pointer transition py-1 px-2 rounded-lg bg-[#FAF7F2] dark:bg-[#202020] border border-[#C1A056]/30"
+                className="text-[11px] font-semibold text-[#C5A059] hover:text-[#E5CA8F] flex items-center gap-1 cursor-pointer transition py-1 px-2 rounded-md bg-[#1C232D] border border-[#C5A059]/30"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 تکمیل تمام لت‌های باقیمانده
@@ -259,43 +259,43 @@ export const DailyLogModal: React.FC<Props> = ({
             {liveCalculations.items.map((act) => (
               <div
                 key={act.activityId}
-                className="p-3.5 rounded-2xl bg-[#FAF8F5] dark:bg-[#151515] border border-[#E8E4DC] dark:border-[#2C2C2C] space-y-2.5 transition"
+                className="p-3.5 rounded-md bg-[#111620] border border-[#212835] space-y-2.5 transition"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <span className="font-bold text-xs text-[#212121] dark:text-white block">
+                    <span className="font-semibold text-xs text-[#F0F4F8] block">
                       {act.title}
                     </span>
                     {act.technicalDetails && (
-                      <span className="text-[10px] text-neutral-400 block mt-0.5">
+                      <span className="text-[11px] text-[#9BA7B6] block mt-0.5">
                         {act.technicalDetails}
                       </span>
                     )}
                   </div>
                   <div className="text-left shrink-0">
-                    <span className="text-xs font-bold text-neutral-600 dark:text-neutral-300">
+                    <span className="text-xs font-medium text-[#9BA7B6] tabular-nums">
                       طرح: {toPersianDigits(act.effectivePlannedQuantity)} {act.unit}
                     </span>
                     {act.amendmentDelta !== 0 && (
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 block">
+                      <span className="text-[10px] text-amber-400 block tabular-nums">
                         ({act.amendmentDelta > 0 ? `+${toPersianDigits(act.amendmentDelta)}` : toPersianDigits(act.amendmentDelta)} اصلاحیه)
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 items-center pt-1 border-t border-dashed border-[#E2DDD4] dark:border-[#2A2A2A]">
+                <div className="grid grid-cols-3 gap-2 items-center pt-1 border-t border-dashed border-[#212835]">
                   {/* Previously Completed */}
-                  <div className="text-[11px] text-neutral-500">
-                    <span className="block text-[10px] text-neutral-400">انجام‌شده قبلی:</span>
-                    <span className="font-bold text-neutral-700 dark:text-neutral-300 font-mono">
+                  <div className="text-[11px] text-[#9BA7B6]">
+                    <span className="block text-[10px] text-[#637184]">انجام‌شده قبلی:</span>
+                    <span className="font-semibold text-[#F0F4F8] font-mono tabular-nums">
                       {toPersianDigits(act.previouslyCompletedQuantity)} {act.unit}
                     </span>
                   </div>
 
                   {/* Today's Input */}
                   <div>
-                    <label className="block text-[10px] font-bold text-[#C1A056] mb-1">
+                    <label className="block text-[10px] font-semibold text-[#C5A059] mb-1">
                       نصب امروز:
                     </label>
                     <input
@@ -305,19 +305,19 @@ export const DailyLogModal: React.FC<Props> = ({
                       value={todayInputs[act.activityId] || ''}
                       onChange={(e) => handleInputChange(act.activityId, e.target.value)}
                       placeholder="۰"
-                      className="w-full text-center text-xs font-bold font-mono p-2 rounded-xl border border-[#C1A056]/50 bg-white dark:bg-[#202020] dark:text-white focus:ring-2 focus:ring-[#C1A056]"
+                      className="w-full text-center text-xs font-bold font-mono tabular-nums p-2 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059]"
                     />
                   </div>
 
                   {/* Dynamic Remaining */}
                   <div className="text-left">
-                    <span className="block text-[10px] text-neutral-400">باقیمانده:</span>
+                    <span className="block text-[10px] text-[#637184]">باقیمانده:</span>
                     {act.isOver ? (
-                      <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 font-mono bg-rose-500/10 px-1.5 py-0.5 rounded">
+                      <span className="text-[11px] font-bold text-rose-400 font-mono tabular-nums bg-rose-500/10 px-1.5 py-0.5 rounded">
                         +{toPersianDigits(act.overQty)} مازاد!
                       </span>
                     ) : (
-                      <span className={`text-xs font-bold font-mono ${act.remaining === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-700 dark:text-neutral-300'}`}>
+                      <span className={`text-xs font-semibold font-mono tabular-nums ${act.remaining === 0 ? 'text-emerald-400' : 'text-[#F0F4F8]'}`}>
                         {toPersianDigits(act.remaining)} {act.unit}
                       </span>
                     )}
@@ -327,8 +327,8 @@ export const DailyLogModal: React.FC<Props> = ({
             ))}
 
             {liveCalculations.anyOverCompleted && (
-              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <div className="p-2.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>توجه: تعداد نصب‌شده از سقف طرح اولیه بیشتر است و پس از ثبت، جهت بررسی به مدیر QC گزارش خواهد شد.</span>
               </div>
             )}
@@ -337,36 +337,36 @@ export const DailyLogModal: React.FC<Props> = ({
           {/* Work Hours Tracking */}
           <div className="grid grid-cols-2 gap-3 pt-1">
             <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-neutral-400" />
+              <label className="block text-xs font-medium text-[#9BA7B6] mb-1 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-[#637184]" />
                 ساعت شروع کار:
               </label>
               <input
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-neutral-400" />
+              <label className="block text-xs font-medium text-[#9BA7B6] mb-1 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-[#637184]" />
                 ساعت پایان کار:
               </label>
               <input
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059]"
               />
             </div>
           </div>
 
           {/* Supervisor Confirmation Toggle */}
           {isSupervisor ? (
-            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs">
-              <span className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <div className="p-3 rounded-md bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs">
+              <span className="font-semibold text-emerald-300 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 تایید سرپرست اکیپ ({currentUser?.name || 'سرپرست'})
               </span>
               <label className="flex items-center gap-1.5 cursor-pointer">
@@ -374,18 +374,18 @@ export const DailyLogModal: React.FC<Props> = ({
                   type="checkbox"
                   checked={supervisorConfirmed}
                   onChange={(e) => setSupervisorConfirmed(e.target.checked)}
-                  className="rounded text-[#C1A056] focus:ring-[#C1A056]"
+                  className="rounded text-[#C5A059] focus:ring-[#C5A059]"
                 />
-                <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300">تایید شده</span>
+                <span className="text-[11px] font-medium text-[#9BA7B6]">تایید شده</span>
               </label>
             </div>
           ) : (
-            <div className="p-2.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800/40 border border-[#E2DDD4] dark:border-[#2C2C2C] flex items-center justify-between text-xs text-neutral-500">
+            <div className="p-2.5 rounded-md bg-[#111620] border border-[#212835] flex items-center justify-between text-xs text-[#9BA7B6]">
               <span className="flex items-center gap-1.5">
-                <Info className="w-4 h-4 text-neutral-400 shrink-0" />
+                <Info className="w-4 h-4 text-[#637184] shrink-0" />
                 <span>گزارش توسط نصاب ثبت شده و تایید آن برعهده سرپرست اکیپ است.</span>
               </span>
-              <span className="text-[10px] bg-neutral-200 dark:bg-neutral-700 px-2 py-0.5 rounded-full font-bold shrink-0">
+              <span className="text-[10px] bg-[#1C232D] text-[#9BA7B6] px-2 py-0.5 rounded font-medium shrink-0">
                 در انتظار تایید سرپرست
               </span>
             </div>
@@ -396,17 +396,17 @@ export const DailyLogModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setShowOptionalDetails((prev) => !prev)}
-              className="w-full py-2 px-3 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:text-[#C1A056] bg-neutral-100/60 dark:bg-neutral-800/40 rounded-xl flex items-center justify-between cursor-pointer transition"
+              className="w-full py-2 px-3 text-xs font-semibold text-[#9BA7B6] hover:text-[#F0F4F8] bg-[#111620] hover:bg-[#1C232D] rounded-md border border-[#212835] flex items-center justify-between cursor-pointer transition"
             >
               <span>توضیحات و مستندات تکمیلی (اختیاری)</span>
-              {showOptionalDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {showOptionalDetails ? <ChevronUp className="w-4 h-4 text-[#C5A059]" /> : <ChevronDown className="w-4 h-4" />}
             </button>
 
             {showOptionalDetails && (
-              <div className="mt-3 space-y-3.5 p-3 rounded-2xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-neutral-50/50 dark:bg-neutral-900/30 animate-in fade-in duration-150">
+              <div className="mt-3 space-y-3.5 p-3 rounded-md border border-[#212835] bg-[#111620] animate-in fade-in duration-150">
                 {/* Notes */}
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                  <label className="block text-xs font-medium text-[#9BA7B6] mb-1">
                     یادداشت یا توضیحات روزانه:
                   </label>
                   <textarea
@@ -414,14 +414,14 @@ export const DailyLogModal: React.FC<Props> = ({
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="در صورت وجود نکته خاص یا هماهنگی با کارفرما بنویسید..."
-                    className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white leading-relaxed focus:ring-2 focus:ring-[#C1A056]"
+                    className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] leading-relaxed focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059]"
                   />
                 </div>
 
                 {/* Obstacles */}
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                  <label className="block text-xs font-medium text-[#9BA7B6] mb-1 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
                     موانع کارگاهی یا تاخیرات فیزیکی:
                   </label>
                   <input
@@ -429,14 +429,14 @@ export const DailyLogModal: React.FC<Props> = ({
                     value={obstacles}
                     onChange={(e) => setObstacles(e.target.value)}
                     placeholder="مثال: قطعی برق یا حضور عوامل نقاشی"
-                    className="w-full text-xs p-2 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                    className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059]"
                   />
                 </div>
 
                 {/* Equipment Issues */}
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1.5">
-                    <Wrench className="w-3.5 h-3.5 text-amber-500" />
+                  <label className="block text-xs font-medium text-[#9BA7B6] mb-1 flex items-center gap-1.5">
+                    <Wrench className="w-3.5 h-3.5 text-amber-400" />
                     مشکلات ابزار یا متریال:
                   </label>
                   <input
@@ -444,20 +444,20 @@ export const DailyLogModal: React.FC<Props> = ({
                     value={equipmentIssues}
                     onChange={(e) => setEquipmentIssues(e.target.value)}
                     placeholder="مثال: نیاز به رول‌پلاک بلندتر"
-                    className="w-full text-xs p-2 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                    className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059]"
                   />
                 </div>
 
                 {/* Continuation Date */}
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-[#C1A056]" />
+                  <label className="block text-xs font-medium text-[#9BA7B6] mb-1 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-[#C5A059]" />
                     تاریخ پیشنهادی ادامه کار:
                   </label>
                   <select
                     value={plannedContinuationDate}
                     onChange={(e) => setPlannedContinuationDate(e.target.value)}
-                    className="w-full text-xs p-2 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                    className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059]"
                   >
                     <option value="">پیش‌فرض (روز کاری بعدی تقویم)</option>
                     {upcomingDays.map((d) => (
@@ -470,12 +470,12 @@ export const DailyLogModal: React.FC<Props> = ({
 
                 {/* Photos */}
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                  <label className="block text-xs font-medium text-[#9BA7B6] mb-1">
                     عکس‌های پیشرفت امروز (اختیاری):
                   </label>
                   <div className="flex items-center gap-2 flex-wrap">
                     {photos.map((ph, idx) => (
-                      <div key={idx} className="relative w-14 h-14 rounded-xl overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C]">
+                      <div key={idx} className="relative w-14 h-14 rounded-md overflow-hidden border border-[#212835]">
                         <CloudImage src={ph} alt="" className="w-full h-full object-cover" />
                         <button
                           type="button"
@@ -487,9 +487,9 @@ export const DailyLogModal: React.FC<Props> = ({
                       </div>
                     ))}
 
-                    <label className="flex flex-col items-center justify-center w-14 h-14 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer text-neutral-400 transition">
-                      <Camera className="w-4 h-4 mb-0.5" />
-                      <span className="text-[9px] font-bold">عکس</span>
+                    <label className="flex flex-col items-center justify-center w-14 h-14 rounded-md border border-dashed border-[#2D3748] hover:border-[#C5A059] hover:bg-[#1C232D] cursor-pointer text-[#9BA7B6] transition">
+                      <Camera className="w-4 h-4 mb-0.5 text-[#C5A059]" />
+                      <span className="text-[9px] font-medium">عکس</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -499,9 +499,9 @@ export const DailyLogModal: React.FC<Props> = ({
                       />
                     </label>
 
-                    <label className="flex flex-col items-center justify-center w-14 h-14 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer text-neutral-400 transition">
-                      <Upload className="w-4 h-4 mb-0.5" />
-                      <span className="text-[9px] font-bold">گالری</span>
+                    <label className="flex flex-col items-center justify-center w-14 h-14 rounded-md border border-dashed border-[#2D3748] hover:border-[#C5A059] hover:bg-[#1C232D] cursor-pointer text-[#9BA7B6] transition">
+                      <Upload className="w-4 h-4 mb-0.5 text-[#C5A059]" />
+                      <span className="text-[9px] font-medium">گالری</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -518,7 +518,7 @@ export const DailyLogModal: React.FC<Props> = ({
         </form>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#181818] flex items-center gap-2 shrink-0">
+        <div className="p-4 border-t border-[#212835] bg-[#0D1117] flex items-center gap-2 shrink-0">
           <Button
             type="button"
             variant="ghost"

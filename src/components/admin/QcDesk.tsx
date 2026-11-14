@@ -339,17 +339,17 @@ export const QcDesk: React.FC<Props> = ({
     return (
       <div className="space-y-5">
         {/* Project Header Info */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#E2DDD4] dark:border-[#2C2C2C] gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#212835] gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-black bg-[#212121] text-[#E5CA8F] px-2 py-0.5 rounded-md">
+              <span className="font-mono text-xs font-black bg-[#0D1117] text-[#C5A059] border border-[#212835] px-2 py-0.5 rounded">
                 {selectedProject.code}
               </span>
-              <h3 className="font-black text-base sm:text-lg text-[#181818] dark:text-[#F5F3EF]">
+              <h3 className="font-black text-base sm:text-lg text-[#F0F4F8]">
                 {selectedProject.title}
               </h3>
             </div>
-            <p className="text-xs text-[#69655F] dark:text-[#9E988D] mt-1">{selectedProject.address}</p>
+            <p className="text-xs text-[#637184] mt-1">{selectedProject.address}</p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -368,7 +368,7 @@ export const QcDesk: React.FC<Props> = ({
                 variant="secondary"
                 size="sm"
                 onClick={() => onOpenEvaluation(selectedProject)}
-                icon={<Award className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />}
+                icon={<Award className="w-4 h-4 text-[#C5A059]" />}
               >
                 ارزیابی پرسنل
               </Button>
@@ -410,9 +410,9 @@ export const QcDesk: React.FC<Props> = ({
         {selectedProject.workSessions && selectedProject.workSessions.length > 0 && (() => {
           const sessionSummary = calculateWorkSessionsSummary(selectedProject.workSessions);
           return sessionSummary ? (
-            <div className="flex items-center justify-between bg-white dark:bg-[#1A1A1A] px-3.5 py-2.5 rounded-xl border border-[#C1A056]/30 text-xs font-bold text-[#8E6F27] dark:text-[#E5CA8F] shadow-2xs">
+            <div className="flex items-center justify-between bg-[#151B23] px-3.5 py-2.5 rounded-md border border-[#C5A059]/30 text-xs font-bold text-[#C5A059] ">
               <span className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-[#C1A056]" />
+                <Clock className="w-4 h-4 text-[#C5A059]" />
                 <span>مجموع زمان کار:</span>
               </span>
               <span>{sessionSummary.text}</span>
@@ -422,17 +422,17 @@ export const QcDesk: React.FC<Props> = ({
 
         {/* Daily Logs Timeline (Collapsible) for Multi-Day Projects */}
         {selectedProject.dailyLogs && selectedProject.dailyLogs.length > 0 && (
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-3">
+          <div className="bg-[#111620] rounded-lg p-4 border border-[#212835] space-y-3">
             <button
               type="button"
               onClick={() => setIsDailyLogsOpen((prev) => !prev)}
               className="w-full flex items-center justify-between text-right cursor-pointer select-none"
             >
-              <h4 className="text-xs font-black text-[#181818] dark:text-[#F5F3EF] flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+              <h4 className="text-xs font-black text-[#F0F4F8] flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#C5A059]" />
                 <span>گزارش‌های روزانه کار ({toPersianDigits(selectedProject.dailyLogs.length)} روز ثبت‌شده):</span>
               </h4>
-              <div className="text-[#69655F] dark:text-[#9E988D]">
+              <div className="text-[#637184]">
                 {isDailyLogsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </div>
             </button>
@@ -442,15 +442,15 @@ export const QcDesk: React.FC<Props> = ({
                 {selectedProject.dailyLogs.map((log, idx) => (
                   <div
                     key={log.id || idx}
-                    className="bg-white dark:bg-[#141414] p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-2 text-xs"
+                    className="bg-[#111620] p-3 rounded-md border border-[#212835] space-y-2 text-xs"
                   >
-                    <div className="flex items-center justify-between text-[#69655F] dark:text-[#9E988D]">
-                      <span className="font-bold text-[#181818] dark:text-[#F5F3EF]">
+                    <div className="flex items-center justify-between text-[#637184]">
+                      <span className="font-bold text-[#F0F4F8]">
                         {formatJalali(log.date)}
                       </span>
                       <span>توسط: {log.byUserName}</span>
                     </div>
-                    <p className="text-[#4A4742] dark:text-[#BDB8AF] leading-relaxed">
+                    <p className="text-[#9BA7B6] leading-relaxed">
                       {log.note}
                     </p>
                     {log.photos && log.photos.length > 0 && (
@@ -458,7 +458,7 @@ export const QcDesk: React.FC<Props> = ({
                         {log.photos.map((photo, pIdx) => (
                           <div
                             key={pIdx}
-                            className="relative h-20 rounded-lg overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C]"
+                            className="relative h-20 rounded-lg overflow-hidden border border-[#212835]"
                           >
                             <CloudImage
                               src={photo}
@@ -477,36 +477,36 @@ export const QcDesk: React.FC<Props> = ({
         )}
 
         {/* Photos Grid: Before & After */}
-        <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-3">
+        <div className="bg-[#111620] rounded-lg p-4 border border-[#212835] space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-black text-[#181818] dark:text-[#F5F3EF] flex items-center gap-2">
-              <Camera className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+            <h4 className="text-xs font-black text-[#F0F4F8] flex items-center gap-2">
+              <Camera className="w-4 h-4 text-[#C5A059]" />
               <span>عکس‌های قبل و بعد از نصب:</span>
             </h4>
-            <span className="text-xs text-[#69655F] dark:text-[#9E988D]">
+            <span className="text-xs text-[#637184]">
               {toPersianDigits(beforePhotos.length)} قبل / {toPersianDigits(afterPhotos.length)} بعد
             </span>
           </div>
 
           {selectedProject.isExceptionalCompletion && selectedProject.exceptionalCompletionDetails && (
-            <div className="bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/40 rounded-xl p-3 text-xs space-y-1.5 animate-in fade-in duration-150">
+            <div className="bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/40 rounded-md p-3 text-xs space-y-1.5 animate-in fade-in duration-150">
               <div className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-300">
                 <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                 <span>اتمام استثنایی با کسری اقلام اجرایی (تحویل ناقص پروژه)</span>
               </div>
-              <p className="text-xs text-[#181818] dark:text-[#F5F3EF] leading-relaxed">
+              <p className="text-xs text-[#F0F4F8] leading-relaxed">
                 <span className="font-bold text-rose-600 block mb-0.5">علت مستند عدم اجرای اقلام باقیمانده:</span>
                 «{selectedProject.exceptionalCompletionDetails.documentedReason}»
               </p>
-              <div className="pt-1 text-[11px] text-[#69655F] dark:text-[#9E988D]">
+              <div className="pt-1 text-[11px] text-[#637184]">
                 اقلام اجرا‌نشده: {selectedProject.exceptionalCompletionDetails.remainingActivities.map(a => `${a.title} (${toPersianDigits(a.remainingQuantity)} ${a.unit})`).join('، ')}
               </div>
             </div>
           )}
 
           {selectedProject.completionNotes ? (
-            <p className="text-xs text-[#4A4742] dark:text-[#BDB8AF] bg-white dark:bg-[#141414] p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] leading-relaxed">
-              <span className="font-bold text-[#181818] dark:text-[#F5F3EF] block mb-0.5">توضیح تکنسین:</span>
+            <p className="text-xs text-[#9BA7B6] bg-[#111620] p-3 rounded-md border border-[#212835] leading-relaxed">
+              <span className="font-bold text-[#F0F4F8] block mb-0.5">توضیح تکنسین:</span>
               «{selectedProject.completionNotes}»
             </p>
           ) : null}
@@ -524,7 +524,7 @@ export const QcDesk: React.FC<Props> = ({
                     <div
                       key={`before-${i}`}
                       onClick={() => setPreviewPhotoIndex(i)}
-                      className="relative h-24 rounded-xl overflow-hidden border border-amber-500/40 cursor-pointer shadow-2xs group"
+                      className="relative h-24 rounded-md overflow-hidden border border-amber-500/40 cursor-pointer  group"
                     >
                       <CloudImage src={photo} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
@@ -537,7 +537,7 @@ export const QcDesk: React.FC<Props> = ({
                   ))}
                 </div>
               ) : (
-                <div className="text-xs text-[#69655F] dark:text-[#9E988D] bg-white dark:bg-[#141414] p-3 rounded-xl border border-dashed border-[#D2CCC0] dark:border-[#2C2C2C] text-center">
+                <div className="text-xs text-[#637184] bg-[#111620] p-3 rounded-md border border-dashed border-[#212835] text-center">
                   عکسی از قبل ثبت نشده است.
                 </div>
               )}
@@ -555,7 +555,7 @@ export const QcDesk: React.FC<Props> = ({
                     <div
                       key={`after-${i}`}
                       onClick={() => setPreviewPhotoIndex(beforePhotos.length + i)}
-                      className="relative h-24 rounded-xl overflow-hidden border border-emerald-500/40 cursor-pointer shadow-2xs group"
+                      className="relative h-24 rounded-md overflow-hidden border border-emerald-500/40 cursor-pointer  group"
                     >
                       <CloudImage src={photo} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
@@ -568,7 +568,7 @@ export const QcDesk: React.FC<Props> = ({
                   ))}
                 </div>
               ) : (
-                <div className="text-xs text-[#8E6F27] dark:text-[#E5CA8F] bg-white dark:bg-[#141414] p-3 rounded-xl border border-dashed border-[#C1A056]/30 text-center">
+                <div className="text-xs text-[#C5A059] bg-[#111620] p-3 rounded-md border border-dashed border-[#C5A059]/30 text-center">
                   هنوز عکس اتمام کار آپلود نشده است.
                 </div>
               )}
@@ -579,10 +579,10 @@ export const QcDesk: React.FC<Props> = ({
         {/* Customer Signature & 6-Item Handover Checklist */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Signature */}
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-3">
+          <div className="bg-[#111620] rounded-lg p-4 border border-[#212835] space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-                <PenTool className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+              <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                <PenTool className="w-4 h-4 text-[#C5A059]" />
                 <span>امضای دیجیتال و رضایت مشتری:</span>
               </h4>
               {selectedProject.customerSignature ? (
@@ -597,8 +597,8 @@ export const QcDesk: React.FC<Props> = ({
             </div>
 
             {selectedProject.customerSignature ? (
-              <div className="bg-white dark:bg-[#141414] p-3 rounded-xl border border-[#C1A056]/30 space-y-2 shadow-2xs">
-                <div className="h-20 bg-white rounded-lg border border-dashed border-[#C1A056]/40 p-2 flex items-center justify-center">
+              <div className="bg-[#111620] p-3 rounded-md border border-[#C5A059]/30 space-y-2 ">
+                <div className="h-20 bg-white rounded-lg border border-dashed border-[#C5A059]/40 p-2 flex items-center justify-center">
                   <CloudImage
                     src={selectedProject.customerSignature}
                     alt="امضای مشتری"
@@ -606,7 +606,7 @@ export const QcDesk: React.FC<Props> = ({
                   />
                 </div>
                 <div className="flex items-center justify-between text-xs pt-1">
-                  <span className="font-bold text-[#181818] dark:text-[#F5F3EF]">
+                  <span className="font-bold text-[#F0F4F8]">
                     {selectedProject.customerName}
                   </span>
                   <div className="flex items-center gap-1">
@@ -615,12 +615,12 @@ export const QcDesk: React.FC<Props> = ({
                         key={s}
                         className={`w-3.5 h-3.5 ${
                           selectedProject.customerSatisfaction && s <= selectedProject.customerSatisfaction
-                            ? 'text-[#C1A056] fill-[#C1A056]'
+                            ? 'text-[#C5A059] fill-[#C5A059]'
                             : 'text-zinc-300 dark:text-zinc-600'
                         }`}
                       />
                     ))}
-                    <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-bold mr-1">
+                    <span className="text-xs text-[#637184] font-bold mr-1">
                       {selectedProject.customerSatisfaction
                         ? `${toPersianDigits(selectedProject.customerSatisfaction)} از 5`
                         : '—'}
@@ -629,16 +629,16 @@ export const QcDesk: React.FC<Props> = ({
                 </div>
               </div>
             ) : (
-              <div className="text-xs text-[#69655F] dark:text-[#9E988D] bg-white dark:bg-[#141414] p-4 rounded-xl border border-dashed border-[#D2CCC0] dark:border-[#2C2C2C] text-center">
+              <div className="text-xs text-[#637184] bg-[#111620] p-4 rounded-md border border-dashed border-[#212835] text-center">
                 امضای مشتری هنوز ثبت نشده است.
               </div>
             )}
           </div>
 
           {/* 6 Standards Handover Checklist */}
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-2.5">
-            <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-              <CheckSquare className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+          <div className="bg-[#111620] rounded-lg p-4 border border-[#212835] space-y-2.5">
+            <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+              <CheckSquare className="w-4 h-4 text-[#C5A059]" />
               <span>چک‌لیست استانداردهای تحویل (۶ مورد):</span>
             </h4>
 
@@ -658,10 +658,10 @@ export const QcDesk: React.FC<Props> = ({
                 return (
                   <div
                     key={item.key}
-                    className="flex flex-col p-2 rounded-lg bg-white dark:bg-[#141414] border border-[#E2DDD4] dark:border-[#2C2C2C] text-xs gap-1"
+                    className="flex flex-col p-2 rounded-lg bg-[#111620] border border-[#212835] text-xs gap-1"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[#4A4742] dark:text-[#BDB8AF]">{item.label}</span>
+                      <span className="text-[#9BA7B6]">{item.label}</span>
                       <span
                         className={`font-bold ${
                           isChecked
@@ -688,10 +688,10 @@ export const QcDesk: React.FC<Props> = ({
 
         {/* Customer Acceptance & Sign-off Details (Phase P3) */}
         {selectedProject.customerAcceptance && (
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-2.5">
+          <div className="bg-[#111620] rounded-lg p-4 border border-[#212835] space-y-2.5">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-                <PenTool className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+              <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                <PenTool className="w-4 h-4 text-[#C5A059]" />
                 <span>صورت‌جلسه تحویل و وضعیت کارفرما / نماینده کارگاه:</span>
               </h4>
               <span
@@ -710,9 +710,9 @@ export const QcDesk: React.FC<Props> = ({
                   : 'عدم حضور کارفرما (معافیت)'}
               </span>
             </div>
-            <div className="bg-white dark:bg-[#141414] p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] text-xs space-y-1.5 text-[#4A4742] dark:text-[#BDB8AF]">
+            <div className="bg-[#111620] p-3 rounded-md border border-[#212835] text-xs space-y-1.5 text-[#9BA7B6]">
               <div className="flex items-center justify-between">
-                <span>تحویل‌گیرنده: <strong className="text-[#181818] dark:text-[#F5F3EF]">{selectedProject.customerAcceptance.representativeName}</strong> {selectedProject.customerAcceptance.representativeRole ? `(${selectedProject.customerAcceptance.representativeRole})` : ''}</span>
+                <span>تحویل‌گیرنده: <strong className="text-[#F0F4F8]">{selectedProject.customerAcceptance.representativeName}</strong> {selectedProject.customerAcceptance.representativeRole ? `(${selectedProject.customerAcceptance.representativeRole})` : ''}</span>
                 {selectedProject.customerAcceptance.acceptedAt && (
                   <span>زمان: {formatJalali(selectedProject.customerAcceptance.acceptedAt)}</span>
                 )}
@@ -728,12 +728,12 @@ export const QcDesk: React.FC<Props> = ({
         )}
 
         {/* Defect Management & Corrective Actions Tracker (Phase P3) */}
-        <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-3">
+        <div className="bg-[#111620] rounded-lg p-4 border border-[#212835] space-y-3">
           <div className="flex items-center justify-between">
             <button
               type="button"
               onClick={() => setIsDefectsOpen((prev) => !prev)}
-              className="flex items-center gap-2 text-right cursor-pointer select-none font-black text-xs text-[#181818] dark:text-[#F5F3EF]"
+              className="flex items-center gap-2 text-right cursor-pointer select-none font-black text-xs text-[#F0F4F8]"
             >
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
               <span>مدیریت عدم‌انطباق‌ها و عیوب کیفی ({toPersianDigits((selectedProject.qcDefects || []).length)} مورد ثبت‌شده):</span>
@@ -754,8 +754,8 @@ export const QcDesk: React.FC<Props> = ({
 
           {/* Form to add new Defect */}
           {showAddDefect && isQcManager && (
-            <form onSubmit={handleAddDefect} className="bg-white dark:bg-[#141414] p-3.5 rounded-xl border border-amber-300 dark:border-amber-800/40 space-y-3">
-              <div className="font-bold text-xs text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+            <form onSubmit={handleAddDefect} className="bg-[#111620] p-3.5 rounded-md border border-amber-300 dark:border-amber-800/40 space-y-3">
+              <div className="font-bold text-xs text-[#F0F4F8] flex items-center gap-1.5">
                 <Plus className="w-3.5 h-3.5 text-amber-600" />
                 <span>ثبت مورد جدید عدم‌انطباق کیفی:</span>
               </div>
@@ -765,7 +765,7 @@ export const QcDesk: React.FC<Props> = ({
                   <select
                     value={newDefectSeverity}
                     onChange={(e) => setNewDefectSeverity(e.target.value as QCDefectSeverity)}
-                    className="w-full p-2 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#1E1E1E]"
+                    className="w-full p-2 rounded-lg border border-[#212835] bg-[#111620]"
                   >
                     <option value="CRITICAL">بحرانی (CRITICAL) — مانع تایید نهایی</option>
                     <option value="MAJOR">عمده (MAJOR)</option>
@@ -777,7 +777,7 @@ export const QcDesk: React.FC<Props> = ({
                   <select
                     value={newDefectCategory}
                     onChange={(e) => setNewDefectCategory(e.target.value as QCDefectCategory)}
-                    className="w-full p-2 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#1E1E1E]"
+                    className="w-full p-2 rounded-lg border border-[#212835] bg-[#111620]"
                   >
                     <option value="LEVELING">تراز و شاقول بودن</option>
                     <option value="FABRIC">کیفیت پارچه و اتو</option>
@@ -795,7 +795,7 @@ export const QcDesk: React.FC<Props> = ({
                     placeholder="مثلاً پنجره سالن اصلی"
                     value={newDefectLocation}
                     onChange={(e) => setNewDefectLocation(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#1E1E1E]"
+                    className="w-full p-2 rounded-lg border border-[#212835] bg-[#111620]"
                   />
                 </div>
               </div>
@@ -807,7 +807,7 @@ export const QcDesk: React.FC<Props> = ({
                   placeholder="شرح دقیق نقص کیفی و علت عدم پذیرش..."
                   value={newDefectDesc}
                   onChange={(e) => setNewDefectDesc(e.target.value)}
-                  className="w-full p-2 rounded-lg text-xs border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#1E1E1E]"
+                  className="w-full p-2 rounded-lg text-xs border border-[#212835] bg-[#111620]"
                 />
               </div>
               <div className="flex items-center justify-end gap-2">
@@ -828,7 +828,7 @@ export const QcDesk: React.FC<Props> = ({
                 selectedProject.qcDefects.map((defect) => (
                   <div
                     key={defect.id}
-                    className={`p-3 rounded-xl border text-xs space-y-1.5 transition ${
+                    className={`p-3 rounded-md border text-xs space-y-1.5 transition ${
                       defect.severity === 'CRITICAL'
                         ? 'bg-rose-500/10 border-rose-500/40 dark:bg-rose-950/20'
                         : defect.severity === 'MAJOR'
@@ -849,7 +849,7 @@ export const QcDesk: React.FC<Props> = ({
                         >
                           {defect.severity === 'CRITICAL' ? 'بحرانی' : defect.severity === 'MAJOR' ? 'عمده' : 'جزیی'}
                         </span>
-                        <span className="font-bold text-[#181818] dark:text-[#F5F3EF]">
+                        <span className="font-bold text-[#F0F4F8]">
                           {defect.description}
                         </span>
                         {defect.location && (
@@ -890,7 +890,7 @@ export const QcDesk: React.FC<Props> = ({
                     </div>
 
                     {defect.resolutionNotes && (
-                      <div className="p-2 bg-white dark:bg-[#141414] rounded-lg border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-700 dark:text-zinc-300">
+                      <div className="p-2 bg-[#111620] rounded-lg border border-[#212835] text-[11px] text-zinc-700 dark:text-zinc-300">
                         <span className="font-bold text-blue-600 block mb-0.5">گزارش رفع نقص توسط اکیپ ({defect.resolvedByUserName}):</span>
                         «{defect.resolutionNotes}»
                       </div>
@@ -905,7 +905,7 @@ export const QcDesk: React.FC<Props> = ({
                   </div>
                 ))
               ) : (
-                <div className="text-xs text-zinc-500 bg-white dark:bg-[#141414] p-3 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 text-center">
+                <div className="text-xs text-zinc-500 bg-[#111620] p-3 rounded-md border border-dashed border-[#212835] text-center">
                   هیچ نقص کیفی برای این پروژه ثبت نشده است.
                 </div>
               )}
@@ -915,14 +915,14 @@ export const QcDesk: React.FC<Props> = ({
 
         {/* Historical Inspections Timeline (Phase P3) */}
         {selectedProject.qcInspections && selectedProject.qcInspections.length > 0 && (
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-3">
+          <div className="bg-[#111620] rounded-lg p-4 border border-[#212835] space-y-3">
             <button
               type="button"
               onClick={() => setIsInspectionsHistoryOpen((prev) => !prev)}
-              className="w-full flex items-center justify-between text-right cursor-pointer select-none font-black text-xs text-[#181818] dark:text-[#F5F3EF]"
+              className="w-full flex items-center justify-between text-right cursor-pointer select-none font-black text-xs text-[#F0F4F8]"
             >
               <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+                <ShieldCheck className="w-4 h-4 text-[#C5A059]" />
                 <span>تاریخچه نوبت‌های بازرسی QC ({toPersianDigits(selectedProject.qcInspections.length)} بازرسی ثبت‌شده):</span>
               </span>
               {isInspectionsHistoryOpen ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
@@ -933,7 +933,7 @@ export const QcDesk: React.FC<Props> = ({
                 {selectedProject.qcInspections.map((insp, idx) => (
                   <div
                     key={insp.id || idx}
-                    className="p-3 bg-white dark:bg-[#141414] rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs space-y-1.5"
+                    className="p-3 bg-[#111620] rounded-md border border-[#212835] text-xs space-y-1.5"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -948,7 +948,7 @@ export const QcDesk: React.FC<Props> = ({
                         >
                           {insp.result === 'PASS' ? 'تایید (PASS)' : insp.result === 'FAIL' ? 'عدم تایید (FAIL)' : 'مشروط (CONDITIONAL)'}
                         </span>
-                        <span className="font-bold text-[#181818] dark:text-[#F5F3EF]">
+                        <span className="font-bold text-[#F0F4F8]">
                           نوبت #{toPersianDigits(idx + 1)} — {formatJalali(insp.inspectionDate)}
                         </span>
                       </div>
@@ -962,7 +962,7 @@ export const QcDesk: React.FC<Props> = ({
                     )}
 
                     {insp.notes && (
-                      <p className="text-[11px] text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900 p-2 rounded-lg">
+                      <p className="text-[11px] text-zinc-700 dark:text-zinc-300 bg-[#0D1117] p-2 rounded-lg">
                         «{insp.notes}»
                       </p>
                     )}
@@ -975,7 +975,7 @@ export const QcDesk: React.FC<Props> = ({
 
         {/* Action: If IN_PROGRESS, allow manager to mark ready for QC */}
         {selectedProject.status === 'IN_PROGRESS' && (
-          <div className="bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="font-bold text-xs text-amber-900 dark:text-amber-200">
                 این پروژه در حال حاضر «در حال نصب» است
@@ -996,7 +996,7 @@ export const QcDesk: React.FC<Props> = ({
 
         {/* If already APPROVED and not editing */}
         {selectedProject.qcStatus === 'APPROVED' && !isEditingApproved && (
-          <div className="bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/30 rounded-2xl p-4 space-y-2.5">
+          <div className="bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/30 rounded-lg p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-black text-xs sm:text-sm">
                 <CheckCircle2 className="w-4 h-4" />
@@ -1005,7 +1005,7 @@ export const QcDesk: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setIsEditingApproved(true)}
-                className="text-xs font-bold text-[#8E6F27] dark:text-[#E5CA8F] hover:underline cursor-pointer"
+                className="text-xs font-bold text-[#C5A059] hover:underline cursor-pointer"
               >
                 ویرایش نمره و ارزیابی
               </button>
@@ -1017,19 +1017,19 @@ export const QcDesk: React.FC<Props> = ({
                   key={star}
                   className={`w-4 h-4 ${
                     star <= (selectedProject.qcScore || 5)
-                      ? 'text-[#C1A056] fill-[#C1A056]'
+                      ? 'text-[#C5A059] fill-[#C5A059]'
                       : 'text-zinc-300 dark:text-zinc-600'
                   }`}
                 />
               ))}
-              <span className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] mr-2">
+              <span className="text-xs font-bold text-[#F0F4F8] mr-2">
                 {toPersianDigits(selectedProject.qcScore || 5)} از 5
               </span>
             </div>
 
             {selectedProject.qcNotes && (
-              <div className="bg-white dark:bg-[#141414] p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] text-xs text-[#4A4742] dark:text-[#BDB8AF] leading-relaxed">
-                <span className="font-bold text-[#181818] dark:text-[#F5F3EF] block mb-1">نظر مسئول QC:</span>
+              <div className="bg-[#111620] p-3 rounded-md border border-[#212835] text-xs text-[#9BA7B6] leading-relaxed">
+                <span className="font-bold text-[#F0F4F8] block mb-1">نظر مسئول QC:</span>
                 «{selectedProject.qcNotes}»
               </div>
             )}
@@ -1038,14 +1038,14 @@ export const QcDesk: React.FC<Props> = ({
 
         {/* QC Evaluation, Quality Scoring & Decision Form */}
         {(isAwaitingQc(selectedProject) || isEditingApproved || selectedProject.qcStatus === 'REJECTED') && (
-          <form onSubmit={handleApprove} className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#C1A056]/40 space-y-4">
-            <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+          <form onSubmit={handleApprove} className="bg-[#111620] rounded-lg p-4 border border-[#C5A059]/40 space-y-4">
+            <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#C5A059]" />
               <span>ارزیابی و بازرسی کنترل کیفی نهایی:</span>
             </h4>
 
             {!isQcManager && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl text-xs text-blue-800 dark:text-blue-300 flex items-center gap-2">
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md text-xs text-blue-800 dark:text-blue-300 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 shrink-0 text-blue-600" />
                 <span>شما به عنوان مسئول هماهنگی و زمان‌بندی به این برگه دسترسی دارید؛ تأیید نهایی و امتیازدهی کیفی منحصراً در صلاحیت مدیر ارشد QC است.</span>
               </div>
@@ -1053,7 +1053,7 @@ export const QcDesk: React.FC<Props> = ({
 
             {/* Critical Defect Gate Warning */}
             {hasCriticalDefects && (
-              <div className="p-3 bg-rose-500/15 dark:bg-rose-950/40 border border-rose-500 rounded-xl text-xs flex items-start gap-2 text-rose-800 dark:text-rose-200">
+              <div className="p-3 bg-rose-500/15 dark:bg-rose-950/40 border border-rose-500 rounded-md text-xs flex items-start gap-2 text-rose-800 dark:text-rose-200">
                 <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold block mb-0.5">تأیید نهایی QC مسدود است:</span>
@@ -1063,13 +1063,13 @@ export const QcDesk: React.FC<Props> = ({
             )}
 
             {/* Quality Scoring Criteria (5-Criteria Internal Scoring) */}
-            <div className="bg-white dark:bg-[#141414] p-3.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-3">
+            <div className="bg-[#111620] p-3.5 rounded-md border border-[#212835] space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#8E6F27] dark:text-[#E5CA8F]" />
+                <label className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#C5A059]" />
                   <span>معیارهای پنج‌گانه کیفیت داخلی نصب (۱ تا ۵):</span>
                 </label>
-                <div className="text-xs bg-[#FAF7F2] dark:bg-[#1E1E1E] px-2.5 py-1 rounded-lg border border-[#C1A056]/30 font-bold text-[#8E6F27] dark:text-[#E5CA8F]">
+                <div className="text-xs bg-[#111620] px-2.5 py-1 rounded-lg border border-[#C5A059]/30 font-bold text-[#C5A059]">
                   نمره نهایی محاسبه‌شده: {toPersianDigits(calculateQualityScore(qualityCriteria).overallScore)} از ۵
                 </div>
               </div>
@@ -1082,8 +1082,8 @@ export const QcDesk: React.FC<Props> = ({
                   { key: 'cleanlinessScore', label: 'نظافت کارگاه و حفاظت کف (وزن موقت ۱۵٪)', val: qualityCriteria.cleanlinessScore },
                   { key: 'complianceScore', label: 'انطباق با استاندارد و طرح (وزن موقت ۱۵٪)', val: qualityCriteria.complianceScore },
                 ].map((crit) => (
-                  <div key={crit.key} className="flex items-center justify-between p-2 rounded-lg bg-[#FAF7F2] dark:bg-[#1E1E1E]">
-                    <span className="text-[#4A4742] dark:text-[#BDB8AF] text-[11px]">{crit.label}:</span>
+                  <div key={crit.key} className="flex items-center justify-between p-2 rounded-lg bg-[#111620]">
+                    <span className="text-[#9BA7B6] text-[11px]">{crit.label}:</span>
                     <div className="flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map((s) => (
                         <button
@@ -1097,8 +1097,8 @@ export const QcDesk: React.FC<Props> = ({
                           }}
                           className={`w-6 h-6 rounded flex items-center justify-center font-bold text-xs cursor-pointer transition ${
                             crit.val === s
-                              ? 'bg-[#212121] text-[#E5CA8F] dark:bg-[#E5CA8F] dark:text-[#212121]'
-                              : 'bg-white dark:bg-[#141414] text-zinc-500 border border-zinc-200 dark:border-zinc-800'
+                              ? 'bg-[#C5A059] text-[#0D1117] font-black'
+                              : 'bg-[#111620] text-zinc-500 border border-[#212835]'
                           }`}
                         >
                           {toPersianDigits(s)}
@@ -1115,8 +1115,8 @@ export const QcDesk: React.FC<Props> = ({
             </div>
 
             {/* Checklist Toggles */}
-            <div className="bg-white dark:bg-[#141414] p-3.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-2">
-              <label className="block text-xs font-bold text-[#181818] dark:text-[#F5F3EF]">
+            <div className="bg-[#111620] p-3.5 rounded-md border border-[#212835] space-y-2">
+              <label className="block text-xs font-bold text-[#F0F4F8]">
                 چک‌لیست تطبیق استانداردهای بازرسی کنترل کیفیت:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -1146,7 +1146,7 @@ export const QcDesk: React.FC<Props> = ({
 
             {/* QC Notes */}
             <div>
-              <label className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1.5">
+              <label className="block text-xs font-semibold text-[#9BA7B6] mb-1.5">
                 توضیحات و نکات کنترلی مسئول بازرسی:
               </label>
               <textarea
@@ -1154,7 +1154,7 @@ export const QcDesk: React.FC<Props> = ({
                 placeholder="توضیحات نهایی جهت درج در صورت‌جلسه بازرسی QC..."
                 value={qcNotes}
                 onChange={(e) => setQcNotes(e.target.value)}
-                className="w-full text-xs p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white"
+                className="w-full text-xs p-3 rounded-md border border-[#212835] focus:ring-2 focus:ring-[#C1A056] bg-[#111620] dark:text-white"
               />
             </div>
 
@@ -1218,9 +1218,9 @@ export const QcDesk: React.FC<Props> = ({
 
       {/* Main Content Area */}
       {relevantProjects.length === 0 ? (
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-8 text-center border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs max-w-md mx-auto">
-          <ShieldCheck className="w-12 h-12 text-[#8E6F27] dark:text-[#E5CA8F] mx-auto mb-2 opacity-50" />
-          <h3 className="font-bold text-sm text-[#181818] dark:text-white">
+        <div className="bg-[#151B23] rounded-lg p-8 text-center border border-[#212835]  max-w-md mx-auto">
+          <ShieldCheck className="w-12 h-12 text-[#C5A059] mx-auto mb-2 opacity-50" />
+          <h3 className="font-bold text-sm text-[#F0F4F8]">
             {filter === 'PENDING'
               ? 'پروژه‌ای در انتظار بررسی QC نیست'
               : filter === 'APPROVED'
@@ -1232,7 +1232,7 @@ export const QcDesk: React.FC<Props> = ({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Projects List (Full width on mobile, 1 column on desktop) */}
           <div className="lg:col-span-1 space-y-2">
-            <div className="text-xs font-bold text-[#69655F] dark:text-[#9E988D] px-1">
+            <div className="text-xs font-bold text-[#637184] px-1">
               لیست پروژه‌ها ({toPersianDigits(relevantProjects.length)} مورد):
             </div>
 
@@ -1249,33 +1249,33 @@ export const QcDesk: React.FC<Props> = ({
                   <div
                     key={p.id}
                     onClick={() => handleSelectProject(p)}
-                    className={`p-3.5 rounded-2xl border cursor-pointer transition select-none relative ${
+                    className={`p-3.5 rounded-lg border cursor-pointer transition select-none relative ${
                       isSelected
-                        ? 'border-[#C1A056] bg-[#FAF7F2] dark:bg-[#202020] shadow-xs ring-2 ring-[#C1A056]/30'
+                        ? 'border-[#C5A059] bg-[#1C232D]  ring-2 ring-[#C1A056]/30'
                         : awaitingQc
-                        ? 'border-[#C1A056]/60 bg-white dark:bg-[#1A1A1A] hover:border-[#C1A056]'
-                        : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#1A1A1A] hover:border-[#C1A056]/40'
+                        ? 'border-[#C5A059]/50 bg-[#151B23] hover:border-[#C5A059]'
+                        : 'border-[#212835] bg-[#151B23] hover:border-[#C5A059]/40'
                     }`}
                   >
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-mono font-black text-xs text-[#8E6F27] dark:text-[#E5CA8F]">
+                      <span className="font-mono font-black text-xs text-[#C5A059]">
                         {p.code}
                       </span>
                       <StatusPill status={p.status} qcStatus={p.qcStatus} size="sm" />
                     </div>
 
-                    <h4 className="font-bold text-xs sm:text-sm text-[#181818] dark:text-[#F5F3EF] leading-snug line-clamp-1">
+                    <h4 className="font-bold text-xs sm:text-sm text-[#F0F4F8] leading-snug line-clamp-1">
                       {p.title}
                     </h4>
-                    <p className="text-xs text-[#69655F] dark:text-[#9E988D] mt-0.5 line-clamp-1">
+                    <p className="text-xs text-[#637184] mt-0.5 line-clamp-1">
                       {p.customerName}
                     </p>
 
                     {/* Metadata Pills */}
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap text-xs">
                       {totalPhotos > 0 && (
-                        <span className="inline-flex items-center gap-1 bg-[#FAF7F2] dark:bg-[#141414] text-[#4A4742] dark:text-[#BDB8AF] px-2 py-0.5 rounded-md border border-[#E2DDD4] dark:border-[#282828]">
-                          <Camera className="w-3 h-3 text-[#8E6F27] dark:text-[#E5CA8F]" />
+                        <span className="inline-flex items-center gap-1 bg-[#111620] text-[#9BA7B6] px-2 py-0.5 rounded-md border border-[#212835]">
+                          <Camera className="w-3 h-3 text-[#C5A059]" />
                           <span>{toPersianDigits(totalPhotos)} عکس</span>
                         </span>
                       )}
@@ -1286,7 +1286,7 @@ export const QcDesk: React.FC<Props> = ({
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#E2DDD4] dark:border-[#2C2C2C] text-xs text-[#69655F] dark:text-[#9E988D]">
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#212835] text-xs text-[#637184]">
                       <div className="flex items-center gap-1">
                         <Avatar name={leadName || 'سرپرست'} id={leadUser?.id} size="sm" />
                         <span className="truncate max-w-[90px]">{leadName || 'سرپرست'}</span>
@@ -1302,7 +1302,7 @@ export const QcDesk: React.FC<Props> = ({
           </div>
 
           {/* Desktop Right Detail Pane (hidden on mobile, shown >= 1024px) */}
-          <div className="hidden lg:block lg:col-span-2 bg-white dark:bg-[#1A1A1A] rounded-2xl border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs p-5">
+          <div className="hidden lg:block lg:col-span-2 bg-[#151B23] rounded-lg border border-[#212835]  p-5">
             {renderDetailWorkspace()}
           </div>
         </div>
@@ -1375,7 +1375,7 @@ export const QcDesk: React.FC<Props> = ({
               <CloudImage
                 src={allProjectPhotos[previewPhotoIndex]}
                 alt="بزرگ‌نمایی عکس کنترل کیفیت"
-                className="max-h-[75vh] max-w-full rounded-xl shadow-2xl object-contain bg-black"
+                className="max-h-[75vh] max-w-full rounded-md shadow-2xl object-contain bg-black"
               />
 
               {allProjectPhotos.length > 1 && (

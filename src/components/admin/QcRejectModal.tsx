@@ -81,20 +81,20 @@ export const QcRejectModal: React.FC<Props> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="qc-reject-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl max-w-lg w-full shadow-2xl border border-rose-500/40 overflow-hidden my-6 transition-all animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-[#151B23] rounded-lg max-w-lg w-full border border-rose-500/40 overflow-hidden my-6 transition-all animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="bg-[#212121] px-6 py-4 text-white flex items-center justify-between border-b-2 border-rose-600">
+        <div className="bg-[#0D1117] px-5 py-3.5 text-white flex items-center justify-between border-b border-[#212835]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-md bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
               <XCircle className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
-              <h3 id="qc-reject-title" className="font-black text-base sm:text-lg text-white">
-                عدم تایید کیفی / دستور اصلاح (بازگشت به تکنسین)
+              <h3 id="qc-reject-title" className="font-bold text-sm text-[#F0F4F8]">
+                عدم تایید کیفی / دستور اصلاح
               </h3>
-              <p className="text-xs text-rose-300 mt-0.5">
+              <p className="text-xs text-rose-400 mt-0.5">
                 <span className="font-mono">{project.code}</span> • {project.title}
               </p>
             </div>
@@ -102,23 +102,23 @@ export const QcRejectModal: React.FC<Props> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
+            className="w-8 h-8 flex items-center justify-center rounded-md bg-[#1C232D] hover:bg-[#2D3748] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
             aria-label="بستن پنجره"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Warning Note */}
-        <div className="bg-rose-500/10 dark:bg-rose-950/40 border-b border-rose-500/20 p-4 text-xs text-rose-800 dark:text-rose-200 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+        <div className="bg-rose-500/10 border-b border-rose-500/20 p-3.5 text-xs text-rose-300 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
           <span>پروژه مجدداً در کارتابل تکنسین‌ها به وضعیت «در حال اصلاح» برمی‌گردد.</span>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-2">
+            <label className="block text-xs font-bold text-[#F0F4F8] mb-2">
               نواقص پرتکرار جهت انتخاب سریع:
             </label>
             <div className="space-y-1.5">
@@ -132,14 +132,14 @@ export const QcRejectModal: React.FC<Props> = ({
                       toggleDefect(item);
                       setError('');
                     }}
-                    className={`w-full text-right p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition cursor-pointer border ${
+                    className={`w-full text-right p-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer border ${
                       isSelected
-                        ? 'bg-rose-500/15 border-rose-500 text-rose-700 dark:text-rose-200 font-bold'
-                        : 'bg-[#FAF7F2] dark:bg-[#222222] border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 hover:border-rose-300'
+                        ? 'bg-rose-500/15 border-rose-500 text-rose-300 font-bold'
+                        : 'bg-[#111620] border-[#212835] text-[#9BA7B6] hover:border-rose-500/50 hover:text-[#F0F4F8]'
                     }`}
                   >
                     <span>{item}</span>
-                    {isSelected && <span className="text-rose-600 font-bold">✓</span>}
+                    {isSelected && <span className="text-rose-400 font-bold">✓</span>}
                   </button>
                 );
               })}
@@ -147,7 +147,7 @@ export const QcRejectModal: React.FC<Props> = ({
           </div>
 
           <div>
-            <label htmlFor="qc-reject-notes" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
+            <label htmlFor="qc-reject-notes" className="block text-xs font-bold text-[#F0F4F8] mb-1.5">
               شرح تکمیلی و دستورالعمل اصلاح برای تکنسین:
             </label>
             <textarea
@@ -159,21 +159,21 @@ export const QcRejectModal: React.FC<Props> = ({
                 setError('');
               }}
               placeholder="مثال: چین لت سمت چپ ۲ سانتیمتر نامتقارن است و نیاز به بخاردهی مجدد دارد..."
-              className="w-full text-xs p-3 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-rose-500 focus:border-rose-500 bg-[#FAF7F2] dark:bg-[#141414] dark:text-white leading-relaxed resize-none"
+              className="w-full text-xs p-3 rounded-md border border-[#2D3748] focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-[#0D1117] text-[#F0F4F8] leading-relaxed resize-none"
             />
-            {error && <p className="text-rose-600 text-xs font-bold mt-1">{error}</p>}
+            {error && <p className="text-rose-400 text-xs font-bold mt-1">{error}</p>}
           </div>
 
           <div>
-            <label htmlFor="qc-reject-date" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-rose-500" />
+            <label htmlFor="qc-reject-date" className="block text-xs font-bold text-[#F0F4F8] mb-1.5 flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-rose-400" />
               <span>تاریخ برنامه‌ریزی مجدد کارتابل (اختیاری):</span>
             </label>
             <select
               id="qc-reject-date"
               value={newScheduledDate}
               onChange={(e) => setNewScheduledDate(e.target.value)}
-              className="w-full text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-rose-500 focus:border-rose-500 bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
+              className="w-full text-xs p-2.5 rounded-md border border-[#2D3748] focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-[#0D1117] text-[#F0F4F8]"
             >
               <option value="">بدون تغییر ({formatJalali(project.scheduledDate, 'تعیین‌نشده')})</option>
               {upcomingDays.map((d) => (
@@ -185,19 +185,19 @@ export const QcRejectModal: React.FC<Props> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#212835]">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#FAF7F2] dark:bg-[#252525] hover:bg-[#EAE6DD] text-slate-700 dark:text-zinc-300 transition disabled:opacity-50"
+              className="px-4 py-2 rounded-md text-xs font-bold bg-[#1C232D] hover:bg-[#2D3748] text-[#9BA7B6] hover:text-[#F0F4F8] transition disabled:opacity-50 cursor-pointer"
             >
               انصراف
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 shadow-md active:scale-95 transition disabled:opacity-50"
+              className="px-5 py-2 rounded-md text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 active:scale-95 transition disabled:opacity-50 cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
               <span>{isSubmitting ? 'در حال ارسال...' : 'ارسال دستور اصلاح به تکنسین'}</span>

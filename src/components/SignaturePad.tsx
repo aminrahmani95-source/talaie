@@ -143,18 +143,18 @@ export const SignaturePad: React.FC<Props> = ({ value, onChange, className = '' 
 
   return (
     <div className={`space-y-2 select-none ${className}`}>
-      <div className="relative border-2 border-dashed border-[#C1A056]/60 rounded-2xl overflow-hidden bg-white shadow-sm">
+      <div className="relative border border-dashed border-[#C5A059]/50 rounded-md overflow-hidden bg-white shadow-sm">
         {/* Placeholder hint when canvas is pristine */}
         {!hasSignature && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-slate-400">
-            <PenTool className="w-6 h-6 mb-1 text-[#C1A056]/70" aria-hidden="true" />
-            <span className="text-xs font-bold text-slate-600">با انگشت یا قلم در این کادر امضا کنید</span>
-            <span className="text-xs mt-0.5 text-slate-400">تاییدیه رسمی تحویل اقلام و پرده‌های گالری طلایی</span>
+            <PenTool className="w-5 h-5 mb-1 text-[#C5A059]" aria-hidden="true" />
+            <span className="text-xs font-bold text-slate-700">با انگشت یا قلم در این کادر امضا کنید</span>
+            <span className="text-[11px] mt-0.5 text-slate-500">تاییدیه رسمی تحویل اقلام و پرده‌های گالری طلایی</span>
           </div>
         )}
 
         {/* Guideline line at bottom */}
-        <div className="absolute bottom-6 inset-x-6 border-b border-dashed border-slate-300 pointer-events-none flex justify-between text-xs text-slate-400 px-1">
+        <div className="absolute bottom-6 inset-x-6 border-b border-dashed border-slate-300 pointer-events-none flex justify-between text-[11px] text-slate-400 px-1">
           <span>خط امضای کارفرما</span>
           <span>TALAEI QC</span>
         </div>

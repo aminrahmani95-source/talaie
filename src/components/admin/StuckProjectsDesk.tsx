@@ -231,8 +231,8 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
 
       {/* KPI Stats Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
-          <div className="text-xs text-[#69655F] dark:text-[#9E988D]">توقف‌های باز</div>
+        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
+          <div className="text-xs text-[#637184]">توقف‌های باز</div>
           <div className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1.5">
             <span>{toPersianDigits(openIncidentsCount)}</span>
             {openIncidentsCount > 0 && (
@@ -241,23 +241,23 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
-          <div className="text-xs text-[#69655F] dark:text-[#9E988D]">حل در مهلت ۷۲ ساعت</div>
+        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
+          <div className="text-xs text-[#637184]">حل در مهلت ۷۲ ساعت</div>
           <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
             {toPersianDigits(complianceRate)}٪
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
-          <div className="text-xs text-[#69655F] dark:text-[#9E988D]">کل توقف‌ها</div>
-          <div className="text-xl font-black text-[#181818] dark:text-white mt-1">
+        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
+          <div className="text-xs text-[#637184]">کل توقف‌ها</div>
+          <div className="text-xl font-black text-[#F0F4F8] mt-1">
             {toPersianDigits(allIncidents.length)} مورد
           </div>
         </div>
 
-        <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-3.5 border border-[#C1A056]/30 shadow-2xs">
-          <div className="text-xs text-[#8E6F27] dark:text-[#E5CA8F] font-bold">مهلت رفع توقف</div>
-          <div className="text-xs text-[#181818] dark:text-white mt-2 font-bold">
+        <div className="bg-[#111620] rounded-lg p-3.5 border border-[#C5A059]/30 ">
+          <div className="text-xs text-[#C5A059] font-bold">مهلت رفع توقف</div>
+          <div className="text-xs text-[#F0F4F8] mt-2 font-bold">
             حداکثر ۷۲ ساعت
           </div>
         </div>
@@ -275,14 +275,14 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
               placeholder="جستجو بر اساس عنوان یا کد پروژه..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-xs pr-9 pl-3 py-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#1A1A1A] text-[#181818] dark:text-white"
+              className="w-full text-xs pr-9 pl-3 py-2.5 rounded-md border border-[#212835] bg-[#151B23] text-[#F0F4F8]"
             />
           </div>
 
           {filteredProjects.length === 0 ? (
-            <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-8 text-center border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
+            <div className="bg-[#151B23] rounded-lg p-8 text-center border border-[#212835] ">
               <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2 opacity-80" />
-              <h4 className="font-bold text-sm text-[#181818] dark:text-white">
+              <h4 className="font-bold text-sm text-[#F0F4F8]">
                 پروژه‌ای در این بخش متوقف نیست
               </h4>
             </div>
@@ -297,14 +297,14 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                 <div
                   key={p.id}
                   onClick={() => setSelectedProjectId(p.id)}
-                  className={`p-3.5 rounded-2xl border transition cursor-pointer text-right space-y-2 select-none ${
+                  className={`p-3.5 rounded-lg border transition cursor-pointer text-right space-y-2 select-none ${
                     isSelected
-                      ? 'border-[#C1A056] bg-[#FAF7F2] dark:bg-[#202020] ring-2 ring-[#C1A056]/30 shadow-xs'
-                      : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#1A1A1A] hover:border-[#C1A056]/50'
+                      ? 'border-[#C5A059] bg-[#1C232D] ring-2 ring-[#C1A056]/30 '
+                      : 'border-[#212835] bg-[#151B23] hover:border-[#C5A059]/50'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-black text-[#8E6F27] dark:text-[#E5CA8F]">
+                    <span className="font-mono text-xs font-black text-[#C5A059]">
                       {p.code}
                     </span>
                     {isResolved ? (
@@ -318,7 +318,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                             ? 'bg-rose-600 text-white animate-pulse'
                             : timing.hours < 24
                             ? 'bg-amber-500 text-white'
-                            : 'bg-[#212121] text-[#E5CA8F]'
+                            : 'bg-[#0D1117] text-[#C5A059] border border-[#212835]'
                         }`}
                       >
                         <Clock className="w-3 h-3" />
@@ -332,16 +332,16 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                   </div>
 
                   <div>
-                    <h4 className="font-bold text-xs sm:text-sm text-[#181818] dark:text-[#F5F3EF] line-clamp-1">
+                    <h4 className="font-bold text-xs sm:text-sm text-[#F0F4F8] line-clamp-1">
                       {p.title}
                     </h4>
-                    <p className="text-xs text-[#69655F] dark:text-[#9E988D] mt-0.5 line-clamp-1">
+                    <p className="text-xs text-[#637184] mt-0.5 line-clamp-1">
                       {p.customerName} | {getCategoryTitle(latestInc?.category)}
                     </p>
                   </div>
 
                   {!isResolved && (
-                    <div className="w-full h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                    <div className="w-full h-1.5 rounded-full bg-[#212835] overflow-hidden">
                       <div
                         className={`h-full transition-all ${
                           timing.isOverdue ? 'bg-rose-600' : timing.hours < 24 ? 'bg-amber-500' : 'bg-emerald-500'
@@ -359,18 +359,18 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
         {/* Right Column: Detail and Resolution Form */}
         <div className="lg:col-span-7">
           {selectedProject ? (
-            <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-4">
-              <div className="flex items-start justify-between border-b border-[#E2DDD4] dark:border-[#2C2C2C] pb-3">
+            <div className="bg-[#151B23] rounded-lg p-5 border border-[#212835]  space-y-4">
+              <div className="flex items-start justify-between border-b border-[#212835] pb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-black px-2 py-0.5 rounded-md bg-[#212121] text-[#E5CA8F]">
+                    <span className="font-mono text-xs font-black px-2 py-0.5 rounded-md bg-[#0D1117] text-[#C5A059] border border-[#212835]">
                       {selectedProject.code}
                     </span>
-                    <h3 className="font-black text-base text-[#181818] dark:text-[#F5F3EF]">
+                    <h3 className="font-black text-base text-[#F0F4F8]">
                       {selectedProject.title}
                     </h3>
                   </div>
-                  <p className="text-xs text-[#69655F] dark:text-[#9E988D] mt-1">
+                  <p className="text-xs text-[#637184] mt-1">
                     کارفرما: {selectedProject.customerName} | نشانی: {selectedProject.address}
                   </p>
                 </div>
@@ -378,7 +378,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                   <button
                     type="button"
                     onClick={() => onManageProject(selectedProject)}
-                    className="shrink-0 px-3 min-h-[44px] text-xs font-bold rounded-xl bg-[#FAF7F2] dark:bg-[#252525] text-[#8E6F27] dark:text-[#E5CA8F] hover:bg-[#EFEBE4] flex items-center gap-1.5 cursor-pointer"
+                    className="shrink-0 px-3 min-h-[44px] text-xs font-bold rounded-md bg-[#FAF7F2] dark:bg-[#252525] text-[#C5A059] hover:bg-[#EFEBE4] flex items-center gap-1.5 cursor-pointer"
                   >
                     <Settings2 className="w-4 h-4" />
                     مدیریت کامل
@@ -387,7 +387,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
               </div>
 
               {/* Incident Details Card */}
-              <div className="bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-2xl p-4 space-y-2.5">
+              <div className="bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-lg p-4 space-y-2.5">
                 <div className="flex items-center justify-between text-xs font-bold text-rose-800 dark:text-rose-300">
                   <div className="flex items-center gap-1.5">
                     <Flame className="w-4 h-4 text-rose-500" />
@@ -398,7 +398,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                   </span>
                 </div>
 
-                <div className="text-xs text-[#181818] dark:text-[#F5F3EF] bg-white dark:bg-[#141414] p-3 rounded-xl border border-rose-200 dark:border-rose-900/30 leading-relaxed">
+                <div className="text-xs text-[#F0F4F8] bg-[#111620] p-3 rounded-md border border-rose-200 dark:border-rose-900/30 leading-relaxed">
                   {activeIncident?.description || 'کسری یراق یا مغایرت فنی در محل پروژه.'}
                 </div>
               </div>
@@ -406,25 +406,25 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
               {/* Action Form if open */}
               {activeIncident?.resolutionStatus !== 'RESOLVED' ? (
                 <div className="space-y-3 pt-2">
-                  <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     <span>ثبت اقدام و رفع توقف پروژه:</span>
                   </h4>
 
                   {resolutionError && (
-                    <div className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/30 p-2.5 rounded-xl border border-rose-200">
+                    <div className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/30 p-2.5 rounded-md border border-rose-200">
                       {resolutionError}
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                    <label className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                       ریشه‌یابی خطا:
                     </label>
                     <select
                       value={fmeaRootCause}
                       onChange={(e) => setFmeaRootCause(e.target.value as FmeaRootCause)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                      className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#111620] dark:text-white"
                     >
                       <option value="SUPPLIER_DEFECT">خطای تامین‌کننده یراق یا موتور</option>
                       <option value="SALES_ORDER_ERROR">اشتباه در سفارش‌گذاری فروش</option>
@@ -436,7 +436,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                    <label className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                       شرح اقدام اصلاحی انجام‌شده:
                     </label>
                     <textarea
@@ -444,18 +444,18 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                       placeholder="مثال: قطعه کسری از انبار مرکزی تامین و به نصاب تحویل شد..."
                       value={resolutionNote}
                       onChange={(e) => setResolutionNote(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                      className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#111620] dark:text-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                    <label className="block text-xs font-semibold text-[#9BA7B6] mb-1">
                       تاریخ اعزام مجدد (اختیاری):
                     </label>
                     <select
                       value={newScheduledDate}
                       onChange={(e) => setNewScheduledDate(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                      className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#111620] dark:text-white"
                     >
                       <option value="">همان روز قبلی باقی بماند</option>
                       {upcomingDays.map((d) => (
@@ -481,17 +481,17 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                   </div>
                 </div>
               ) : (
-                <div className="bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/30 rounded-2xl p-4 space-y-2">
+                <div className="bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/30 rounded-lg p-4 space-y-2">
                   <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
                     <CheckCircle2 className="w-4 h-4" />
                     <span>توقف این پروژه رفع شده است</span>
                   </div>
                   {activeIncident?.resolutionNote && (
-                    <p className="text-xs text-[#4A4742] dark:text-[#BDB8AF]">
+                    <p className="text-xs text-[#9BA7B6]">
                       اقدام انجام‌شده: «{activeIncident.resolutionNote}»
                     </p>
                   )}
-                  <div className="text-xs text-[#69655F] dark:text-[#9E988D]">
+                  <div className="text-xs text-[#637184]">
                     ثبت توسط {getDisplayName(activeIncident?.resolvedBy)} در تاریخ {formatJalaliDateTime(activeIncident?.resolvedAt)}
                   </div>
                 </div>

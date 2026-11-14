@@ -180,18 +180,18 @@ export const PreInstallationModal: React.FC<Props> = ({
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
     >
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl max-w-xl w-full shadow-2xl border border-[#E8E4DC] dark:border-[#2D2D2D] overflow-hidden my-4 sm:my-6 transition-all animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+      <div className="bg-[#151B23] rounded-lg max-w-xl w-full shadow-2xl border border-[#E8E4DC] dark:border-[#2D2D2D] overflow-hidden my-4 sm:my-6 transition-all animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-[#212121] px-5 py-4 text-white flex items-center justify-between border-b-2 border-[#C1A056] shrink-0">
+        <div className="bg-[#0D1117] px-5 py-4 text-white flex items-center justify-between border-b-2 border-[#C5A059] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-[#C1A056] border border-[#C1A056]/30">
+            <div className="w-10 h-10 rounded-md bg-white/10 flex items-center justify-center text-[#C5A059] border border-[#C5A059]/30">
               <Ruler className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-black text-sm sm:text-base text-white">
                 برگه بازبینی و آمادگی فیزیکی بستر نصب
               </h3>
-              <p className="text-xs text-[#C1A056] font-bold line-clamp-1">{project.title}</p>
+              <p className="text-xs text-[#C5A059] font-bold line-clamp-1">{project.title}</p>
             </div>
           </div>
           <button
@@ -205,7 +205,7 @@ export const PreInstallationModal: React.FC<Props> = ({
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5 overflow-y-auto grow">
           {formError && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
               <span>{formError}</span>
             </div>
@@ -220,31 +220,31 @@ export const PreInstallationModal: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setInspectionType('IN_PERSON')}
-                className={`p-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 transition ${
+                className={`p-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 transition ${
                   inspectionType === 'IN_PERSON'
-                    ? 'border-[#C1A056] bg-[#FAF7F2] dark:bg-[#252525] text-[#8E6F27] dark:text-[#E5CA8F] ring-2 ring-[#C1A056]/30 shadow-xs'
-                    : 'border-[#E8E4DC] dark:border-[#333333] text-slate-600 dark:text-zinc-400'
+                    ? 'border-[#C5A059] bg-[#FAF7F2] dark:bg-[#252525] text-[#C5A059] ring-2 ring-[#C1A056]/30 '
+                    : 'border-[#212835] text-slate-600 dark:text-zinc-400'
                 }`}
               >
-                <MapPin className="w-4 h-4 text-[#C1A056]" />
+                <MapPin className="w-4 h-4 text-[#C5A059]" />
                 <span>بازدید حضوری در محل پروژه</span>
               </button>
               <button
                 type="button"
                 onClick={() => setInspectionType('REMOTE')}
-                className={`p-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 transition ${
+                className={`p-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 transition ${
                   inspectionType === 'REMOTE'
-                    ? 'border-[#C1A056] bg-[#FAF7F2] dark:bg-[#252525] text-[#8E6F27] dark:text-[#E5CA8F] ring-2 ring-[#C1A056]/30 shadow-xs'
-                    : 'border-[#E8E4DC] dark:border-[#333333] text-slate-600 dark:text-zinc-400'
+                    ? 'border-[#C5A059] bg-[#FAF7F2] dark:bg-[#252525] text-[#C5A059] ring-2 ring-[#C1A056]/30 '
+                    : 'border-[#212835] text-slate-600 dark:text-zinc-400'
                 }`}
               >
-                <Video className="w-4 h-4 text-[#C1A056]" />
+                <Video className="w-4 h-4 text-[#C5A059]" />
                 <span>بازبینی از راه دور (عکس / ویدئو)</span>
               </button>
             </div>
           </div>
 
-          <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed bg-[#FAF7F2] dark:bg-[#202020] p-3 rounded-2xl border border-[#E8E4DC] dark:border-[#2D2D2D]">
+          <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed bg-[#1C232D] p-3 rounded-lg border border-[#E8E4DC] dark:border-[#2D2D2D]">
             جهت جلوگیری از مأموریت ناموفق و هزینه‌های اکیپ، وضعیت فیزیکی هر بند را بررسی و تعیین وضعیت کنید. پروژه تنها در صورت تأیید کلیه بندهای کاربردی قابل اعزام اکیپ خواهد بود.
           </p>
 
@@ -262,14 +262,14 @@ export const PreInstallationModal: React.FC<Props> = ({
               return (
                 <div
                   key={itemMeta.id}
-                  className={`p-3.5 rounded-2xl border transition-all ${
+                  className={`p-3.5 rounded-lg border transition-all ${
                     item.state === 'CONFIRMED'
                       ? 'border-emerald-500/40 bg-emerald-500/5'
                       : item.state === 'ISSUE_DETECTED'
                       ? 'border-rose-500/50 bg-rose-500/5 ring-1 ring-rose-500/20'
                       : item.state === 'NOT_APPLICABLE'
                       ? 'border-zinc-300 dark:border-zinc-700 bg-zinc-100/50 dark:bg-zinc-800/40'
-                      : 'border-[#E8E4DC] dark:border-[#2D2D2D] bg-[#FAF7F2] dark:bg-[#222222]'
+                      : 'border-[#E8E4DC] dark:border-[#2D2D2D] bg-[#111620]'
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -287,10 +287,10 @@ export const PreInstallationModal: React.FC<Props> = ({
                       <button
                         type="button"
                         onClick={() => handleStateChange(itemMeta.id, 'CONFIRMED')}
-                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
+                        className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1 ${
                           item.state === 'CONFIRMED'
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'bg-white dark:bg-[#181818] border border-[#E8E4DC] dark:border-[#333333] text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50'
+                            ? 'bg-emerald-600 text-white '
+                            : 'bg-white dark:bg-[#181818] border border-[#212835] text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50'
                         }`}
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
@@ -300,10 +300,10 @@ export const PreInstallationModal: React.FC<Props> = ({
                       <button
                         type="button"
                         onClick={() => handleStateChange(itemMeta.id, 'ISSUE_DETECTED')}
-                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
+                        className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1 ${
                           item.state === 'ISSUE_DETECTED'
-                            ? 'bg-rose-600 text-white shadow-xs'
-                            : 'bg-white dark:bg-[#181818] border border-[#E8E4DC] dark:border-[#333333] text-rose-700 dark:text-rose-400 hover:bg-rose-50'
+                            ? 'bg-rose-600 text-white '
+                            : 'bg-white dark:bg-[#181818] border border-[#212835] text-rose-700 dark:text-rose-400 hover:bg-rose-50'
                         }`}
                       >
                         <AlertTriangle className="w-3.5 h-3.5" />
@@ -313,10 +313,10 @@ export const PreInstallationModal: React.FC<Props> = ({
                       <button
                         type="button"
                         onClick={() => handleStateChange(itemMeta.id, 'NOT_APPLICABLE')}
-                        className={`px-2 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
+                        className={`px-2 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1 ${
                           item.state === 'NOT_APPLICABLE'
-                            ? 'bg-zinc-600 text-white shadow-xs'
-                            : 'bg-white dark:bg-[#181818] border border-[#E8E4DC] dark:border-[#333333] text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50'
+                            ? 'bg-zinc-600 text-white '
+                            : 'bg-white dark:bg-[#181818] border border-[#212835] text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50'
                         }`}
                       >
                         <MinusCircle className="w-3.5 h-3.5" />
@@ -354,7 +354,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                         placeholder="مثال: کابل برق به درگاه پنجره غربی کشیده نشده است یا کناف نیاز به شاسی‌کشی مجدد دارد."
                         value={item.notes || ''}
                         onChange={(e) => handleNotesChange(itemMeta.id, e.target.value)}
-                        className="w-full text-xs p-2.5 rounded-xl border border-rose-300 dark:border-rose-800 bg-white dark:bg-[#151515] dark:text-white"
+                        className="w-full text-xs p-2.5 rounded-md border border-rose-300 dark:border-rose-800 bg-white dark:bg-[#151515] dark:text-white"
                       />
                     </div>
                   )}
@@ -367,10 +367,10 @@ export const PreInstallationModal: React.FC<Props> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-1.5">
-                <Camera className="w-4 h-4 text-[#C1A056]" />
+                <Camera className="w-4 h-4 text-[#C5A059]" />
                 <span>تصاویر و مستندات میدانی وضعیت بستر ({photos.length}):</span>
               </label>
-              <label className="cursor-pointer px-3 py-1.5 rounded-xl border border-[#C1A056]/40 bg-[#FAF7F2] dark:bg-[#202020] text-xs font-bold text-[#8E6F27] dark:text-[#E5CA8F] hover:bg-[#C1A056]/10 transition flex items-center gap-1.5">
+              <label className="cursor-pointer px-3 py-1.5 rounded-md border border-[#C5A059]/40 bg-[#1C232D] text-xs font-bold text-[#C5A059] hover:bg-[#C1A056]/10 transition flex items-center gap-1.5">
                 <Camera className="w-3.5 h-3.5" />
                 <span>افزودن تصویر</span>
                 <input
@@ -388,7 +388,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                 {photos.map((photo, idx) => (
                   <div
                     key={idx}
-                    className="relative group aspect-square rounded-xl overflow-hidden border border-[#E8E4DC] dark:border-[#333333] bg-zinc-100 dark:bg-zinc-800"
+                    className="relative group aspect-square rounded-md overflow-hidden border border-[#212835] bg-zinc-100 dark:bg-zinc-800"
                   >
                     <img
                       src={photo}
@@ -413,7 +413,7 @@ export const PreInstallationModal: React.FC<Props> = ({
             <label className="block text-xs font-bold text-[#212121] dark:text-white mb-2">
               نتیجه نهایی کارشناسی آمادگی بستر نصب:
             </label>
-            <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
+            <div className={`p-4 rounded-lg border flex items-center justify-between gap-3 ${
               isReady
                 ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
                 : 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200'
@@ -442,7 +442,7 @@ export const PreInstallationModal: React.FC<Props> = ({
 
           {/* Postpone date picker if not ready */}
           {!isReady && (
-            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/40 p-3 rounded-2xl space-y-1.5">
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/40 p-3 rounded-lg space-y-1.5">
               <label className="block text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-amber-600" />
                 <span>تاریخ پیشنهادی جهت موکول شدن مأموریت (انتخاب از تقویم ۳۰ روزه):</span>
@@ -450,7 +450,7 @@ export const PreInstallationModal: React.FC<Props> = ({
               <select
                 value={postponeDate}
                 onChange={(e) => setPostponeDate(e.target.value)}
-                className="w-full text-xs p-2.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-[#151515] dark:text-white font-bold"
+                className="w-full text-xs p-2.5 rounded-md border border-amber-300 dark:border-amber-700 bg-white dark:bg-[#151515] dark:text-white font-bold"
               >
                 <option value="">انتخاب تاریخ موکول‌شدن (اختیاری)...</option>
                 {days.map((d) => (
@@ -473,7 +473,7 @@ export const PreInstallationModal: React.FC<Props> = ({
               placeholder="مثال: کارفرما کارهای کناف را تمام کرده و پریزهای برق نصب شده‌اند؛ هیچ تداخلی با سایر پیمانکاران وجود ندارد."
               value={generalNotes}
               onChange={(e) => setGeneralNotes(e.target.value)}
-              className="w-full text-xs p-3 rounded-xl border border-[#E8E4DC] dark:border-[#333333] bg-[#FAF7F2] dark:bg-[#151515] dark:text-white"
+              className="w-full text-xs p-3 rounded-md border border-[#212835] bg-[#FAF7F2] dark:bg-[#151515] dark:text-white"
             />
           </div>
 
@@ -483,14 +483,14 @@ export const PreInstallationModal: React.FC<Props> = ({
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="flex-1 py-3 rounded-xl border border-[#E8E4DC] dark:border-[#333333] text-slate-700 dark:text-zinc-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-[#252525] disabled:opacity-50"
+              className="flex-1 py-3 rounded-md border border-[#212835] text-slate-700 dark:text-zinc-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-[#252525] disabled:opacity-50"
             >
               انصراف
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 py-3 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-black rounded-xl text-xs transition border border-[#C1A056]/30 shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-[#0D1117] hover:bg-[#333333] text-[#C5A059] font-black rounded-md text-xs transition border border-[#C5A059]/30 shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isSubmitting ? 'در حال ثبت...' : 'ثبت برگه بازبینی بستر نصب'}
             </button>

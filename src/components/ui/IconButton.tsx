@@ -22,20 +22,20 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
     ref
   ) => {
     const sizeClasses = {
-      sm: 'w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl text-sm',
-      md: 'w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl text-base',
-      lg: 'w-12 h-12 min-w-[48px] min-h-[48px] rounded-2xl text-lg',
+      sm: 'w-9 h-9 min-w-[36px] min-h-[36px] rounded-md text-xs',
+      md: 'w-10 h-10 min-w-[40px] min-h-[40px] rounded-md text-sm',
+      lg: 'w-11 h-11 min-w-[44px] min-h-[44px] rounded-md text-base',
     }[size];
 
     const variantClasses = {
       default:
-        'bg-white dark:bg-[#1F1F1F] text-[#4A4742] dark:text-[#BDB8AF] border border-[#E2DDD4] dark:border-[#333333] hover:text-[#181818] dark:hover:text-[#F5F3EF] hover:bg-[#F9F7F3] dark:hover:bg-[#282828] shadow-2xs',
+        'bg-[#151B23] text-[#9BA7B6] border border-[#2D3748] hover:text-[#F0F4F8] hover:border-[#3E4C63] hover:bg-[#1C232D] shadow-xs',
       primary:
-        'bg-[#212121] text-[#C1A056] hover:bg-[#2D2D2D] dark:bg-[#C1A056] dark:text-[#181818] dark:hover:bg-[#D4B56C] border border-[#C1A056]/30 shadow-xs',
+        'bg-[#C5A059] text-[#0D1117] hover:bg-[#D4AF37] border border-[#C5A059] shadow-xs',
       ghost:
-        'bg-transparent text-[#4A4742] dark:text-[#BDB8AF] hover:text-[#181818] dark:hover:text-[#F5F3EF] hover:bg-[#EFEBE4]/60 dark:hover:bg-[#252525]',
+        'bg-transparent text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#1C232D]',
       danger:
-        'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/60',
+        'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 shadow-xs',
     }[variant];
 
     return (
@@ -44,7 +44,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         type={type}
         aria-label={ariaLabel}
         disabled={disabled}
-        className={`inline-flex items-center justify-center transition-all duration-150 select-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1A056] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#121212] active:scale-95 disabled:opacity-40 disabled:pointer-events-none ${sizeClasses} ${variantClasses} ${className}`}
+        className={`inline-flex items-center justify-center transition-all duration-150 select-none cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0D1117] active:scale-95 disabled:opacity-40 disabled:pointer-events-none ${sizeClasses} ${variantClasses} ${className}`}
         {...props}
       >
         {icon}

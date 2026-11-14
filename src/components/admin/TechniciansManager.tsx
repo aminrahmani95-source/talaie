@@ -292,7 +292,7 @@ export const TechniciansManager: React.FC<Props> = ({
     if (u.role === 'LEAD_TECHNICIAN') {
       return {
         label: 'سرپرست اکیپ نصب',
-        classes: 'bg-[#C1A056]/20 text-[#8E6F27] dark:text-[#E5CA8F]',
+        classes: 'bg-[#C1A056]/20 text-[#C5A059]',
       };
     }
     return {
@@ -369,44 +369,44 @@ export const TechniciansManager: React.FC<Props> = ({
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
-          <div className="text-xs text-[#69655F] dark:text-[#9E988D]">کل اعضا</div>
-          <div className="text-xl font-black text-[#181818] dark:text-white mt-1">
+        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
+          <div className="text-xs text-[#637184]">کل اعضا</div>
+          <div className="text-xl font-black text-[#F0F4F8] mt-1">
             {toPersianDigits(users.length)} نفر
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
-          <div className="text-xs text-[#8E6F27] dark:text-[#E5CA8F] font-bold">مسئولین QC</div>
-          <div className="text-xl font-black text-[#181818] dark:text-white mt-1">
+        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
+          <div className="text-xs text-[#C5A059] font-bold">مسئولین QC</div>
+          <div className="text-xl font-black text-[#F0F4F8] mt-1">
             {toPersianDigits(qcLeads.length)} نفر
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
+        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
           <div className="text-xs text-blue-600 dark:text-blue-400 font-bold">هماهنگی و زمان‌بندی</div>
-          <div className="text-xl font-black text-[#181818] dark:text-white mt-1">
+          <div className="text-xl font-black text-[#F0F4F8] mt-1">
             {toPersianDigits(coordinators.length)} نفر
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
-          <div className="text-xs text-[#8E6F27] dark:text-[#E5CA8F] font-bold">سرپرستان اکیپ</div>
-          <div className="text-xl font-black text-[#181818] dark:text-white mt-1">
+        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
+          <div className="text-xs text-[#C5A059] font-bold">سرپرستان اکیپ</div>
+          <div className="text-xl font-black text-[#F0F4F8] mt-1">
             {toPersianDigits(crewLeads.length)} نفر
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-3.5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs">
-          <div className="text-xs text-[#69655F] dark:text-[#9E988D]">تکنسین‌های نصب</div>
-          <div className="text-xl font-black text-[#181818] dark:text-white mt-1">
+        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
+          <div className="text-xs text-[#637184]">تکنسین‌های نصب</div>
+          <div className="text-xl font-black text-[#F0F4F8] mt-1">
             {toPersianDigits(crewMembers.length)} نفر
           </div>
         </div>
       </div>
 
       {/* Main Section Switch: Personnel vs 4 Teams */}
-      <div className="flex items-center justify-start border-b border-[#E2DDD4] dark:border-[#2C2C2C] pb-3">
+      <div className="flex items-center justify-start border-b border-[#212835] pb-3">
         <SegmentedControl
           options={[
             { id: 'PERSONNEL', label: 'حساب‌های پرسنل و دسترسی‌ها', badge: users.length },
@@ -419,20 +419,20 @@ export const TechniciansManager: React.FC<Props> = ({
 
       {mainSection === 'TEAMS' ? (
         <div className="space-y-4">
-          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] p-4 rounded-2xl border border-[#C1A056]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-[#111620] p-4 rounded-lg border border-[#C5A059]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h4 className="text-sm font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[#C1A056]" />
+              <h4 className="text-sm font-bold text-[#F0F4F8] flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-[#C5A059]" />
                 <span>سازماندهی ۴ اکیپ نصب فنی شرکت گالری طلایی</span>
               </h4>
-              <p className="text-xs text-[#69655F] dark:text-[#9E988D] mt-1 leading-relaxed">
+              <p className="text-xs text-[#637184] mt-1 leading-relaxed">
                 دپارتمان فنی دارای ۴ اکیپ رسمی نصب است. هر اکیپ حداکثر متشکل از ۱ سرپرست و ۲ تکنسین (مجموعاً ۳ نفر) است که کل کادر ۱۲ نفره را پوشش می‌دهد. هر کاربر در یک زمان فقط عضو یک اکیپ می‌تواند باشد.
               </p>
             </div>
           </div>
 
           {teamActionError && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
               <span>{teamActionError}</span>
             </div>
@@ -465,16 +465,16 @@ export const TechniciansManager: React.FC<Props> = ({
               return (
                 <div
                   key={team.id || team.code}
-                  className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 sm:p-5 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-4"
+                  className="bg-[#151B23] rounded-lg p-4 sm:p-5 border border-[#212835]  space-y-4"
                 >
                   {/* Team Card Header */}
-                  <div className="flex items-center justify-between pb-3 border-b border-[#E2DDD4] dark:border-[#2C2C2C]">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#212835]">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-[#212121] dark:bg-[#141414] border border-[#C1A056]/40 flex items-center justify-center text-[#C1A056]">
+                      <div className="w-9 h-9 rounded-md bg-[#212121] dark:bg-[#141414] border border-[#C5A059]/40 flex items-center justify-center text-[#C5A059]">
                         <Building2 className="w-4 h-4" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-sm text-[#181818] dark:text-[#F5F3EF]">
+                        <h4 className="font-bold text-sm text-[#F0F4F8]">
                           {team.name}
                         </h4>
                         <span className="text-xs font-mono text-zinc-500">{team.code}</span>
@@ -496,7 +496,7 @@ export const TechniciansManager: React.FC<Props> = ({
                   <div className="space-y-2">
                     <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-[#C1A056]" />
+                        <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
                         <span>سرپرست اکیپ (۱ نفر):</span>
                       </span>
                       {supervisorUser && (
@@ -507,11 +507,11 @@ export const TechniciansManager: React.FC<Props> = ({
                     </span>
 
                     {supervisorUser ? (
-                      <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#C1A056]/30 bg-[#FAF7F2] dark:bg-[#202020]">
+                      <div className="flex items-center justify-between p-2.5 rounded-md border border-[#C5A059]/30 bg-[#1C232D]">
                         <div className="flex items-center gap-2">
                           <Avatar name={supervisorUser.name} role={supervisorUser.role} size="sm" />
                           <div>
-                            <span className="font-bold text-xs text-[#181818] dark:text-white block">
+                            <span className="font-bold text-xs text-[#F0F4F8] block">
                               {supervisorUser.name}
                             </span>
                             <span className="text-[11px] font-mono text-slate-500 dark:text-zinc-400" dir="ltr">
@@ -538,7 +538,7 @@ export const TechniciansManager: React.FC<Props> = ({
                           onChange={(e) =>
                             setSelectedLeadToAdd((prev) => ({ ...prev, [team.id]: e.target.value }))
                           }
-                          className="flex-1 text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                          className="flex-1 text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                         >
                           <option value="">انتخاب سرپرست از پرسنل آزاد...</option>
                           {availableUsers.map((u) => (
@@ -567,10 +567,10 @@ export const TechniciansManager: React.FC<Props> = ({
                   </div>
 
                   {/* 2. Technicians Slot (Up to 2) */}
-                  <div className="space-y-2 pt-2 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
+                  <div className="space-y-2 pt-2 border-t border-[#212835]">
                     <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        <Wrench className="w-3.5 h-3.5 text-[#C1A056]" />
+                        <Wrench className="w-3.5 h-3.5 text-[#C5A059]" />
                         <span>تکنسین‌های نصب ({toPersianDigits(techUsers.length)} از ۲ نفر):</span>
                       </span>
                     </span>
@@ -581,12 +581,12 @@ export const TechniciansManager: React.FC<Props> = ({
                         {techUsers.map((tech) => (
                           <div
                             key={tech.id}
-                            className="flex items-center justify-between p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#202020]"
+                            className="flex items-center justify-between p-2.5 rounded-md border border-[#212835] bg-[#1C232D]"
                           >
                             <div className="flex items-center gap-2">
                               <Avatar name={tech.name} role={tech.role} size="sm" />
                               <div>
-                                <span className="font-bold text-xs text-[#181818] dark:text-white block">
+                                <span className="font-bold text-xs text-[#F0F4F8] block">
                                   {tech.name}
                                 </span>
                                 <span className="text-[11px] font-mono text-slate-500 dark:text-zinc-400" dir="ltr">
@@ -618,7 +618,7 @@ export const TechniciansManager: React.FC<Props> = ({
                           onChange={(e) =>
                             setSelectedTechToAdd((prev) => ({ ...prev, [team.id]: e.target.value }))
                           }
-                          className="flex-1 text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                          className="flex-1 text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                         >
                           <option value="">افزودن تکنسین از پرسنل آزاد...</option>
                           {availableUsers.map((u) => (
@@ -647,7 +647,7 @@ export const TechniciansManager: React.FC<Props> = ({
                   </div>
 
                   {/* 3. Daily Capacity Configuration for this Team */}
-                  <div className="pt-3 border-t border-[#E2DDD4] dark:border-[#2C2C2C] flex items-center justify-between gap-2">
+                  <div className="pt-3 border-t border-[#212835] flex items-center justify-between gap-2">
                     <div className="text-xs">
                       <span className="font-bold text-slate-700 dark:text-zinc-300 block">
                         ظرفیت روزانه اکیپ:
@@ -668,7 +668,7 @@ export const TechniciansManager: React.FC<Props> = ({
                         placeholder="ساعت"
                         defaultValue={team.dailyCapacityHours ?? ''}
                         id={`capacity-input-${team.id}`}
-                        className="w-16 text-center text-xs p-1.5 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                        className="w-16 text-center text-xs p-1.5 rounded-lg border border-[#212835] bg-[#0D1117] dark:text-white"
                       />
                       <Button
                         variant="secondary"
@@ -724,7 +724,7 @@ export const TechniciansManager: React.FC<Props> = ({
                 placeholder="جستجوی نام یا تلفن..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full text-xs pr-9 pl-3 py-2 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#1A1A1A] text-[#181818] dark:text-white"
+                className="w-full text-xs pr-9 pl-3 py-2 rounded-md border border-[#212835] bg-[#151B23] text-[#F0F4F8]"
               />
             </div>
           </div>
@@ -737,13 +737,13 @@ export const TechniciansManager: React.FC<Props> = ({
               return (
                 <div
                   key={u.id}
-                  className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs hover:border-[#C1A056]/60 transition space-y-3 relative"
+                  className="bg-[#151B23] rounded-lg p-4 border border-[#212835]  hover:border-[#C5A059]/60 transition space-y-3 relative"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3 min-w-0">
                       <Avatar name={getDisplayName(u.name)} id={u.id} size="lg" />
                       <div className="min-w-0">
-                        <h4 className="font-bold text-sm text-[#181818] dark:text-white truncate">
+                        <h4 className="font-bold text-sm text-[#F0F4F8] truncate">
                           {getDisplayName(u.name)}
                         </h4>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -767,7 +767,7 @@ export const TechniciansManager: React.FC<Props> = ({
                       <button
                         type="button"
                         onClick={() => handleOpenEdit(u)}
-                        className="w-8 h-8 flex items-center justify-center text-[#69655F] dark:text-[#9E988D] hover:text-[#8E6F27] dark:hover:text-[#E5CA8F] hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition cursor-pointer"
+                        className="w-8 h-8 flex items-center justify-center text-[#637184] hover:text-[#8E6F27] dark:hover:text-[#E5CA8F] hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition cursor-pointer"
                         title="ویرایش حساب"
                         aria-label={`ویرایش حساب ${getDisplayName(u.name)}`}
                       >
@@ -776,7 +776,7 @@ export const TechniciansManager: React.FC<Props> = ({
                       <button
                         type="button"
                         onClick={() => handleOpenResetPassword(u)}
-                        className="w-8 h-8 flex items-center justify-center text-[#69655F] dark:text-[#9E988D] hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition cursor-pointer"
+                        className="w-8 h-8 flex items-center justify-center text-[#637184] hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition cursor-pointer"
                         title="تغییر رمز عبور"
                         aria-label={`تغییر رمز عبور ${getDisplayName(u.name)}`}
                       >
@@ -786,7 +786,7 @@ export const TechniciansManager: React.FC<Props> = ({
                         type="button"
                         disabled={Boolean(deleteLoadingId) || isSubmitting}
                         onClick={() => handleDelete(u)}
-                        className="w-8 h-8 flex items-center justify-center text-[#69655F] dark:text-[#9E988D] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer disabled:opacity-50"
+                        className="w-8 h-8 flex items-center justify-center text-[#637184] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer disabled:opacity-50"
                         title="حذف حساب"
                         aria-label={`حذف حساب ${getDisplayName(u.name)}`}
                       >
@@ -799,13 +799,13 @@ export const TechniciansManager: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  <div className="bg-[#FAF7F2] dark:bg-[#141414] rounded-xl p-2.5 border border-[#E2DDD4] dark:border-[#282828] text-xs">
-                    <div className="flex items-center justify-between text-[#69655F] dark:text-[#9E988D]">
+                  <div className="bg-[#111620] rounded-md p-2.5 border border-[#E2DDD4] dark:border-[#282828] text-xs">
+                    <div className="flex items-center justify-between text-[#637184]">
                       <span className="flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-[#8E6F27] dark:text-[#E5CA8F]" />
+                        <Phone className="w-3.5 h-3.5 text-[#C5A059]" />
                         <span>موبایل سازمانی:</span>
                       </span>
-                      <span className="font-mono font-bold text-[#181818] dark:text-white" dir="ltr">
+                      <span className="font-mono font-bold text-[#F0F4F8]" dir="ltr">
                         {u.phone}
                       </span>
                     </div>
@@ -825,14 +825,14 @@ export const TechniciansManager: React.FC<Props> = ({
       >
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {modalError && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
               <span>{modalError}</span>
             </div>
           )}
 
           <div>
-            <label htmlFor="tech-name" className="block text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+            <label htmlFor="tech-name" className="block text-xs font-bold text-[#9BA7B6] mb-1">
               نام و نام‌خانوادگی:
             </label>
             <input
@@ -842,12 +842,12 @@ export const TechniciansManager: React.FC<Props> = ({
               placeholder="مثال: فرخ نقدعلیان"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+              className="w-full text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
             />
           </div>
 
           <div>
-            <label htmlFor="tech-phone" className="block text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+            <label htmlFor="tech-phone" className="block text-xs font-bold text-[#9BA7B6] mb-1">
               شماره موبایل:
             </label>
             <input
@@ -858,14 +858,14 @@ export const TechniciansManager: React.FC<Props> = ({
               autoComplete="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] font-mono text-left bg-white dark:bg-[#141414] dark:text-white"
+              className="w-full text-sm p-2.5 rounded-md border border-[#212835] font-mono text-left bg-[#0D1117] dark:text-white"
               dir="ltr"
             />
           </div>
 
           {!editingUser && (
             <div>
-              <label htmlFor="tech-password" className="block text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+              <label htmlFor="tech-password" className="block text-xs font-bold text-[#9BA7B6] mb-1">
                 رمز عبور اولیه:
               </label>
               <input
@@ -876,24 +876,24 @@ export const TechniciansManager: React.FC<Props> = ({
                 placeholder="حداقل ۸ کاراکتر"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] font-mono text-left bg-white dark:bg-[#141414] dark:text-white"
+                className="w-full text-sm p-2.5 rounded-md border border-[#212835] font-mono text-left bg-[#0D1117] dark:text-white"
                 dir="ltr"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF] mb-1.5">
+            <label className="block text-xs font-bold text-[#9BA7B6] mb-1.5">
               نقش سازمانی:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={() => setRole('QC_MANAGER')}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                className={`p-2.5 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'QC_MANAGER'
-                    ? 'border-[#C1A056] bg-[#212121] text-[#E5CA8F]'
-                    : 'border-[#E2DDD4] dark:border-[#2C2C2C] text-[#69655F] dark:text-[#9E988D]'
+                    ? 'border-[#C5A059] bg-[#212121] text-[#E5CA8F]'
+                    : 'border-[#212835] text-[#637184]'
                 }`}
               >
                 مدیر QC
@@ -901,10 +901,10 @@ export const TechniciansManager: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setRole('SCHEDULING_COORDINATOR')}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                className={`p-2.5 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'SCHEDULING_COORDINATOR'
                     ? 'border-blue-500 bg-blue-500/20 text-blue-800 dark:text-blue-300'
-                    : 'border-[#E2DDD4] dark:border-[#2C2C2C] text-[#69655F] dark:text-[#9E988D]'
+                    : 'border-[#212835] text-[#637184]'
                 }`}
               >
                 مسئول هماهنگی
@@ -912,10 +912,10 @@ export const TechniciansManager: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setRole('LEAD_TECHNICIAN')}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                className={`p-2.5 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'LEAD_TECHNICIAN'
-                    ? 'border-[#C1A056] bg-[#FAF7F2] dark:bg-[#202020] text-[#8E6F27] dark:text-[#E5CA8F]'
-                    : 'border-[#E2DDD4] dark:border-[#2C2C2C] text-[#69655F] dark:text-[#9E988D]'
+                    ? 'border-[#C5A059] bg-[#1C232D] text-[#C5A059]'
+                    : 'border-[#212835] text-[#637184]'
                 }`}
               >
                 سرپرست اکیپ
@@ -923,10 +923,10 @@ export const TechniciansManager: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setRole('TECHNICIAN')}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                className={`p-2.5 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'TECHNICIAN'
-                    ? 'border-[#212121] dark:border-[#C1A056] bg-[#212121] dark:bg-[#202020] text-[#E5CA8F]'
-                    : 'border-[#E2DDD4] dark:border-[#2C2C2C] text-[#69655F] dark:text-[#9E988D]'
+                    ? 'border-[#212121] dark:border-[#C5A059] bg-[#212121] dark:bg-[#202020] text-[#E5CA8F]'
+                    : 'border-[#212835] text-[#637184]'
                 }`}
               >
                 تکنسین نصب
@@ -935,9 +935,9 @@ export const TechniciansManager: React.FC<Props> = ({
           </div>
 
           {editingUser && (
-            <div className="pt-2 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
+            <div className="pt-2 border-t border-[#212835]">
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF]">
+                <span className="text-xs font-bold text-[#9BA7B6]">
                   وضعیت فعالیت حساب:
                 </span>
                 <input
@@ -950,7 +950,7 @@ export const TechniciansManager: React.FC<Props> = ({
             </div>
           )}
 
-          <div className="flex items-center gap-3 pt-3 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
+          <div className="flex items-center gap-3 pt-3 border-t border-[#212835]">
             <Button
               type="button"
               variant="ghost"
@@ -985,14 +985,14 @@ export const TechniciansManager: React.FC<Props> = ({
         {selectedUserForReset && (
           <form onSubmit={handleConfirmResetPassword} className="p-4 space-y-4">
             {resetError && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
                 <span>{resetError}</span>
               </div>
             )}
-            <div className="text-xs text-[#69655F] dark:text-[#9E988D]">
+            <div className="text-xs text-[#637184]">
               تنظیم رمز عبور جدید برای:
-              <div className="font-bold text-sm text-[#181818] dark:text-white mt-1">
+              <div className="font-bold text-sm text-[#F0F4F8] mt-1">
                 {getDisplayName(selectedUserForReset.name)}
               </div>
               <div className="text-xs font-mono mt-0.5" dir="ltr">
@@ -1001,7 +1001,7 @@ export const TechniciansManager: React.FC<Props> = ({
             </div>
 
             <div>
-              <label htmlFor="new-password" className="block text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+              <label htmlFor="new-password" className="block text-xs font-bold text-[#9BA7B6] mb-1">
                 رمز عبور جدید:
               </label>
               <input
@@ -1012,12 +1012,12 @@ export const TechniciansManager: React.FC<Props> = ({
                 placeholder="حداقل ۸ کاراکتر"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] font-mono text-left bg-white dark:bg-[#141414] dark:text-white"
+                className="w-full text-sm p-2.5 rounded-md border border-[#212835] font-mono text-left bg-[#0D1117] dark:text-white"
                 dir="ltr"
               />
             </div>
 
-            <div className="flex items-center gap-3 pt-3 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
+            <div className="flex items-center gap-3 pt-3 border-t border-[#212835]">
               <Button
                 type="button"
                 variant="ghost"

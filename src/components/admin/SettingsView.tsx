@@ -177,10 +177,10 @@ export const SettingsView: React.FC<Props> = ({
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
       {/* Banner */}
-      <div className="bg-[#212121] rounded-3xl p-6 text-white shadow-xl flex items-center justify-between border border-[#C1A056]/30">
+      <div className="bg-[#212121] rounded-3xl p-6 text-white shadow-xl flex items-center justify-between border border-[#C5A059]/30">
         <div>
           <div className="flex items-center gap-2">
-            <Layers className="w-6 h-6 text-[#C1A056]" aria-hidden="true" />
+            <Layers className="w-6 h-6 text-[#C5A059]" aria-hidden="true" />
             <h2 className="text-xl font-black text-white">تنظیمات و همگام‌سازی گالری طلایی</h2>
           </div>
           <p className="text-xs text-[#E8E4DC] mt-1">
@@ -190,13 +190,13 @@ export const SettingsView: React.FC<Props> = ({
       </div>
 
       {/* Theme Switcher Card */}
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
+      <div className="bg-[#151B23] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D]  space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-sm text-[#212121] dark:text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
+            <Sparkles className="w-4 h-4 text-[#C5A059]" aria-hidden="true" />
             حالت نمایشی سامانه (Theme Mode)
           </h3>
-          <span className="text-xs text-[#C1A056] font-bold">
+          <span className="text-xs text-[#C5A059] font-bold">
             {isDarkMode ? 'حالت شب فعال است' : 'حالت روز فعال است'}
           </span>
         </div>
@@ -207,13 +207,13 @@ export const SettingsView: React.FC<Props> = ({
             onClick={() => {
               if (isDarkMode && onToggleDarkMode) onToggleDarkMode();
             }}
-            className={`flex items-center justify-center gap-2 p-4 rounded-2xl border transition min-h-[52px] active:scale-95 cursor-pointer ${
+            className={`flex items-center justify-center gap-2 p-4 rounded-lg border transition min-h-[52px] active:scale-95 cursor-pointer ${
               !isDarkMode
-                ? 'border-[#C1A056] bg-[#FAF7F2] text-[#212121] ring-2 ring-[#C1A056]/30 font-bold shadow-xs'
+                ? 'border-[#C5A059] bg-[#FAF7F2] text-[#212121] ring-2 ring-[#C1A056]/30 font-bold '
                 : 'border-[#E8E4DC] dark:border-[#333333] text-slate-500 dark:text-zinc-400 hover:bg-[#FAF7F2] dark:hover:bg-[#222222]'
             }`}
           >
-            <Sun className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
+            <Sun className="w-5 h-5 text-[#C5A059]" aria-hidden="true" />
             <span>حالت روز (روشن)</span>
           </button>
 
@@ -222,13 +222,13 @@ export const SettingsView: React.FC<Props> = ({
             onClick={() => {
               if (!isDarkMode && onToggleDarkMode) onToggleDarkMode();
             }}
-            className={`flex items-center justify-center gap-2 p-4 rounded-2xl border transition min-h-[52px] active:scale-95 cursor-pointer ${
+            className={`flex items-center justify-center gap-2 p-4 rounded-lg border transition min-h-[52px] active:scale-95 cursor-pointer ${
               isDarkMode
-                ? 'border-[#C1A056] bg-[#222222] text-[#C1A056] ring-2 ring-[#C1A056]/30 font-bold shadow-xs'
+                ? 'border-[#C5A059] bg-[#222222] text-[#C5A059] ring-2 ring-[#C1A056]/30 font-bold '
                 : 'border-[#E8E4DC] text-slate-500 hover:bg-[#FAF7F2]'
             }`}
           >
-            <Moon className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
+            <Moon className="w-5 h-5 text-[#C5A059]" aria-hidden="true" />
             <span>حالت شب (دارک لوکس)</span>
           </button>
         </div>
@@ -236,9 +236,9 @@ export const SettingsView: React.FC<Props> = ({
 
       <form onSubmit={handleSaveGeneral} className="space-y-6">
         {/* Section 1: General & Visibility */}
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
+        <div className="bg-[#151B23] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D]  space-y-4">
           <h3 className="font-bold text-sm text-[#212121] dark:text-white flex items-center gap-2">
-            <Eye className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
+            <Eye className="w-4 h-4 text-[#C5A059]" aria-hidden="true" />
             پنجره دید تکنسین‌ها و نام مجموعه
           </h3>
 
@@ -252,14 +252,14 @@ export const SettingsView: React.FC<Props> = ({
                 type="text"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
+                className="w-full text-sm p-2.5 rounded-md border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-[#111620] dark:text-white"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                 <label htmlFor="settings-visibility-slider">پنجره دید تکنسین‌ها:</label>
-                <span className="font-bold text-[#A88738] dark:text-[#C1A056]">
+                <span className="font-bold text-[#A88738] dark:text-[#C5A059]">
                   {toPersianDigits(visibilityDays)} روز آینده
                 </span>
               </div>
@@ -291,7 +291,7 @@ export const SettingsView: React.FC<Props> = ({
                   placeholder="مثلاً ۸ (یا خالی برای حالت نامشخص)"
                   value={defaultCapacityHours}
                   onChange={(e) => setDefaultCapacityHours(e.target.value)}
-                  className="w-48 text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
+                  className="w-48 text-sm p-2.5 rounded-md border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-[#111620] dark:text-white"
                 />
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
                   {defaultCapacityHours ? `${toPersianDigits(defaultCapacityHours)} ساعت در روز` : 'تعیین‌نشده (هشدار عدم تنظیم ظرفیت)'}
@@ -305,13 +305,13 @@ export const SettingsView: React.FC<Props> = ({
         </div>
 
         {/* Section 2: Master Tools Bank */}
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
+        <div className="bg-[#151B23] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D]  space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-[#212121] dark:text-white flex items-center gap-2">
-              <Wrench className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
+              <Wrench className="w-4 h-4 text-[#C5A059]" aria-hidden="true" />
               بانک پیش‌فرض ابزارها (تجهیزات دکمه «فول ابزار»)
             </h3>
-            <span className="text-xs text-[#A88738] dark:text-[#C1A056] font-bold">
+            <span className="text-xs text-[#A88738] dark:text-[#C5A059] font-bold">
               {toPersianDigits(tools.length)} قلم ابزار
             </span>
           </div>
@@ -327,12 +327,12 @@ export const SettingsView: React.FC<Props> = ({
               placeholder="نام ابزار جدید (مثلاً: دریل مگنتی، ریل‌بر برقی)..."
               value={newTool}
               onChange={(e) => setNewTool(e.target.value)}
-              className="flex-1 text-xs p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-[#FAF7F2] dark:bg-[#141414] dark:text-white dark:placeholder-zinc-500"
+              className="flex-1 text-xs p-2.5 rounded-md border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-[#111620] dark:text-white dark:placeholder-zinc-500"
             />
             <button
               type="button"
               onClick={handleAddTool}
-              className="px-5 py-2.5 bg-[#212121] dark:bg-[#C1A056] text-[#C1A056] dark:text-[#121212] rounded-xl text-xs font-bold hover:bg-[#333333] transition flex items-center gap-1 border border-[#C1A056]/30 active:scale-95 min-h-[44px] cursor-pointer"
+              className="px-5 py-2.5 bg-[#212121] dark:bg-[#C1A056] text-[#C5A059] dark:text-[#121212] rounded-md text-xs font-bold hover:bg-[#333333] transition flex items-center gap-1 border border-[#C5A059]/30 active:scale-95 min-h-[44px] cursor-pointer"
             >
               <Plus className="w-4 h-4" aria-hidden="true" />
               افزودن به بانک
@@ -344,7 +344,7 @@ export const SettingsView: React.FC<Props> = ({
             {tools.map((t) => (
               <div
                 key={t}
-                className="flex items-center justify-between p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] bg-[#FAF7F2] dark:bg-[#202020] text-xs text-[#212121] dark:text-zinc-200"
+                className="flex items-center justify-between p-2.5 rounded-md border border-[#E8E4DC] dark:border-[#333333] bg-[#1C232D] text-xs text-[#212121] dark:text-zinc-200"
               >
                 <span className="truncate">{t}</span>
                 <button
@@ -362,10 +362,10 @@ export const SettingsView: React.FC<Props> = ({
         </div>
 
         {/* Section 3: Supabase Cloud Realtime Status & Photo Migration */}
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
+        <div className="bg-[#151B23] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D]  space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <Cloud className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
+              <Cloud className="w-5 h-5 text-[#C5A059]" aria-hidden="true" />
               <h3 className="font-bold text-sm text-[#212121] dark:text-white">
                 وضعیت شبکه ابری و همگام‌سازی زنده (Supabase Realtime)
               </h3>
@@ -388,8 +388,8 @@ export const SettingsView: React.FC<Props> = ({
             )}
           </div>
 
-          <div className="bg-[#FAF7F2] dark:bg-[#202020] border border-[#C1A056]/30 rounded-2xl p-4 text-xs text-slate-800 dark:text-zinc-200 leading-relaxed space-y-2">
-            <p className="font-bold text-[#212121] dark:text-[#C1A056]">
+          <div className="bg-[#1C232D] border border-[#C5A059]/30 rounded-lg p-4 text-xs text-slate-800 dark:text-zinc-200 leading-relaxed space-y-2">
+            <p className="font-bold text-[#212121] dark:text-[#C5A059]">
               ارتباط سطر‌به‌سطر امن و بدون تداخل (Row-by-Row Synchronization):
             </p>
             <p>
@@ -399,7 +399,7 @@ export const SettingsView: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={handleCopySql}
-                className="px-3.5 py-2 min-h-[44px] bg-[#212121] hover:bg-[#333333] dark:bg-[#C1A056] dark:hover:bg-[#a88738] text-[#C1A056] dark:text-[#212121] rounded-xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
+                className="px-3.5 py-2 min-h-[44px] bg-[#212121] hover:bg-[#333333] dark:bg-[#C1A056] dark:hover:bg-[#a88738] text-[#C5A059] dark:text-[#212121] rounded-md text-xs font-bold transition flex items-center gap-1.5 active:scale-95  cursor-pointer"
               >
                 {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copiedSql ? 'دستورات SQL کپی شد!' : 'کپی دستورات SQL ساخت جدول‌ها'}</span>
@@ -408,7 +408,7 @@ export const SettingsView: React.FC<Props> = ({
                 href="https://supabase.com/dashboard"
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs text-[#A88738] dark:text-[#C1A056] font-bold underline hover:opacity-80 min-h-[44px] flex items-center"
+                className="text-xs text-[#A88738] dark:text-[#C5A059] font-bold underline hover:opacity-80 min-h-[44px] flex items-center"
               >
                 ورود به پنل Supabase ↗
               </a>
@@ -416,10 +416,10 @@ export const SettingsView: React.FC<Props> = ({
           </div>
 
           {/* Photo Cloud Migration Tool for QC Manager */}
-          <div className="p-4 rounded-2xl border border-[#E8E4DC] dark:border-[#333333] bg-white dark:bg-[#181818] space-y-3">
+          <div className="p-4 rounded-lg border border-[#E8E4DC] dark:border-[#333333] bg-white dark:bg-[#181818] space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-[#C1A056]" />
+                <ImageIcon className="w-4 h-4 text-[#C5A059]" />
                 <span className="text-xs font-bold text-[#212121] dark:text-white">
                   انتقال عکس‌های قدیمی به فضای باکت ابری (talaie-photos)
                 </span>
@@ -431,7 +431,7 @@ export const SettingsView: React.FC<Props> = ({
 
             {migrationProgress && (
               <div className="space-y-1">
-                <div className="flex justify-between text-xs text-[#C1A056]">
+                <div className="flex justify-between text-xs text-[#C5A059]">
                   <span>در حال انتقال تصویر {toPersianDigits(migrationProgress.current)} از {toPersianDigits(migrationProgress.total)}...</span>
                   <span>{Math.round((migrationProgress.current / migrationProgress.total) * 100)}%</span>
                 </div>
@@ -445,7 +445,7 @@ export const SettingsView: React.FC<Props> = ({
             )}
 
             {migrationResult && (
-              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
+              <div className="p-2.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
                 {migrationResult}
               </div>
             )}
@@ -454,7 +454,7 @@ export const SettingsView: React.FC<Props> = ({
               type="button"
               disabled={isMigrating}
               onClick={handleMigratePhotos}
-              className="px-4 py-2 bg-[#212121] dark:bg-[#C1A056] text-[#C1A056] dark:text-[#121212] rounded-xl text-xs font-bold hover:bg-[#333333] transition flex items-center gap-2 border border-[#C1A056]/30 active:scale-95 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 bg-[#212121] dark:bg-[#C1A056] text-[#C5A059] dark:text-[#121212] rounded-md text-xs font-bold hover:bg-[#333333] transition flex items-center gap-2 border border-[#C5A059]/30 active:scale-95 cursor-pointer disabled:opacity-50"
             >
               {isMigrating ? (
                 <>
@@ -473,17 +473,17 @@ export const SettingsView: React.FC<Props> = ({
 
         <button
           type="submit"
-          className="w-full py-3.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] font-bold rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm border border-[#C1A056]/30 active:scale-[0.99] min-h-[48px] cursor-pointer"
+          className="w-full py-3.5 bg-[#212121] hover:bg-[#333333] text-[#C5A059] font-bold rounded-lg shadow-lg transition flex items-center justify-center gap-2 text-sm border border-[#C5A059]/30 active:scale-[0.99] min-h-[48px] cursor-pointer"
         >
-          <CheckCircle2 className="w-5 h-5 text-[#C1A056]" aria-hidden="true" />
+          <CheckCircle2 className="w-5 h-5 text-[#C5A059]" aria-hidden="true" />
           ذخیره تمام تنظیمات
         </button>
       </form>
 
       {/* Section 4: Backup & Restore */}
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D] shadow-xs space-y-4">
+      <div className="bg-[#151B23] rounded-3xl p-6 border border-[#E8E4DC] dark:border-[#2D2D2D]  space-y-4">
         <h3 className="font-bold text-sm text-[#212121] dark:text-white flex items-center gap-2">
-          <Download className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
+          <Download className="w-4 h-4 text-[#C5A059]" aria-hidden="true" />
           پشتیبان‌گیری (Backup) و بازیابی اطلاعات
         </h3>
 
@@ -495,14 +495,14 @@ export const SettingsView: React.FC<Props> = ({
           <button
             type="button"
             onClick={handleExportBackup}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#212121] hover:bg-[#333333] text-[#C1A056] rounded-full text-xs font-bold transition shadow-xs border border-[#C1A056]/30 active:scale-95 min-h-[44px] cursor-pointer"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#212121] hover:bg-[#333333] text-[#C5A059] rounded-full text-xs font-bold transition  border border-[#C5A059]/30 active:scale-95 min-h-[44px] cursor-pointer"
           >
             <Download className="w-4 h-4" aria-hidden="true" />
             دانلود فایل پشتیبان کامل (JSON Backup)
           </button>
 
           <label className="flex items-center gap-2 px-5 py-2.5 border border-[#E8E4DC] dark:border-[#333333] hover:bg-[#FAF7F2] dark:hover:bg-[#242424] text-slate-700 dark:text-zinc-300 rounded-full text-xs font-bold transition cursor-pointer active:scale-95 min-h-[44px]">
-            <Upload className="w-4 h-4 text-[#C1A056]" aria-hidden="true" />
+            <Upload className="w-4 h-4 text-[#C5A059]" aria-hidden="true" />
             <span>بازیابی از فایل پشتیبان</span>
             <input
               type="file"

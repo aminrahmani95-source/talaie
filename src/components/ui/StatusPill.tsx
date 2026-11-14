@@ -30,7 +30,7 @@ export const StatusPill: React.FC<StatusPillProps> = ({
   size = 'sm',
   className = '',
 }) => {
-  const sizeClasses = size === 'sm' ? 'text-xs px-2.5 py-1 gap-1.5' : 'text-sm px-3 py-1.5 gap-2';
+  const sizeClasses = size === 'sm' ? 'text-[11px] px-2 py-0.5 gap-1.5' : 'text-xs px-2.5 py-1 gap-1.5';
 
   // Handle QC Status if provided explicitly or alone
   if (qcStatus && qcStatus !== 'NOT_STARTED') {
@@ -38,34 +38,34 @@ export const StatusPill: React.FC<StatusPillProps> = ({
       case 'APPROVED':
         return (
           <span
-            className={`inline-flex items-center font-bold rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 ${sizeClasses} ${className}`}
+            className={`inline-flex items-center font-bold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 ${sizeClasses} ${className}`}
           >
-            <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
             <span>{customLabel || (isExceptionalCompletion ? 'تایید QC (کسری اقلام)' : 'تایید QC')}</span>
           </span>
         );
       case 'REJECTED':
         return (
           <span
-            className={`inline-flex items-center font-bold rounded-full bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-900/60 animate-pulse ${sizeClasses} ${className}`}
+            className={`inline-flex items-center font-bold rounded bg-rose-500/15 text-rose-300 border border-rose-500/40 ${sizeClasses} ${className}`}
           >
-            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-400" />
             <span>{customLabel || (isExceptionalCompletion ? 'رد استثنا — نیازمند تکمیل' : 'نیاز به اصلاح')}</span>
           </span>
         );
       case 'PENDING':
         return (
           <span
-            className={`inline-flex items-center font-bold rounded-full ${
+            className={`inline-flex items-center font-bold rounded ${
               isExceptionalCompletion
-                ? 'bg-rose-50 text-rose-900 dark:bg-rose-950/50 dark:text-rose-200 border-rose-300 dark:border-rose-800/60'
-                : 'bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200 border-amber-300 dark:border-amber-800/60'
+                ? 'bg-rose-500/15 text-rose-300 border border-rose-500/40'
+                : 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
             } ${sizeClasses} ${className}`}
           >
             {isExceptionalCompletion ? (
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-400" />
             ) : (
-              <Clock className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <Clock className="w-3.5 h-3.5 shrink-0 text-amber-400" />
             )}
             <span>{customLabel || (isExceptionalCompletion ? 'اتمام استثنایی (در انتظار QC)' : 'در انتظار QC')}</span>
           </span>
@@ -80,9 +80,9 @@ export const StatusPill: React.FC<StatusPillProps> = ({
     case 'SCHEDULED':
       return (
         <span
-          className={`inline-flex items-center font-medium rounded-full bg-slate-100 text-slate-700 dark:bg-zinc-800/80 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 ${sizeClasses} ${className}`}
+          className={`inline-flex items-center font-medium rounded bg-[#1C232D] text-[#9BA7B6] border border-[#2D3748] ${sizeClasses} ${className}`}
         >
-          <Calendar className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-zinc-400" />
+          <Calendar className="w-3.5 h-3.5 shrink-0 text-[#637184]" />
           <span>{customLabel || 'برنامه‌ریزی‌شده'}</span>
         </span>
       );
@@ -90,9 +90,9 @@ export const StatusPill: React.FC<StatusPillProps> = ({
     case 'EN_ROUTE':
       return (
         <span
-          className={`inline-flex items-center font-bold rounded-full bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 ${sizeClasses} ${className}`}
+          className={`inline-flex items-center font-bold rounded bg-sky-500/10 text-sky-400 border border-sky-500/30 ${sizeClasses} ${className}`}
         >
-          <Truck className="w-3.5 h-3.5 shrink-0 text-sky-600 dark:text-sky-400" />
+          <Truck className="w-3.5 h-3.5 shrink-0 text-sky-400" />
           <span>{customLabel || 'در مسیر'}</span>
         </span>
       );
@@ -100,9 +100,9 @@ export const StatusPill: React.FC<StatusPillProps> = ({
     case 'IN_PROGRESS':
       return (
         <span
-          className={`inline-flex items-center font-bold rounded-full bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300 dark:border-amber-800/60 ${sizeClasses} ${className}`}
+          className={`inline-flex items-center font-bold rounded bg-amber-500/15 text-amber-300 border border-amber-500/40 ${sizeClasses} ${className}`}
         >
-          <Wrench className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <Wrench className="w-3.5 h-3.5 shrink-0 text-amber-400" />
           <span>{customLabel || 'در حال نصب'}</span>
         </span>
       );
@@ -110,9 +110,9 @@ export const StatusPill: React.FC<StatusPillProps> = ({
     case 'PAUSED':
       return (
         <span
-          className={`inline-flex items-center font-bold rounded-full bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 ${sizeClasses} ${className}`}
+          className={`inline-flex items-center font-bold rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 ${sizeClasses} ${className}`}
         >
-          <PauseCircle className="w-3.5 h-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+          <PauseCircle className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
           <span>{customLabel || 'نیمه‌کاره — ادامه روز بعد'}</span>
         </span>
       );
@@ -120,9 +120,9 @@ export const StatusPill: React.FC<StatusPillProps> = ({
     case 'STUCK':
       return (
         <span
-          className={`inline-flex items-center font-bold rounded-full bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-900/60 ${sizeClasses} ${className}`}
+          className={`inline-flex items-center font-bold rounded bg-rose-500/15 text-rose-300 border border-rose-500/40 ${sizeClasses} ${className}`}
         >
-          <AlertOctagon className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+          <AlertOctagon className="w-3.5 h-3.5 shrink-0 text-rose-400" />
           <span>{customLabel || 'متوقف'}</span>
         </span>
       );
@@ -130,9 +130,9 @@ export const StatusPill: React.FC<StatusPillProps> = ({
     case 'COMPLETED':
       return (
         <span
-          className={`inline-flex items-center font-bold rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 ${sizeClasses} ${className}`}
+          className={`inline-flex items-center font-bold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 ${sizeClasses} ${className}`}
         >
-          <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
           <span>{customLabel || 'اتمام نصب'}</span>
         </span>
       );
@@ -141,16 +141,16 @@ export const StatusPill: React.FC<StatusPillProps> = ({
       if (qcStatus === 'NOT_STARTED') {
         return (
           <span
-            className={`inline-flex items-center font-medium rounded-full bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 ${sizeClasses} ${className}`}
+            className={`inline-flex items-center font-medium rounded bg-[#151B23] text-[#637184] border border-[#212835] ${sizeClasses} ${className}`}
           >
-            <MinusCircle className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+            <MinusCircle className="w-3.5 h-3.5 shrink-0 text-[#637184]" />
             <span>{customLabel || 'شروع‌نشده'}</span>
           </span>
         );
       }
       return customLabel ? (
         <span
-          className={`inline-flex items-center font-medium rounded-full bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 ${sizeClasses} ${className}`}
+          className={`inline-flex items-center font-medium rounded bg-[#151B23] text-[#9BA7B6] border border-[#212835] ${sizeClasses} ${className}`}
         >
           <span>{customLabel}</span>
         </span>
