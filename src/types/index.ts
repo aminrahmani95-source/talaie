@@ -746,6 +746,7 @@ export interface MaterialDispatchRecord {
 export interface MaterialActionLog {
   id: string;
   timestamp: string;
+  serverRecordedAt?: string;
   action: string;
   byUserId: string;
   byUserName: string;

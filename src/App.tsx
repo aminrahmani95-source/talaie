@@ -185,6 +185,7 @@ export const App: React.FC = () => {
 
   // Request sequence tracker to drop stale server responses
   const fetchSeqRef = useRef<number>(0);
+  const sessionEpochRef = useRef<number>(1);
   const isSyncedWithServerRef = useRef<boolean>(false);
   useEffect(() => {
     isSyncedWithServerRef.current = isSyncedWithServer;
@@ -224,7 +225,12 @@ export const App: React.FC = () => {
       });
 
     const unsubscribeAuth = SupabaseSyncService.onAuthStateChange((user) => {
-      setCurrentUser(user);
+      setCurrentUser((prevUser) => {
+        if (prevUser?.id !== user?.id) {
+          sessionEpochRef.current++;
+        }
+        return user;
+      });
     });
 
     return () => {
@@ -245,6 +251,9 @@ export const App: React.FC = () => {
       return;
     }
 
+    const capturedEpoch = sessionEpochRef.current;
+    const capturedUserId = currentUser.id;
+
     setIsSyncedWithServer(false);
 
     // 1. Fetch initial server data after login
@@ -262,7 +271,7 @@ export const App: React.FC = () => {
           SupabaseSyncService.fetchMaterialRequests().catch(() => []),
         ]);
 
-        if (currentSeq !== fetchSeqRef.current) return;
+        if (currentSeq !== fetchSeqRef.current || sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
 
         // Base material requests: prefer cloud materials if available, merged with local cache
         const localMaterials = StorageService.getMaterialRequests(currentUser.id);
@@ -285,7 +294,7 @@ export const App: React.FC = () => {
           ? await Outbox.applyPendingToSettings(cloudSettings)
           : undefined;
 
-        if (currentSeq !== fetchSeqRef.current) return;
+        if (currentSeq !== fetchSeqRef.current || sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
 
         setProjects(mergedProjects);
         projectsRef.current = mergedProjects;
@@ -310,9 +319,9 @@ export const App: React.FC = () => {
         setIsOfflineMode(false);
 
         // Attempt processing any pending offline operations
-        SupabaseSyncService.processOfflineQueue(currentUser.id);
+        SupabaseSyncService.processOfflineQueue(currentUser.id, () => sessionEpochRef.current);
       } catch (err) {
-        if (currentSeq !== fetchSeqRef.current) return;
+        if (currentSeq !== fetchSeqRef.current || sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
         console.warn('Initial cloud fetch error (running in offline mode with cached data):', err);
         // Retain existing cached projects & tickets in state
         setIsSyncedWithServer(false);
@@ -324,15 +333,23 @@ export const App: React.FC = () => {
 
     // Re-try fetching cloud data on online event and trigger offline sync
     const handleOnline = () => {
+      if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
       loadCloudData();
-      SupabaseSyncService.processOfflineQueue(currentUser?.id);
+      SupabaseSyncService.processOfflineQueue(currentUser?.id, () => sessionEpochRef.current);
     };
     window.addEventListener('online', handleOnline);
 
     const handleSyncTrigger = () => {
-      SupabaseSyncService.processOfflineQueue(currentUser?.id);
+      if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
+      SupabaseSyncService.processOfflineQueue(currentUser?.id, () => sessionEpochRef.current);
     };
     window.addEventListener('talaie-trigger-offline-sync', handleSyncTrigger);
+
+    const handleLeaseReleased = () => {
+      if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
+      SupabaseSyncService.processOfflineQueue(currentUser?.id, () => sessionEpochRef.current);
+    };
+    window.addEventListener('talaie-queue-lease-released', handleLeaseReleased);
 
     // Polling every 30s ONLY when desynced or offline
     const intervalId = setInterval(() => {
@@ -346,6 +363,7 @@ export const App: React.FC = () => {
     // 2. Realtime row-by-row subscriptions
     const unsubProjects = SupabaseSyncService.subscribeProjects({
       onInsert: (newProject) => {
+        if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
         setProjects((prev) => {
           if (prev.some((p) => p.id === newProject.id)) return prev;
           const next = [newProject, ...prev];
@@ -354,6 +372,7 @@ export const App: React.FC = () => {
         });
       },
       onUpdate: (updatedProject) => {
+        if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
         setProjects((prev) => {
           const existing = prev.find((p) => p.id === updatedProject.id);
           if (!existing) {
@@ -373,6 +392,7 @@ export const App: React.FC = () => {
         });
       },
       onDelete: (deletedId) => {
+        if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
         setProjects((prev) => {
           const next = prev.filter((p) => p.id !== deletedId);
           projectsRef.current = next;
@@ -383,24 +403,29 @@ export const App: React.FC = () => {
 
     const unsubTickets = SupabaseSyncService.subscribeTickets({
       onInsert: (newTicket) => {
+        if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
         setTickets((prev) => {
           if (prev.some((t) => t.id === newTicket.id)) return prev;
           return [newTicket, ...prev];
         });
       },
       onUpdate: (updatedTicket) => {
+        if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
         setTickets((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
       },
       onDelete: (deletedId) => {
+        if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
         setTickets((prev) => prev.filter((t) => t.id !== deletedId));
       },
     });
 
     const unsubSettings = SupabaseSyncService.subscribeSettings((cloudSettings) => {
+      if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
       setSettings((prev) => ({ ...prev, ...cloudSettings }));
     });
 
     const unsubProfiles = SupabaseSyncService.subscribeProfiles((updatedProfiles) => {
+      if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
       if (updatedProfiles.length > 0) {
         setUsers(updatedProfiles);
         setCurrentUser((prevUser) => {
@@ -416,11 +441,13 @@ export const App: React.FC = () => {
     });
 
     const unsubTeams = SupabaseSyncService.subscribeTeams(async () => {
+      if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
       try {
         const [t, tm] = await Promise.all([
           SupabaseSyncService.fetchInstallationTeams(),
           SupabaseSyncService.fetchTeamMembers(),
         ]);
+        if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
         setTeams(t);
         setTeamMembers(tm);
       } catch (err) {
@@ -429,8 +456,10 @@ export const App: React.FC = () => {
     });
 
     const unsubScheduleChanges = SupabaseSyncService.subscribeScheduleChanges(async () => {
+      if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
       try {
         const sc = await SupabaseSyncService.fetchScheduleChangeRequests();
+        if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
         setScheduleChangeRequests(sc);
       } catch (err) {
         console.warn('Realtime schedule changes refresh failed:', err);
@@ -440,6 +469,7 @@ export const App: React.FC = () => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('talaie-trigger-offline-sync', handleSyncTrigger);
+      window.removeEventListener('talaie-queue-lease-released', handleLeaseReleased);
       clearInterval(intervalId);
       unsubProjects();
       unsubTickets();
@@ -578,6 +608,7 @@ export const App: React.FC = () => {
           return false;
         }
       } else if (mutation.type === 'PATCH_MATERIAL_REQUEST') {
+        // QC_MANAGER is already bypassed above (line 541); SCHEDULING_COORDINATOR is also authorized
         if (currentUser.role !== 'SCHEDULING_COORDINATOR') {
           const reqId = mutation.payload?.id || mutation.orderingKey.replace('material:', '');
           const original = materialRequestsRef.current.find((r) => r.id === reqId);
@@ -599,6 +630,22 @@ export const App: React.FC = () => {
             return false;
           }
         }
+      }
+    }
+
+    // Baseline snapshot capture for PATCH_PROJECT to support lifecycle conflict detection
+    if (mutation.type === 'PATCH_PROJECT' && !mutation.baselineSnapshot) {
+      const projectId = mutation.payload?.id || mutation.orderingKey.replace('project:', '');
+      const currentProject = projectsRef.current.find((p) => p.id === projectId);
+      if (currentProject) {
+        mutation.baselineSnapshot = {
+          projectId,
+          status: currentProject.status,
+          updatedAt: currentProject.updatedAt,
+          customerSignature: currentProject.customerSignature ? 'present' : 'none',
+          dailyLogsCount: currentProject.dailyLogs?.length || 0,
+          workSessionsCount: currentProject.workSessions?.length || 0,
+        };
       }
     }
 
@@ -1334,11 +1381,18 @@ export const App: React.FC = () => {
     try {
       const project = projectsRef.current.find((p) => p.id === request.projectId);
       const updated = createConfirmReceiptPayload(request, dispatchId, currentUser, project);
+      // In receipt confirmation, history is strictly server-generated to guarantee
+      // serverRecordedAt and prevent client-supplied user names from overriding profile identity.
+      const patch = {
+        status: updated.status,
+        dispatches: updated.dispatches,
+        updatedAt: updated.updatedAt,
+      };
       await commit(
         {
           type: 'PATCH_MATERIAL_REQUEST',
           orderingKey: `material:${updated.id}`,
-          payload: { id: updated.id, patch: updated },
+          payload: { id: updated.id, patch },
         },
         () => {
           setMaterialRequests((prev) =>
@@ -1509,6 +1563,7 @@ export const App: React.FC = () => {
         return;
       }
     }
+    sessionEpochRef.current++;
     await SupabaseSyncService.signOut();
     setCurrentUser(null);
     setProjects([]);

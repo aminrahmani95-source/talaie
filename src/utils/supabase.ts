@@ -728,10 +728,16 @@ export const SupabaseSyncService = {
     }
   },
 
-  async patchProject(projectId: string, patch: Record<string, any>): Promise<void> {
+  async patchProject(projectId: string, patch: Record<string, any>, signal?: AbortSignal): Promise<void> {
     const client = this.getClient();
     if (!client) {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
+
+    if (signal?.aborted) {
+      const err = new Error('Operation aborted');
+      err.name = 'AbortError';
+      throw err;
     }
 
     if (patch.customerSignature === '') {
@@ -1249,7 +1255,12 @@ export const SupabaseSyncService = {
     }
   },
 
-  async executeOfflineOperation(op: OutboxOperation): Promise<void> {
+  async executeOfflineOperation(op: OutboxOperation, signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) {
+      const err = new Error('Operation aborted');
+      err.name = 'AbortError';
+      throw err;
+    }
     switch (op.type) {
       case 'CREATE_PROJECT': {
         const project = op.payload?.project || op.payload;
@@ -1259,7 +1270,7 @@ export const SupabaseSyncService = {
       case 'PATCH_PROJECT': {
         const projectId = op.payload?.id || op.orderingKey.replace('project:', '');
         const patch = op.payload?.patch || op.payload;
-        await this.patchProject(projectId, patch);
+        await this.patchProject(projectId, patch, signal);
         break;
       }
       case 'APPEND_PROJECT_EVALUATION': {
@@ -1301,7 +1312,30 @@ export const SupabaseSyncService = {
         await this.upsertSettings(settings);
         break;
       }
-      case 'CREATE_MATERIAL_REQUEST':
+      case 'CREATE_MATERIAL_REQUEST': {
+        const client = this.getClient();
+        if (!client) throw new Error('عدم دسترسی به سرور ابری.');
+        const id = op.payload?.id;
+        const requestData = op.payload?.patch || op.payload;
+        if (!id) throw new Error('شناسه درخواست متریال نامعتبر است.');
+
+        // فراخوانی تابع امن و ایدمپوتنت create_material_request در سرور ابری
+        const { error: rpcError } = await client.rpc('create_material_request', {
+          id,
+          request_data: requestData,
+        });
+
+        if (rpcError) {
+          if (rpcError.code === '42883' || rpcError.message.includes('function') || rpcError.message.includes('does not exist')) {
+            const err = new Error('تابع ثبت درخواست متریال در سرور در انتظار اجرای مایگریشن ۰۱۴ است.');
+            (err as any).code = 'FEATURE_NOT_IMPLEMENTED_ON_SERVER';
+            (err as any).isExpectedOffline = true;
+            throw err;
+          }
+          throw rpcError;
+        }
+        break;
+      }
       case 'PATCH_MATERIAL_REQUEST': {
         const client = this.getClient();
         if (!client) throw new Error('عدم دسترسی به سرور ابری.');
@@ -1309,7 +1343,7 @@ export const SupabaseSyncService = {
         const patch = op.payload?.patch || op.payload;
         if (!id) throw new Error('شناسه درخواست متریال نامعتبر است.');
 
-        // Attempt RPC first, fallback to direct table operation
+        // فراخوانی تابع محافظت‌شده patch_material_request
         const { error: rpcError } = await client.rpc('patch_material_request', {
           id,
           patch,
@@ -1317,26 +1351,12 @@ export const SupabaseSyncService = {
 
         if (rpcError) {
           if (rpcError.code === '42883' || rpcError.message.includes('function') || rpcError.message.includes('does not exist')) {
-            const { error: tableError } = await client.from('material_requests').upsert({
-              id,
-              project_id: patch.projectId || patch.project_id || '',
-              data: patch,
-              status: patch.status || 'SUBMITTED',
-              urgency: patch.urgency || 'NORMAL',
-              updated_at: new Date().toISOString(),
-            });
-            if (tableError) {
-              if (tableError.code === '42P01' || tableError.message.includes('does not exist')) {
-                const err = new Error('جدول درخواست‌های متریال در سرور در انتظار اجرای مایگریشن ۰۱۴ است.');
-                (err as any).code = 'FEATURE_NOT_IMPLEMENTED_ON_SERVER';
-                (err as any).isExpectedOffline = true;
-                throw err;
-              }
-              throw tableError;
-            }
-          } else {
-            throw rpcError;
+            const err = new Error('تابع به‌روزرسانی درخواست متریال در سرور در انتظار اجرای مایگریشن ۰۱۴ است.');
+            (err as any).code = 'FEATURE_NOT_IMPLEMENTED_ON_SERVER';
+            (err as any).isExpectedOffline = true;
+            throw err;
           }
+          throw rpcError;
         }
         break;
       }
@@ -1361,7 +1381,7 @@ export const SupabaseSyncService = {
     }
   },
 
-  async processOfflineQueue(currentUserId?: string): Promise<void> {
+  async processOfflineQueue(currentUserId?: string, sessionEpochGetter?: () => number): Promise<void> {
     const client = this.getClient();
     if (!client) return;
 
@@ -1374,6 +1394,26 @@ export const SupabaseSyncService = {
 
     await Outbox.processQueue({
       currentUserId: uid,
+      getCurrentSessionEpoch: sessionEpochGetter,
+      fetchProjectSnapshot: async (projectId: string) => {
+        try {
+          const { data, error } = await client
+            .from('projects')
+            .select('data, updated_at')
+            .eq('id', projectId)
+            .maybeSingle();
+
+          if (error || !data) return null;
+          const projData = data.data || {};
+          return {
+            status: projData.status,
+            updatedAt: data.updated_at || projData.updatedAt,
+            customerSignature: projData.customerSignature,
+          };
+        } catch {
+          return null;
+        }
+      },
       uploadBlob: async (upload: PendingUpload) => {
         const prefix = upload.orderingKey.replace(':', 's/');
         const storagePath = `${prefix}/${upload.fileName}`;
@@ -1403,8 +1443,8 @@ export const SupabaseSyncService = {
         }
         return storagePath;
       },
-      executeMutation: async (op: OutboxOperation) => {
-        await this.executeOfflineOperation(op);
+      executeMutation: async (op: OutboxOperation, signal?: AbortSignal) => {
+        await this.executeOfflineOperation(op, signal);
       },
       refreshSession: async () => {
         try {

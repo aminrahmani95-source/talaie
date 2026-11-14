@@ -336,9 +336,9 @@ describe('Talaei Outbox Writing Layer & Sync Tests', () => {
     // 7. Verify transient network error stays in pending queue with backoff and is never sent to failed
     await Outbox.commit(
       {
-        type: 'PATCH_PROJECT',
-        orderingKey: 'project:transient-test',
-        payload: { id: 'transient-test', patch: { title: 'Network test' } },
+        type: 'DELETE_TICKET',
+        orderingKey: 'ticket:transient-test',
+        payload: { id: 'transient-test' },
       },
       'user-1'
     );

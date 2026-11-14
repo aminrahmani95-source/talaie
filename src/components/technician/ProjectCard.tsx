@@ -637,22 +637,22 @@ export const ProjectCard: React.FC<Props> = ({
 
             {isInProgress && (
               isBeforeEndDate ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <button
                     type="button"
                     onClick={() => onOpenDailyLogModal?.(project)}
                     className="w-full py-4 px-4 bg-[#212121] hover:bg-[#2D2D2D] text-[#C1A056] border-2 border-[#C1A056] rounded-xl text-sm font-black shadow-md transition flex items-center justify-center gap-2.5 active:scale-[0.98] min-h-[50px] cursor-pointer"
                   >
-                    <Moon className="w-5 h-5" />
-                    <span>پایان کار امروز</span>
+                    <Moon className="w-5 h-5 text-[#C1A056]" />
+                    <span>پایان شیفت امروز (ثبت پیشرفت و ادامه در روز بعد)</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => onOpenCompletionModal(project)}
-                    className="w-full py-2.5 px-3 text-xs font-bold text-[#69655F] dark:text-[#9E988D] hover:text-[#181818] dark:hover:text-white transition flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
+                    className="w-full py-3 px-4 bg-white dark:bg-[#1E1E1E] hover:bg-[#FAF7F2] dark:hover:bg-[#252525] text-[#181818] dark:text-zinc-200 border-2 border-[#C1A056]/50 hover:border-[#C1A056] rounded-xl text-xs font-black shadow-2xs transition flex items-center justify-center gap-2 active:scale-[0.98] min-h-[46px] cursor-pointer"
                   >
                     <CheckCircle2 className="w-4 h-4 text-[#C1A056]" />
-                    <span>کار تمام شد؟ ثبت اتمام و ارسال به QC</span>
+                    <span>نصب کل پروژه امروز تمام شد؟ ثبت اتمام کامل و ارسال به QC</span>
                   </button>
                 </div>
               ) : (

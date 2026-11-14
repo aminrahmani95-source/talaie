@@ -18,10 +18,20 @@ export type OutboxMutationType =
   | 'PATCH_MATERIAL_REQUEST'
   | 'DELETE_MATERIAL_REQUEST';
 
+export type OutboxExecutionState =
+  | 'QUEUED'
+  | 'IN_FLIGHT'
+  | 'CONFIRMED_SUCCESS'
+  | 'CONFIRMED_FAILURE'
+  | 'UNKNOWN_OUTCOME'
+  | 'CONFLICT_HOLD'
+  | 'COMMITTED_LOCAL_ACK_PENDING';
+
 export interface OutboxMutation {
   type: OutboxMutationType;
   orderingKey: string; // e.g. "project:p-101", "ticket:t-101", "settings"
   payload: any;
+  baselineSnapshot?: any;
 }
 
 export interface OutboxOperation {
@@ -34,6 +44,17 @@ export interface OutboxOperation {
   retryCount: number;
   nextRetryAt: number;
   lastError?: string;
+  executionState?: OutboxExecutionState;
+  lastAttemptedAt?: number;
+  unknownReason?: string;
+  conflictDetails?: {
+    reason: string;
+    serverStatus?: string;
+    clientStatus?: string;
+    serverUpdatedAt?: string;
+    detectedAt: number;
+  };
+  baselineSnapshot?: any;
 }
 
 export interface TargetPath {
@@ -85,14 +106,46 @@ let cachedPendingCount = 0;
 let cachedFailedCount = 0;
 let isProcessing = false;
 
+export interface InFlightLease {
+  opId: string;
+  orderingKey: string;
+  userId: string;
+  startedAt: number;
+  abortController: AbortController;
+  watchdogTimer: any;
+}
+
+const activeLeases = new Map<string, InFlightLease>();
+
+export function getActiveLeasesCount(): number {
+  return activeLeases.size;
+}
+
+export function isKeyInFlight(orderingKey: string): boolean {
+  return activeLeases.has(orderingKey);
+}
+
+export function isOpInFlight(opId: string): boolean {
+  for (const lease of activeLeases.values()) {
+    if (lease.opId === opId) return true;
+  }
+  return false;
+}
+
 export function abortActiveProcessing(): void {
   activeProcessingRunId++;
   isProcessing = false;
+  // NOTE: In-flight leases remain held until their physical network promises settle.
+  // This prevents race conditions where a new session dispatches duplicate requests.
 }
 
 export function resetProcessingStateForTesting(): void {
   activeProcessingRunId++;
   isProcessing = false;
+  for (const lease of activeLeases.values()) {
+    if (lease.watchdogTimer) clearTimeout(lease.watchdogTimer);
+  }
+  activeLeases.clear();
   closeDb();
 }
 const pendingListeners = new Set<(count: number) => void>();
@@ -282,6 +335,45 @@ export function isPermanentError(err: any, hasSession: boolean = true): boolean 
 }
 
 /**
+ * Classifies retry safety for each OutboxMutationType.
+ * Only operations whose repeating is proven to be strictly idempotent without duplicate
+ * effects, concurrent write overwrites, or error throwing may return true.
+ *
+ * Proven Safe (Idempotent & Concurrent-Write Safe):
+ * - CREATE_MATERIAL_REQUEST: RPC catches unique_violation, verifies project/ownership, does not overwrite server changes, and returns existing data (014_p2_3_material_requests.sql:126-146)
+ * - DELETE_TICKET: Table delete by primary key id; repeating delete on deleted row is a no-op (src/utils/supabase.ts:1143)
+ * - DELETE_MATERIAL_REQUEST: Table delete by primary key id; repeating delete on deleted row is a no-op (src/utils/supabase.ts:1366)
+ *
+ * NOT Safe (Non-idempotent, clobbers concurrent edits, or repeating can fail / corrupt state):
+ * - CREATE_PROJECT: Direct insert without ON CONFLICT; repeat throws SQL 23505 (src/utils/supabase.ts:793-797)
+ * - PATCH_PROJECT: RPC validates state transitions and array lengths; repeat throws hard exception (015_p3_final_qc_scoring_and_defects.sql:410-470)
+ * - APPEND_PROJECT_EVALUATION: RPC blindly appends to evaluations JSON array; repeat duplicates entries (006_role_guards.sql:180)
+ * - DELETE_PROJECT: RPC admin_delete_project throws exception if row is not found; repeat throws hard exception (011_p1_server_capacity_and_history_protection.sql:483-485)
+ * - CREATE_TICKET: Upsert with onConflict: 'id' overwrites concurrent modifications made by another user (src/utils/supabase.ts:1085-1092)
+ * - PATCH_TICKET: Read-modify-write without version check overwrites concurrent modifications made by another user (src/utils/supabase.ts:1110-1128)
+ * - UPDATE_SETTINGS: Blind upsert on key 'settings' overwrites concurrent settings changes made by another admin (src/utils/supabase.ts:1243-1250)
+ * - PATCH_MATERIAL_REQUEST: RPC validates status transitions and dispatch states; repeat throws exception (014_p2_3_material_requests.sql:282-285)
+ */
+export function isOperationRetrySafe(type: OutboxMutationType): boolean {
+  switch (type) {
+    case 'DELETE_TICKET':
+    case 'DELETE_MATERIAL_REQUEST':
+      return true;
+    case 'CREATE_MATERIAL_REQUEST':
+    case 'CREATE_PROJECT':
+    case 'PATCH_PROJECT':
+    case 'APPEND_PROJECT_EVALUATION':
+    case 'DELETE_PROJECT':
+    case 'CREATE_TICKET':
+    case 'PATCH_TICKET':
+    case 'UPDATE_SETTINGS':
+    case 'PATCH_MATERIAL_REQUEST':
+    default:
+      return false;
+  }
+}
+
+/**
  * Exponential backoff: 15s, 30s, 60s, 120s, 240s, 480s, up to max 15 minutes (900s)
  */
 export function getNextBackoffDelay(retryCount: number): number {
@@ -437,6 +529,136 @@ function getUniqueTimestamp(): number {
   return lastOpTimestamp;
 }
 
+/**
+ * Recovers abandoned IN_FLIGHT, COMMITTED_LOCAL_ACK_PENDING, and legacy unconfirmed
+ * operations on startup/reconnection before queue processing begins.
+ *
+ * Safety Rules:
+ * 1. Scoped strictly to processingUserId (foreign user records remain dormant).
+ * 2. COMMITTED_LOCAL_ACK_PENDING: Atomically cleans up locally (deletes from STORE_PENDING
+ *    and STORE_UPLOADS). Never dispatches to server.
+ * 3. Existing UNKNOWN_OUTCOME and CONFLICT_HOLD: Preserved as-is.
+ * 4. Abandoned IN_FLIGHT:
+ *    - Retry-safe operations (DELETE_TICKET, DELETE_MATERIAL_REQUEST): Rescheduled as QUEUED with backoff.
+ *    - Non-retry-safe operations: Held as UNKNOWN_OUTCOME with nextRetryAt === 0.
+ * 5. Legacy records without executionState:
+ *    - retryCount === 0: Treated as QUEUED.
+ *    - retryCount > 0:
+ *      * Retry-safe: QUEUED with backoff.
+ *      * Non-retry-safe: Held as UNKNOWN_OUTCOME (LEGACY_UNCONFIRMED_ATTEMPT) with nextRetryAt === 0.
+ * 6. Durability: Every write/delete transaction awaits tx.oncomplete with tx.onerror and tx.onabort.
+ */
+export async function performStartupRecovery(
+  db: IDBDatabase,
+  processingUserId: string
+): Promise<void> {
+  const operations: OutboxOperation[] = await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_PENDING, 'readonly');
+    const store = tx.objectStore(STORE_PENDING);
+    const req = store.getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+
+  if (operations.length === 0) return;
+
+  const userOps = operations.filter((op) => op.userId === processingUserId);
+  if (userOps.length === 0) return;
+
+  for (const op of userOps) {
+    // 1. COMMITTED_LOCAL_ACK_PENDING: Perform local cleanup only!
+    if (op.executionState === 'COMMITTED_LOCAL_ACK_PENDING') {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const tx = db.transaction([STORE_PENDING, STORE_UPLOADS], 'readwrite');
+          const pStore = tx.objectStore(STORE_PENDING);
+          const uStore = tx.objectStore(STORE_UPLOADS);
+          const reqDel = pStore.delete(op.id);
+          let delDone = false;
+          reqDel.onsuccess = () => { delDone = true; };
+          reqDel.onerror = () => reject(reqDel.error || tx.error);
+          const uReq = uStore.getAll();
+          uReq.onsuccess = () => {
+            const uploads: PendingUpload[] = uReq.result || [];
+            for (const u of uploads) {
+              if (u.operationId === op.id) {
+                uStore.delete(u.id);
+              }
+            }
+          };
+          tx.oncomplete = () => { if (delDone) resolve(); };
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+        });
+      } catch (err) {
+        console.warn(`[StartupRecovery] Local cleanup failed for committed op ${op.id}:`, err);
+      }
+      continue;
+    }
+
+    // 2. Existing UNKNOWN_OUTCOME and CONFLICT_HOLD: Preserve held states!
+    if (op.executionState === 'UNKNOWN_OUTCOME' || op.executionState === 'CONFLICT_HOLD') {
+      continue;
+    }
+
+    // 3. Abandoned IN_FLIGHT: Reconnect after tab crash / reload
+    if (op.executionState === 'IN_FLIGHT') {
+      const isRetryable = isOperationRetrySafe(op.type);
+      if (isRetryable) {
+        op.executionState = 'QUEUED';
+        op.retryCount++;
+        op.nextRetryAt = Date.now() + getNextBackoffDelay(op.retryCount);
+        op.lastError = 'ABANDONED_IN_FLIGHT_ON_RESTART: Scheduled for retry';
+      } else {
+        op.executionState = 'UNKNOWN_OUTCOME';
+        op.unknownReason = 'ABANDONED_IN_FLIGHT_ON_RESTART';
+        op.nextRetryAt = 0;
+        op.lastError = 'ABANDONED_IN_FLIGHT_ON_RESTART: Non-idempotent operation held';
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE_PENDING, 'readwrite');
+        const pStore = tx.objectStore(STORE_PENDING);
+        pStore.put(op);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+      });
+      continue;
+    }
+
+    // 4. Legacy records without executionState
+    if (!op.executionState) {
+      if (!op.retryCount || op.retryCount === 0) {
+        op.executionState = 'QUEUED';
+      } else {
+        const isRetryable = isOperationRetrySafe(op.type);
+        if (isRetryable) {
+          op.executionState = 'QUEUED';
+          if (!op.nextRetryAt) {
+            op.nextRetryAt = Date.now() + getNextBackoffDelay(op.retryCount);
+          }
+        } else {
+          op.executionState = 'UNKNOWN_OUTCOME';
+          op.unknownReason = 'LEGACY_UNCONFIRMED_ATTEMPT';
+          op.nextRetryAt = 0;
+          op.lastError = 'LEGACY_UNCONFIRMED_ATTEMPT: Non-idempotent legacy operation held';
+        }
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE_PENDING, 'readwrite');
+        const pStore = tx.objectStore(STORE_PENDING);
+        pStore.put(op);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+      });
+      continue;
+    }
+  }
+}
+
 export const Outbox = {
   /**
    * Single unified entry point for all writes in the app:
@@ -472,6 +694,8 @@ export const Outbox = {
       createdAt: getUniqueTimestamp(),
       retryCount: 0,
       nextRetryAt: 0,
+      executionState: 'QUEUED',
+      baselineSnapshot: mutation.baselineSnapshot,
     };
 
     // Step 1: Save operation and uploads atomically to IndexedDB
@@ -487,6 +711,7 @@ export const Outbox = {
 
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
       tx.onabort = () => reject(tx.error || new Error('تراکنش ذخیره‌سازی لغو شد.'));
     });
 
@@ -583,6 +808,7 @@ export const Outbox = {
 
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
       tx.onabort = () => reject(tx.error || new Error('خطا در پاک‌سازی صف‌های آفلاین'));
     });
     await updateCountsInternal();
@@ -626,6 +852,7 @@ export const Outbox = {
 
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
     });
 
     await updateCountsInternal();
@@ -670,6 +897,7 @@ export const Outbox = {
 
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
     });
 
     await updateCountsInternal();
@@ -765,6 +993,7 @@ export const Outbox = {
 
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
     });
 
     await updateCountsInternal();
@@ -977,28 +1206,93 @@ export const Outbox = {
   },
 
   /**
-   * Outbox processor:
+   * Main Queue Processor entry point.
+   * Acquires the exclusive Web Lock 'talaie_outbox_master_lock' to prevent multi-tab concurrency.
+   * If Web Locks API is unavailable, fails closed (returns immediately).
+   */
+  async processQueue(handlers: {
+    currentUserId: string;
+    uploadBlob: (upload: PendingUpload) => Promise<string>;
+    executeMutation: (op: OutboxOperation, signal?: AbortSignal) => Promise<void>;
+    refreshSession?: () => Promise<boolean>;
+    hasSession?: () => boolean;
+    getCurrentSessionEpoch?: () => number;
+    fetchProjectSnapshot?: (projectId: string) => Promise<{ status?: string; updatedAt?: string; customerSignature?: string } | null>;
+  }): Promise<void> {
+    if (isProcessing) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    if (!handlers.currentUserId) return;
+
+    if (
+      typeof navigator === 'undefined' ||
+      !navigator.locks ||
+      typeof navigator.locks.request !== 'function'
+    ) {
+      console.warn(
+        '[Outbox] Web Locks API unavailable. Processing halted to prevent multi-tab concurrency violations.'
+      );
+      return;
+    }
+
+    await navigator.locks.request(
+      'talaie_outbox_master_lock',
+      { ifAvailable: true },
+      async (lock) => {
+        if (!lock) {
+          // Another tab or worker is holding the master lock. Yield immediately.
+          return;
+        }
+        await this.internalProcessQueue(handlers);
+      }
+    );
+  },
+
+  /**
+   * Internal Outbox processor executed under exclusive master Web Lock:
    * - Different orderingKeys run in parallel.
    * - Same orderingKey runs in strict FIFO sequential order.
    * - A failed operation stops ONLY its own orderingKey.
    * - User B does NOT send User A's operations.
    * - Atomic transaction updates payload and removes upload records.
    */
-  async processQueue(handlers: {
+  async internalProcessQueue(handlers: {
     currentUserId: string;
     uploadBlob: (upload: PendingUpload) => Promise<string>;
-    executeMutation: (op: OutboxOperation) => Promise<void>;
+    executeMutation: (op: OutboxOperation, signal?: AbortSignal) => Promise<void>;
     refreshSession?: () => Promise<boolean>;
     hasSession?: () => boolean;
+    getCurrentSessionEpoch?: () => number;
+    fetchProjectSnapshot?: (projectId: string) => Promise<{ status?: string; updatedAt?: string; customerSignature?: string } | null>;
   }): Promise<void> {
     if (isProcessing) return;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     if (!handlers.currentUserId) return;
 
+    // Capture session epoch & processing user identity BEFORE any asynchronous operations
+    const capturedRunEpoch = handlers.getCurrentSessionEpoch
+      ? handlers.getCurrentSessionEpoch()
+      : 0;
+    const processingUserId = handlers.currentUserId;
     const currentRunId = ++activeProcessingRunId;
     isProcessing = true;
+
+    const isSessionValid = (op?: OutboxOperation): boolean => {
+      if (activeProcessingRunId !== currentRunId) return false;
+      if (handlers.getCurrentSessionEpoch) {
+        if (handlers.getCurrentSessionEpoch() !== capturedRunEpoch) return false;
+      }
+      if (handlers.hasSession && !handlers.hasSession()) return false;
+      if (op && op.userId !== processingUserId) return false;
+      return true;
+    };
+
     try {
       const db = await openDb();
+      if (!isSessionValid()) return;
+
+      // 0. Perform startup recovery under the master Web Lock
+      await performStartupRecovery(db, processingUserId);
+      if (!isSessionValid()) return;
 
       // 1. Fetch all pending operations
       const operations: OutboxOperation[] = await new Promise((resolve, reject) => {
@@ -1009,9 +1303,9 @@ export const Outbox = {
         req.onerror = () => reject(req.error);
       });
 
-      if (operations.length === 0 || activeProcessingRunId !== currentRunId) return;
+      if (operations.length === 0 || !isSessionValid()) return;
 
-      // 2. Fetch all failed operations to know blocked ordering keys
+      // 2. Fetch all failed operations to know blocked ordering keys (SCOPED TO CURRENT USER)
       const failedList: FailedOperation[] = await new Promise((resolve, reject) => {
         const tx = db.transaction(STORE_FAILED, 'readonly');
         const store = tx.objectStore(STORE_FAILED);
@@ -1020,9 +1314,10 @@ export const Outbox = {
         req.onerror = () => reject(req.error);
       });
 
-      if (activeProcessingRunId !== currentRunId) return;
+      if (!isSessionValid()) return;
 
-      const blockedKeys = new Set<string>(failedList.map((f) => f.orderingKey));
+      const myFailedList = failedList.filter((f) => f.userId === processingUserId);
+      const blockedKeys = new Set<string>(myFailedList.map((f) => f.orderingKey));
 
       // 3. Group operations by orderingKey
       const opsByKey = new Map<string, OutboxOperation[]>();
@@ -1042,14 +1337,19 @@ export const Outbox = {
         req.onerror = () => reject(req.error);
       });
 
-      if (activeProcessingRunId !== currentRunId) return;
+      if (!isSessionValid()) return;
 
       // 5. Process different orderingKeys concurrently in parallel!
       const keyPromises: Promise<void>[] = [];
 
       for (const [key, ops] of opsByKey.entries()) {
-        // If this key has a failed operation, block subsequent ops on this key only!
+        // If this key has a failed operation for the current user, block subsequent ops on this key only!
         if (blockedKeys.has(key)) {
+          continue;
+        }
+
+        // If this key is actively in-flight, do NOT spawn a duplicate processor!
+        if (activeLeases.has(key)) {
           continue;
         }
 
@@ -1059,31 +1359,230 @@ export const Outbox = {
         const processKeyOps = async () => {
           for (const op of ops) {
             // Check cancellation on account switch or logout
-            if (activeProcessingRunId !== currentRunId) return;
-            if (handlers.hasSession && !handlers.hasSession()) return;
+            if (!isSessionValid(op)) return;
 
-            // User ownership check: strictly require a valid, matching user ID
-            if (
-              !op.userId ||
-              typeof op.userId !== 'string' ||
-              op.userId.trim() === '' ||
-              op.userId !== handlers.currentUserId
-            ) {
+            // 1. Foreign-user operation check:
+            // An operation may ONLY be dispatched when op.userId === currentUserId.
+            // Foreign-user operations must remain dormant in STORE_PENDING.
+            // They must NEVER be executed using the current user's JWT.
+            if (!op.userId || op.userId !== processingUserId) {
+              continue;
+            }
+
+            // 2. Conflict Hold check:
+            // If this operation is already held in CONFLICT_HOLD, keep it held
+            // and stop further processing for this key to preserve causal ordering.
+            if (op.executionState === 'CONFLICT_HOLD') {
               break;
             }
 
-            // Exponential backoff check: skip if within backoff period
+            // 3. Unresolved non-idempotent operation check:
+            // Non-idempotent operations (e.g. APPEND_PROJECT_EVALUATION) must NEVER be automatically
+            // retried after UNKNOWN_OUTCOME. They must remain held to prevent duplicate server writes.
+            if (op.executionState === 'UNKNOWN_OUTCOME' && !isOperationRetrySafe(op.type)) {
+              break;
+            }
+
+            // 4. Committed operation local acknowledgment retry:
+            // If this operation was already committed on the server in a previous run,
+            // NEVER re-dispatch it to Supabase! Retry ONLY local IndexedDB acknowledgment.
+            if (op.executionState === 'COMMITTED_LOCAL_ACK_PENDING') {
+              let ackSuccess = false;
+              try {
+                await new Promise<void>((resolve, reject) => {
+                  const tx = db.transaction([STORE_PENDING, STORE_UPLOADS], 'readwrite');
+                  const pStore = tx.objectStore(STORE_PENDING);
+                  const uStore = tx.objectStore(STORE_UPLOADS);
+                  const reqDel = pStore.delete(op.id);
+                  let delDone = false;
+                  reqDel.onsuccess = () => {
+                    delDone = true;
+                  };
+                  reqDel.onerror = () => reject(reqDel.error || tx.error);
+                  const uReq = uStore.getAll();
+                  uReq.onsuccess = () => {
+                    const list: PendingUpload[] = uReq.result || [];
+                    for (const u of list) {
+                      if (u.operationId === op.id) {
+                        uStore.delete(u.id);
+                      }
+                    }
+                  };
+                  tx.oncomplete = () => {
+                    if (delDone) resolve();
+                  };
+                  tx.onerror = () => reject(tx.error);
+                  tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                });
+                ackSuccess = true;
+              } catch (retryAckErr: any) {
+                console.warn(
+                  `[Outbox] Local acknowledgment retry failed for committed op ${op.id}:`,
+                  retryAckErr
+                );
+                op.lastError = `LOCAL_ACK_RETRY_FAILED: ${retryAckErr?.message || String(retryAckErr)}`;
+                try {
+                  await new Promise<void>((resolve, reject) => {
+                    const tx = db.transaction(STORE_PENDING, 'readwrite');
+                    const pStore = tx.objectStore(STORE_PENDING);
+                    pStore.put(op);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                  });
+                } catch {}
+                // Halt this ordering key so subsequent operations cannot overtake it!
+                break;
+              }
+
+              if (ackSuccess) {
+                // Continue to next operation on this key
+                continue;
+              }
+            }
+
+            // 5. Exponential backoff check: skip if within backoff period
             if (op.nextRetryAt && Date.now() < op.nextRetryAt) {
               break;
             }
+
+            // 6. Baseline snapshot conflict detection (for PATCH_PROJECT):
+            if (op.executionState !== 'COMMITTED_LOCAL_ACK_PENDING' && op.type === 'PATCH_PROJECT' && op.baselineSnapshot) {
+              if (!handlers.fetchProjectSnapshot) {
+                // FAIL-CLOSED: Missing snapshot handler must halt dispatch immediately!
+                op.executionState = 'CONFLICT_HOLD';
+                op.conflictDetails = {
+                  reason:
+                    'SNAPSHOT_HANDLER_UNAVAILABLE: تابع دریافت وضعیت سرور پیکربندی نشده است. جهت حفظ یکپارچگی، عملیات متوقف شد.',
+                  detectedAt: Date.now(),
+                };
+
+                await new Promise<void>((res, rej) => {
+                  const tx = db.transaction(STORE_PENDING, 'readwrite');
+                  const pStore = tx.objectStore(STORE_PENDING);
+                  pStore.put(op);
+                  tx.oncomplete = () => res();
+                  tx.onerror = () => rej(tx.error);
+                  tx.onabort = () => rej(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                });
+
+                break; // Halt this key, do not dispatch
+              }
+
+              const projectId = op.payload?.id || op.orderingKey.replace('project:', '');
+              let serverSnapshot: { status?: string; updatedAt?: string; customerSignature?: string } | null = null;
+              let snapshotFetchFailed = false;
+              let snapshotErrorReason = '';
+
+              try {
+                serverSnapshot = await handlers.fetchProjectSnapshot(projectId);
+                // CRITICAL: Revalidate session identity and epoch immediately after await!
+                if (!isSessionValid(op)) return;
+
+                if (!serverSnapshot) {
+                  snapshotFetchFailed = true;
+                  snapshotErrorReason = 'SERVER_SNAPSHOT_UNAVAILABLE';
+                }
+              } catch (err: any) {
+                if (!isSessionValid(op)) return;
+                snapshotFetchFailed = true;
+                snapshotErrorReason = err?.message || 'SNAPSHOT_FETCH_ERROR';
+              }
+
+              // FAIL-CLOSED: If snapshot cannot be retrieved or verified, DO NOT proceed!
+              // Persist CONFLICT_HOLD without dispatching, preserving the operation & history.
+              if (snapshotFetchFailed) {
+                op.executionState = 'CONFLICT_HOLD';
+                op.conflictDetails = {
+                  reason: `اعتبارسنجی پیش‌نیاز سرور ناموفق بود (${snapshotErrorReason}). جهت جلوگیری از بازنویسی ناسازگار، عملیات متوقف شد.`,
+                  detectedAt: Date.now(),
+                };
+
+                await new Promise<void>((res, rej) => {
+                  const tx = db.transaction(STORE_PENDING, 'readwrite');
+                  const pStore = tx.objectStore(STORE_PENDING);
+                  pStore.put(op);
+                  tx.oncomplete = () => res();
+                  tx.onerror = () => rej(tx.error);
+                  tx.onabort = () => rej(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                });
+
+                break; // Halt this key, do not dispatch
+              }
+
+              const baseStatus = op.baselineSnapshot.status;
+              const serverStatus = serverSnapshot!.status;
+              const patchStatus = op.payload?.patch?.status;
+
+              // Detect lifecycle state conflicts:
+              const isLifecycleConflict =
+                (serverStatus === 'COMPLETED' && patchStatus && patchStatus !== 'COMPLETED') ||
+                (serverStatus === 'STUCK' && patchStatus && patchStatus === 'COMPLETED') ||
+                (serverStatus === 'CANCELLED' && patchStatus && patchStatus !== 'CANCELLED');
+
+              if (isLifecycleConflict) {
+                op.executionState = 'CONFLICT_HOLD';
+                op.conflictDetails = {
+                  reason: 'تداخل شیفت کاری با وضعیت جدید سرور',
+                  serverStatus,
+                  clientStatus: patchStatus,
+                  serverUpdatedAt: serverSnapshot!.updatedAt,
+                  detectedAt: Date.now(),
+                };
+
+                await new Promise<void>((res, rej) => {
+                  const tx = db.transaction(STORE_PENDING, 'readwrite');
+                  const pStore = tx.objectStore(STORE_PENDING);
+                  pStore.put(op);
+                  tx.oncomplete = () => res();
+                  tx.onerror = () => rej(tx.error);
+                  tx.onabort = () => rej(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                });
+
+                break; // Hold this key, do not dispatch
+              }
+            }
+
+            // Revalidate session identity and epoch before lease acquisition and dispatch!
+            if (!isSessionValid(op)) return;
+
+            // 6. In-Memory Processing Lease & 45-Second Diagnostic Watchdog
+            const abortController = new AbortController();
+            const startedAt = Date.now();
+            const watchdogTimer = setTimeout(() => {
+              console.warn(
+                `[Outbox Watchdog] Operation ${op.id} on ${op.orderingKey} exceeded 45s without settling.`
+              );
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(
+                  new CustomEvent('talaie-sync-watchdog-alert', {
+                    detail: {
+                      opId: op.id,
+                      orderingKey: op.orderingKey,
+                      elapsedMs: Date.now() - startedAt,
+                    },
+                  })
+                );
+              }
+            }, 45000);
+
+            const lease: InFlightLease = {
+              opId: op.id,
+              orderingKey: op.orderingKey,
+              userId: op.userId,
+              startedAt,
+              abortController,
+              watchdogTimer,
+            };
+            activeLeases.set(op.orderingKey, lease);
 
             try {
               // A. Upload pending files for this operation
               const opUploads = allUploads.filter((u) => u.operationId === op.id);
               for (const u of opUploads) {
-                if (activeProcessingRunId !== currentRunId) return;
+                if (!isSessionValid(op)) return;
                 const storagePath = await handlers.uploadBlob(u);
-                if (activeProcessingRunId !== currentRunId) return;
+                if (!isSessionValid(op)) return;
 
                 // Update payload targets
                 for (const t of u.targets) {
@@ -1092,6 +1591,7 @@ export const Outbox = {
 
                 // In a single atomic IndexedDB transaction:
                 // Save updated op.payload and delete upload record!
+                // (Blobs are deleted ONLY after storagePath is saved in op.payload!)
                 await new Promise<void>((resolve, reject) => {
                   const tx = db.transaction([STORE_PENDING, STORE_UPLOADS], 'readwrite');
                   const pStore = tx.objectStore(STORE_PENDING);
@@ -1102,26 +1602,260 @@ export const Outbox = {
 
                   tx.oncomplete = () => resolve();
                   tx.onerror = () => reject(tx.error);
+                  tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
                 });
+
+                if (!isSessionValid(op)) return;
               }
 
-              if (activeProcessingRunId !== currentRunId) return;
+              // Revalidate session identity and epoch immediately before durable pre-dispatch persistence!
+              if (!isSessionValid(op)) return;
 
-              // B. Execute server mutation
-              await handlers.executeMutation(op);
+              // B. Durable Pre-Dispatch IN_FLIGHT Persistence:
+              // Must be committed to disk BEFORE server mutation dispatch.
+              // If persistence fails or aborts, DO NOT dispatch and halt this ordering key!
+              op.executionState = 'IN_FLIGHT';
+              op.lastAttemptedAt = Date.now();
+              try {
+                await new Promise<void>((resolve, reject) => {
+                  const tx = db.transaction(STORE_PENDING, 'readwrite');
+                  const pStore = tx.objectStore(STORE_PENDING);
+                  const pReq = pStore.put(op);
+                  let putDone = false;
+                  pReq.onsuccess = () => {
+                    putDone = true;
+                  };
+                  pReq.onerror = () => reject(pReq.error || tx.error);
+                  tx.oncomplete = () => {
+                    if (putDone) resolve();
+                  };
+                  tx.onerror = () => reject(tx.error);
+                  tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                });
+              } catch (inFlightPersistErr: any) {
+                console.warn(
+                  `[Outbox] Pre-dispatch IN_FLIGHT persistence failed for op ${op.id} on ${op.orderingKey}:`,
+                  inFlightPersistErr
+                );
+                op.lastError = `IN_FLIGHT_PERSIST_FAILED: ${inFlightPersistErr?.message || String(inFlightPersistErr)}`;
+                try {
+                  await new Promise<void>((resolve, reject) => {
+                    const tx = db.transaction(STORE_PENDING, 'readwrite');
+                    const pStore = tx.objectStore(STORE_PENDING);
+                    const pReq = pStore.put(op);
+                    let putDone = false;
+                    pReq.onsuccess = () => {
+                      putDone = true;
+                    };
+                    pReq.onerror = () => reject(pReq.error);
+                    tx.oncomplete = () => {
+                      if (putDone) resolve();
+                    };
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                  });
+                } catch {}
+                // Halt this ordering key so later operations cannot overtake it.
+                // CRITICAL FAIL-CLOSED SAFETY REQUIREMENT: NEVER DISPATCH!
+                break;
+              }
 
-              if (activeProcessingRunId !== currentRunId) return;
+              // Revalidate session identity and epoch immediately before physical dispatch!
+              if (!isSessionValid(op)) return;
 
-              // C. On success, remove from pending_operations
-              await new Promise<void>((resolve, reject) => {
-                const tx = db.transaction(STORE_PENDING, 'readwrite');
-                const pStore = tx.objectStore(STORE_PENDING);
-                const reqDel = pStore.delete(op.id);
-                reqDel.onsuccess = () => resolve();
-                reqDel.onerror = () => reject(reqDel.error);
-              });
+              // C. Execute server mutation with abort signal
+              let mutationSucceeded = false;
+              try {
+                await handlers.executeMutation(op, lease.abortController.signal);
+                mutationSucceeded = true;
+              } catch (mutationErr: any) {
+                const hasSession = handlers.hasSession ? handlers.hasSession() : true;
+                const isTransient = isTransientError(mutationErr, hasSession);
+
+                if (isTransient) {
+                  // If 42501 due to empty session, attempt refresh once
+                  if (mutationErr?.code === '42501' && handlers.refreshSession) {
+                    try {
+                      const refreshed = await handlers.refreshSession();
+                      if (isSessionValid(op) && refreshed) {
+                        continue;
+                      }
+                    } catch {}
+                  }
+
+                  const isRetryable = isOperationRetrySafe(op.type);
+                  op.retryCount++;
+                  op.nextRetryAt = isRetryable ? Date.now() + getNextBackoffDelay(op.retryCount) : 0;
+                  op.lastError = mutationErr?.message || String(mutationErr);
+                  op.executionState = 'UNKNOWN_OUTCOME';
+                  op.lastAttemptedAt = Date.now();
+                  op.unknownReason = !isRetryable
+                    ? 'NON_IDEMPOTENT_OPERATION_HELD'
+                    : mutationErr?.name === 'AbortError'
+                    ? 'ABORTED'
+                    : mutationErr?.message || 'NETWORK_DROP_OR_TIMEOUT';
+
+                  await new Promise<void>((resolve, reject) => {
+                    const tx = db.transaction(STORE_PENDING, 'readwrite');
+                    const pStore = tx.objectStore(STORE_PENDING);
+                    pStore.put(op);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                  });
+
+                  // Stop further processing for this specific key
+                  break;
+                } else {
+                  // Permanent failure: move to failed_operations, stop subsequent ops on this key!
+                  // NOTE: Photo blobs in STORE_UPLOADS are NEVER deleted on failure!
+                  await new Promise<void>((resolve, reject) => {
+                    const tx = db.transaction([STORE_PENDING, STORE_FAILED], 'readwrite');
+                    const pStore = tx.objectStore(STORE_PENDING);
+                    const fStore = tx.objectStore(STORE_FAILED);
+
+                    pStore.delete(op.id);
+                    let errorReason = mutationErr?.message || String(mutationErr);
+                    if (
+                      errorReason.includes('پروژه مورد نظر یافت نشد') ||
+                      errorReason.toLowerCase().includes('not found') ||
+                      errorReason.includes('این پروژه توسط مدیر تغییر کرده یا حذف شده است') ||
+                      (errorReason.includes('انتقال وضعیت') && errorReason.includes('مجاز نیست'))
+                    ) {
+                      errorReason = 'این پروژه توسط مدیر تغییر کرده یا حذف شده است';
+                    }
+
+                    const failedOp: FailedOperation = {
+                      id: op.id,
+                      orderingKey: op.orderingKey,
+                      userId: op.userId,
+                      type: op.type,
+                      payload: op.payload,
+                      errorReason,
+                      failedAt: Date.now(),
+                      retryCount: op.retryCount + 1,
+                      originalCreatedAt: op.createdAt,
+                    };
+                    fStore.put(failedOp);
+
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                  });
+
+                  blockedKeys.add(key);
+                  break;
+                }
+              }
+
+              if (mutationSucceeded) {
+                // Confirmed Server Success:
+                // Step C1: Persist durable COMMITTED_LOCAL_ACK_PENDING state before local deletion
+                op.executionState = 'COMMITTED_LOCAL_ACK_PENDING';
+                op.lastAttemptedAt = Date.now();
+                op.unknownReason = undefined;
+                op.lastError = undefined;
+
+                try {
+                  await new Promise<void>((resolve, reject) => {
+                    const tx = db.transaction(STORE_PENDING, 'readwrite');
+                    const pStore = tx.objectStore(STORE_PENDING);
+                    const pReq = pStore.put(op);
+                    let putDone = false;
+                    pReq.onsuccess = () => {
+                      putDone = true;
+                    };
+                    pReq.onerror = () => reject(pReq.error);
+                    tx.oncomplete = () => {
+                      if (putDone) resolve();
+                    };
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                  });
+                } catch (persistErr: any) {
+                  console.warn(
+                    `[Outbox] Op ${op.id} succeeded on server but persisting COMMITTED_LOCAL_ACK_PENDING failed:`,
+                    persistErr
+                  );
+                  op.lastError = `LOCAL_ACK_PERSIST_FAILED: ${persistErr?.message || String(persistErr)}`;
+                  break;
+                }
+
+                // Step C2: Acknowledge by atomically deleting op from STORE_PENDING and uploads from STORE_UPLOADS
+                let ackSuccess = false;
+                try {
+                  await new Promise<void>((resolve, reject) => {
+                    const tx = db.transaction([STORE_PENDING, STORE_UPLOADS], 'readwrite');
+                    const pStore = tx.objectStore(STORE_PENDING);
+                    const uStore = tx.objectStore(STORE_UPLOADS);
+                    const reqDel = pStore.delete(op.id);
+                    let delDone = false;
+                    reqDel.onsuccess = () => {
+                      delDone = true;
+                    };
+                    reqDel.onerror = () => reject(reqDel.error || tx.error);
+
+                    const uReq = uStore.getAll();
+                    uReq.onsuccess = () => {
+                      const uploads: PendingUpload[] = uReq.result || [];
+                      for (const u of uploads) {
+                        if (u.operationId === op.id) {
+                          uStore.delete(u.id);
+                        }
+                      }
+                    };
+
+                    tx.oncomplete = () => {
+                      if (delDone) resolve();
+                    };
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                  });
+                  ackSuccess = true;
+                } catch (localAckErr: any) {
+                  console.warn(
+                    `[Outbox] Op ${op.id} succeeded on server and COMMITTED_LOCAL_ACK_PENDING is persisted, but deletion failed:`,
+                    localAckErr
+                  );
+                  op.lastError = `LOCAL_ACK_DELETE_FAILED: ${localAckErr?.message || String(localAckErr)}`;
+                  try {
+                    await new Promise<void>((resolve, reject) => {
+                      const tx = db.transaction(STORE_PENDING, 'readwrite');
+                      const pStore = tx.objectStore(STORE_PENDING);
+                      const pReq = pStore.put(op);
+                      let putDone = false;
+                      pReq.onsuccess = () => {
+                        putDone = true;
+                      };
+                      pReq.onerror = () => reject(pReq.error);
+                      tx.oncomplete = () => {
+                        if (putDone) resolve();
+                      };
+                      tx.onerror = () => reject(tx.error);
+                      tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
+                    });
+                  } catch (persistErr) {
+                    console.warn(
+                      `[Outbox] Failed to update COMMITTED_LOCAL_ACK_PENDING with error for op ${op.id}:`,
+                      persistErr
+                    );
+                  }
+                  // Halt this ordering key so subsequent operations cannot overtake the committed operation!
+                  break;
+                }
+
+                if (ackSuccess) {
+                  // Check session epoch for UI notification:
+                  if (isSessionValid(op)) {
+                    // UI notification and optimistic state commit are safe
+                  } else {
+                    console.info(
+                      `[Outbox] Op ${op.id} succeeded on server; UI notification dropped (session changed).`
+                    );
+                  }
+                }
+              }
             } catch (err: any) {
-              if (activeProcessingRunId !== currentRunId) return;
               const hasSession = handlers.hasSession ? handlers.hasSession() : true;
               const isTransient = isTransientError(err, hasSession);
 
@@ -1130,31 +1864,38 @@ export const Outbox = {
                 if (err.code === '42501' && handlers.refreshSession) {
                   try {
                     const refreshed = await handlers.refreshSession();
-                    if (refreshed && activeProcessingRunId === currentRunId) {
-                      // Session refreshed, continue loop to retry immediately
+                    if (isSessionValid(op) && refreshed) {
                       continue;
                     }
                   } catch {}
                 }
 
-                // Transient network / timeout error: does NOT count toward 5-retry limit!
-                // Apply exponential backoff: 15s, 30s, 1m, 2m, 4m, 8m, max 15m.
+                const isRetryable = isOperationRetrySafe(op.type);
                 op.retryCount++;
-                op.nextRetryAt = Date.now() + getNextBackoffDelay(op.retryCount);
+                op.nextRetryAt = isRetryable ? Date.now() + getNextBackoffDelay(op.retryCount) : 0;
                 op.lastError = err?.message || String(err);
+                op.executionState = 'UNKNOWN_OUTCOME';
+                op.lastAttemptedAt = Date.now();
+                op.unknownReason = !isRetryable
+                  ? 'NON_IDEMPOTENT_OPERATION_HELD'
+                  : err?.name === 'AbortError'
+                  ? 'ABORTED'
+                  : err?.message || 'NETWORK_DROP_OR_TIMEOUT';
 
                 await new Promise<void>((resolve, reject) => {
                   const tx = db.transaction(STORE_PENDING, 'readwrite');
                   const pStore = tx.objectStore(STORE_PENDING);
-                  const pReq = pStore.put(op);
-                  pReq.onsuccess = () => resolve();
-                  pReq.onerror = () => reject(pReq.error);
+                  pStore.put(op);
+                  tx.oncomplete = () => resolve();
+                  tx.onerror = () => reject(tx.error);
+                  tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
                 });
 
-                // Stop further processing for this specific key during backoff
+                // Stop further processing for this specific key
                 break;
               } else {
                 // Permanent failure: move to failed_operations, stop subsequent ops on this key!
+                // NOTE: Photo blobs in STORE_UPLOADS are NEVER deleted on failure!
                 await new Promise<void>((resolve, reject) => {
                   const tx = db.transaction([STORE_PENDING, STORE_FAILED], 'readwrite');
                   const pStore = tx.objectStore(STORE_PENDING);
@@ -1186,11 +1927,26 @@ export const Outbox = {
 
                   tx.oncomplete = () => resolve();
                   tx.onerror = () => reject(tx.error);
+                  tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
                 });
 
-                // This key now has a failed operation, block subsequent ops on this key!
                 blockedKeys.add(key);
                 break;
+              }
+            } finally {
+              // Clean up in-memory lease in finally
+              if (lease.watchdogTimer) {
+                clearTimeout(lease.watchdogTimer);
+              }
+              activeLeases.delete(op.orderingKey);
+
+              // Awaken waiting queue processors
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(
+                  new CustomEvent('talaie-queue-lease-released', {
+                    detail: { orderingKey: op.orderingKey, opId: op.id },
+                  })
+                );
               }
             }
           }
@@ -1211,6 +1967,7 @@ export const Outbox = {
   },
 
   abortActiveProcessing,
+  performStartupRecovery,
 };
 
 // Aliases for backwards compatibility

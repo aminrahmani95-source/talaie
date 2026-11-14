@@ -46,6 +46,7 @@ expected_functions as (
     ('propose_schedule_change', 'p_project_id text, p_proposed_date text, p_proposed_end_date text, p_proposed_team_id uuid, p_reason text'),
     ('review_schedule_change', 'p_request_id uuid, p_decision text, p_review_notes text'),
     ('confirm_daily_log', 'p_project_id text, p_log_id text, p_notes text'),
+    ('create_material_request', 'id text, request_data jsonb'),
     ('patch_material_request', 'id text, patch jsonb')
   ) as t(func_name, func_args)
 ),
@@ -101,9 +102,8 @@ expected_policies as (
     ('public', 'tickets', 'Authorized users insert tickets'),
     ('public', 'tickets', 'Authorized users update tickets'),
     ('public', 'tickets', 'QC Managers delete tickets'),
-    ('public', 'material_requests', 'Active users read material requests'),
-    ('public', 'material_requests', 'Active users insert material requests'),
-    ('public', 'material_requests', 'QC Managers update material requests'),
+    ('public', 'material_requests', 'Authenticated active users can read material requests'),
+    ('public', 'material_requests', 'Authenticated users can insert material requests'),
     ('public', 'material_requests', 'QC Managers delete material requests'),
     ('public', 'project_audit', 'QC Managers read audit'),
     ('storage', 'objects', 'Authorized users upload photos'),
@@ -205,6 +205,7 @@ function_security_checks as (
     end as detail
   from (values
     ('patch_project'),
+    ('create_material_request'),
     ('patch_material_request'),
     ('confirm_daily_log'),
     ('trg_enforce_project_plan_integrity'),
@@ -246,6 +247,10 @@ security_function_body_checks as (
       and pg_get_functiondef(proc.oid) like '%MEASUREMENT_PENDING%'
       and pg_get_functiondef(proc.oid) like '%planAmendments%'
       and pg_get_functiondef(proc.oid) like '%previousQuantity%'
+      and pg_get_functiondef(proc.oid) like '%receivingLeadConfirmed%'
+      and pg_get_functiondef(proc.oid) like '%isManagerOverride%'
+      and pg_get_functiondef(proc.oid) like '%qcStatus%'
+      and pg_get_functiondef(proc.oid) like '%qcDefects%'
     ) as ok,
     case
       when proc.oid is null then 'patch_project missing'
@@ -254,7 +259,9 @@ security_function_body_checks as (
       when pg_get_functiondef(proc.oid) not like '%lockedAt%' then 'patch_project missing lockedAt guard'
       when pg_get_functiondef(proc.oid) not like '%planAmendments%' then 'patch_project missing planAmendments guard'
       when pg_get_functiondef(proc.oid) not like '%previousQuantity%' then 'patch_project missing stale concurrency guard'
-      else 'patch_project contains FOR UPDATE row locking, lockedAt, MEASUREMENT_PENDING, and stale amendment concurrency enforcement'
+      when pg_get_functiondef(proc.oid) not like '%receivingLeadConfirmed%' then 'patch_project missing transfer acknowledgment guard'
+      when pg_get_functiondef(proc.oid) not like '%qcStatus%' then 'patch_project missing QC status approval gate'
+      else 'patch_project contains FOR UPDATE row locking, lockedAt, plan amendments, team transfer execution gate, and QC approval guards'
     end as detail
   from (select 1) dummy
   left join pg_proc proc on proc.proname = 'patch_project'

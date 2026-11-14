@@ -168,8 +168,9 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   // ۸. شاخص‌های تحلیلی و هوش عملیاتی فاز P4 (Operational Intelligence & Analytics)
   const analytics = useMemo(() => {
     // الف) کنترل کیفیت
+    // پروژه‌های دارای سابقه بازرسی رسمی (جامعه آماری دقیق جهت سنجش نرخ قبولی)
     const inspectedProjects = projects.filter(
-      (p) => p.qcStatus === 'APPROVED' || (p.qcInspections && p.qcInspections.length > 0)
+      (p) => p.qcInspections && p.qcInspections.length > 0
     );
     const approvedProjects = projects.filter((p) => p.qcStatus === 'APPROVED');
     const scoredProjects = approvedProjects.filter((p) => p.qcScore && p.qcScore > 0);
@@ -913,7 +914,9 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                 %{toPersianDigits(analytics.firstTimePassRate)}
               </div>
-              <p className="text-[10px] text-neutral-400">بدون بازکاری و اصلاح کارگاهی</p>
+              <p className="text-[10px] text-neutral-400">
+                بر مبنای {toPersianDigits(analytics.inspectedProjectsCount)} پروژه بازرسی‌شده
+              </p>
             </div>
 
             {/* کل پنل‌های نصب‌شده */}

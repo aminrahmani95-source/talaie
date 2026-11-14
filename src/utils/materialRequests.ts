@@ -531,7 +531,7 @@ export function createConfirmReceiptPayload(
     : `تایید دریافت محموله پیک «${targetDispatch.courierInfo}» سر کارگاه توسط ${userName}`;
 
   const historyLog = {
-    id: `mat-act-${Date.now()}-recv`,
+    id: `mat-act-${dispatchId}-recv`,
     timestamp: now,
     action: 'CONFIRMED_RECEIPT' as any,
     byUserId: user.id,
