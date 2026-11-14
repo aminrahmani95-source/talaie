@@ -16,8 +16,12 @@ import {
   AlertTriangle,
   CalendarRange,
   Clock,
+  Layers,
+  Plus,
+  Check,
+  ArrowRightLeft,
 } from 'lucide-react';
-import { Project, ProjectAuditRecord, ProjectStatus, QCStatus, Ticket, User } from '../../types';
+import { Project, ProjectAuditRecord, ProjectStatus, QCStatus, Ticket, User, InstallationTeam } from '../../types';
 import { Sheet, Button, StatusPill, SegmentedControl, Badge } from '../ui';
 import { CloudImage } from '../common/CloudImage';
 import {
@@ -31,6 +35,17 @@ import { formatAuditDiff, getQcStatusPersianLabel, getStatusPersianLabel } from 
 import { formatJalali, formatJalaliDateTime, toPersianDigits } from '../../utils/jalali';
 import { calculateWorkSessionsSummary, getMultiDayTotalDays, isProjectMultiDay } from '../../utils/multiDay';
 import { getDisplayName } from '../../utils/technicianName';
+import {
+  calculateActivityProgress,
+  getEffectiveProjectPlan,
+  createPlanAmendment,
+  reviewPlanAmendment,
+} from '../../utils/planProgress';
+import {
+  canTransferProjectTeam,
+  createTeamTransferPayload,
+  getProjectTransferHistory,
+} from '../../utils/teamTransfer';
 
 type TabId = 'info' | 'status' | 'docs' | 'history';
 type PhotoField = 'beforePhotos' | 'afterPhotos' | 'completionPhotos';
@@ -51,13 +66,14 @@ export interface ProjectManagerSheetProps {
   project: Project;
   users: User[];
   tickets: Ticket[];
+  teams?: InstallationTeam[];
   currentUser: User;
   isOnline: boolean;
   onClose: () => void;
   onEditInfo: (project: Project) => void;
   /** Applies a manager patch. `_auditReason` (if any) is recorded in the history and never stored on the project. */
   onApplyPatch: (projectId: string, patch: Record<string, unknown>, successMessage: string) => Promise<void>;
-  onDeleteProject: (projectId: string, options: { reason: string; deleteTicketsAndFiles: boolean }) => Promise<void>;
+  onDeleteProject?: (projectId: string, options: { reason: string; deleteTicketsAndFiles: boolean }) => Promise<void>;
   onOpenCertificate: (project: Project) => void;
   onViewProposal: (project: Project) => void;
   fetchAudit: (projectId: string) => Promise<ProjectAuditRecord[]>;
@@ -79,6 +95,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
   project,
   users,
   tickets,
+  teams = [],
   currentUser,
   isOnline,
   onClose,
@@ -110,6 +127,19 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
   const [showDelete, setShowDelete] = useState(false);
   const [deleteCode, setDeleteCode] = useState('');
   const [deleteAll, setDeleteAll] = useState(true);
+
+  // plan amendment state
+  const [showAddAmendment, setShowAddAmendment] = useState(false);
+  const [amendActivityId, setAmendActivityId] = useState('');
+  const [amendNewQty, setAmendNewQty] = useState('');
+  const [amendReason, setAmendReason] = useState('');
+
+  // team transfer state (Phase P2.2)
+  const [showTransferForm, setShowTransferForm] = useState(false);
+  const [targetTeamId, setTargetTeamId] = useState('');
+  const [transferReason, setTransferReason] = useState('');
+  const [transferNewDate, setTransferNewDate] = useState('');
+  const [transferNotes, setTransferNotes] = useState('');
 
   useEffect(() => {
     setManualStatus(project.status);
@@ -148,6 +178,96 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
       await onApplyPatch(project.id, { ...patch, _auditReason: reasonTrim || autoReason }, msg);
       setReason('');
       setConfirmReset(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const isQcManager = currentUser.role === 'QC_MANAGER';
+  const plan = useMemo(() => getEffectiveProjectPlan(project), [project]);
+  const progressList = useMemo(() => calculateActivityProgress(project), [project]);
+
+  const handleAddAmendment = async () => {
+    if (!amendActivityId || !amendNewQty || !amendReason.trim()) return;
+    const act = plan.find((a) => a.id === amendActivityId);
+    if (!act) return;
+
+    const newQtyNum = parseFloat(amendNewQty);
+    if (isNaN(newQtyNum) || newQtyNum < 0) return;
+
+    const amendment = createPlanAmendment(
+      act.id,
+      act.title,
+      act.plannedQuantity,
+      newQtyNum,
+      amendReason.trim(),
+      currentUser,
+      isQcManager ? 'APPROVED' : 'PENDING'
+    );
+
+    const existingAmendments = project.planAmendments || [];
+    const updatedAmendments = [...existingAmendments, amendment];
+
+    await run(
+      { planAmendments: updatedAmendments },
+      'اصلاحیه طرح با موفقیت ثبت شد.',
+      `اصلاحیه طرح: تغییر مقدار ${act.title} به ${newQtyNum} (${amendReason.trim()})`
+    );
+
+    setShowAddAmendment(false);
+    setAmendActivityId('');
+    setAmendNewQty('');
+    setAmendReason('');
+  };
+
+  const handleReviewAmendment = async (amendmentId: string, status: 'APPROVED' | 'REJECTED') => {
+    const updatedAmendments = reviewPlanAmendment(
+      project.planAmendments || [],
+      amendmentId,
+      status,
+      currentUser,
+      reasonTrim || undefined
+    );
+    await run(
+      { planAmendments: updatedAmendments },
+      status === 'APPROVED' ? 'اصلاحیه طرح تایید شد.' : 'اصلاحیه طرح رد شد.',
+      `بررسی اصلاحیه طرح: ${status === 'APPROVED' ? 'تایید' : 'رد'}`
+    );
+  };
+
+  const handleExecuteTeamTransfer = async () => {
+    if (!targetTeamId || !transferReason.trim()) return;
+    const targetTeam = teams.find((t) => t.id === targetTeamId);
+    if (!targetTeam) return;
+
+    const targetSupervisor = users.find((u) => u.id === targetTeam.supervisorId);
+    const targetMembers = users.filter((u) => u.teamId === targetTeam.id);
+
+    try {
+      setBusy(true);
+      const { patch } = createTeamTransferPayload({
+        project,
+        targetTeam,
+        targetSupervisor,
+        targetTeamMembers: targetMembers,
+        currentUser,
+        reason: transferReason,
+        notes: transferNotes,
+        newScheduledDate: transferNewDate || undefined,
+      });
+
+      await run(
+        patch as unknown as Record<string, unknown>,
+        `پروژه با موفقیت به «${targetTeam.name}» منتقل شد.`,
+        `انتقال رسمی اکیپ: ${transferReason.trim()}`
+      );
+      setShowTransferForm(false);
+      setTransferReason('');
+      setTargetTeamId('');
+      setTransferNewDate('');
+      setTransferNotes('');
+    } catch (err: any) {
+      alert(err.message || 'خطا در انتقال اکیپ');
     } finally {
       setBusy(false);
     }
@@ -206,6 +326,219 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
           </Button>
         )}
       </div>
+
+      {/* Original Installation Plan & Progress */}
+      <div className={sectionCls}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 font-bold text-sm">
+            <Layers className="w-4 h-4 text-[#C1A056]" /> اقلام اجرایی طرح و پیشرفت واقعی
+          </div>
+          {isQcManager && (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Plus className="w-3.5 h-3.5" />}
+              onClick={() => setShowAddAmendment((v) => !v)}
+            >
+              ثبت اصلاحیه طرح
+            </Button>
+          )}
+        </div>
+
+        {/* Add Amendment Form (QC Manager only) */}
+        {showAddAmendment && (
+          <div className="rounded-xl border border-[#C1A056]/40 bg-[#FAF7F2] dark:bg-[#1E1E1E] p-3 space-y-3">
+            <div className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF]">ثبت اصلاحیه طرح نصب (کنترل کیفی)</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <label className="space-y-1">
+                <span className="font-bold">انتخاب فعالیت:</span>
+                <select
+                  className={inputCls}
+                  value={amendActivityId}
+                  onChange={(e) => setAmendActivityId(e.target.value)}
+                >
+                  <option value="">-- انتخاب فعالیت --</option>
+                  {plan.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.title} (مبنا: {toPersianDigits(a.plannedQuantity)} {a.unit})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="font-bold">مقدار جدید نهایی:</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  className={inputCls}
+                  value={amendNewQty}
+                  onChange={(e) => setAmendNewQty(e.target.value)}
+                  placeholder="مثال: 14"
+                />
+              </label>
+            </div>
+            <label className="space-y-1 text-xs block">
+              <span className="font-bold">علت اصلاحیه (الزامی برای ثبت در سابقه):</span>
+              <input
+                type="text"
+                className={inputCls}
+                value={amendReason}
+                onChange={(e) => setAmendReason(e.target.value)}
+                placeholder="مثال: افزایش ۲ لت پرده سالن به درخواست کارفرما"
+              />
+            </label>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={busy || !amendActivityId || !amendNewQty || !amendReason.trim()}
+                onClick={handleAddAmendment}
+              >
+                ثبت و تایید اصلاحیه
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowAddAmendment(false);
+                  setAmendActivityId('');
+                  setAmendNewQty('');
+                  setAmendReason('');
+                }}
+              >
+                انصراف
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Plan Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-right border-collapse">
+            <thead>
+              <tr className="border-b border-[#E2DDD4] dark:border-[#333] text-[#6B6459] dark:text-[#A39E93]">
+                <th className="py-2 px-1">فعالیت</th>
+                <th className="py-2 px-1">طرح مبنا</th>
+                <th className="py-2 px-1">اصلاحیه</th>
+                <th className="py-2 px-1">برنامه نهایی</th>
+                <th className="py-2 px-1">انجام شده</th>
+                <th className="py-2 px-1">باقیمانده</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2DDD4]/60 dark:divide-[#282828]">
+              {progressList.map((item) => (
+                <tr key={item.activityId} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
+                  <td className="py-2 px-1 font-bold text-[#181818] dark:text-[#F5F3EF]">
+                    {item.title}
+                  </td>
+                  <td className="py-2 px-1 font-mono">
+                    {toPersianDigits(item.baselineQuantity)} {item.unit}
+                  </td>
+                  <td className="py-2 px-1 font-mono">
+                    {item.amendmentDelta !== 0 ? (
+                      <span className={item.amendmentDelta > 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
+                        {item.amendmentDelta > 0 ? '+' : ''}{toPersianDigits(item.amendmentDelta)}
+                      </span>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td className="py-2 px-1 font-mono font-bold text-[#C1A056]">
+                    {toPersianDigits(item.effectivePlannedQuantity)}
+                  </td>
+                  <td className="py-2 px-1 font-mono font-bold text-emerald-600">
+                    {toPersianDigits(item.totalCompletedQuantity)}
+                  </td>
+                  <td className="py-2 px-1 font-mono">
+                    {item.isOverCompleted ? (
+                      <span className="text-amber-600 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded">
+                        +{toPersianDigits(item.overCompletedQuantity)} مازاد
+                      </span>
+                    ) : item.remainingQuantity === 0 ? (
+                      <span className="text-emerald-600 font-bold">تکمیل ✓</span>
+                    ) : (
+                      <span className="text-[#6B6459] dark:text-[#A39E93]">
+                        {toPersianDigits(item.remainingQuantity)}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Amendments List (if any) */}
+        {(project.planAmendments || []).length > 0 && (
+          <div className="pt-2 border-t border-[#E2DDD4] dark:border-[#2A2A2A] space-y-2">
+            <div className="text-xs font-bold text-[#6B6459] dark:text-[#A39E93]">سوابق اصلاحیه‌های طرح:</div>
+            {(project.planAmendments || []).map((am) => (
+              <div key={am.id} className="rounded-xl bg-white dark:bg-[#1E1E1E] p-2.5 border border-[#E2DDD4] dark:border-[#333] text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold">
+                    {am.activityTitle}: {toPersianDigits(am.previousQuantity)} ← {toPersianDigits(am.newQuantity)}
+                  </span>
+                  <Badge variant={am.status === 'APPROVED' ? 'gold' : am.status === 'REJECTED' ? 'danger' : 'default'}>
+                    {am.status === 'APPROVED' ? 'تایید شده' : am.status === 'REJECTED' ? 'رد شده' : 'در انتظار بررسی QC'}
+                  </Badge>
+                </div>
+                <div className="text-[11px] text-[#6B6459] dark:text-[#A39E93]">
+                  علت: {am.reason} ({getDisplayName(am.requestedByUserName)} در {formatJalaliDateTime(am.requestedAt)})
+                </div>
+                {am.status === 'PENDING' && isQcManager && (
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" onClick={() => handleReviewAmendment(am.id, 'APPROVED')} disabled={busy}>
+                      تایید اصلاحیه
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => handleReviewAmendment(am.id, 'REJECTED')} disabled={busy}>
+                      رد اصلاحیه
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Team Transfer History (Phase P2.2) */}
+      {(project.teamTransfers || []).length > 0 && (
+        <div className={sectionCls}>
+          <div className="flex items-center gap-2 font-bold text-sm">
+            <ArrowRightLeft className="w-4 h-4 text-[#C1A056]" /> سابقه انتقال بین اکیپ‌ها (فاز P2.2)
+          </div>
+          <div className="space-y-2">
+            {(project.teamTransfers || []).map((trf) => (
+              <div
+                key={trf.id}
+                className="rounded-xl bg-white dark:bg-[#1E1E1E] p-3 border border-[#E2DDD4] dark:border-[#333] text-xs space-y-1.5"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#181818] dark:text-[#F5F3EF]">
+                    از «{trf.fromTeamName}» ← به «{trf.toTeamName}»
+                  </span>
+                  <Badge variant={trf.receivingLeadConfirmed ? 'gold' : 'default'}>
+                    {trf.receivingLeadConfirmed ? 'تایید سرپرست مقصد ✓' : 'در انتظار تایید تحویل'}
+                  </Badge>
+                </div>
+                <div className="text-[#6B6459] dark:text-[#A39E93]">
+                  علت: {trf.reason} (توسط {getDisplayName(trf.transferredByUserName)} در {formatJalaliDateTime(trf.transferredAt)})
+                </div>
+                {trf.notes && (
+                  <div className="text-[#6B6459] dark:text-[#A39E93] text-[11px]">
+                    یادداشت فنی: {trf.notes}
+                  </div>
+                )}
+                {trf.handoverInventory && trf.handoverInventory.length > 0 && (
+                  <div className="text-[11px] text-[#8A8378] pt-1 border-t border-dashed border-[#E2DDD4] dark:border-[#2A2A2A]">
+                    صورت‌جلسه اقلام تحویلی: {trf.handoverInventory.map((i) => `${i.activityTitle} (${toPersianDigits(i.remainingQuantity)} ${i.unit})`).join('، ')}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -302,10 +635,145 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         )}
       </div>
 
+      {/* Team Transfer Section (Phase P2.2) */}
+      {canTransferProjectTeam(currentUser) && (
+        <div className={sectionCls}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 font-bold text-sm">
+              <ArrowRightLeft className="w-4 h-4 text-[#C1A056]" /> انتقال رسمی به اکیپ دیگر (فاز P2.2)
+            </div>
+            <Button
+              variant={showTransferForm ? 'ghost' : 'secondary'}
+              size="sm"
+              icon={<ArrowRightLeft className="w-3.5 h-3.5" />}
+              onClick={() => setShowTransferForm((v) => !v)}
+            >
+              {showTransferForm ? 'بستن فرم' : 'انتقال اکیپ'}
+            </Button>
+          </div>
+
+          <p className="text-xs text-[#6B6459] dark:text-[#A39E93]">
+            اکیپ جاری: <span className="font-bold text-[#181818] dark:text-[#F5F3EF]">{project.assignedTeamName || 'بدون اکیپ'}</span>
+          </p>
+
+          {showTransferForm && (
+            <div className="rounded-xl border border-[#C1A056]/40 bg-[#FAF7F2] dark:bg-[#1E1E1E] p-3 space-y-3">
+              <div className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF]">
+                انتقال رسمی پروژه و صورت‌جلسه تحویل اقلام باقیمانده (فاز P2.2)
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <label className="space-y-1">
+                  <span className="font-bold">انتخاب اکیپ مقصد: <span className="text-rose-500">*</span></span>
+                  <select
+                    className={inputCls}
+                    value={targetTeamId}
+                    onChange={(e) => setTargetTeamId(e.target.value)}
+                  >
+                    <option value="">-- انتخاب اکیپ مقصد --</option>
+                    {teams
+                      .filter((t) => t.id !== project.assignedTeamId)
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="font-bold">تاریخ جدید اعزام (اختیاری):</span>
+                  <input
+                    type="date"
+                    className={inputCls}
+                    value={transferNewDate}
+                    onChange={(e) => setTransferNewDate(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <label className="space-y-1 text-xs block">
+                <span className="font-bold">علت رسمی انتقال اکیپ: <span className="text-rose-500">*</span></span>
+                <input
+                  type="text"
+                  className={inputCls}
+                  value={transferReason}
+                  onChange={(e) => setTransferReason(e.target.value)}
+                  placeholder="مثال: توقف کار اکیپ ۱ ناشی از تداخل برنامه، اعزام اکیپ ۲ برای تکمیل شیدها"
+                />
+              </label>
+
+              <label className="space-y-1 text-xs block">
+                <span className="font-bold">یادداشت فنی تحویل کار (اختیاری):</span>
+                <textarea
+                  rows={2}
+                  className={inputCls}
+                  value={transferNotes}
+                  onChange={(e) => setTransferNotes(e.target.value)}
+                  placeholder="نکات فنی برای سرپرست جدید..."
+                />
+              </label>
+
+              {/* Preview of remaining inventory */}
+              <div className="rounded-lg bg-white dark:bg-[#161616] p-2.5 border border-[#E2DDD4] dark:border-[#2C2C2C] text-xs space-y-1.5">
+                <div className="font-bold text-[#6B6459] dark:text-[#A39E93]">
+                  صورت‌جلسه اقلام باقیمانده کار تحویلی به اکیپ جدید:
+                </div>
+                <div className="space-y-1">
+                  {calculateActivityProgress(project).map((act) => (
+                    <div key={act.activityId} className="flex justify-between text-[11px]">
+                      <span>{act.title}:</span>
+                      <span className="font-bold text-[#C1A056]">
+                        {toPersianDigits(Math.max(0, act.remainingQuantity))} {act.unit} باقیمانده
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  disabled={busy || !targetTeamId || !transferReason.trim()}
+                  onClick={handleExecuteTeamTransfer}
+                >
+                  ثبت انتقال رسمی و ایجاد صورت‌جلسه
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowTransferForm(false);
+                    setTargetTeamId('');
+                    setTransferReason('');
+                    setTransferNewDate('');
+                    setTransferNotes('');
+                  }}
+                >
+                  انصراف
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className={sectionCls}>
         <div className="flex items-center gap-2 font-bold text-sm">
           <ShieldCheck className="w-4 h-4 text-[#C1A056]" /> کنترل کیفی (QC)
         </div>
+        {project.isExceptionalCompletion && project.exceptionalCompletionDetails && (
+          <div className="p-3 bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/30 rounded-xl text-xs space-y-1 text-rose-800 dark:text-rose-200">
+            <div className="font-bold flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-rose-600" />
+              <span>پروژه دارای اعلام «اتمام استثنایی با کسری اقلام» است</span>
+            </div>
+            <p className="text-[11px] text-[#4A4742] dark:text-[#BDB8AF]">
+              دلیل تکنسین: «{project.exceptionalCompletionDetails.documentedReason}»
+            </p>
+            <div className="text-[11px] text-[#69655F] dark:text-[#9E988D] pt-0.5">
+              اقلام کسری: {project.exceptionalCompletionDetails.remainingActivities.map(a => `${a.title} (${toPersianDigits(a.remainingQuantity)} ${a.unit})`).join('، ')}
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {project.qcStatus === 'APPROVED' ? (
             <Button
@@ -460,6 +928,47 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
                   حذف
                 </button>
               </div>
+              {log.activityProgress && log.activityProgress.length > 0 && (
+                <div className="bg-[#FAF7F2] dark:bg-[#141414] rounded-lg p-2.5 border border-[#E2DDD4]/60 dark:border-[#282828] space-y-1.5">
+                  <div className="text-[11px] font-bold text-[#6B6459] dark:text-[#A39E93]">پیشرفت کار ثبت‌شده در این شیفت:</div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {log.activityProgress.map((ap) => (
+                      <span key={ap.activityId} className="bg-white dark:bg-[#1E1E1E] px-2 py-0.5 rounded border border-[#E2DDD4] dark:border-[#333] font-mono font-bold text-[#181818] dark:text-zinc-200">
+                        {ap.activityTitle}: {toPersianDigits(ap.completedQuantity)} {ap.unit}
+                      </span>
+                    ))}
+                  </div>
+                  {log.supervisorConfirmed && (
+                    <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" /> تایید شده توسط سرپرست ({getDisplayName(log.supervisorConfirmedBy)})
+                    </div>
+                  )}
+                  {!log.supervisorConfirmed && (isQcManager || project.leadTechnicianId === currentUser.id) && (
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={async () => {
+                          const updatedLogs = (project.dailyLogs || []).map((l) =>
+                            l.id === log.id
+                              ? {
+                                  ...l,
+                                  supervisorConfirmed: true,
+                                  supervisorConfirmedBy: getDisplayName(currentUser.name) || 'سرپرست اکیپ',
+                                  supervisorConfirmedAt: new Date().toISOString(),
+                                }
+                              : l
+                          );
+                          await run({ dailyLogs: updatedLogs }, 'گزارش روزانه توسط سرپرست تایید شد.', 'تایید گزارش روزانه توسط سرپرست');
+                        }}
+                        className="text-xs text-emerald-600 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded border border-emerald-300 dark:border-emerald-800 font-bold cursor-pointer"
+                      >
+                        ✓ تایید این گزارش توسط سرپرست
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               {log.note && <p className="text-sm whitespace-pre-wrap">{log.note}</p>}
               {log.photos?.length > 0 && (
                 <div className="grid grid-cols-4 gap-2">
@@ -477,6 +986,21 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         <div className="flex items-center gap-2 font-bold text-sm">
           <FileText className="w-4 h-4 text-[#C1A056]" /> گزارش اتمام کار
         </div>
+        {project.isExceptionalCompletion && project.exceptionalCompletionDetails && (
+          <div className="bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/40 rounded-xl p-3 text-xs space-y-1.5 animate-in fade-in duration-150">
+            <div className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-300">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>اتمام استثنایی با کسری اقلام اجرایی (تحویل ناقص پروژه)</span>
+            </div>
+            <p className="text-xs text-[#181818] dark:text-[#F5F3EF] leading-relaxed">
+              <span className="font-bold text-rose-600 block mb-0.5">علت مستند عدم اجرای اقلام باقیمانده:</span>
+              «{project.exceptionalCompletionDetails.documentedReason}»
+            </p>
+            <div className="pt-1 text-[11px] text-[#6B6459] dark:text-[#A39E93]">
+              اقلام اجرا‌نشده: {project.exceptionalCompletionDetails.remainingActivities.map(a => `${a.title} (${toPersianDigits(a.remainingQuantity)} ${a.unit})`).join('، ')}
+            </div>
+          </div>
+        )}
         <textarea rows={3} className={inputCls} value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} placeholder="یادداشت اتمام کار" />
         <Button
           variant="secondary"
@@ -581,6 +1105,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
           icon={<Trash2 className="w-4 h-4" />}
           disabled={busy || !reasonOk || !isDeleteCodeConfirmed(deleteCode, project.code)}
           onClick={async () => {
+            if (!onDeleteProject) return;
             setBusy(true);
             try {
               await onDeleteProject(project.id, { reason: reasonTrim, deleteTicketsAndFiles: deleteAll });
@@ -608,10 +1133,12 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
       footer={
         showDelete ? undefined : (
           <div className="flex items-center justify-between gap-2 w-full">
-            <Button variant="ghost" className="text-rose-600" icon={<Trash2 className="w-4 h-4" />} onClick={() => { setShowDelete(true); setReason(''); }}>
-              حذف کامل پروژه
-            </Button>
-            <Button variant="secondary" onClick={onClose}>
+            {onDeleteProject && (
+              <Button variant="ghost" className="text-rose-600" icon={<Trash2 className="w-4 h-4" />} onClick={() => { setShowDelete(true); setReason(''); }}>
+                حذف کامل پروژه
+              </Button>
+            )}
+            <Button variant="secondary" onClick={onClose} className={!onDeleteProject ? 'mr-auto' : undefined}>
               بستن
             </Button>
           </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Project } from '../../types';
 import { XCircle, X, AlertTriangle, Send, Calendar } from 'lucide-react';
-import { getUpcomingDays, formatJalali } from '../../utils/jalali';
+import { getUpcomingDays, formatJalali, toPersianDigits } from '../../utils/jalali';
 
 interface Props {
   project: Project;
@@ -16,7 +16,11 @@ export const QcRejectModal: React.FC<Props> = ({
   onClose,
   onSubmit,
 }) => {
-  const [reason, setReason] = useState('');
+  const initialReason =
+    project.isExceptionalCompletion && project.exceptionalCompletionDetails
+      ? `رد اتمام استثنایی: الزام به اعزام مجدد اکیپ جهت تکمیل اقلام باقیمانده طرح (${project.exceptionalCompletionDetails.remainingActivities.map((a) => `${a.title}: ${toPersianDigits(a.remainingQuantity)} ${a.unit}`).join('، ')})`
+      : '';
+  const [reason, setReason] = useState(initialReason);
   const [quickDefects, setQuickDefects] = useState<string[]>([]);
   const [newScheduledDate, setNewScheduledDate] = useState(project.scheduledDate || '');
   const [error, setError] = useState('');
@@ -27,6 +31,9 @@ export const QcRejectModal: React.FC<Props> = ({
   const upcomingDays = getUpcomingDays(30);
 
   const DEFECT_TEMPLATES = [
+    ...(project.isExceptionalCompletion
+      ? ['رد اتمام استثنایی و الزام به تکمیل کلیه اقلام باقیمانده طرح']
+      : []),
     'عدم تراز افقی و شاقول نبودن ریل یا لت‌ها',
     'وجود چروک در لایه زیرین یا عدم اتوکشی کامل والان',
     'عدم جمع‌آوری پایه‌های کریدل و محافظ کف',

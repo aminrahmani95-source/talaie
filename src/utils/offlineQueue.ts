@@ -3,7 +3,7 @@
 // معماری تک‌مسیره: commit(op) -> ذخیره اتمیک در IndexedDB -> اعمال محلی -> ارسال به سرور
 // ==============================================================================
 
-import { Project, Ticket, SystemSettings, PersonnelEvaluation } from '../types';
+import { Project, Ticket, SystemSettings, PersonnelEvaluation, MaterialRequest } from '../types';
 
 export type OutboxMutationType =
   | 'CREATE_PROJECT'
@@ -13,7 +13,10 @@ export type OutboxMutationType =
   | 'CREATE_TICKET'
   | 'PATCH_TICKET'
   | 'DELETE_TICKET'
-  | 'UPDATE_SETTINGS';
+  | 'UPDATE_SETTINGS'
+  | 'CREATE_MATERIAL_REQUEST'
+  | 'PATCH_MATERIAL_REQUEST'
+  | 'DELETE_MATERIAL_REQUEST';
 
 export interface OutboxMutation {
   type: OutboxMutationType;
@@ -77,15 +80,23 @@ export function closeDb(): void {
   }
 }
 
+let activeProcessingRunId = 0;
+let cachedPendingCount = 0;
+let cachedFailedCount = 0;
+let isProcessing = false;
+
+export function abortActiveProcessing(): void {
+  activeProcessingRunId++;
+  isProcessing = false;
+}
+
 export function resetProcessingStateForTesting(): void {
+  activeProcessingRunId++;
   isProcessing = false;
   closeDb();
 }
 const pendingListeners = new Set<(count: number) => void>();
 const failedListeners = new Set<(count: number) => void>();
-let cachedPendingCount = 0;
-let cachedFailedCount = 0;
-let isProcessing = false;
 
 export function openDb(): Promise<IDBDatabase> {
   if (dbInstance) return Promise.resolve(dbInstance);
@@ -492,7 +503,11 @@ export const Outbox = {
     }
   },
 
-  async getPendingCount(): Promise<number> {
+  async getPendingCount(userId?: string): Promise<number> {
+    if (userId) {
+      const ops = await this.getPendingOperations(userId);
+      return ops.length;
+    }
     const { pending } = await updateCountsInternal();
     return pending;
   },
@@ -506,7 +521,11 @@ export const Outbox = {
     };
   },
 
-  async getFailedCount(): Promise<number> {
+  async getFailedCount(userId?: string): Promise<number> {
+    if (userId) {
+      const ops = await this.getFailedOperations(userId);
+      return ops.length;
+    }
     const { failed } = await updateCountsInternal();
     return failed;
   },
@@ -520,29 +539,61 @@ export const Outbox = {
     };
   },
 
-  async getFailedOperations(): Promise<FailedOperation[]> {
+  async getFailedOperations(userId?: string): Promise<FailedOperation[]> {
     const db = await openDb();
-    return new Promise((resolve, reject) => {
+    const ops = await new Promise<FailedOperation[]>((resolve, reject) => {
       const tx = db.transaction(STORE_FAILED, 'readonly');
       const store = tx.objectStore(STORE_FAILED);
       const req = store.getAll();
       req.onsuccess = () => resolve(req.result || []);
       req.onerror = () => reject(req.error);
     });
+    if (userId) {
+      return ops.filter((op) => op.userId === userId);
+    }
+    return ops;
   },
 
-  async getPendingOperations(): Promise<OutboxOperation[]> {
+  async getPendingOperations(userId?: string): Promise<OutboxOperation[]> {
     const db = await openDb();
-    return new Promise((resolve, reject) => {
+    const ops = await new Promise<OutboxOperation[]>((resolve, reject) => {
       const tx = db.transaction(STORE_PENDING, 'readonly');
       const store = tx.objectStore(STORE_PENDING);
       const req = store.getAll();
       req.onsuccess = () => resolve(req.result || []);
       req.onerror = () => reject(req.error);
     });
+    if (userId) {
+      return ops.filter((op) => op.userId === userId);
+    }
+    return ops;
   },
 
-  async retryFailedOperation(id: string): Promise<void> {
+  /**
+   * Destructively purges all Outbox stores (pending, failed, uploads)
+   * MUST only be called during a confirmed, destructive application reset.
+   */
+  async purgeAll(): Promise<void> {
+    const db = await openDb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction([STORE_PENDING, STORE_FAILED, STORE_UPLOADS], 'readwrite');
+      tx.objectStore(STORE_PENDING).clear();
+      tx.objectStore(STORE_FAILED).clear();
+      tx.objectStore(STORE_UPLOADS).clear();
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('خطا در پاک‌سازی صف‌های آفلاین'));
+    });
+    await updateCountsInternal();
+  },
+
+  async retryFailedOperation(id: string, currentUserId: string): Promise<void> {
+    if (!currentUserId || typeof currentUserId !== 'string' || currentUserId.trim() === '') {
+      return;
+    }
+    const cleanUserId = currentUserId.trim();
+
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction([STORE_FAILED, STORE_PENDING], 'readwrite');
@@ -553,6 +604,10 @@ export const Outbox = {
       getReq.onsuccess = () => {
         const item: FailedOperation | undefined = getReq.result;
         if (item) {
+          if (!item.userId || item.userId !== cleanUserId) {
+            // Cannot retry another user's failed operation or unowned item
+            return;
+          }
           failedStore.delete(id);
           // Preserve original createdAt to maintain FIFO ordering!
           const restoredOp: OutboxOperation = {
@@ -579,22 +634,37 @@ export const Outbox = {
     }
   },
 
-  async deleteFailedOperation(id: string): Promise<void> {
+  async deleteFailedOperation(id: string, currentUserId: string): Promise<void> {
+    if (!currentUserId || typeof currentUserId !== 'string' || currentUserId.trim() === '') {
+      return;
+    }
+    const cleanUserId = currentUserId.trim();
+
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction([STORE_FAILED, STORE_UPLOADS], 'readwrite');
       const failedStore = tx.objectStore(STORE_FAILED);
       const uploadsStore = tx.objectStore(STORE_UPLOADS);
 
-      failedStore.delete(id);
-
-      const reqAll = uploadsStore.getAll();
-      reqAll.onsuccess = () => {
-        const uploads: PendingUpload[] = reqAll.result || [];
-        for (const u of uploads) {
-          if (u.operationId === id) {
-            uploadsStore.delete(u.id);
+      const getReq = failedStore.get(id);
+      getReq.onsuccess = () => {
+        const item: FailedOperation | undefined = getReq.result;
+        if (item) {
+          if (!item.userId || item.userId !== cleanUserId) {
+            // Cannot delete another user's failed operation or unowned item
+            return;
           }
+          failedStore.delete(id);
+
+          const reqAll = uploadsStore.getAll();
+          reqAll.onsuccess = () => {
+            const uploads: PendingUpload[] = reqAll.result || [];
+            for (const u of uploads) {
+              if (u.operationId === id) {
+                uploadsStore.delete(u.id);
+              }
+            }
+          };
         }
       };
 
@@ -606,17 +676,118 @@ export const Outbox = {
   },
 
   /**
+   * بازیابی ایمن و بازگرداندن عملیات‌های متریال متوقف‌شده در صف خطای دائم
+   * که صرفاً به دلیل عدم پیاده‌سازی جداول سرور متوقف شده بودند.
+   * 
+   * اصول تضمین‌شده:
+   * ۱. احراز هویت اجباری: targetUserId الزامی است و ورودی خالی/نامعتبر هیچ تغییری در دیتابیس ایجاد نمی‌کند.
+   * ۲. تفکیک دقیق: صرفاً عملیات‌های متریال با خطای FEATURE_NOT_IMPLEMENTED_ON_SERVER انتخاب می‌شوند.
+   * ۳. حفظ خطاهای دائمی نامرتبط: خطاهای دیگر (مانند ۴۰۴، نقض قوانین پروژه یا RLS) در STORE_FAILED دست‌نخورده باقی می‌مانند.
+   * ۴. صیانت از ترتیب زمانی (FIFO): زمان اولیه (originalCreatedAt) حفظ می‌شود تا وابستگی‌ها و تقدم عملیات رعایت شوند.
+   * ۵. ممانعت قطعی از تکرار: شناسه‌های موجود در STORE_PENDING بررسی شده و عملیات تکراری ایجاد نمی‌شود.
+   * ۶. تراکنش اتمیک: حذف از STORE_FAILED و ثبت در STORE_PENDING در یک تراکنش واحد انجام می‌گیرد.
+   */
+  async requeueUnsupportedMaterialOperations(targetUserId: string): Promise<{
+    requeuedCount: number;
+    requeuedIds: string[];
+  }> {
+    if (!targetUserId || typeof targetUserId !== 'string' || targetUserId.trim() === '') {
+      return { requeuedCount: 0, requeuedIds: [] };
+    }
+    const cleanTargetUserId = targetUserId.trim();
+
+    const db = await openDb();
+    const requeuedIds: string[] = [];
+
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction([STORE_FAILED, STORE_PENDING], 'readwrite');
+      const failedStore = tx.objectStore(STORE_FAILED);
+      const pendingStore = tx.objectStore(STORE_PENDING);
+
+      const reqFailed = failedStore.getAll();
+      const reqPending = pendingStore.getAll();
+
+      let failedList: FailedOperation[] = [];
+      let pendingList: OutboxOperation[] = [];
+      let loadedCount = 0;
+
+      const checkBothLoaded = () => {
+        loadedCount++;
+        if (loadedCount < 2) return;
+
+        const pendingIds = new Set(pendingList.map((p) => p.id));
+
+        for (const item of failedList) {
+          if (!item.userId || item.userId !== cleanTargetUserId) {
+            continue;
+          }
+
+          const isMaterialOp =
+            (item.orderingKey && item.orderingKey.startsWith('material:')) ||
+            item.type === 'CREATE_MATERIAL_REQUEST' ||
+            item.type === 'PATCH_MATERIAL_REQUEST' ||
+            item.type === 'DELETE_MATERIAL_REQUEST';
+
+          const isServerNotImplementedError =
+            item.errorReason.includes('FEATURE_NOT_IMPLEMENTED_ON_SERVER') ||
+            item.errorReason.includes('همگام‌سازی ابری متریال هنوز در سرور فعال نشده است') ||
+            item.errorReason.includes('در انتظار مایگریشن');
+
+          if (isMaterialOp && isServerNotImplementedError) {
+            if (!pendingIds.has(item.id)) {
+              failedStore.delete(item.id);
+              const restoredOp: OutboxOperation = {
+                id: item.id,
+                orderingKey: item.orderingKey,
+                userId: item.userId,
+                type: item.type,
+                payload: item.payload,
+                createdAt: item.originalCreatedAt || Date.now(),
+                retryCount: 0,
+                nextRetryAt: 0,
+              };
+              pendingStore.put(restoredOp);
+              requeuedIds.push(item.id);
+              pendingIds.add(item.id);
+            }
+          }
+        }
+      };
+
+      reqFailed.onsuccess = () => {
+        failedList = reqFailed.result || [];
+        checkBothLoaded();
+      };
+      reqPending.onsuccess = () => {
+        pendingList = reqPending.result || [];
+        checkBothLoaded();
+      };
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+
+    await updateCountsInternal();
+    if (requeuedIds.length > 0 && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('talaie-trigger-offline-sync'));
+    }
+
+    return { requeuedCount: requeuedIds.length, requeuedIds };
+  },
+
+  /**
    * Applies all pending operations in the Outbox on top of server projects
    * so unsent in-flight changes never flicker or disappear from the screen.
    */
   async applyPendingToProjects(
     serverProjects: Project[],
-    pendingOps?: OutboxOperation[]
+    pendingOps?: OutboxOperation[],
+    currentUserId?: string
   ): Promise<Project[]> {
-    const ops = pendingOps || (await Outbox.getPendingOperations());
+    const ops = pendingOps || (await Outbox.getPendingOperations(currentUserId));
     const result = [...serverProjects];
     const projectOps = ops
-      .filter((op) => op.orderingKey.startsWith('project:'))
+      .filter((op) => op.orderingKey.startsWith('project:') && (!currentUserId || op.userId === currentUserId))
       .sort((a, b) => a.createdAt - b.createdAt);
 
     for (const op of projectOps) {
@@ -670,12 +841,13 @@ export const Outbox = {
    */
   async applyPendingToTickets(
     serverTickets: Ticket[],
-    pendingOps?: OutboxOperation[]
+    pendingOps?: OutboxOperation[],
+    currentUserId?: string
   ): Promise<Ticket[]> {
-    const ops = pendingOps || (await Outbox.getPendingOperations());
+    const ops = pendingOps || (await Outbox.getPendingOperations(currentUserId));
     const result = [...serverTickets];
     const ticketOps = ops
-      .filter((op) => op.orderingKey.startsWith('ticket:'))
+      .filter((op) => op.orderingKey.startsWith('ticket:') && (!currentUserId || op.userId === currentUserId))
       .sort((a, b) => a.createdAt - b.createdAt);
 
     for (const op of ticketOps) {
@@ -699,6 +871,73 @@ export const Outbox = {
           }
         }
       } else if (op.type === 'DELETE_TICKET') {
+        const id = op.payload?.id || op.payload;
+        if (id) {
+          const idx = result.findIndex((x) => x.id === id);
+          if (idx >= 0) {
+            result.splice(idx, 1);
+          }
+        }
+      }
+    }
+
+    return result;
+  },
+
+  /**
+   * Applies all pending and un-synced operations in the Outbox on top of material requests
+   */
+  async applyPendingToMaterialRequests(
+    serverRequests: MaterialRequest[],
+    pendingOps?: Array<OutboxOperation | FailedOperation>,
+    currentUserId?: string
+  ): Promise<MaterialRequest[]> {
+    let ops: Array<OutboxOperation | FailedOperation> = [];
+    if (pendingOps) {
+      ops = pendingOps;
+    } else {
+      const [pending, failed] = await Promise.all([
+        Outbox.getPendingOperations(currentUserId),
+        Outbox.getFailedOperations(currentUserId),
+      ]);
+      ops = [...pending, ...failed];
+    }
+
+    const result = [...serverRequests];
+    const matOps = ops
+      .filter(
+        (op) =>
+          op.orderingKey &&
+          op.orderingKey.startsWith('material:') &&
+          (!currentUserId || op.userId === currentUserId)
+      )
+      .sort((a, b) => {
+        const timeA = (a as any).createdAt ?? (a as any).originalCreatedAt ?? 0;
+        const timeB = (b as any).createdAt ?? (b as any).originalCreatedAt ?? 0;
+        return timeA - timeB;
+      });
+
+    for (const op of matOps) {
+      if (op.type === 'CREATE_MATERIAL_REQUEST') {
+        const r = op.payload?.request || op.payload;
+        if (r && r.id) {
+          const idx = result.findIndex((x) => x.id === r.id);
+          if (idx >= 0) {
+            result[idx] = { ...result[idx], ...r };
+          } else {
+            result.unshift(r);
+          }
+        }
+      } else if (op.type === 'PATCH_MATERIAL_REQUEST') {
+        const id = op.payload?.id;
+        const patch = op.payload?.patch || op.payload;
+        if (id && patch) {
+          const idx = result.findIndex((x) => x.id === id);
+          if (idx >= 0) {
+            result[idx] = { ...result[idx], ...patch };
+          }
+        }
+      } else if (op.type === 'DELETE_MATERIAL_REQUEST') {
         const id = op.payload?.id || op.payload;
         if (id) {
           const idx = result.findIndex((x) => x.id === id);
@@ -756,6 +995,7 @@ export const Outbox = {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     if (!handlers.currentUserId) return;
 
+    const currentRunId = ++activeProcessingRunId;
     isProcessing = true;
     try {
       const db = await openDb();
@@ -769,7 +1009,7 @@ export const Outbox = {
         req.onerror = () => reject(req.error);
       });
 
-      if (operations.length === 0) return;
+      if (operations.length === 0 || activeProcessingRunId !== currentRunId) return;
 
       // 2. Fetch all failed operations to know blocked ordering keys
       const failedList: FailedOperation[] = await new Promise((resolve, reject) => {
@@ -779,6 +1019,8 @@ export const Outbox = {
         req.onsuccess = () => resolve(req.result || []);
         req.onerror = () => reject(req.error);
       });
+
+      if (activeProcessingRunId !== currentRunId) return;
 
       const blockedKeys = new Set<string>(failedList.map((f) => f.orderingKey));
 
@@ -800,6 +1042,8 @@ export const Outbox = {
         req.onerror = () => reject(req.error);
       });
 
+      if (activeProcessingRunId !== currentRunId) return;
+
       // 5. Process different orderingKeys concurrently in parallel!
       const keyPromises: Promise<void>[] = [];
 
@@ -814,8 +1058,17 @@ export const Outbox = {
 
         const processKeyOps = async () => {
           for (const op of ops) {
-            // User ownership check: User B does NOT send User A's operations!
-            if (op.userId !== handlers.currentUserId) {
+            // Check cancellation on account switch or logout
+            if (activeProcessingRunId !== currentRunId) return;
+            if (handlers.hasSession && !handlers.hasSession()) return;
+
+            // User ownership check: strictly require a valid, matching user ID
+            if (
+              !op.userId ||
+              typeof op.userId !== 'string' ||
+              op.userId.trim() === '' ||
+              op.userId !== handlers.currentUserId
+            ) {
               break;
             }
 
@@ -828,7 +1081,9 @@ export const Outbox = {
               // A. Upload pending files for this operation
               const opUploads = allUploads.filter((u) => u.operationId === op.id);
               for (const u of opUploads) {
+                if (activeProcessingRunId !== currentRunId) return;
                 const storagePath = await handlers.uploadBlob(u);
+                if (activeProcessingRunId !== currentRunId) return;
 
                 // Update payload targets
                 for (const t of u.targets) {
@@ -850,8 +1105,12 @@ export const Outbox = {
                 });
               }
 
+              if (activeProcessingRunId !== currentRunId) return;
+
               // B. Execute server mutation
               await handlers.executeMutation(op);
+
+              if (activeProcessingRunId !== currentRunId) return;
 
               // C. On success, remove from pending_operations
               await new Promise<void>((resolve, reject) => {
@@ -862,6 +1121,7 @@ export const Outbox = {
                 reqDel.onerror = () => reject(reqDel.error);
               });
             } catch (err: any) {
+              if (activeProcessingRunId !== currentRunId) return;
               const hasSession = handlers.hasSession ? handlers.hasSession() : true;
               const isTransient = isTransientError(err, hasSession);
 
@@ -870,7 +1130,7 @@ export const Outbox = {
                 if (err.code === '42501' && handlers.refreshSession) {
                   try {
                     const refreshed = await handlers.refreshSession();
-                    if (refreshed) {
+                    if (refreshed && activeProcessingRunId === currentRunId) {
                       // Session refreshed, continue loop to retry immediately
                       continue;
                     }
@@ -943,10 +1203,14 @@ export const Outbox = {
     } catch (err) {
       console.warn('Outbox processQueue error:', err);
     } finally {
-      isProcessing = false;
+      if (activeProcessingRunId === currentRunId) {
+        isProcessing = false;
+      }
       await updateCountsInternal();
     }
   },
+
+  abortActiveProcessing,
 };
 
 // Aliases for backwards compatibility

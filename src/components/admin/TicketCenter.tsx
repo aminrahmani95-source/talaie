@@ -1,39 +1,90 @@
-import React, { useState } from 'react';
-import { Ticket } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { Ticket, IssueCategory, SlaStatus, User } from '../../types';
 import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  User,
+  User as UserIcon,
   X,
   ZoomIn,
+  AlertOctagon,
+  Activity,
+  Flame,
+  Filter,
+  Layers,
+  Users,
+  ShieldCheck,
+  Check,
 } from 'lucide-react';
 import { toPersianDigits, formatJalaliDateTime } from '../../utils/jalali';
 import { CloudImage } from '../common/CloudImage';
 import { PageHeader } from '../ui/PageHeader';
-import { SegmentedControl } from '../ui/SegmentedControl';
 import { Button } from '../ui/Button';
 import { getDisplayName } from '../../utils/technicianName';
+import {
+  computeSlaMetrics,
+  getTicketSlaStatus,
+  getRemainingSlaHours,
+  getElapsedHours,
+  SLA_STATUS_LABELS,
+  ISSUE_CATEGORY_LABELS,
+} from '../../utils/sla';
 
 interface Props {
   tickets: Ticket[];
   onUpdateTicket: (ticket: Ticket) => void;
+  currentUser?: User;
 }
 
-export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
-  const [filter, setFilter] = useState<'OPEN' | 'RESOLVED' | 'ALL'>('OPEN');
+type SlaFilterTab = 'ALL' | 'OPEN_IN_SLA' | 'OPEN_OVERDUE' | 'RESOLVED_IN_SLA' | 'RESOLVED_OVERDUE';
+
+export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, currentUser }) => {
+  const [filter, setFilter] = useState<SlaFilterTab>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [blockingOnly, setBlockingOnly] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
-  const openCount = tickets.filter((t) => t.status === 'OPEN').length;
-  const resolvedCount = tickets.filter((t) => t.status === 'RESOLVED').length;
+  // Compute SLA Metrics
+  const slaMetrics = useMemo(() => computeSlaMetrics(tickets), [tickets]);
 
-  const filteredTickets = tickets.filter((t) => {
-    if (filter === 'OPEN') return t.status === 'OPEN';
-    if (filter === 'RESOLVED') return t.status === 'RESOLVED';
-    return true;
-  });
+  // Filtered tickets
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((t) => {
+      const slaStatus = getTicketSlaStatus(t);
+
+      // SLA Status filter
+      if (filter !== 'ALL' && slaStatus !== filter) {
+        return false;
+      }
+
+      // Category filter
+      if (categoryFilter !== 'ALL' && t.category !== categoryFilter) {
+        return false;
+      }
+
+      // Blocking filter
+      if (blockingOnly && !t.isBlocking) {
+        return false;
+      }
+
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        const matchesTitle = t.projectTitle?.toLowerCase().includes(q);
+        const matchesCode = t.projectCode?.toLowerCase().includes(q);
+        const matchesAuthor = t.authorName?.toLowerCase().includes(q);
+        const matchesDesc = t.description?.toLowerCase().includes(q);
+        if (!matchesTitle && !matchesCode && !matchesAuthor && !matchesDesc) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [tickets, filter, categoryFilter, blockingOnly, searchQuery]);
 
   const handleResolve = (ticket: Ticket) => {
     if (!resolutionNote.trim()) {
@@ -41,11 +92,25 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
       return;
     }
 
+    const resolvedAt = new Date().toISOString();
     const updated: Ticket = {
       ...ticket,
       status: 'RESOLVED',
       resolutionNote: resolutionNote.trim(),
-      resolvedAt: new Date().toISOString(),
+      resolvedAt,
+      verifiedByUserId: currentUser?.id,
+      verifiedByUserName: currentUser ? getDisplayName(currentUser.name) : undefined,
+      actionHistory: [
+        ...(ticket.actionHistory || []),
+        {
+          id: `act-${Date.now()}`,
+          timestamp: resolvedAt,
+          action: 'RESOLVED',
+          byUserId: currentUser?.id || 'qc-mgr',
+          byUserName: currentUser ? getDisplayName(currentUser.name) : 'مدیریت QC',
+          note: resolutionNote.trim(),
+        },
+      ],
     };
 
     onUpdateTicket(updated);
@@ -53,8 +118,11 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
     setResolutionNote('');
   };
 
-  const getTicketTypeLabel = (type: string) => {
-    switch (type) {
+  const getCategoryTitle = (ticket: Ticket) => {
+    if (ticket.category && ISSUE_CATEGORY_LABELS[ticket.category]) {
+      return ISSUE_CATEGORY_LABELS[ticket.category];
+    }
+    switch (ticket.type) {
       case 'DEFICIENCY_FABRIC':
         return 'کسری یا آسیب پارچه';
       case 'DAMAGED_HARDWARE':
@@ -71,162 +139,375 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket }) => {
   };
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="space-y-6 pb-12">
       {/* Page Header */}
       <PageHeader
-        title="تیکت‌ها و پیام‌های اضطراری"
-        subtitle="پیام‌ها و اعلام کسری‌های سر پروژه توسط تکنسین‌های نصب"
-        actions={
-          <SegmentedControl
-            options={[
-              { id: 'OPEN', label: 'تیکت‌های باز', badge: openCount > 0 ? openCount : undefined },
-              { id: 'RESOLVED', label: 'حل شده‌ها', badge: resolvedCount > 0 ? resolvedCount : undefined },
-              { id: 'ALL', label: 'همه تیکت‌ها', badge: tickets.length },
-            ]}
-            value={filter}
-            onChange={(val) => setFilter(val as 'OPEN' | 'RESOLVED' | 'ALL')}
-            size="sm"
-          />
-        }
+        title="مرکز تیکت‌ها و پایش SLA ۷۲ ساعته"
+        subtitle="مدیریت یکپارچه نواقص اجرایی، خرابی‌های ابزار، تطابق استانداردها و حل بحران‌ها"
       />
 
+      {/* KPI Performance Banner */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Metric 1: SLA Compliance */}
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-500">
+            <span className="text-xs font-bold">نرخ رعایت SLA ۷۲h</span>
+            <Activity className="w-4 h-4 text-[#C1A056]" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-black text-[#181818] dark:text-[#F5F3EF]">
+              %{toPersianDigits(slaMetrics.onTimeRate.toFixed(1))}
+            </span>
+            <span className="text-[10px] text-neutral-400">انطباق کلی</span>
+          </div>
+          <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+            <div
+              className={`h-full transition-all duration-500 ${
+                slaMetrics.onTimeRate >= 90
+                  ? 'bg-emerald-500'
+                  : slaMetrics.onTimeRate >= 75
+                  ? 'bg-amber-500'
+                  : 'bg-rose-500'
+              }`}
+              style={{ width: `${Math.min(100, Math.max(0, slaMetrics.onTimeRate))}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Metric 2: Open Overdue */}
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-500">
+            <span className="text-xs font-bold">تیکت‌های بحرانی منقضی</span>
+            <Flame className="w-4 h-4 text-rose-500" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span
+              className={`text-2xl font-black ${
+                slaMetrics.openOverdue > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-700 dark:text-neutral-300'
+              }`}
+            >
+              {toPersianDigits(slaMetrics.openOverdue)}
+            </span>
+            <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold">
+              {slaMetrics.openOverdue > 0 ? 'عبور از ۷۲ ساعت' : 'صفر (عالی)'}
+            </span>
+          </div>
+          <span className="text-[11px] text-neutral-400 block truncate">
+            از مجموع {toPersianDigits(slaMetrics.openCount)} تیکت باز در سیستم
+          </span>
+        </div>
+
+        {/* Metric 3: Avg Resolution Hours */}
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-500">
+            <span className="text-xs font-bold">میانگین زمان حل</span>
+            <Clock className="w-4 h-4 text-sky-500" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-black text-[#181818] dark:text-[#F5F3EF]">
+              {toPersianDigits(slaMetrics.averageResolutionHours.toFixed(1))}
+            </span>
+            <span className="text-[10px] text-neutral-400">ساعت</span>
+          </div>
+          <span className="text-[11px] text-neutral-400 block truncate">
+            {toPersianDigits(slaMetrics.resolvedInSla)} مورد حل در موعد
+          </span>
+        </div>
+
+        {/* Metric 4: Blocking Issues */}
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-500">
+            <span className="text-xs font-bold">مسدودکننده‌های عملیات</span>
+            <AlertOctagon className="w-4 h-4 text-amber-500" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-black text-amber-600 dark:text-amber-400">
+              {toPersianDigits(tickets.filter((t) => t.status === 'OPEN' && t.isBlocking).length)}
+            </span>
+            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">Blocking</span>
+          </div>
+          <span className="text-[11px] text-neutral-400 block truncate">نیاز به مداخله فوری سرپرست</span>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs space-y-3">
+        {/* SLA Status Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+          {[
+            { id: 'ALL', label: 'همه تیکت‌ها', count: tickets.length },
+            { id: 'OPEN_IN_SLA', label: 'باز در مهلت', count: slaMetrics.openInSla },
+            { id: 'OPEN_OVERDUE', label: 'بحرانی منقضی', count: slaMetrics.openOverdue, alert: true },
+            { id: 'RESOLVED_IN_SLA', label: 'حل به موقع', count: slaMetrics.resolvedInSla },
+            { id: 'RESOLVED_OVERDUE', label: 'حل با تاخیر', count: slaMetrics.resolvedOverdue },
+          ].map((tab) => {
+            const isActive = filter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setFilter(tab.id as SlaFilterTab)}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
+                  isActive
+                    ? 'bg-[#212121] dark:bg-[#C1A056] text-white dark:text-[#141414] shadow-xs'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                    tab.alert && tab.count > 0
+                      ? 'bg-rose-500 text-white'
+                      : isActive
+                      ? 'bg-white/20 text-current'
+                      : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'
+                  }`}
+                >
+                  {toPersianDigits(tab.count)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Category & Search Controls */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
+          {/* Category Dropdown */}
+          <div>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full text-xs p-2 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
+            >
+              <option value="ALL">همه دسته‌بندی‌های ایراد (۸ گانه)</option>
+              {Object.entries(ISSUE_CATEGORY_LABELS).map(([catKey, catLabel]) => (
+                <option key={catKey} value={catKey}>
+                  {catLabel}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Search Input */}
+          <div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="جستجو بر اساس پروژه، کد یا فرستنده..."
+              className="w-full text-xs p-2 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
+            />
+          </div>
+
+          {/* Blocking Only Toggle */}
+          <div className="flex items-center">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-neutral-700 dark:text-neutral-300">
+              <input
+                type="checkbox"
+                checked={blockingOnly}
+                onChange={(e) => setBlockingOnly(e.target.checked)}
+                className="rounded border-neutral-300 text-rose-600 focus:ring-rose-500 w-4 h-4"
+              />
+              <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400">
+                <AlertOctagon className="w-3.5 h-3.5" />
+                فقط موارد مسدودکننده (Blocking)
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Ticket List */}
       {filteredTickets.length === 0 ? (
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-8 text-center border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs max-w-md mx-auto">
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-10 text-center border border-[#E2DDD4] dark:border-[#2C2C2C] shadow-2xs max-w-md mx-auto">
           <CheckCircle2 className="w-12 h-12 text-[#8E6F27] dark:text-[#E5CA8F] mx-auto mb-2 opacity-50" />
-          <h3 className="font-bold text-sm text-[#181818] dark:text-white">
-            هیچ تیکت بازی وجود ندارد
-          </h3>
+          <h3 className="font-bold text-sm text-[#181818] dark:text-white">هیچ تیکتی با این فیلتر یافت نشد</h3>
           <p className="text-xs text-[#69655F] dark:text-[#9E988D] mt-1">
-            همه موارد پیگیری شده یا هیچ گزارشی ارسال نشده است.
+            همه موارد پیگیری شده یا معیارهای جستجو را تغییر دهید.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredTickets.map((t) => (
-            <div
-              key={t.id}
-              className={`bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border shadow-2xs space-y-3 ${
-                t.status === 'OPEN'
-                  ? 'border-rose-300 dark:border-rose-900 ring-2 ring-rose-500/10'
-                  : 'border-[#E2DDD4] dark:border-[#2C2C2C] opacity-90'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#FAF7F2] dark:bg-[#222222] text-[#181818] dark:text-[#F5F3EF] border border-[#E2DDD4] dark:border-[#2C2C2C]">
-                  {getTicketTypeLabel(t.type)}
-                </span>
-                <span
-                  className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                    t.status === 'OPEN'
-                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                      : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
-                  }`}
-                >
-                  {t.status === 'OPEN' ? 'نیازمند اقدام' : 'حل شده'}
-                </span>
-              </div>
+          {filteredTickets.map((t) => {
+            const slaStatus = getTicketSlaStatus(t);
+            const slaConfig = SLA_STATUS_LABELS[slaStatus];
+            const remainingHours = getRemainingSlaHours(t);
+            const elapsedHours = getElapsedHours(t);
 
-              <div>
-                <h4 className="font-bold text-sm text-[#181818] dark:text-[#F5F3EF] leading-tight">
-                  {t.projectTitle} ({t.projectCode})
-                </h4>
-                <div className="flex items-center gap-2 text-xs text-[#69655F] dark:text-[#9E988D] mt-1">
-                  <span>ارسال‌کننده: {getDisplayName(t.authorName)}</span>
-                  <span>•</span>
-                  <span>{formatJalaliDateTime(t.createdAt)}</span>
+            return (
+              <div
+                key={t.id}
+                className={`bg-white dark:bg-[#1A1A1A] rounded-2xl p-4 border shadow-2xs space-y-3.5 transition ${
+                  slaStatus === 'OPEN_OVERDUE'
+                    ? 'border-rose-400 dark:border-rose-800 ring-2 ring-rose-500/15'
+                    : t.isBlocking
+                    ? 'border-amber-400 dark:border-amber-800 ring-1 ring-amber-500/20'
+                    : 'border-[#E2DDD4] dark:border-[#2C2C2C]'
+                }`}
+              >
+                {/* Header: Category Badge + SLA Badge */}
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#FAF7F2] dark:bg-[#202020] text-[#181818] dark:text-[#F5F3EF] border border-[#E2DDD4] dark:border-[#2C2C2C] line-clamp-1">
+                    {getCategoryTitle(t)}
+                  </span>
+                  <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold border shrink-0 ${slaConfig.badgeCls}`}>
+                    {slaConfig.label}
+                  </span>
                 </div>
-              </div>
 
-              <p className="text-xs text-[#4A4742] dark:text-[#BDB8AF] bg-[#FAF7F2] dark:bg-[#141414] p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] leading-relaxed">
-                {t.description}
-              </p>
-
-              {/* Photos */}
-              {t.photos && t.photos.filter((p) => Boolean(p && p.trim() !== '')).length > 0 && (
-                <div className="flex items-center gap-2">
-                  {t.photos
-                    .filter((p) => Boolean(p && p.trim() !== ''))
-                    .map((p, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setPreviewPhoto(p)}
-                        className="relative w-14 h-14 rounded-xl overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C] block group cursor-pointer"
-                        aria-label="مشاهده تصویر ضمیمه"
-                      >
-                        <CloudImage src={p} alt="" className="w-full h-full object-cover group-hover:scale-105 transition" />
-                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
-                          <ZoomIn className="w-4 h-4" />
-                        </div>
-                      </button>
-                    ))}
-                </div>
-              )}
-
-              {/* Resolution Info if Resolved */}
-              {t.status === 'RESOLVED' && (
-                <div className="bg-[#FAF7F2] dark:bg-[#141414] rounded-xl p-3 border border-[#C1A056]/30 text-xs text-[#181818] dark:text-[#F5F3EF] space-y-1">
-                  <div className="font-bold flex items-center justify-between text-[#8E6F27] dark:text-[#E5CA8F]">
-                    <span className="flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>اقدام انجام شده:</span>
+                {/* Project Title and Author */}
+                <div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h4 className="font-bold text-sm text-[#181818] dark:text-[#F5F3EF] leading-tight">
+                      {t.projectTitle}
+                    </h4>
+                    <span className="font-mono text-xs text-neutral-400 shrink-0">{t.projectCode}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-[#69655F] dark:text-[#9E988D] mt-1">
+                    <span className="flex items-center gap-1">
+                      <UserIcon className="w-3 h-3 text-neutral-400" />
+                      {getDisplayName(t.authorName)}
                     </span>
-                    {t.resolvedAt && (
-                      <span className="text-xs text-[#69655F] dark:text-[#9E988D] font-normal">
-                        {formatJalaliDateTime(t.resolvedAt)}
+                    <span>•</span>
+                    <span>{formatJalaliDateTime(t.createdAt)}</span>
+                  </div>
+                </div>
+
+                {/* Blocking Alert Pill */}
+                {t.isBlocking && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-start gap-2 text-xs text-rose-700 dark:text-rose-300">
+                    <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold block">مسدودکننده عملیات نصب (Blocking)</span>
+                      {t.blockingReason && (
+                        <span className="text-[11px] text-rose-600/90 dark:text-rose-300/90 mt-0.5 block">
+                          علت: {t.blockingReason}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* SLA Countdown / Time Elapsed Banner */}
+                <div className="p-2 rounded-xl bg-[#FAF7F2] dark:bg-[#141414] border border-[#E2DDD4] dark:border-[#2C2C2C] flex items-center justify-between text-xs">
+                  <span className="text-neutral-500 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-neutral-400" />
+                    <span>وضعیت مهلت ۷۲h:</span>
+                  </span>
+                  {t.status === 'OPEN' ? (
+                    remainingHours > 0 ? (
+                      <span className="font-bold text-amber-600 dark:text-amber-400 font-mono">
+                        {toPersianDigits(remainingHours)} ساعت باقی‌مانده
+                      </span>
+                    ) : (
+                      <span className="font-bold text-rose-600 dark:text-rose-400 font-mono animate-pulse">
+                        {toPersianDigits(Math.abs(remainingHours))} ساعت تاخیر بحرانی!
+                      </span>
+                    )
+                  ) : (
+                    <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">
+                      حل شده در {toPersianDigits(elapsedHours)} ساعت
+                    </span>
+                  )}
+                </div>
+
+                {/* Description */}
+                <p className="text-xs text-[#4A4742] dark:text-[#BDB8AF] bg-[#FAF7F2] dark:bg-[#141414] p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] leading-relaxed">
+                  {t.description}
+                </p>
+
+                {/* Photos */}
+                {t.photos && t.photos.filter((p) => Boolean(p && p.trim() !== '')).length > 0 && (
+                  <div className="flex items-center gap-2">
+                    {t.photos
+                      .filter((p) => Boolean(p && p.trim() !== ''))
+                      .map((p, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setPreviewPhoto(p)}
+                          className="relative w-14 h-14 rounded-xl overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C] block group cursor-pointer"
+                          aria-label="مشاهده تصویر ضمیمه"
+                        >
+                          <CloudImage
+                            src={p}
+                            alt=""
+                            className="w-full h-full object-cover group-hover:scale-105 transition"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
+                            <ZoomIn className="w-4 h-4" />
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                )}
+
+                {/* Action History / Resolution Details */}
+                {t.status === 'RESOLVED' && (
+                  <div className="bg-[#FAF7F2] dark:bg-[#141414] rounded-xl p-3 border border-[#C1A056]/30 text-xs text-[#181818] dark:text-[#F5F3EF] space-y-1">
+                    <div className="font-bold flex items-center justify-between text-[#8E6F27] dark:text-[#E5CA8F]">
+                      <span className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>اقدام انجام شده:</span>
+                      </span>
+                      {t.resolvedAt && (
+                        <span className="text-[11px] text-[#69655F] dark:text-[#9E988D] font-normal">
+                          {formatJalaliDateTime(t.resolvedAt)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[#4A4742] dark:text-[#BDB8AF]">{t.resolutionNote}</p>
+                    {t.verifiedByUserName && (
+                      <span className="text-[10px] text-neutral-400 block pt-1">
+                        تایید توسط: {t.verifiedByUserName}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-[#4A4742] dark:text-[#BDB8AF]">{t.resolutionNote}</p>
-                </div>
-              )}
+                )}
 
-              {/* Action Form if Open */}
-              {t.status === 'OPEN' && (
-                <div className="pt-2 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
-                  {resolvingId === t.id ? (
-                    <div className="space-y-2">
-                      <textarea
-                        rows={2}
-                        value={resolutionNote}
-                        onChange={(e) => setResolutionNote(e.target.value)}
-                        placeholder="اقدام انجام شده جهت رفع مشکل را بنویسید..."
-                        className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
-                      />
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => handleResolve(t)}
-                          icon={<CheckCircle2 className="w-4 h-4" />}
-                          className="flex-1"
-                        >
-                          ثبت حل مشکل
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setResolvingId(null)}
-                        >
-                          انصراف
-                        </Button>
+                {/* Action Form for Open Tickets */}
+                {t.status === 'OPEN' && (
+                  <div className="pt-2 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
+                    {resolvingId === t.id ? (
+                      <div className="space-y-2">
+                        <textarea
+                          rows={2}
+                          value={resolutionNote}
+                          onChange={(e) => setResolutionNote(e.target.value)}
+                          placeholder="اقدام انجام شده جهت رفع مشکل و بستن تیکت را شرح دهید..."
+                          className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleResolve(t)}
+                            icon={<CheckCircle2 className="w-4 h-4" />}
+                            className="flex-1"
+                          >
+                            ثبت حل مشکل
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setResolvingId(null)}>
+                            انصراف
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setResolvingId(t.id)}
-                      icon={<CheckCircle2 className="w-4 h-4" />}
-                      className="w-full"
-                    >
-                      پاسخ و حل این مشکل
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setResolvingId(t.id)}
+                        icon={<CheckCircle2 className="w-4 h-4" />}
+                        className="w-full"
+                      >
+                        اقدام و رفع مشکل
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

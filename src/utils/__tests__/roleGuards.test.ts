@@ -1,12 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ALLOWED_TECHNICIAN_PATCH_KEYS,
   isValidStatusTransition,
   validateProjectPatchRoleGuards,
   validateTicketRoleGuards,
   validateEvaluationRoleGuards,
 } from '../roleGuards';
-import { Project, ProjectStatus, Ticket, User, StuckIncident } from '../../types';
+import { Project, User, StuckIncident } from '../../types';
 import { PermanentError } from '../offlineQueue';
 
 describe('Role Guards & State Machine Validation', () => {
@@ -39,6 +38,14 @@ describe('Role Guards & State Machine Validation', () => {
     name: 'تکنسین متفرقه',
     phone: '09123333333',
     role: 'TECHNICIAN',
+    active: true,
+  };
+
+  const coordinator: User = {
+    id: 'user-coord-1',
+    name: 'مسئول هماهنگی',
+    phone: '09124444444',
+    role: 'SCHEDULING_COORDINATOR',
     active: true,
   };
 
@@ -372,6 +379,37 @@ describe('Role Guards & State Machine Validation', () => {
           dailyLogs: [{ ...existingLog, note: 'دستکاری شد' }, newLog],
         });
       }).toThrowError(/ویرایش لاگ‌های روزانه قبلی مجاز نیست/);
+
+      // Technician cannot forge supervisor confirmation
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithLog, {
+          dailyLogs: [existingLog, { ...newLog, supervisorConfirmed: true }],
+        });
+      }).toThrowError(/تایید گزارش روزانه منحصراً در صلاحیت سرپرست اکیپ یا مدیر QC است/);
+
+      // Lead technician CAN submit daily log with supervisorConfirmed = true
+      expect(() => {
+        validateProjectPatchRoleGuards(leadTech, projectWithLog, {
+          dailyLogs: [existingLog, { ...newLog, byUserId: leadTech.id, supervisorConfirmed: true }],
+        });
+      }).not.toThrow();
+    });
+
+    it('allows exceptional completion fields in technician patch', () => {
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, { ...mockProject, status: 'IN_PROGRESS' }, {
+          status: 'COMPLETED',
+          qcStatus: 'PENDING',
+          isExceptionalCompletion: true,
+          exceptionalCompletionDetails: {
+            hasIncompleteActivities: true,
+            remainingActivities: [{ activityId: 'act-1', title: 'پرده', remainingQuantity: 1, unit: 'لت' }],
+            documentedReason: 'کناف سقف آماده نبود و کارفرما عدم نصب را پذیرفت',
+            confirmedBySupervisor: leadTech.name,
+            confirmedAt: '2026-11-02T16:00:00Z',
+          },
+        });
+      }).not.toThrow();
     });
 
     it('enforces open/close rules on workSessions', () => {
@@ -429,6 +467,163 @@ describe('Role Guards & State Machine Validation', () => {
           dailyLogs: [],
         });
       }).not.toThrow();
+    });
+
+    it('strictly forbids ANY user (including QC_MANAGER) from mutating locked originalPlan directly', () => {
+      const lockedProject: Project = {
+        ...mockProject,
+        status: 'IN_PROGRESS',
+        originalPlan: {
+          lockedAt: '2026-05-01T08:00:00Z',
+          activities: [
+            {
+              id: 'act-1',
+              title: 'پرده برقی',
+              category: 'CURTAIN',
+              plannedQuantity: 10,
+              unit: 'لت',
+            },
+          ],
+        },
+      };
+
+      // QC_MANAGER blocked
+      expect(() => {
+        validateProjectPatchRoleGuards(qcManager, lockedProject, {
+          originalPlan: {
+            lockedAt: '2026-05-01T08:00:00Z',
+            activities: [
+              {
+                id: 'act-1',
+                title: 'پرده برقی',
+                category: 'CURTAIN',
+                plannedQuantity: 15,
+                unit: 'لت',
+              },
+            ],
+          },
+        });
+      }).toThrowError(/طرح اولیه نصب \(Original Plan\) پس از قفل شدن یا زمان‌بندی تغییرناپذیر است/);
+
+      // Coordinator blocked
+      expect(() => {
+        validateProjectPatchRoleGuards(coordinator, lockedProject, {
+          originalPlan: {
+            lockedAt: '2026-05-01T08:00:00Z',
+            activities: [],
+          },
+        });
+      }).toThrowError(/طرح اولیه نصب \(Original Plan\) پس از قفل شدن یا زمان‌بندی تغییرناپذیر است/);
+
+      // Technician blocked
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, lockedProject, {
+          originalPlan: {
+            lockedAt: '2026-05-01T08:00:00Z',
+            activities: [],
+          },
+        });
+      }).toThrowError(/طرح اولیه نصب \(Original Plan\) پس از قفل شدن یا زمان‌بندی تغییرناپذیر است/);
+    });
+
+    it('allows QC_MANAGER to initialize originalPlan only before lock during MEASUREMENT_PENDING', () => {
+      const draftProject: Project = {
+        ...mockProject,
+        status: 'MEASUREMENT_PENDING',
+        originalPlan: undefined,
+      };
+
+      expect(() => {
+        validateProjectPatchRoleGuards(qcManager, draftProject, {
+          originalPlan: {
+            lockedAt: '2026-05-01T08:00:00Z',
+            activities: [
+              {
+                id: 'act-1',
+                title: 'شید رول',
+                category: 'SHADE',
+                plannedQuantity: 5,
+                unit: 'لت',
+              },
+            ],
+          },
+        });
+      }).not.toThrow();
+
+      // Technician cannot initialize it even during MEASUREMENT_PENDING
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, draftProject, {
+          originalPlan: {
+            lockedAt: '2026-05-01T08:00:00Z',
+            activities: [],
+          },
+        });
+      }).toThrowError(/تعریف طرح اولیه فقط در صلاحیت مدیر QC است/);
+    });
+
+    it('enforces approved amendment immutability: deletion and field changes are rejected for ALL users', () => {
+      const approvedAmend = {
+        id: 'amend-10',
+        activityId: 'act-1',
+        activityTitle: 'پرده برقی',
+        previousQuantity: 10,
+        newQuantity: 12,
+        reason: 'افزایش ۲ لت کارفرما',
+        requestedByUserId: technician.id,
+        requestedByUserName: technician.name,
+        requestedAt: '2026-05-15T10:00:00Z',
+        status: 'APPROVED' as const,
+        reviewedByUserId: qcManager.id,
+        reviewedByUserName: qcManager.name,
+        reviewedAt: '2026-05-15T11:00:00Z',
+      };
+
+      const projectWithAmend: Project = {
+        ...mockProject,
+        status: 'IN_PROGRESS',
+        planAmendments: [approvedAmend],
+      };
+
+      // 1. Deletion blocked for QC_MANAGER
+      expect(() => {
+        validateProjectPatchRoleGuards(qcManager, projectWithAmend, {
+          planAmendments: [],
+        });
+      }).toThrowError(/حذف سوابق اصلاحیه‌های نهایی‌شده طرح امکان‌پذیر نیست/);
+
+      // 2. Tampering quantity blocked for QC_MANAGER
+      expect(() => {
+        validateProjectPatchRoleGuards(qcManager, projectWithAmend, {
+          planAmendments: [{ ...approvedAmend, newQuantity: 18 }],
+        });
+      }).toThrowError(/اصلاحیه تاییدشده قبلی غیرقابل تغییر است/);
+
+      // 3. Tampering reason blocked for QC_MANAGER
+      expect(() => {
+        validateProjectPatchRoleGuards(qcManager, projectWithAmend, {
+          planAmendments: [{ ...approvedAmend, reason: 'علت دیگر' }],
+        });
+      }).toThrowError(/اصلاحیه تاییدشده قبلی غیرقابل تغییر است/);
+
+      // 4. Technician cannot approve a new amendment
+      const pendingAmend = {
+        id: 'amend-11',
+        activityId: 'act-1',
+        activityTitle: 'پرده برقی',
+        previousQuantity: 12,
+        newQuantity: 14,
+        reason: 'درخواست جدید',
+        requestedByUserId: technician.id,
+        requestedByUserName: technician.name,
+        requestedAt: '2026-05-16T10:00:00Z',
+        status: 'APPROVED' as const, // Unauthorized approval!
+      };
+
+      expect(() => {
+        validateProjectPatchRoleGuards(technician, projectWithAmend, {
+          planAmendments: [approvedAmend, pendingAmend],
+        });
+      }).toThrowError(/تایید بازنگری و تغییر سقف برنامه فقط در صلاحیت مدیر QC است/);
     });
   });
 

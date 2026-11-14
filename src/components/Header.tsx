@@ -31,6 +31,8 @@ export const Header: React.FC<Props> = ({
   const roleTitle =
     currentUser.role === 'QC_MANAGER'
       ? 'مدیر کنترل کیفیت'
+      : currentUser.role === 'SCHEDULING_COORDINATOR'
+      ? 'مسئول هماهنگی و زمان‌بندی'
       : currentUser.role === 'LEAD_TECHNICIAN'
       ? 'سرپرست اکیپ نصب'
       : 'تکنسین نصب';

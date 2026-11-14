@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Activity,
   CalendarDays,
   ShieldCheck,
   AlertOctagon,
@@ -7,10 +8,11 @@ import {
   MoreHorizontal,
   Users,
   Settings,
+  Package,
 } from 'lucide-react';
 import { Sheet } from '../ui/Sheet';
 
-export type ManagerTab = 'planner' | 'qc' | 'stuck' | 'tickets' | 'technicians' | 'settings';
+export type ManagerTab = 'control' | 'planner' | 'qc' | 'stuck' | 'tickets' | 'materials' | 'technicians' | 'settings';
 
 interface Props {
   activeTab: ManagerTab;
@@ -18,6 +20,7 @@ interface Props {
   pendingQcCount?: number;
   openStuckCount?: number;
   openTicketCount?: number;
+  pendingMaterialCount?: number;
 }
 
 export const BottomNav: React.FC<Props> = ({
@@ -26,12 +29,23 @@ export const BottomNav: React.FC<Props> = ({
   pendingQcCount = 0,
   openStuckCount = 0,
   openTicketCount = 0,
+  pendingMaterialCount = 0,
 }) => {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
-  const isMoreActive = activeTab === 'technicians' || activeTab === 'settings';
+  const isMoreActive =
+    activeTab === 'stuck' ||
+    activeTab === 'materials' ||
+    activeTab === 'technicians' ||
+    activeTab === 'settings';
 
   const navItems = [
+    {
+      id: 'control' as const,
+      label: 'مرکز کنترل',
+      icon: Activity,
+      badge: undefined,
+    },
     {
       id: 'planner' as const,
       label: 'برنامه',
@@ -46,15 +60,8 @@ export const BottomNav: React.FC<Props> = ({
       badgeColor: 'bg-[#C1A056] text-[#212121]',
     },
     {
-      id: 'stuck' as const,
-      label: 'متوقف‌ها',
-      icon: AlertOctagon,
-      badge: openStuckCount > 0 ? openStuckCount : undefined,
-      badgeColor: 'bg-rose-600 text-white animate-pulse',
-    },
-    {
       id: 'tickets' as const,
-      label: 'تیکت‌ها',
+      label: 'تیکت و SLA',
       icon: AlertTriangle,
       badge: openTicketCount > 0 ? openTicketCount : undefined,
       badgeColor: 'bg-rose-500 text-white',
@@ -139,6 +146,66 @@ export const BottomNav: React.FC<Props> = ({
         maxWidth="sm"
       >
         <div className="grid grid-cols-1 gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              onSelectTab('stuck');
+              setIsMoreOpen(false);
+            }}
+            className={`flex items-center gap-3 p-3.5 rounded-2xl border transition text-right cursor-pointer min-h-[56px] ${
+              activeTab === 'stuck'
+                ? 'border-rose-500 bg-rose-500/10 text-rose-700 dark:text-rose-400 font-bold'
+                : 'border-[#E2DDD4] dark:border-[#2D2D2D] bg-[#FAF7F2] dark:bg-[#1F1F1F] text-[#181818] dark:text-[#F5F3EF] hover:border-rose-500/60'
+            }`}
+          >
+            <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#282828] border border-[#E2DDD4] dark:border-[#383838] flex items-center justify-center text-rose-600">
+              <AlertOctagon className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-bold flex items-center justify-between">
+                <span>پروژه‌های متوقف (استاک)</span>
+                {openStuckCount > 0 && (
+                  <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                    {openStuckCount}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-[#69655F] dark:text-[#9E988D] mt-0.5">
+                رسیدگی فوری به پروژه‌های نیازمند مداخله زیر ۷۲ ساعت
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onSelectTab('materials');
+              setIsMoreOpen(false);
+            }}
+            className={`flex items-center gap-3 p-3.5 rounded-2xl border transition text-right cursor-pointer min-h-[56px] ${
+              activeTab === 'materials'
+                ? 'border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-400 font-bold'
+                : 'border-[#E2DDD4] dark:border-[#2D2D2D] bg-[#FAF7F2] dark:bg-[#1F1F1F] text-[#181818] dark:text-[#F5F3EF] hover:border-purple-500/60'
+            }`}
+          >
+            <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#282828] border border-[#E2DDD4] dark:border-[#383838] flex items-center justify-center text-purple-600">
+              <Package className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-bold flex items-center justify-between">
+                <span>مرکز متریال و پیگیری کسری</span>
+                {pendingMaterialCount > 0 && (
+                  <span className="bg-purple-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                    {pendingMaterialCount}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-[#69655F] dark:text-[#9E988D] mt-0.5">
+                تامین، ارسال مرحله‌ای با پیک و رهگیری تحویل سر کارگاه
+              </div>
+            </div>
+          </button>
+
           <button
             type="button"
             onClick={() => {

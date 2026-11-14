@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Project, User, SystemSettings, ProposalImage } from '../../types';
+import { Project, User, SystemSettings, ProposalImage, InstallationTeam, ProjectTechnicalHandover } from '../../types';
 import {
   X,
   Plus,
@@ -15,6 +15,10 @@ import {
   AlertTriangle,
   Loader2,
   Search,
+  Warehouse,
+  Factory,
+  Users,
+  CheckSquare,
 } from 'lucide-react';
 import { getUpcomingDays, getTodayPersianString, toPersianDigits } from '../../utils/jalali';
 import { getMultiDayTotalDays } from '../../utils/multiDay';
@@ -34,6 +38,7 @@ interface Props {
   project?: Project | null;
   defaultDate?: string;
   users: User[];
+  teams?: InstallationTeam[];
   settings: SystemSettings;
   onClose: () => void;
   onSave: (data: ProjectFormSaveData) => void;
@@ -43,12 +48,65 @@ export const ProjectFormModal: React.FC<Props> = ({
   project,
   defaultDate,
   users,
+  teams,
   settings,
   onClose,
   onSave,
 }) => {
   const isEditing = !!project;
   const days = getUpcomingDays(30);
+
+  const defaultTeams: InstallationTeam[] = [
+    { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_3', name: 'اکیپ نصب ۳', code: 'TEAM_3', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_4', name: 'اکیپ نصب ۴', code: 'TEAM_4', createdAt: '', updatedAt: '' },
+  ];
+  const effectiveTeams = teams && teams.length > 0 ? teams : defaultTeams;
+
+  // Gating & Technical Handover states
+  const [prodConfirmed, setProdConfirmed] = useState<boolean>(
+    Boolean(project?.technicalHandover?.productionConfirmation?.confirmed)
+  );
+  const [prodConfirmedBy, setProdConfirmedBy] = useState<string>(
+    project?.technicalHandover?.productionConfirmation?.confirmedBy || ''
+  );
+  const [prodNotes, setProdNotes] = useState<string>(
+    project?.technicalHandover?.productionConfirmation?.notes || ''
+  );
+
+  const [whConfirmed, setWhConfirmed] = useState<boolean>(
+    Boolean(project?.technicalHandover?.warehouseConfirmation?.confirmed)
+  );
+  const [whConfirmedBy, setWhConfirmedBy] = useState<string>(
+    project?.technicalHandover?.warehouseConfirmation?.confirmedBy || ''
+  );
+  const [whNotes, setWhNotes] = useState<string>(
+    project?.technicalHandover?.warehouseConfirmation?.notes || ''
+  );
+
+  const isHistorical = Boolean(project?.technicalHandover?.isHistoricalMigration);
+  const isHandoverComplete =
+    (prodConfirmed && whConfirmed) ||
+    isHistorical ||
+    Boolean(project && project.status !== 'MEASUREMENT_PENDING' && !project.technicalHandover);
+
+  // Teams & Workload states
+  const [assignedTeamId, setAssignedTeamId] = useState<string>(
+    project?.assignedTeamId || ''
+  );
+  const [assignedTeamName, setAssignedTeamName] = useState<string>(
+    project?.assignedTeamName || ''
+  );
+  const [estimatedWorkload, setEstimatedWorkload] = useState<string>(
+    project?.estimatedWorkload ? String(project.estimatedWorkload) : ''
+  );
+  const [requiredDurationHours, setRequiredDurationHours] = useState<string>(
+    project?.requiredDurationHours ? String(project.requiredDurationHours) : ''
+  );
+  const [secondMeasurementDoc, setSecondMeasurementDoc] = useState<string>(
+    project?.secondMeasurementDoc || ''
+  );
 
   // Form states
   const [projectId] = useState(() => project?.id || `p-${Date.now()}`);
@@ -69,10 +127,10 @@ export const ProjectFormModal: React.FC<Props> = ({
 
   // Scheduled date & time
   const [scheduledDate, setScheduledDate] = useState(
-    project?.scheduledDate || defaultDate || days[0]?.dateKey || ''
+    project?.scheduledDate || (isHandoverComplete ? defaultDate || days[0]?.dateKey || '' : '')
   );
   const [endDate, setEndDate] = useState(
-    project?.endDate || project?.scheduledDate || defaultDate || days[0]?.dateKey || ''
+    project?.endDate || project?.scheduledDate || (isHandoverComplete ? defaultDate || days[0]?.dateKey || '' : '')
   );
   const [scheduledTime, setScheduledTime] = useState(project?.scheduledTime || '09:30');
 
@@ -98,8 +156,9 @@ export const ProjectFormModal: React.FC<Props> = ({
   );
 
   // Status & QC
-  const [status, setStatus] = useState<Project['status']>(project?.status || 'SCHEDULED');
-  const [qcStatus, setQcStatus] = useState<Project['qcStatus']>(project?.qcStatus || 'NOT_STARTED');
+  const status: Project['status'] =
+    project?.status || (isHandoverComplete ? 'SCHEDULED' : 'MEASUREMENT_PENDING');
+  const qcStatus: Project['qcStatus'] = project?.qcStatus || 'NOT_STARTED';
 
   // Form error and submission lock
   const [formError, setFormError] = useState('');
@@ -198,6 +257,38 @@ export const ProjectFormModal: React.FC<Props> = ({
       return;
     }
 
+    // Handover Gate validation:
+    const isScheduling =
+      ['SCHEDULED', 'EN_ROUTE', 'IN_PROGRESS', 'PAUSED'].includes(status) ||
+      Boolean(scheduledDate && scheduledDate.trim() !== '') ||
+      Boolean(assignedTeamId && assignedTeamId.trim() !== '');
+
+    if (isScheduling && !isHandoverComplete) {
+      setFormError('دسترسی غیرمجاز: پروژه تا زمان ثبت و تأیید هر دو پیش‌نیاز اتمام تولید و تحویل به انبار، قابل زمان‌بندی و اعزام اکیپ نیست.');
+      return;
+    }
+
+    const technicalHandover: ProjectTechnicalHandover = {
+      isHandoverComplete,
+      isHistoricalMigration: project?.technicalHandover?.isHistoricalMigration,
+      productionConfirmation: {
+        confirmed: prodConfirmed,
+        confirmedBy: prodConfirmedBy.trim() || 'کارشناس واحد تولید',
+        confirmedAt: prodConfirmed
+          ? project?.technicalHandover?.productionConfirmation?.confirmedAt || new Date().toISOString()
+          : undefined,
+        notes: prodNotes.trim() || undefined,
+      },
+      warehouseConfirmation: {
+        confirmed: whConfirmed,
+        confirmedBy: whConfirmedBy.trim() || 'مسئول انبار مرکزی',
+        confirmedAt: whConfirmed
+          ? project?.technicalHandover?.warehouseConfirmation?.confirmedAt || new Date().toISOString()
+          : undefined,
+        notes: whNotes.trim() || undefined,
+      },
+    };
+
     setFormError('');
     setIsSubmitting(true);
 
@@ -220,6 +311,12 @@ export const ProjectFormModal: React.FC<Props> = ({
           scheduledTime,
           assignedTechnicianIds,
           leadTechnicianId: effectiveLead,
+          assignedTeamId: assignedTeamId || undefined,
+          assignedTeamName: assignedTeamName || undefined,
+          estimatedWorkload: estimatedWorkload ? Number(estimatedWorkload) : undefined,
+          requiredDurationHours: requiredDurationHours ? Number(requiredDurationHours) : undefined,
+          secondMeasurementDoc: secondMeasurementDoc.trim() || undefined,
+          technicalHandover,
           isFullTools,
           toolsRequired,
           customToolsNotes: customToolsNotes.trim(),
@@ -261,6 +358,12 @@ export const ProjectFormModal: React.FC<Props> = ({
           scheduledTime,
           assignedTechnicianIds,
           leadTechnicianId: effectiveLead,
+          assignedTeamId: assignedTeamId || undefined,
+          assignedTeamName: assignedTeamName || undefined,
+          estimatedWorkload: estimatedWorkload ? Number(estimatedWorkload) : undefined,
+          requiredDurationHours: requiredDurationHours ? Number(requiredDurationHours) : undefined,
+          secondMeasurementDoc: secondMeasurementDoc.trim() || undefined,
+          technicalHandover,
           isFullTools,
           toolsRequired,
           customToolsNotes: customToolsNotes.trim(),
@@ -415,6 +518,130 @@ export const ProjectFormModal: React.FC<Props> = ({
             </div>
           </div>
 
+          {/* Section: Official Handover Gate */}
+          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#C1A056]/40 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+                <CheckSquare className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+                <span>گیت تحویل رسمی به واحد فنی (پیش‌نیاز زمان‌بندی و اعزام)</span>
+              </h4>
+              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                isHandoverComplete
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                  : 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30'
+              }`}>
+                {isHandoverComplete ? '✓ گیت تایید شده' : '⏳ در انتظار تایید پیش‌نیازها'}
+              </span>
+            </div>
+
+            {!isHandoverComplete && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>پروژه تا زمان ثبت و تأیید هر دو پیش‌نیاز اتمام تولید و تحویل به انبار، قابل زمان‌بندی و اعزام اکیپ نیست.</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 1. Production Confirmation Card */}
+              <div className={`p-3.5 rounded-xl border transition-all ${
+                prodConfirmed
+                  ? 'border-emerald-500/40 bg-emerald-500/5'
+                  : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#151515]'
+              }`}>
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={prodConfirmed}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      setProdConfirmed(val);
+                      if (val && !prodConfirmedBy) {
+                        setProdConfirmedBy('کارشناس واحد تولید');
+                      }
+                    }}
+                    className="mt-0.5 w-4 h-4 rounded text-[#C1A056] focus:ring-[#C1A056] accent-[#C1A056]"
+                  />
+                  <div className="text-xs space-y-0.5">
+                    <span className="font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+                      <Factory className="w-3.5 h-3.5 text-[#C1A056]" />
+                      <span>۱. تأیید اتمام تولید کارگاهی</span>
+                    </span>
+                    <span className="text-slate-500 dark:text-zinc-400 block text-[11px]">
+                      ساخت پرده، دوخت و مونتاژ ریل‌ها در کارگاه به اتمام رسیده است.
+                    </span>
+                  </div>
+                </label>
+                {prodConfirmed && (
+                  <div className="mt-2.5 pt-2 border-t border-emerald-500/20 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="نام یا سمت تأییدکننده تولید..."
+                      value={prodConfirmedBy}
+                      onChange={(e) => setProdConfirmedBy(e.target.value)}
+                      className="w-full text-xs p-2 rounded-lg border border-emerald-500/30 bg-white dark:bg-[#121212] dark:text-white"
+                    />
+                    <input
+                      type="text"
+                      placeholder="نکات کیفی ساخت و تولید (اختیاری)..."
+                      value={prodNotes}
+                      onChange={(e) => setProdNotes(e.target.value)}
+                      className="w-full text-xs p-2 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#121212] dark:text-white"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Warehouse Confirmation Card */}
+              <div className={`p-3.5 rounded-xl border transition-all ${
+                whConfirmed
+                  ? 'border-emerald-500/40 bg-emerald-500/5'
+                  : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#151515]'
+              }`}>
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={whConfirmed}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      setWhConfirmed(val);
+                      if (val && !whConfirmedBy) {
+                        setWhConfirmedBy('مسئول انبار مرکزی');
+                      }
+                    }}
+                    className="mt-0.5 w-4 h-4 rounded text-[#C1A056] focus:ring-[#C1A056] accent-[#C1A056]"
+                  />
+                  <div className="text-xs space-y-0.5">
+                    <span className="font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+                      <Warehouse className="w-3.5 h-3.5 text-[#C1A056]" />
+                      <span>۲. تأیید ورود کالا به انبار</span>
+                    </span>
+                    <span className="text-slate-500 dark:text-zinc-400 block text-[11px]">
+                      کالا و یراق‌آلات کامل تحویل انبار شده و آماده بارگیری اکیپ است.
+                    </span>
+                  </div>
+                </label>
+                {whConfirmed && (
+                  <div className="mt-2.5 pt-2 border-t border-emerald-500/20 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="نام یا سمت تحویل‌گیرنده انبار..."
+                      value={whConfirmedBy}
+                      onChange={(e) => setWhConfirmedBy(e.target.value)}
+                      className="w-full text-xs p-2 rounded-lg border border-emerald-500/30 bg-white dark:bg-[#121212] dark:text-white"
+                    />
+                    <input
+                      type="text"
+                      placeholder="شماره حواله انبار یا یادداشت تحویل..."
+                      value={whNotes}
+                      onChange={(e) => setWhNotes(e.target.value)}
+                      className="w-full text-xs p-2 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#121212] dark:text-white"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Section 2: Technical Specifications */}
           <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E2DDD4] dark:border-[#2C2C2C] rounded-2xl p-4 space-y-3">
             <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
@@ -528,10 +755,88 @@ export const ProjectFormModal: React.FC<Props> = ({
           <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] border border-[#E2DDD4] dark:border-[#2C2C2C] rounded-2xl p-4 space-y-3">
             <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
               <Calendar className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
-              <span>زمان‌بندی و تعیین اکیپ</span>
+              <span>زمان‌بندی، انتساب اکیپ و برآورد فنی</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Assigned Installation Team */}
+              <div className="sm:col-span-2">
+                <label htmlFor="assigned-team" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                  اکیپ تخصیص‌یافته (از ۴ اکیپ رسمی نصب):
+                </label>
+                <select
+                  id="assigned-team"
+                  value={assignedTeamId}
+                  onChange={(e) => {
+                    const tId = e.target.value;
+                    setAssignedTeamId(tId);
+                    const selected = effectiveTeams.find((t) => t.id === tId || t.code === tId);
+                    setAssignedTeamName(selected ? selected.name : '');
+                    if (selected?.supervisorId && !leadTechnicianId) {
+                      setLeadTechnicianId(selected.supervisorId);
+                      if (!assignedTechnicianIds.includes(selected.supervisorId)) {
+                        setAssignedTechnicianIds((prev) => [...prev, selected.supervisorId!]);
+                      }
+                    }
+                  }}
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-bold"
+                >
+                  <option value="">بدون اکیپ (تعیین نشده)</option>
+                  {effectiveTeams.map((t) => (
+                    <option key={t.id || t.code} value={t.id || t.code}>
+                      {t.name} ({t.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Workload & Duration Estimates */}
+              <div>
+                <label htmlFor="estimated-workload" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                  حجم کار تخمینی (متر طول / مساحت):
+                </label>
+                <input
+                  id="estimated-workload"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="مثال: ۲۴.۵"
+                  value={estimatedWorkload}
+                  onChange={(e) => setEstimatedWorkload(e.target.value)}
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-bold text-center font-mono"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="required-duration" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                  تخمین مدت کار (ساعت):
+                </label>
+                <input
+                  id="required-duration"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="مثال: ۴"
+                  value={requiredDurationHours}
+                  onChange={(e) => setRequiredDurationHours(e.target.value)}
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white font-bold text-center font-mono"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label htmlFor="second-measurement-doc" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
+                  سند قطعی اندازه‌گیری دوم (شماره فرم یا توضیحات ابعاد تاییدشده):
+                </label>
+                <input
+                  id="second-measurement-doc"
+                  type="text"
+                  placeholder="مثال: فرم اندازه‌گیری دوم شماره ۱۰۸ — ابعاد کف‌سازی با کناف مطابقت دارد"
+                  value={secondMeasurementDoc}
+                  onChange={(e) => setSecondMeasurementDoc(e.target.value)}
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                />
+              </div>
+
               <div>
                 <label htmlFor="scheduled-date" className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1">
                   تاریخ اجرا:

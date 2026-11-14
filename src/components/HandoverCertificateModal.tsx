@@ -11,6 +11,7 @@ import {
   Phone,
   FileCheck2,
   Sparkles,
+  AlertTriangle,
 } from 'lucide-react';
 import { toPersianDigits, formatDuration, formatTimeOnly, formatJalali } from '../utils/jalali';
 import { CloudImage } from './common/CloudImage';
@@ -114,6 +115,19 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             </div>
           </div>
 
+          {/* Draft warning watermark banner for unapproved exceptional completions */}
+          {project.isExceptionalCompletion && project.qcStatus !== 'APPROVED' && (
+            <div className="bg-amber-50 border-2 border-dashed border-amber-400 rounded-xl p-3 text-center text-xs text-amber-900 font-bold space-y-0.5">
+              <div className="flex items-center justify-center gap-1.5 text-amber-800">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                <span>پیش‌نویس موقت تحویل ناقص — فاقد اعتبار تحویل قطعی یا تسویه‌حساب نهایی</span>
+              </div>
+              <p className="text-[11px] font-normal text-amber-700">
+                این پروژه با اعلام اتمام استثنایی و کسری اقلام ثبت شده است و تا پیش از تأیید رسمی مدیر کنترل کیفی (QC_MANAGER)، سند نهایی محسوب نمی‌شود.
+              </p>
+            </div>
+          )}
+
           {/* Project & Client Information Card */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-4 rounded-2xl border border-[#E8E4DC] text-xs">
             <div>
@@ -133,7 +147,13 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             <div>
               <span className="text-slate-400 block text-xs">وضعیت کنترل کیفی:</span>
               <span className={`font-black mt-0.5 block ${project.qcStatus === 'APPROVED' ? 'text-emerald-700' : 'text-amber-700'}`}>
-                {project.qcStatus === 'APPROVED' ? '✓ تایید نهایی QC' : 'در انتظار بررسی QC'}
+                {project.qcStatus === 'APPROVED'
+                  ? project.isExceptionalCompletion
+                    ? '✓ تایید نهایی QC با کسری اقلام'
+                    : '✓ تایید نهایی QC'
+                  : project.isExceptionalCompletion
+                  ? 'در انتظار تصمیم QC (تحویل ناقص)'
+                  : 'در انتظار بررسی QC'}
               </span>
             </div>
             <div className="col-span-2 sm:col-span-4 pt-2 border-t border-slate-100 flex items-start gap-1.5 text-slate-600">
@@ -175,6 +195,40 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
               </div>
             </div>
           </div>
+
+          {/* Exceptional Completion / Incomplete Delivery Banner */}
+          {project.isExceptionalCompletion && project.exceptionalCompletionDetails && (
+            <div className="bg-rose-50 border border-rose-300 rounded-2xl p-4 space-y-2.5 text-xs">
+              <div className="flex items-center gap-2 font-bold text-rose-800 text-sm">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>
+                  {project.qcStatus === 'APPROVED'
+                    ? 'گواهی رسمی تحویل با کسری اقلام (اتمام استثنایی با تایید رسمی واحد کنترل کیفی)'
+                    : 'پیش‌نویس تحویل با کسری اقلام — در انتظار تصمیم‌گیری مدیر ارشد QC (فاقد اعتبار تحویل نهایی)'}
+                </span>
+              </div>
+              <p className="text-slate-700 leading-relaxed">
+                <span className="font-bold text-rose-700">دلیل مستند عدم اتمام کلیه اقلام طرح:</span>{' '}
+                «{project.exceptionalCompletionDetails.documentedReason}»
+              </p>
+              <div className="pt-2 border-t border-rose-200 text-slate-700">
+                <span className="font-bold block mb-1 text-rose-900">اقلام کسرشده / تحویل‌نشده نسبت به طرح مصوب:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700 pt-1">
+                  {project.exceptionalCompletionDetails.remainingActivities.map((act) => (
+                    <div
+                      key={act.activityId}
+                      className="bg-white/90 px-3 py-1.5 rounded-lg border border-rose-200 flex items-center justify-between shadow-2xs"
+                    >
+                      <span className="font-medium text-[#212121]">{act.title}:</span>
+                      <span className="font-bold text-rose-700">
+                        کسر {toPersianDigits(act.remainingQuantity)} {act.unit}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Before & After Visual Proof */}
           {(beforePhoto || afterPhoto) && (
@@ -289,13 +343,28 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
           <div className="grid grid-cols-2 gap-4 pt-3 border-t-2 border-[#E8E4DC]">
             {/* Customer Digital Signature Box */}
             <div className="bg-white border border-[#E8E4DC] rounded-2xl p-4 text-center space-y-2">
-              <div className="text-xs font-bold text-slate-700">تایید و امضای دیجیتال کارفرما / تحویل‌گیرنده:</div>
+              <div className="text-xs font-bold text-slate-700">
+                {project.representativeRole || project.representativeName
+                  ? `تایید و امضای نماینده کارفرما (${project.representativeRole || 'نماینده'} - ${project.representativeName || ''}):`
+                  : 'تایید و امضای دیجیتال کارفرما / تحویل‌گیرنده:'}
+              </div>
               <p className="text-xs text-slate-400">
-                اینجانب سلامت کامل اقلام و عملکرد بی‌نقص سیستم‌های نصب‌شده را تایید می‌نمایم.
+                {project.customerAcceptance?.status === 'UNAVAILABLE' || project.handoverSigneeType === 'UNAVAILABLE_EXEMPT'
+                  ? 'عدم حضور کارفرما سر کارگاه با ذکر مستندات ثبت گردیده است.'
+                  : 'اینجانب سلامت کامل اقلام و عملکرد بی‌نقص سیستم‌های نصب‌شده را تایید می‌نمایم.'}
               </p>
               <div className="h-20 bg-[#FCFAF7] rounded-xl border border-dashed border-[#C1A056]/40 flex items-center justify-center p-1">
                 {project.customerSignature ? (
                   <CloudImage src={project.customerSignature} alt="امضای کارفرما" className="max-h-full max-w-full object-contain" />
+                ) : project.customerAcceptance?.status === 'UNAVAILABLE' || project.handoverSigneeType === 'UNAVAILABLE_EXEMPT' ? (
+                  <div className="text-xs text-amber-700 font-bold p-1">
+                    عدم حضور کارفرما / تحویل‌گیرنده
+                    {project.unavailabilityReason && (
+                      <span className="block text-[11px] font-normal text-slate-500 mt-0.5 truncate max-w-xs">
+                        علت: {project.unavailabilityReason}
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <span className="text-xs text-slate-400 italic">امضای فیزیکی در محل</span>
                 )}

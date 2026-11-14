@@ -1,9 +1,11 @@
 import React from 'react';
 import {
+  Activity,
   CalendarDays,
   ShieldCheck,
   AlertOctagon,
   AlertTriangle,
+  Package,
   Users,
   Settings,
 } from 'lucide-react';
@@ -15,6 +17,7 @@ interface Props {
   pendingQcCount?: number;
   openStuckCount?: number;
   openTicketCount?: number;
+  pendingMaterialCount?: number;
 }
 
 export const Sidebar: React.FC<Props> = ({
@@ -23,8 +26,15 @@ export const Sidebar: React.FC<Props> = ({
   pendingQcCount = 0,
   openStuckCount = 0,
   openTicketCount = 0,
+  pendingMaterialCount = 0,
 }) => {
   const navItems = [
+    {
+      id: 'control' as const,
+      label: 'مرکز کنترل',
+      icon: Activity,
+      badge: undefined,
+    },
     {
       id: 'planner' as const,
       label: 'برنامه',
@@ -51,6 +61,13 @@ export const Sidebar: React.FC<Props> = ({
       icon: AlertTriangle,
       badge: openTicketCount > 0 ? openTicketCount : undefined,
       badgeColor: 'bg-rose-500 text-white',
+    },
+    {
+      id: 'materials' as const,
+      label: 'متریال و لجستیک',
+      icon: Package,
+      badge: pendingMaterialCount > 0 ? pendingMaterialCount : undefined,
+      badgeColor: 'bg-purple-600 text-white',
     },
     {
       id: 'technicians' as const,

@@ -16,6 +16,7 @@ import {
 export interface StatusPillProps {
   status?: ProjectStatus;
   qcStatus?: QCStatus;
+  isExceptionalCompletion?: boolean;
   label?: string;
   size?: 'sm' | 'md';
   className?: string;
@@ -24,6 +25,7 @@ export interface StatusPillProps {
 export const StatusPill: React.FC<StatusPillProps> = ({
   status,
   qcStatus,
+  isExceptionalCompletion = false,
   label: customLabel,
   size = 'sm',
   className = '',
@@ -39,7 +41,7 @@ export const StatusPill: React.FC<StatusPillProps> = ({
             className={`inline-flex items-center font-bold rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 ${sizeClasses} ${className}`}
           >
             <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <span>{customLabel || 'تایید QC'}</span>
+            <span>{customLabel || (isExceptionalCompletion ? 'تایید QC (کسری اقلام)' : 'تایید QC')}</span>
           </span>
         );
       case 'REJECTED':
@@ -48,16 +50,24 @@ export const StatusPill: React.FC<StatusPillProps> = ({
             className={`inline-flex items-center font-bold rounded-full bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-900/60 animate-pulse ${sizeClasses} ${className}`}
           >
             <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
-            <span>{customLabel || 'نیاز به اصلاح'}</span>
+            <span>{customLabel || (isExceptionalCompletion ? 'رد استثنا — نیازمند تکمیل' : 'نیاز به اصلاح')}</span>
           </span>
         );
       case 'PENDING':
         return (
           <span
-            className={`inline-flex items-center font-bold rounded-full bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200 border border-amber-300 dark:border-amber-800/60 ${sizeClasses} ${className}`}
+            className={`inline-flex items-center font-bold rounded-full ${
+              isExceptionalCompletion
+                ? 'bg-rose-50 text-rose-900 dark:bg-rose-950/50 dark:text-rose-200 border-rose-300 dark:border-rose-800/60'
+                : 'bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200 border-amber-300 dark:border-amber-800/60'
+            } ${sizeClasses} ${className}`}
           >
-            <Clock className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <span>{customLabel || 'در انتظار QC'}</span>
+            {isExceptionalCompletion ? (
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+            ) : (
+              <Clock className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            )}
+            <span>{customLabel || (isExceptionalCompletion ? 'اتمام استثنایی (در انتظار QC)' : 'در انتظار QC')}</span>
           </span>
         );
       default:

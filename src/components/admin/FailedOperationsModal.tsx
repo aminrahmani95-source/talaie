@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   AlertOctagon,
+  AlertTriangle,
   RefreshCw,
   Trash2,
   CheckCircle2,
@@ -16,21 +17,25 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onActionComplete?: () => void;
+  currentUserId?: string;
 }
 
 export const FailedOperationsModal: React.FC<Props> = ({
   isOpen,
   onClose,
   onActionComplete,
+  currentUserId,
 }) => {
   const [failedOps, setFailedOps] = useState<FailedOperation[]>([]);
   const [loading, setLoading] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [isRequeuing, setIsRequeuing] = useState(false);
+  const [requeueNotice, setRequeueNotice] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const ops = await OfflineQueue.getFailedOperations();
+      const ops = await OfflineQueue.getFailedOperations(currentUserId);
       setFailedOps(ops.sort((a, b) => b.failedAt - a.failedAt));
     } catch (err) {
       console.warn('Failed to load failed operations:', err);
@@ -43,14 +48,62 @@ export const FailedOperationsModal: React.FC<Props> = ({
     if (isOpen) {
       loadData();
     }
-  }, [isOpen]);
+  }, [isOpen, currentUserId]);
 
   if (!isOpen) return null;
 
+  const unsupportedMaterialOps = failedOps.filter((op) => {
+    const isMaterialOp =
+      (op.orderingKey && op.orderingKey.startsWith('material:')) ||
+      op.type === 'CREATE_MATERIAL_REQUEST' ||
+      op.type === 'PATCH_MATERIAL_REQUEST' ||
+      op.type === 'DELETE_MATERIAL_REQUEST';
+
+    const isServerNotImplementedError =
+      op.errorReason.includes('FEATURE_NOT_IMPLEMENTED_ON_SERVER') ||
+      op.errorReason.includes('همگام‌سازی ابری متریال هنوز در سرور فعال نشده است') ||
+      op.errorReason.includes('در انتظار مایگریشن');
+
+    return isMaterialOp && isServerNotImplementedError;
+  });
+
+  const handleRequeueMaterialOps = async () => {
+    if (!currentUserId || typeof currentUserId !== 'string' || currentUserId.trim() === '') {
+      setRequeueNotice('خطا: دسترسی غیرمجاز؛ شناسه کاربر احرازنشده است.');
+      return;
+    }
+    const cleanUserId = currentUserId.trim();
+
+    setIsRequeuing(true);
+    setRequeueNotice(null);
+    try {
+      const result = await OfflineQueue.requeueUnsupportedMaterialOperations(cleanUserId);
+      if (result.requeuedCount > 0) {
+        setRequeueNotice(
+          `تعداد ${toPersianDigits(result.requeuedCount)} عملیات متریال با حفظ تقدم زمانی (FIFO) به صف ارسال بازگردانده شدند.`
+        );
+        await loadData();
+        if (onActionComplete) onActionComplete();
+      } else {
+        setRequeueNotice('هیچ عملیات متریال واجد شرایطی برای بازیابی یافت نشد.');
+      }
+    } catch (err) {
+      console.error('Error requeuing material ops:', err);
+      setRequeueNotice('خطا در بازیابی عملیات‌های متریال.');
+    } finally {
+      setIsRequeuing(false);
+    }
+  };
+
   const handleRetry = async (id: string) => {
+    if (!currentUserId || typeof currentUserId !== 'string' || currentUserId.trim() === '') {
+      return;
+    }
+    const cleanUserId = currentUserId.trim();
+
     setProcessingId(id);
     try {
-      await OfflineQueue.retryFailedOperation(id);
+      await OfflineQueue.retryFailedOperation(id, cleanUserId);
       await loadData();
       if (onActionComplete) onActionComplete();
     } catch (err) {
@@ -61,12 +114,17 @@ export const FailedOperationsModal: React.FC<Props> = ({
   };
 
   const handleDelete = async (id: string) => {
+    if (!currentUserId || typeof currentUserId !== 'string' || currentUserId.trim() === '') {
+      return;
+    }
+    const cleanUserId = currentUserId.trim();
+
     if (!confirm('آیا از حذف این عملیات از صف اطمینان دارید؟ تغییرات ذخیره‌نشده دور ریخته خواهند شد.')) {
       return;
     }
     setProcessingId(id);
     try {
-      await OfflineQueue.deleteFailedOperation(id);
+      await OfflineQueue.deleteFailedOperation(id, cleanUserId);
       await loadData();
       if (onActionComplete) onActionComplete();
     } catch (err) {
@@ -94,6 +152,12 @@ export const FailedOperationsModal: React.FC<Props> = ({
         return 'حذف تیکت';
       case 'UPDATE_SETTINGS':
         return 'به‌روزرسانی تنظیمات سیستم';
+      case 'CREATE_MATERIAL_REQUEST':
+        return 'ثبت درخواست متریال';
+      case 'PATCH_MATERIAL_REQUEST':
+        return 'تخصیص / تایید تحویل متریال';
+      case 'DELETE_MATERIAL_REQUEST':
+        return 'ابطال درخواست متریال';
       default:
         return 'عملیات سیستمی';
     }
@@ -134,6 +198,32 @@ export const FailedOperationsModal: React.FC<Props> = ({
 
         {/* Content */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+          {requeueNotice && (
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{requeueNotice}</span>
+            </div>
+          )}
+
+          {unsupportedMaterialOps.length > 0 && (
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-200">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  تعداد {toPersianDigits(unsupportedMaterialOps.length)} عملیات متریال در انتظار ارتقای سرور هستند. در صورت استقرار جداول می‌توانید آن‌ها را بازیابی کنید.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRequeueMaterialOps}
+                disabled={isRequeuing}
+                className="shrink-0 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer mr-auto sm:mr-0"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRequeuing ? 'animate-spin' : ''}`} />
+                <span>بازیابی و صف‌بندی مجدد</span>
+              </button>
+            </div>
+          )}
           {loading ? (
             <div className="py-12 text-center text-sm text-[#71717A] dark:text-[#A1A1AA] flex items-center justify-center gap-2">
               <RefreshCw className="w-4 h-4 animate-spin text-[#C1A056]" />

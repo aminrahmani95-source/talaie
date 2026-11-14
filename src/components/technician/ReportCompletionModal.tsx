@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
-import { Project, HandoverChecklist } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { Project, HandoverChecklist, HandoverSigneeType, User, ExceptionalCompletionDetails } from '../../types';
 import {
   Camera,
   CheckCircle2,
   X,
   Star,
-  CheckSquare,
   Sparkles,
   SlidersHorizontal,
   Flame,
@@ -13,6 +12,12 @@ import {
   PenTool,
   AlertTriangle,
   Upload,
+  UserCheck,
+  Building,
+  UserX,
+  Phone,
+  Info,
+  Layers,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toPersianDigits } from '../../utils/jalali';
@@ -20,23 +25,36 @@ import { compressImageFile } from '../../utils/imageCompressor';
 import { SignaturePad } from '../SignaturePad';
 import { CloudImage } from '../common/CloudImage';
 import { Button } from '../ui/Button';
+import { calculateActivityProgress, getIncompleteActivitiesSummary } from '../../utils/planProgress';
+
+export interface CompletionSubmitData {
+  completionNotes: string;
+  beforePhotos: string[];
+  afterPhotos: string[];
+  completionPhotos: string[];
+  handoverChecklist: HandoverChecklist;
+  handoverSigneeType: HandoverSigneeType;
+  customerSignature?: string;
+  customerSatisfaction?: number;
+  representativeName?: string;
+  representativeRole?: string;
+  representativePhone?: string;
+  unavailabilityReason?: string;
+  unavailabilityPhotos?: string[];
+  isExceptionalCompletion?: boolean;
+  exceptionalCompletionDetails?: ExceptionalCompletionDetails;
+}
 
 interface Props {
   project: Project;
+  currentUser?: User;
   onClose: () => void;
-  onSubmit: (completionData: {
-    completionNotes: string;
-    beforePhotos: string[];
-    afterPhotos: string[];
-    completionPhotos: string[];
-    handoverChecklist: HandoverChecklist;
-    customerSignature?: string;
-    customerSatisfaction?: number;
-  }) => void;
+  onSubmit: (completionData: CompletionSubmitData) => void;
 }
 
 export const ReportCompletionModal: React.FC<Props> = ({
   project,
+  currentUser,
   onClose,
   onSubmit,
 }) => {
@@ -48,7 +66,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
     project.afterPhotos || project.completionPhotos || []
   );
 
-  // Handover checklist states (defaults to false per standard QC requirements)
+  // Handover checklist states
   const [checklist, setChecklist] = useState<HandoverChecklist>(
     project.handoverChecklist || {
       floorProtectiveClothUsed: false,
@@ -65,12 +83,35 @@ export const ReportCompletionModal: React.FC<Props> = ({
     {}
   );
 
-  // Signature & satisfaction states
+  // Handover signee type & details (Task 4)
+  const [signeeType, setSigneeType] = useState<HandoverSigneeType>(
+    project.handoverSigneeType || 'RESIDENTIAL_CUSTOMER'
+  );
+  const [representativeName, setRepresentativeName] = useState(project.representativeName || '');
+  const [representativeRole, setRepresentativeRole] = useState(project.representativeRole || 'مهندس ناظر');
+  const [representativePhone, setRepresentativePhone] = useState(project.representativePhone || '');
+  const [unavailabilityReason, setUnavailabilityReason] = useState(project.unavailabilityReason || '');
+  const [unavailabilityPhotos, setUnavailabilityPhotos] = useState<string[]>(
+    project.unavailabilityPhotos || []
+  );
+
+  // Signature & optional satisfaction states
   const [signature, setSignature] = useState<string | undefined>(project.customerSignature);
   const [satisfaction, setSatisfaction] = useState<number | undefined>(project.customerSatisfaction);
   const [completionNotes, setCompletionNotes] = useState(project.completionNotes || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadError, setUploadError] = useState('');
+
+  // Plan verification for single-visit and multi-day completion (P2.1)
+  const activityProgress = useMemo(() => calculateActivityProgress(project), [project]);
+  const incompleteReport = useMemo(() => getIncompleteActivitiesSummary(project), [project]);
+  const [completionMode, setCompletionMode] = useState<'FULL_COMPLETED_TODAY' | 'EXCEPTIONAL_PARTIAL'>(
+    'FULL_COMPLETED_TODAY'
+  );
+  const [exceptionalReason, setExceptionalReason] = useState('');
+  const [confirmFinishedToday, setConfirmFinishedToday] = useState(
+    !incompleteReport.hasIncomplete
+  );
 
   const handlePhotoUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -89,6 +130,21 @@ export const ReportCompletionModal: React.FC<Props> = ({
         }
       } catch (err) {
         console.warn('Image compression failed:', err);
+      }
+    }
+    e.target.value = '';
+  };
+
+  const handleUnavailabilityPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    for (const file of Array.from(files)) {
+      try {
+        const compressed = await compressImageFile(file, 1280, 1280, 0.75);
+        setUnavailabilityPhotos((prev) => [...prev, compressed]);
+      } catch (err) {
+        console.warn('Unavailability image compression failed:', err);
       }
     }
     e.target.value = '';
@@ -142,10 +198,43 @@ export const ReportCompletionModal: React.FC<Props> = ({
       }
     }
 
-    if (!satisfaction) {
-      setUploadError('لطفاً میزان رضایت کارفرما از نصب را مشخص نمایید (الزامی).');
-      setActiveTab('SIGNATURE');
-      return;
+    // Role-specific signee validations
+    if (signeeType === 'CONSTRUCTION_REPRESENTATIVE') {
+      if (!representativeName.trim()) {
+        setUploadError('لطفاً نام نماینده کارگاه / مهندس ناظر را وارد نمایید.');
+        setActiveTab('SIGNATURE');
+        return;
+      }
+      if (!representativePhone.trim()) {
+        setUploadError('لطفاً شماره تماس نماینده کارگاه را وارد نمایید.');
+        setActiveTab('SIGNATURE');
+        return;
+      }
+    }
+
+    if (signeeType === 'UNAVAILABLE_EXEMPT') {
+      if (!unavailabilityReason.trim()) {
+        setUploadError('لطفاً شرایط و دلیل عدم حضور کارفرما را مستند نمایید.');
+        setActiveTab('SIGNATURE');
+        return;
+      }
+    }
+
+    // بررسی اتمام کامل اقلام طرح یا ثبت اتمام استثنایی با کسری اقلام (P2.1)
+    if (incompleteReport.hasIncomplete) {
+      if (completionMode === 'EXCEPTIONAL_PARTIAL') {
+        if (exceptionalReason.trim().length < 10) {
+          setUploadError('برای ثبت اتمام استثنایی با کسری اقلام، درج علت مستند (حداقل ۱۰ کاراکتر) الزامی است.');
+          return;
+        }
+      } else {
+        if (!confirmFinishedToday) {
+          setUploadError(
+            `پروژه دارای ${toPersianDigits(incompleteReport.totalRemainingUnits)} واحد کار باقیمانده نسبت به طرح مصوب است. لطفاً تایید فرمایید که این اقلام امروز نصب شدند، یا گزینه «اتمام استثنایی با کسری اقلام» را انتخاب نمایید.`
+          );
+          return;
+        }
+      }
     }
 
     if (afterPhotos.length === 0) {
@@ -161,8 +250,23 @@ export const ReportCompletionModal: React.FC<Props> = ({
     setIsSubmitting(true);
 
     try {
+      const isExceptional = incompleteReport.hasIncomplete && completionMode === 'EXCEPTIONAL_PARTIAL';
+      const exceptionalDetails: ExceptionalCompletionDetails | undefined = isExceptional
+        ? {
+            hasIncompleteActivities: true,
+            remainingActivities: incompleteReport.remainingItems,
+            documentedReason: exceptionalReason.trim(),
+            confirmedBySupervisor: currentUser?.name || 'سرپرست اکیپ',
+            confirmedAt: new Date().toISOString(),
+          }
+        : undefined;
+
+      const finalCompletionNotes = isExceptional
+        ? `${completionNotes.trim() ? `${completionNotes.trim()}\n` : ''}[اتمام استثنایی با کسری اقلام: ${exceptionalReason.trim()}]`
+        : completionNotes.trim();
+
       await onSubmit({
-        completionNotes: completionNotes.trim(),
+        completionNotes: finalCompletionNotes,
         beforePhotos,
         afterPhotos,
         completionPhotos: afterPhotos,
@@ -170,8 +274,16 @@ export const ReportCompletionModal: React.FC<Props> = ({
           ...checklist,
           handoverChecklistNotes: checklistNotes,
         },
-        customerSignature: signature,
+        handoverSigneeType: signeeType,
+        customerSignature: signeeType !== 'UNAVAILABLE_EXEMPT' ? signature : undefined,
         customerSatisfaction: satisfaction,
+        representativeName: signeeType === 'CONSTRUCTION_REPRESENTATIVE' ? representativeName.trim() : undefined,
+        representativeRole: signeeType === 'CONSTRUCTION_REPRESENTATIVE' ? representativeRole.trim() : undefined,
+        representativePhone: signeeType === 'CONSTRUCTION_REPRESENTATIVE' ? representativePhone.trim() : undefined,
+        unavailabilityReason: signeeType === 'UNAVAILABLE_EXEMPT' ? unavailabilityReason.trim() : undefined,
+        unavailabilityPhotos: signeeType === 'UNAVAILABLE_EXEMPT' ? unavailabilityPhotos : undefined,
+        isExceptionalCompletion: isExceptional,
+        exceptionalCompletionDetails: exceptionalDetails,
       });
 
       try {
@@ -223,101 +335,196 @@ export const ReportCompletionModal: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* 3-Step Progress Indicators */}
-        <div className="bg-[#FAF7F2] dark:bg-[#141414] px-4 py-2 border-b border-[#E2DDD4] dark:border-[#2C2C2C] flex items-center justify-between gap-1.5 shrink-0">
+        {/* Tab Navigation */}
+        <div className="grid grid-cols-3 border-b border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#181818] text-xs font-bold text-center shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('PHOTOS')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition min-h-[44px] cursor-pointer ${
+            className={`py-3 transition border-b-2 ${
               activeTab === 'PHOTOS'
-                ? 'bg-[#212121] text-[#E5CA8F] shadow-xs'
-                : 'text-[#69655F] dark:text-[#9E988D] hover:bg-black/5 dark:hover:bg-white/5'
+                ? 'border-[#C1A056] text-[#8E6F27] dark:text-[#E5CA8F] bg-white dark:bg-[#1A1A1A]'
+                : 'border-transparent text-[#69655F] dark:text-[#9E988D]'
             }`}
           >
-            <Camera className="w-4 h-4" />
-            <span>۱. عکس‌ها</span>
-            {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
-              <span className="bg-[#C1A056] text-[#212121] text-xs px-1.5 h-4 rounded-full inline-flex items-center justify-center font-bold">
-                {toPersianDigits(beforePhotos.length + afterPhotos.length)}
-              </span>
-            )}
+            ۱. عکس‌های کار ({toPersianDigits(beforePhotos.length + afterPhotos.length)})
           </button>
-
           <button
             type="button"
             onClick={() => setActiveTab('CHECKLIST')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition min-h-[44px] cursor-pointer ${
+            className={`py-3 transition border-b-2 ${
               activeTab === 'CHECKLIST'
-                ? 'bg-[#212121] text-[#E5CA8F] shadow-xs'
-                : 'text-[#69655F] dark:text-[#9E988D] hover:bg-black/5 dark:hover:bg-white/5'
+                ? 'border-[#C1A056] text-[#8E6F27] dark:text-[#E5CA8F] bg-white dark:bg-[#1A1A1A]'
+                : 'border-transparent text-[#69655F] dark:text-[#9E988D]'
             }`}
           >
-            <CheckSquare className="w-4 h-4" />
-            <span>۲. چک‌لیست</span>
+            ۲. چک‌لیست تحویل
           </button>
-
           <button
             type="button"
             onClick={() => setActiveTab('SIGNATURE')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition min-h-[44px] cursor-pointer ${
+            className={`py-3 transition border-b-2 ${
               activeTab === 'SIGNATURE'
-                ? 'bg-[#212121] text-[#E5CA8F] shadow-xs'
-                : 'text-[#69655F] dark:text-[#9E988D] hover:bg-black/5 dark:hover:bg-white/5'
+                ? 'border-[#C1A056] text-[#8E6F27] dark:text-[#E5CA8F] bg-white dark:bg-[#1A1A1A]'
+                : 'border-transparent text-[#69655F] dark:text-[#9E988D]'
             }`}
           >
-            <PenTool className="w-4 h-4" />
-            <span>۳. امضا</span>
-            {signature && <span className="text-emerald-500 font-bold">✓</span>}
+            ۳. تحویل و امضا
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+        {/* Content */}
+        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto flex-1 space-y-4">
           {uploadError && (
-            <div
-              role="alert"
-              className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs rounded-xl flex items-center gap-2"
-            >
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
               <span>{uploadError}</span>
             </div>
           )}
 
+          {/* Original Plan & Completed Items Verification (P2.1) */}
+          <div className="p-3.5 rounded-2xl bg-[#FAF8F5] dark:bg-[#141414] border border-[#E8E4DC] dark:border-[#2C2C2C] space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-[#181818] dark:text-white">
+              <span className="flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-[#C1A056]" />
+                <span>بررسی تطبیق طرح اولیه و نصب نهایی:</span>
+              </span>
+              <span
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                  !incompleteReport.hasIncomplete
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                }`}
+              >
+                {!incompleteReport.hasIncomplete
+                  ? 'تمام اقلام نصب شده'
+                  : `${toPersianDigits(incompleteReport.totalRemainingUnits)} واحد کار باقیمانده`}
+              </span>
+            </div>
+
+            {activityProgress.map((act) => (
+              <div
+                key={act.activityId}
+                className="flex items-center justify-between text-xs py-1 border-b border-dashed border-[#E2DDD4] dark:border-[#282828] last:border-0"
+              >
+                <div>
+                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">{act.title}</span>
+                  <span className="text-[10px] text-neutral-400 mr-1.5 font-mono">
+                    (طرح: {toPersianDigits(act.effectivePlannedQuantity)} {act.unit})
+                  </span>
+                </div>
+                <div className="text-left font-mono">
+                  <span className="text-neutral-700 dark:text-neutral-300">
+                    {toPersianDigits(act.totalCompletedQuantity)} نصب‌شده
+                  </span>
+                  {act.remainingQuantity > 0 && (
+                    <span className="text-amber-600 dark:text-amber-400 font-bold mr-1.5">
+                      ({toPersianDigits(act.remainingQuantity)} مانده)
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {incompleteReport.hasIncomplete && (
+              <div className="pt-2.5 border-t border-[#E8E4DC] dark:border-[#2C2C2C] space-y-2.5">
+                <div className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>تعیین تکلیف اقلام باقیمانده برای اتمام پروژه:</span>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-start gap-2 p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#1E1E1E] cursor-pointer text-xs">
+                    <input
+                      type="radio"
+                      name="completionMode"
+                      checked={completionMode === 'FULL_COMPLETED_TODAY'}
+                      onChange={() => setCompletionMode('FULL_COMPLETED_TODAY')}
+                      className="mt-0.5 accent-[#C1A056]"
+                    />
+                    <div className="space-y-1 flex-1">
+                      <span className="font-bold text-[#181818] dark:text-[#F5F3EF] block">
+                        ۱. تمام اقلام باقیمانده امروز به طور کامل نصب شدند
+                      </span>
+                      <p className="text-[11px] text-[#69655F] dark:text-[#9E988D]">
+                        کار نصب ۱۰۰٪ تکمیل شده است و هیچ موردی ناتمام باقی نمانده است.
+                      </p>
+                      {completionMode === 'FULL_COMPLETED_TODAY' && (
+                        <label className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] cursor-pointer text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">
+                          <input
+                            type="checkbox"
+                            checked={confirmFinishedToday}
+                            onChange={(e) => setConfirmFinishedToday(e.target.checked)}
+                            className="rounded text-[#C1A056] focus:ring-[#C1A056]"
+                          />
+                          <span>اقرار و تایید می‌نمایم که تمام لت‌های باقیمانده در محل نصب شدند.</span>
+                        </label>
+                      )}
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-2 p-2.5 rounded-xl border border-rose-300 dark:border-rose-900 bg-rose-50/60 dark:bg-rose-950/20 cursor-pointer text-xs">
+                    <input
+                      type="radio"
+                      name="completionMode"
+                      checked={completionMode === 'EXCEPTIONAL_PARTIAL'}
+                      onChange={() => setCompletionMode('EXCEPTIONAL_PARTIAL')}
+                      className="mt-0.5 accent-rose-600"
+                    />
+                    <div className="space-y-1.5 flex-1">
+                      <span className="font-bold text-rose-800 dark:text-rose-300 block">
+                        ۲. اتمام استثنایی با کسری اقلام اجرایی (تحویل ناقص پروژه)
+                      </span>
+                      <p className="text-[11px] text-rose-700 dark:text-rose-400">
+                        به دلیل موانع کناف، عدم آمادگی بستر ساختمانی یا دستور کارفرما، اقلام فوق نصب نشدند و با تایید سرپرست پرونده بسته می‌شود.
+                      </p>
+                      {completionMode === 'EXCEPTIONAL_PARTIAL' && (
+                        <div className="space-y-1 pt-1">
+                          <label className="block text-[11px] font-bold text-rose-900 dark:text-rose-200">
+                            علت مستند عدم اجرای اقلام باقیمانده (الزامی - حداقل ۱۰ کاراکتر):
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={exceptionalReason}
+                            onChange={(e) => setExceptionalReason(e.target.value)}
+                            placeholder="مثال: کناف سقف اتاق خواب مستر تکمیل نبوده و کارفرما تحویل اقلام بدون نصب را پذیرفت"
+                            className="w-full text-xs p-2 rounded-lg border border-rose-300 dark:border-rose-900 bg-white dark:bg-[#141414] dark:text-white leading-relaxed focus:ring-2 focus:ring-rose-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* TAB 1: PHOTOS */}
           {activeTab === 'PHOTOS' && (
             <div className="space-y-4">
               {/* After Photos */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-black text-[#181818] dark:text-white flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                    <span>عکس‌های بعد از نصب (پرده و شید نهایی):</span>
-                  </label>
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">
-                    الزامی برای QC
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-2.5 items-center">
-                  {afterPhotos.map((p, idx) => (
+              <div>
+                <label className="block text-xs font-black text-[#181818] dark:text-white mb-1.5 flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-emerald-600" />
+                  <span>عکس‌های اتمام نصب (بعد از کار) — الزامی:</span>
+                </label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {afterPhotos.map((photo, index) => (
                     <div
-                      key={idx}
-                      className="relative w-20 h-20 rounded-xl overflow-hidden border border-emerald-500/40 shadow-2xs group"
+                      key={index}
+                      className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C] group"
                     >
-                      <CloudImage src={p} alt={`بعد از نصب ${idx + 1}`} className="w-full h-full object-cover" />
+                      <CloudImage src={photo} alt="" className="w-full h-full object-cover" />
                       <button
                         type="button"
-                        onClick={() => handleRemovePhoto(idx, 'AFTER')}
-                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 shadow hover:bg-red-700 transition cursor-pointer"
-                        aria-label="حذف عکس"
+                        onClick={() => handleRemovePhoto(index, 'AFTER')}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs"
                       >
-                        <X className="w-3 h-3" />
+                        ×
                       </button>
                     </div>
                   ))}
 
-                  {/* Camera Button */}
-                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-emerald-500/50 bg-emerald-500/5 hover:bg-emerald-500/10 cursor-pointer text-emerald-700 dark:text-emerald-400 transition min-h-[80px]">
+                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#C1A056] bg-[#C1A056]/5 hover:bg-[#C1A056]/10 cursor-pointer text-[#8E6F27] dark:text-[#E5CA8F] transition min-h-[80px]">
                     <Camera className="w-5 h-5 mb-1" />
                     <span className="text-xs font-bold">دوربین</span>
                     <input
@@ -329,7 +536,6 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     />
                   </label>
 
-                  {/* Gallery Button */}
                   <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-[#69655F] dark:text-[#9E988D] transition min-h-[80px]">
                     <Upload className="w-5 h-5 mb-1 text-slate-400" />
                     <span className="text-xs font-bold">گالری</span>
@@ -345,35 +551,30 @@ export const ReportCompletionModal: React.FC<Props> = ({
               </div>
 
               {/* Before Photos */}
-              <div className="space-y-2 pt-2 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-black text-[#181818] dark:text-white flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                    <span>عکس‌های قبل از نصب (پنجره خام و زیرسازی):</span>
-                  </label>
-                  <span className="text-xs text-[#69655F] dark:text-[#9E988D]">اختیاری</span>
-                </div>
-
-                <div className="flex flex-wrap gap-2.5 items-center">
-                  {beforePhotos.map((p, idx) => (
+              <div className="pt-3 border-t border-[#E2DDD4] dark:border-[#2C2C2C]">
+                <label className="block text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF] mb-1.5 flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-slate-400" />
+                  <span>عکس‌های قبل از شروع کار (اختیاری):</span>
+                </label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {beforePhotos.map((photo, index) => (
                     <div
-                      key={idx}
-                      className="relative w-20 h-20 rounded-xl overflow-hidden border border-amber-500/40 shadow-2xs group"
+                      key={index}
+                      className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C] group"
                     >
-                      <CloudImage src={p} alt={`قبل از نصب ${idx + 1}`} className="w-full h-full object-cover" />
+                      <CloudImage src={photo} alt="" className="w-full h-full object-cover" />
                       <button
                         type="button"
-                        onClick={() => handleRemovePhoto(idx, 'BEFORE')}
-                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 shadow hover:bg-red-700 transition cursor-pointer"
-                        aria-label="حذف عکس"
+                        onClick={() => handleRemovePhoto(index, 'BEFORE')}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs"
                       >
-                        <X className="w-3 h-3" />
+                        ×
                       </button>
                     </div>
                   ))}
 
-                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-amber-500/50 bg-amber-500/5 hover:bg-amber-500/10 cursor-pointer text-amber-700 dark:text-amber-400 transition min-h-[80px]">
-                    <Camera className="w-5 h-5 mb-1" />
+                  <label className="flex flex-col items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-[#69655F] dark:text-[#9E988D] transition min-h-[80px]">
+                    <Camera className="w-5 h-5 mb-1 text-slate-400" />
                     <span className="text-xs font-bold">دوربین</span>
                     <input
                       type="file"
@@ -547,71 +748,277 @@ export const ReportCompletionModal: React.FC<Props> = ({
                   onClick={() => setActiveTab('SIGNATURE')}
                   className="flex-1"
                 >
-                  مرحله بعد: امضا ←
+                  مرحله بعد: تحویل و امضا ←
                 </Button>
               </div>
             </div>
           )}
 
-          {/* TAB 3: SIGNATURE & SATISFACTION */}
+          {/* TAB 3: SIGNATURE & HANDOVER TYPE (Task 4) */}
           {activeTab === 'SIGNATURE' && (
             <div className="space-y-4">
-              {/* Satisfaction Stars */}
-              <div className="bg-[#FAF7F2] dark:bg-[#141414] p-3.5 rounded-2xl border border-[#E2DDD4] dark:border-[#2C2C2C]">
-                <label className="block text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF] mb-1.5">
-                  میزان رضایت کارفرما از نصب:
-                </label>
-                <div className="flex items-center gap-2">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setSatisfaction(s)}
-                      className="min-w-[44px] min-h-[44px] w-11 h-11 flex items-center justify-center rounded-xl hover:scale-110 active:scale-95 transition cursor-pointer"
-                      aria-label={`${s} ستاره`}
-                    >
-                      <Star
-                        className={`w-6 h-6 ${
-                          satisfaction && s <= satisfaction
-                            ? 'text-[#C1A056] fill-[#C1A056]'
-                            : 'text-zinc-300 dark:text-zinc-600'
-                        }`}
-                      />
-                    </button>
-                  ))}
-                  {satisfaction ? (
-                    <span className="text-xs font-bold text-[#181818] dark:text-white mr-2">
-                      {toPersianDigits(satisfaction)} از 5
-                    </span>
-                  ) : (
-                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 mr-2">
-                      (الزامی - انتخاب نشده)
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Digital Signature Pad */}
+              {/* Signee Type Segmented Selector */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-black text-[#181818] dark:text-white flex items-center gap-1.5">
-                    <PenTool className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
-                    <span>امضای دیجیتال کارفرما:</span>
-                  </label>
-                  <span className="text-xs text-[#69655F] dark:text-[#9E988D]">
-                    {project.customerName}
-                  </span>
+                <label className="block text-xs font-bold text-[#4A4742] dark:text-[#BDB8AF] mb-1.5">
+                  طرف تحویل‌گیرنده کارگاه / پروژه:
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'RESIDENTIAL_CUSTOMER', label: 'مشتری مسکونی', icon: UserCheck },
+                    { id: 'CONSTRUCTION_REPRESENTATIVE', label: 'نماینده کارگاه / ناظر', icon: Building },
+                    { id: 'UNAVAILABLE_EXEMPT', label: 'عدم حضور کارفرما', icon: UserX },
+                  ].map((opt) => {
+                    const isSelected = signeeType === opt.id;
+                    const Icon = opt.icon;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setSigneeType(opt.id as HandoverSigneeType)}
+                        className={`p-2.5 rounded-xl border text-center transition flex flex-col items-center gap-1.5 ${
+                          isSelected
+                            ? 'border-[#C1A056] bg-[#C1A056]/15 text-[#8E6F27] dark:text-[#E5CA8F] font-bold shadow-xs'
+                            : 'border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#141414] text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span className="text-[11px] leading-tight">{opt.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-
-                <p className="text-xs text-[#69655F] dark:text-[#9E988D] bg-[#FAF7F2] dark:bg-[#141414] p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] mb-2 leading-relaxed">
-                  «اینجانب سلامت ظاهری، ابعاد، عملکرد موتور و تحویل شید/پرده را تایید می‌نمایم.»
-                </p>
-
-                <SignaturePad
-                  value={signature}
-                  onChange={(dataUrl) => setSignature(dataUrl || undefined)}
-                />
               </div>
+
+              {/* Sub-form 1: RESIDENTIAL CUSTOMER */}
+              {signeeType === 'RESIDENTIAL_CUSTOMER' && (
+                <div className="space-y-3.5">
+                  <div className="p-3 rounded-xl bg-[#FAF7F2] dark:bg-[#141414] border border-[#E2DDD4] dark:border-[#2C2C2C] text-xs">
+                    <span className="font-bold block text-neutral-800 dark:text-white">
+                      تحویل مستقیم به مشتری: {project.customerName}
+                    </span>
+                    <span className="text-[11px] text-neutral-500 block mt-0.5">
+                      شماره تماس ثبت‌شده: {project.customerPhone}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1.5">
+                      <PenTool className="w-3.5 h-3.5 text-[#C1A056]" />
+                      امضای دیجیتال کارفرما روی صفحه:
+                    </label>
+                    <SignaturePad
+                      value={signature}
+                      onChange={(dataUrl) => setSignature(dataUrl || undefined)}
+                    />
+                  </div>
+
+                  {/* Optional Satisfaction Rating */}
+                  <div className="p-3 rounded-xl bg-[#FAF7F2] dark:bg-[#141414] border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                        میزان رضایت کارفرما (اختیاری):
+                      </label>
+                      {satisfaction && (
+                        <button
+                          type="button"
+                          onClick={() => setSatisfaction(undefined)}
+                          className="text-[10px] text-neutral-400 hover:underline"
+                        >
+                          پاک کردن
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setSatisfaction(s)}
+                          className="min-w-[40px] min-h-[40px] w-10 h-10 flex items-center justify-center rounded-xl hover:scale-110 active:scale-95 transition cursor-pointer"
+                          aria-label={`${s} ستاره`}
+                        >
+                          <Star
+                            className={`w-6 h-6 ${
+                              satisfaction && s <= satisfaction
+                                ? 'text-[#C1A056] fill-[#C1A056]'
+                                : 'text-neutral-300 dark:text-neutral-700'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                      {satisfaction && (
+                        <span className="text-xs font-bold text-[#8E6F27] dark:text-[#E5CA8F] mr-2">
+                          {toPersianDigits(satisfaction)} از ۵ ستاره
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-form 2: CONSTRUCTION REPRESENTATIVE */}
+              {signeeType === 'CONSTRUCTION_REPRESENTATIVE' && (
+                <div className="space-y-3.5">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                        نام نماینده کارگاه (الزامی):
+                      </label>
+                      <input
+                        type="text"
+                        value={representativeName}
+                        onChange={(e) => setRepresentativeName(e.target.value)}
+                        placeholder="مثال: مهندس راد"
+                        className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                        سمت در پروژه:
+                      </label>
+                      <input
+                        type="text"
+                        value={representativeRole}
+                        onChange={(e) => setRepresentativeRole(e.target.value)}
+                        placeholder="مثال: ناظر مقیم / سرپرست کارگاه"
+                        className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1">
+                      <Phone className="w-3.5 h-3.5 text-neutral-400" />
+                      شماره تماس نماینده (الزامی):
+                    </label>
+                    <input
+                      type="tel"
+                      dir="ltr"
+                      value={representativePhone}
+                      onChange={(e) => setRepresentativePhone(e.target.value)}
+                      placeholder="0912..."
+                      className="w-full text-xs p-2.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white text-left font-mono"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1.5">
+                      <PenTool className="w-3.5 h-3.5 text-[#C1A056]" />
+                      امضای نماینده کارگاه:
+                    </label>
+                    <SignaturePad
+                      value={signature}
+                      onChange={(dataUrl) => setSignature(dataUrl || undefined)}
+                    />
+                  </div>
+
+                  {/* Optional Satisfaction */}
+                  <div className="p-3 rounded-xl bg-[#FAF7F2] dark:bg-[#141414] border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-1.5">
+                    <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block">
+                      ارزیابی کیفی نماینده (اختیاری):
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setSatisfaction(s)}
+                          className="min-w-[40px] min-h-[40px] w-10 h-10 flex items-center justify-center rounded-xl hover:scale-110 active:scale-95 transition cursor-pointer"
+                          aria-label={`${s} ستاره`}
+                        >
+                          <Star
+                            className={`w-6 h-6 ${
+                              satisfaction && s <= satisfaction
+                                ? 'text-[#C1A056] fill-[#C1A056]'
+                                : 'text-neutral-300 dark:text-neutral-700'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-form 3: UNAVAILABLE EXEMPT */}
+              {signeeType === 'UNAVAILABLE_EXEMPT' && (
+                <div className="space-y-3.5">
+                  <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+                    <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="space-y-1 leading-relaxed">
+                      <span className="font-bold block">معافیت مستند عدم حضور کارفرما</span>
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                        در صورت عدم حضور کارفرما یا اتمام کار پس از ساعات اداری، با شرح مستند دلایل و الصاق تصویر درب بسته یا پیامک هماهنگی، گزارش بدون امضا ثبت شده و توسط مدیر QC ارزیابی خواهد شد.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                      علت عدم امکان اخذ امضا و شرایط ترک کارگاه (الزامی):
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={unavailabilityReason}
+                      onChange={(e) => setUnavailabilityReason(e.target.value)}
+                      placeholder="مثال: کارفرما طبق تماس تلفنی ساعت ۱۸ امکان حضور نداشتند و هماهنگ شد کلید به نگهبانی تحویل گردد..."
+                      className="w-full text-xs p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] bg-white dark:bg-[#141414] dark:text-white leading-relaxed"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                      مدارک تصویری ترک ایمن کارگاه (عکس کلید، درب قفل‌شده یا پیامک):
+                    </label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {unavailabilityPhotos.map((photo, index) => (
+                        <div
+                          key={index}
+                          className="relative w-16 h-16 rounded-xl overflow-hidden border border-[#E2DDD4] dark:border-[#2C2C2C]"
+                        >
+                          <CloudImage src={photo} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setUnavailabilityPhotos((prev) => prev.filter((_, i) => i !== index))
+                            }
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+
+                      <label className="flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer text-neutral-400 transition">
+                        <Camera className="w-4 h-4 mb-0.5" />
+                        <span className="text-[10px] font-bold">دوربین</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleUnavailabilityPhotoUpload}
+                          className="hidden"
+                        />
+                      </label>
+
+                      <label className="flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 border-dashed border-[#E2DDD4] dark:border-[#2C2C2C] hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer text-neutral-400 transition">
+                        <Upload className="w-4 h-4 mb-0.5" />
+                        <span className="text-[10px] font-bold">گالری</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleUnavailabilityPhotoUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <Button
                 variant="ghost"

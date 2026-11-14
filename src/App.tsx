@@ -1,15 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Project,
   User,
   Ticket,
   SystemSettings,
   HandoverChecklist,
-  PreInstallationInspection,
+  SiteReadinessInspection,
   PersonnelEvaluation,
   StuckIncident,
   DailyLog,
-  WorkSession,
+  DailyActivityProgress,
+  InstallationTeam,
+  TeamMember,
+  InstallationTeamWithMembers,
+  ScheduleChangeRequest,
+  MaterialRequest,
+  CustomerAcceptanceRecord,
 } from './types';
 import { StorageService } from './utils/storage';
 import { SupabaseSyncService } from './utils/supabase';
@@ -19,9 +25,22 @@ import {
   validateTicketRoleGuards,
   validateEvaluationRoleGuards,
   isValidStatusTransition,
+  isHandoverGatePassed,
 } from './utils/roleGuards';
+import {
+  createConfirmTransferReceiptPayload,
+  createManagerOverrideTransferPayload,
+  getLatestTeamTransfer,
+  isTransferResolved,
+} from './utils/teamTransfer';
+import {
+  createConfirmReceiptPayload,
+  canCreateMaterialRequest,
+  canConfirmMaterialReceipt,
+} from './utils/materialRequests';
+import { createDefectResolutionPayload } from './utils/qcWorkflow';
 import { getDisplayName } from './utils/technicianName';
-import { localDateKey } from './utils/jalali';
+import { localDateKey, toPersianDigits } from './utils/jalali';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
 import { TechnicianDashboard } from './components/technician/TechnicianDashboard';
@@ -32,6 +51,9 @@ import { DashboardSkeleton } from './components/ui/DashboardSkeleton';
 import type { ProjectFormSaveData } from './components/admin/ProjectFormModal';
 
 // Code-split Manager Screens so technicians never download manager JS
+const OperationsControlCenter = React.lazy(() =>
+  import('./components/admin/OperationsControlCenter').then((m) => ({ default: m.OperationsControlCenter }))
+);
 const MonthPlanner = React.lazy(() =>
   import('./components/admin/MonthPlanner').then((m) => ({ default: m.MonthPlanner }))
 );
@@ -40,6 +62,9 @@ const QcDesk = React.lazy(() =>
 );
 const TicketCenter = React.lazy(() =>
   import('./components/admin/TicketCenter').then((m) => ({ default: m.TicketCenter }))
+);
+const MaterialCenter = React.lazy(() =>
+  import('./components/admin/MaterialCenter').then((m) => ({ default: m.MaterialCenter }))
 );
 const TechniciansManager = React.lazy(() =>
   import('./components/admin/TechniciansManager').then((m) => ({ default: m.TechniciansManager }))
@@ -69,6 +94,9 @@ const ProposalViewerModal = React.lazy(() =>
 );
 const TicketModal = React.lazy(() =>
   import('./components/TicketModal').then((m) => ({ default: m.TicketModal }))
+);
+const MaterialRequestModal = React.lazy(() =>
+  import('./components/technician/MaterialRequestModal').then((m) => ({ default: m.MaterialRequestModal }))
 );
 const ToolChecklistDrawer = React.lazy(() =>
   import('./components/technician/ToolChecklistDrawer').then((m) => ({ default: m.ToolChecklistDrawer }))
@@ -100,15 +128,60 @@ export const App: React.FC = () => {
   const [isFailedOpsModalOpen, setIsFailedOpsModalOpen] = useState<boolean>(false);
 
   const [users, setUsers] = useState<User[]>(() => StorageService.getUsers());
-  const [projects, setProjects] = useState<Project[]>(() => StorageService.getProjects());
-  const [tickets, setTickets] = useState<Ticket[]>(() => StorageService.getTickets());
+  const [teams, setTeams] = useState<InstallationTeam[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(() => StorageService.getSettings());
+  const [scheduleChangeRequests, setScheduleChangeRequests] = useState<ScheduleChangeRequest[]>([]);
+
+  // Fast offline restore of user-scoped cached data when user session is active
+  useEffect(() => {
+    if (currentUser?.id) {
+      const cachedProjects = StorageService.getProjects(currentUser.id);
+      const cachedTickets = StorageService.getTickets(currentUser.id);
+      const cachedMaterials = StorageService.getMaterialRequests(currentUser.id);
+      if (cachedProjects.length > 0) {
+        setProjects(cachedProjects);
+        projectsRef.current = cachedProjects;
+      }
+      if (cachedTickets.length > 0) {
+        setTickets(cachedTickets);
+      }
+      if (cachedMaterials.length > 0) {
+        setMaterialRequests(cachedMaterials);
+      }
+    }
+  }, [currentUser?.id]);
+
+  const teamsWithMembers: InstallationTeamWithMembers[] = useMemo(() => {
+    return teams.map((team) => {
+      const leadMember = teamMembers.find((m) => m.teamId === team.id && m.roleInTeam === 'LEAD');
+      const supervisor = leadMember ? users.find((u) => u.id === leadMember.userId) : undefined;
+      const techMembers = teamMembers.filter((m) => m.teamId === team.id && m.roleInTeam === 'TECHNICIAN');
+      const technicians = techMembers
+        .map((m) => users.find((u) => u.id === m.userId))
+        .filter(Boolean) as User[];
+      return {
+        ...team,
+        supervisor,
+        technicians,
+        totalMembers: (supervisor ? 1 : 0) + technicians.length,
+      };
+    });
+  }, [teams, teamMembers, users]);
 
   // Keep a synchronous ref of projects for predictable state updates in handlers
   const projectsRef = useRef<Project[]>(projects);
   useEffect(() => {
     projectsRef.current = projects;
   }, [projects]);
+
+  const materialRequestsRef = useRef<MaterialRequest[]>(materialRequests);
+  useEffect(() => {
+    materialRequestsRef.current = materialRequests;
+  }, [materialRequests]);
 
   // Request sequence tracker to drop stale server responses
   const fetchSeqRef = useRef<number>(0);
@@ -117,19 +190,28 @@ export const App: React.FC = () => {
     isSyncedWithServerRef.current = isSyncedWithServer;
   }, [isSyncedWithServer]);
 
-  // Subscribe to offline operations queue counts
+  // Subscribe to user-scoped offline operations queue counts
   useEffect(() => {
-    const unsubPending = OfflineQueue.subscribePendingCount((count) => {
-      setPendingQueueCount(count);
+    if (!currentUser?.id) {
+      setPendingQueueCount(0);
+      setFailedQueueCount(0);
+      return;
+    }
+    const uid = currentUser.id;
+    OfflineQueue.getPendingCount(uid).then(setPendingQueueCount);
+    OfflineQueue.getFailedCount(uid).then(setFailedQueueCount);
+
+    const unsubPending = OfflineQueue.subscribePendingCount(() => {
+      OfflineQueue.getPendingCount(uid).then(setPendingQueueCount);
     });
-    const unsubFailed = OfflineQueue.subscribeFailedCount((count) => {
-      setFailedQueueCount(count);
+    const unsubFailed = OfflineQueue.subscribeFailedCount(() => {
+      OfflineQueue.getFailedCount(uid).then(setFailedQueueCount);
     });
     return () => {
       unsubPending();
       unsubFailed();
     };
-  }, []);
+  }, [currentUser?.id]);
 
   // Check Supabase Auth session on initial load and listen to auth changes
   useEffect(() => {
@@ -169,18 +251,36 @@ export const App: React.FC = () => {
     const loadCloudData = async () => {
       const currentSeq = ++fetchSeqRef.current;
       try {
-        const [cloudProjects, cloudTickets, cloudUsers, cloudSettings] = await Promise.all([
+        const [cloudProjects, cloudTickets, cloudUsers, cloudSettings, cloudTeams, cloudTeamMembers, cloudScheduleChanges, cloudMaterials] = await Promise.all([
           SupabaseSyncService.fetchProjects(),
           SupabaseSyncService.fetchTickets(),
           SupabaseSyncService.fetchProfiles(),
           SupabaseSyncService.fetchSettings(),
+          SupabaseSyncService.fetchInstallationTeams().catch(() => []),
+          SupabaseSyncService.fetchTeamMembers().catch(() => []),
+          SupabaseSyncService.fetchScheduleChangeRequests().catch(() => []),
+          SupabaseSyncService.fetchMaterialRequests().catch(() => []),
         ]);
 
         if (currentSeq !== fetchSeqRef.current) return;
 
-        // Merge any pending outbox operations so unsent local mutations don't vanish
-        const mergedProjects = await Outbox.applyPendingToProjects(cloudProjects);
-        const mergedTickets = await Outbox.applyPendingToTickets(cloudTickets);
+        // Base material requests: prefer cloud materials if available, merged with local cache
+        const localMaterials = StorageService.getMaterialRequests(currentUser.id);
+        const baseMaterials = (cloudMaterials && cloudMaterials.length > 0)
+          ? [
+              ...cloudMaterials,
+              ...localMaterials.filter((lm) => !cloudMaterials.some((cm) => cm.id === lm.id)),
+            ]
+          : localMaterials;
+
+        // Merge any pending outbox operations for current user so unsent local mutations don't vanish
+        const mergedProjects = await Outbox.applyPendingToProjects(cloudProjects, undefined, currentUser.id);
+        const mergedTickets = await Outbox.applyPendingToTickets(cloudTickets, undefined, currentUser.id);
+        const mergedMaterialRequests = await Outbox.applyPendingToMaterialRequests(
+          baseMaterials,
+          undefined,
+          currentUser.id
+        );
         const mergedSettings = cloudSettings
           ? await Outbox.applyPendingToSettings(cloudSettings)
           : undefined;
@@ -190,8 +290,18 @@ export const App: React.FC = () => {
         setProjects(mergedProjects);
         projectsRef.current = mergedProjects;
         setTickets(mergedTickets);
+        setMaterialRequests(mergedMaterialRequests);
         if (cloudUsers.length > 0) {
           setUsers(cloudUsers);
+        }
+        if (cloudTeams.length > 0) {
+          setTeams(cloudTeams);
+        }
+        if (cloudTeamMembers.length > 0) {
+          setTeamMembers(cloudTeamMembers);
+        }
+        if (cloudScheduleChanges && cloudScheduleChanges.length >= 0) {
+          setScheduleChangeRequests(cloudScheduleChanges);
         }
         if (mergedSettings) {
           setSettings((prev) => ({ ...prev, ...mergedSettings }));
@@ -305,6 +415,28 @@ export const App: React.FC = () => {
       }
     });
 
+    const unsubTeams = SupabaseSyncService.subscribeTeams(async () => {
+      try {
+        const [t, tm] = await Promise.all([
+          SupabaseSyncService.fetchInstallationTeams(),
+          SupabaseSyncService.fetchTeamMembers(),
+        ]);
+        setTeams(t);
+        setTeamMembers(tm);
+      } catch (err) {
+        console.warn('Realtime teams refresh failed:', err);
+      }
+    });
+
+    const unsubScheduleChanges = SupabaseSyncService.subscribeScheduleChanges(async () => {
+      try {
+        const sc = await SupabaseSyncService.fetchScheduleChangeRequests();
+        setScheduleChangeRequests(sc);
+      } catch (err) {
+        console.warn('Realtime schedule changes refresh failed:', err);
+      }
+    });
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('talaie-trigger-offline-sync', handleSyncTrigger);
@@ -313,11 +445,13 @@ export const App: React.FC = () => {
       unsubTickets();
       unsubSettings();
       unsubProfiles();
+      unsubTeams();
+      unsubScheduleChanges();
     };
   }, [currentUser?.id, authChecking]);
 
-  // Navigation tab for QC Manager
-  const [activeTab, setActiveTab] = useState<ManagerTab>('planner');
+  // Navigation tab for QC Manager / Coordinator
+  const [activeTab, setActiveTab] = useState<ManagerTab>('control');
 
   // Dark Mode state with persistence and system detection
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -350,6 +484,7 @@ export const App: React.FC = () => {
   const [proposalModalProject, setProposalModalProject] = useState<Project | null>(null);
   const [toolChecklistProject, setToolChecklistProject] = useState<Project | null>(null);
   const [ticketModalProject, setTicketModalProject] = useState<Project | null>(null);
+  const [materialModalProject, setMaterialModalProject] = useState<Project | null>(null);
   const [completionModalProject, setCompletionModalProject] = useState<Project | null>(null);
   const [certificateModalProject, setCertificateModalProject] = useState<Project | null>(null);
   const [preInspectionProject, setPreInspectionProject] = useState<Project | null>(null);
@@ -364,18 +499,24 @@ export const App: React.FC = () => {
     setToast({ type, message });
   };
 
-  // Lightweight local storage caching (only when user is active session)
+  // Lightweight local storage caching (scoped to authenticated user session)
   useEffect(() => {
-    if (currentUser) {
-      StorageService.saveProjects(projects);
+    if (currentUser?.id) {
+      StorageService.saveProjects(projects, currentUser.id);
     }
-  }, [projects, currentUser]);
+  }, [projects, currentUser?.id]);
 
   useEffect(() => {
-    if (currentUser) {
-      StorageService.saveTickets(tickets);
+    if (currentUser?.id) {
+      StorageService.saveTickets(tickets, currentUser.id);
     }
-  }, [tickets, currentUser]);
+  }, [tickets, currentUser?.id]);
+
+  useEffect(() => {
+    if (currentUser?.id) {
+      StorageService.saveMaterialRequests(materialRequests, currentUser.id);
+    }
+  }, [materialRequests, currentUser?.id]);
 
   useEffect(() => {
     if (currentUser) {
@@ -390,6 +531,12 @@ export const App: React.FC = () => {
   ): Promise<boolean> => {
     if (!currentUser) return false;
 
+    // Absolute deletion guard: physical deletion of material requests is prohibited to preserve audit trail
+    if (mutation.type === 'DELETE_MATERIAL_REQUEST') {
+      showToast('error', 'حذف فیزیکی درخواست متریال مجاز نمی‌باشد. لطفاً از فرآیند لغو درخواست استفاده نمایید.');
+      return false;
+    }
+
     // Client-side role guards: validate before pushing to outbox
     if (currentUser.role !== 'QC_MANAGER') {
       if (mutation.type === 'PATCH_PROJECT') {
@@ -398,7 +545,7 @@ export const App: React.FC = () => {
         if (currentProject) {
           const patch = mutation.payload?.patch || mutation.payload;
           try {
-            validateProjectPatchRoleGuards(currentUser, currentProject, patch);
+            validateProjectPatchRoleGuards(currentUser, currentProject, patch, currentUser.teamId);
           } catch (err: any) {
             showToast('error', err.message || 'خطای عدم دسترسی نقش.');
             return false;
@@ -422,6 +569,35 @@ export const App: React.FC = () => {
         } catch (err: any) {
           showToast('error', err.message || 'خطای عدم دسترسی به تیکت.');
           return false;
+        }
+      } else if (mutation.type === 'CREATE_MATERIAL_REQUEST') {
+        const req = (mutation.payload?.request || mutation.payload) as MaterialRequest;
+        const project = projectsRef.current.find((p) => p.id === req?.projectId);
+        if (!canCreateMaterialRequest(currentUser, project)) {
+          showToast('error', 'شما دسترسی مجاز برای ثبت درخواست متریال در این پروژه را ندارید.');
+          return false;
+        }
+      } else if (mutation.type === 'PATCH_MATERIAL_REQUEST') {
+        if (currentUser.role !== 'SCHEDULING_COORDINATOR') {
+          const reqId = mutation.payload?.id || mutation.orderingKey.replace('material:', '');
+          const original = materialRequestsRef.current.find((r) => r.id === reqId);
+          const updated = mutation.payload?.patch || mutation.payload;
+          const project = projectsRef.current.find((p) => p.id === (updated?.projectId || original?.projectId));
+
+          // If technician is cancelling their own request
+          const isCancellation =
+            updated?.status === 'CANCELLED' && original?.requestedByUserId === currentUser.id;
+
+          // If technician is confirming receipt of a dispatch
+          const isReceiptConfirmation =
+            Boolean(project &&
+            canConfirmMaterialReceipt(currentUser, project) &&
+            updated?.dispatches?.some((d: any, idx: number) => d.receivedAtSiteConfirmed && !original?.dispatches?.[idx]?.receivedAtSiteConfirmed));
+
+          if (!isCancellation && !isReceiptConfirmation) {
+            showToast('error', 'تکنسین تنها مجاز به تایید دریافت محموله کارگاه یا لغو درخواست ثبت‌شده خود است.');
+            return false;
+          }
         }
       }
     }
@@ -567,28 +743,6 @@ export const App: React.FC = () => {
     if (ok) showToast('success', 'پروژه به‌طور کامل حذف شد.');
   };
 
-  const handleDeleteProject = async (projectId: string) => {
-    if (!currentUser) return;
-    if (!isSyncedWithServer) {
-      showToast('warning', 'اطلاعات در حال دریافت از سرور است، لطفاً شکیبا باشید.');
-      return;
-    }
-
-    await commit(
-      {
-        type: 'DELETE_PROJECT',
-        orderingKey: `project:${projectId}`,
-        payload: { id: projectId },
-      },
-      () => {
-        const next = projectsRef.current.filter((p) => p.id !== projectId);
-        setProjects(next);
-        projectsRef.current = next;
-      }
-    );
-    showToast('success', 'پروژه با موفقیت حذف گردید.');
-  };
-
   const handleMoveProjectDate = async (projectId: string, newDateKey: string) => {
     if (!currentUser) return;
     const patch = {
@@ -610,6 +764,58 @@ export const App: React.FC = () => {
         projectsRef.current = next;
       }
     );
+  };
+
+  const handleProposeScheduleChange = async (
+    projectId: string,
+    proposedDate: string,
+    proposedEndDate?: string,
+    proposedTeamId?: string,
+    reason?: string
+  ) => {
+    try {
+      await SupabaseSyncService.proposeScheduleChange(
+        projectId,
+        proposedDate,
+        proposedEndDate,
+        proposedTeamId,
+        reason || ''
+      );
+      const reqs = await SupabaseSyncService.fetchScheduleChangeRequests();
+      setScheduleChangeRequests(reqs);
+      showToast('success', 'پیشنهاد جابجایی زمان‌بندی ثبت شد و جهت بررسی به مدیر QC ارسال گردید.');
+    } catch (err: any) {
+      showToast('error', err.message || 'خطا در ثبت پیشنهاد جابجایی زمان‌بندی.');
+      throw err;
+    }
+  };
+
+  const handleReviewScheduleChange = async (
+    requestId: string,
+    decision: 'APPROVED' | 'REJECTED',
+    notes?: string
+  ) => {
+    try {
+      await SupabaseSyncService.reviewScheduleChange(requestId, decision, notes || '');
+      const [reqs, updatedProjects] = await Promise.all([
+        SupabaseSyncService.fetchScheduleChangeRequests(),
+        SupabaseSyncService.fetchProjects(),
+      ]);
+      setScheduleChangeRequests(reqs);
+      if (updatedProjects && updatedProjects.length > 0) {
+        setProjects(updatedProjects);
+        projectsRef.current = updatedProjects;
+      }
+      showToast(
+        decision === 'APPROVED' ? 'success' : 'info',
+        decision === 'APPROVED'
+          ? 'درخواست جابجایی تایید و زمان‌بندی جدید پروژه اعمال شد.'
+          : 'درخواست جابجایی زمان‌بندی رد شد.'
+      );
+    } catch (err: any) {
+      showToast('error', err.message || 'خطا در بررسی درخواست زمان‌بندی.');
+      throw err;
+    }
   };
 
   const transitioningLockRef = useRef<Set<string>>(new Set());
@@ -635,6 +841,17 @@ export const App: React.FC = () => {
     if (!isValidStatusTransition(from, to)) {
       showToast('error', `انتقال وضعیت از «${from}» به «${to}» مجاز نیست.`);
       return;
+    }
+
+    if (['EN_ROUTE', 'IN_PROGRESS'].includes(to)) {
+      const latestTransfer = getLatestTeamTransfer(current);
+      if (latestTransfer && !isTransferResolved(latestTransfer)) {
+        showToast(
+          'error',
+          'پروژه به اکیپ جدید منتقل شده و در انتظار تایید رسمی تحویل اقلام سر کارگاه یا رفع انسداد مدیر QC است. تا پیش از ثبت تایید، شروع یا ادامه کار مجاز نیست.'
+        );
+        return;
+      }
     }
 
     // Acquire lock synchronously before any await
@@ -691,15 +908,23 @@ export const App: React.FC = () => {
     }
   };
 
-  // Completion report from field
+  // Completion report from field (P1 Task 4)
   const handleReportCompletion = async (completionData: {
     completionNotes: string;
     beforePhotos: string[];
     afterPhotos: string[];
     completionPhotos: string[];
     handoverChecklist: HandoverChecklist;
+    handoverSigneeType?: any;
     customerSignature?: string;
     customerSatisfaction?: number;
+    representativeName?: string;
+    representativeRole?: string;
+    representativePhone?: string;
+    unavailabilityReason?: string;
+    unavailabilityPhotos?: string[];
+    isExceptionalCompletion?: boolean;
+    exceptionalCompletionDetails?: any;
   }) => {
     if (!completionModalProject || !currentUser) return;
     const projectId = completionModalProject.id;
@@ -713,6 +938,18 @@ export const App: React.FC = () => {
       );
     }
 
+    const isUnavailable = completionData.handoverSigneeType === 'UNAVAILABLE_EXEMPT';
+    const customerAcceptance: CustomerAcceptanceRecord = {
+      status: isUnavailable ? 'UNAVAILABLE' : 'ACCEPTED',
+      representativeName: completionData.representativeName || undefined,
+      representativeRole: completionData.representativeRole || undefined,
+      signature: completionData.customerSignature || undefined,
+      customerSatisfaction: completionData.customerSatisfaction || undefined,
+      unavailabilityReason: completionData.unavailabilityReason || undefined,
+      unavailabilityPhotos: completionData.unavailabilityPhotos || undefined,
+      acceptedAt: nowIso,
+    };
+
     const patch: Partial<Project> = {
       status: 'COMPLETED',
       qcStatus: 'PENDING',
@@ -721,8 +958,17 @@ export const App: React.FC = () => {
       afterPhotos: completionData.afterPhotos,
       completionPhotos: completionData.completionPhotos,
       handoverChecklist: completionData.handoverChecklist,
+      handoverSigneeType: completionData.handoverSigneeType,
       customerSignature: completionData.customerSignature,
       customerSatisfaction: completionData.customerSatisfaction,
+      representativeName: completionData.representativeName,
+      representativeRole: completionData.representativeRole,
+      representativePhone: completionData.representativePhone,
+      unavailabilityReason: completionData.unavailabilityReason,
+      unavailabilityPhotos: completionData.unavailabilityPhotos,
+      isExceptionalCompletion: completionData.isExceptionalCompletion,
+      exceptionalCompletionDetails: completionData.exceptionalCompletionDetails,
+      customerAcceptance,
       completedAt: nowIso,
       updatedAt: nowIso,
       workSessions: updatedSessions,
@@ -746,8 +992,21 @@ export const App: React.FC = () => {
     showToast('success', 'گزارش اتمام کار با موفقیت ثبت شد و به بررسی QC ارسال گردید.');
   };
 
-  // Daily log (temporary pause for multi-day project)
-  const handleEndDailyWork = async (data: { note: string; photos: string[] }) => {
+  // Daily log (temporary pause for multi-day project - P1 Task 5 & P2.1)
+  const handleEndDailyWork = async (data: {
+    note?: string;
+    photos: string[];
+    startTime?: string;
+    endTime?: string;
+    completedQuantity?: number;
+    remainingQuantity?: number;
+    quantityUnit?: string;
+    activityProgress?: DailyActivityProgress[];
+    obstacles?: string;
+    equipmentIssues?: string;
+    plannedContinuationDate?: string;
+    supervisorConfirmed?: boolean;
+  }) => {
     if (!dailyLogModalProject || !currentUser) return;
     // Use the freshest copy (realtime may have changed it while the modal was open)
     const project = projectsRef.current.find((p) => p.id === dailyLogModalProject.id);
@@ -772,11 +1031,28 @@ export const App: React.FC = () => {
       );
     }
 
+    const isSupervisor =
+      currentUser.role === 'LEAD_TECHNICIAN' ||
+      currentUser.role === 'QC_MANAGER' ||
+      project.leadTechnicianId === currentUser.id;
+
     const newDailyLog: DailyLog = {
       id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `log-${Date.now()}`,
       date: todayKey,
-      note: data.note,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      completedQuantity: data.completedQuantity,
+      remainingQuantity: data.remainingQuantity,
+      quantityUnit: data.quantityUnit,
+      activityProgress: data.activityProgress,
+      note: data.note || 'ثبت پیشرفت کاری روزانه',
+      obstacles: data.obstacles,
+      equipmentIssues: data.equipmentIssues,
       photos: data.photos,
+      plannedContinuationDate: data.plannedContinuationDate,
+      supervisorConfirmed: data.supervisorConfirmed ?? isSupervisor,
+      supervisorConfirmedBy: isSupervisor ? currentUser.name : undefined,
+      supervisorConfirmedAt: isSupervisor ? nowIso : undefined,
       byUserId: currentUser.id,
       byUserName: currentUser.name,
       createdAt: nowIso,
@@ -807,24 +1083,27 @@ export const App: React.FC = () => {
     showToast('success', 'پایان کار امروز ثبت شد و پروژه در وضعیت نیمه‌کاره قرار گرفت.');
   };
 
-  // Pre-Installation inspection & 2nd measurement handler
+  // Pre-Installation site readiness inspection handler (Task 4)
   const handleSavePreInspection = async (
-    inspection: PreInstallationInspection,
+    inspection: SiteReadinessInspection,
     newScheduledDate?: string
   ) => {
     if (!preInspectionProject || !currentUser) return;
     const projectId = preInspectionProject.id;
     const current = projectsRef.current.find((p) => p.id === projectId);
 
+    const isPassed = inspection.status === 'PASSED' || Boolean(inspection.isReady);
+
     const patch: Partial<Project> = {
       scheduledDate: newScheduledDate || current?.scheduledDate,
-      preInspection: inspection,
+      siteReadiness: inspection,
       updatedAt: new Date().toISOString(),
     };
 
     // Only change status if current status is MEASUREMENT_PENDING or SCHEDULED
     if (current && (current.status === 'MEASUREMENT_PENDING' || current.status === 'SCHEDULED')) {
-      patch.status = (inspection.status === 'APPROVED' ? 'SCHEDULED' : 'MEASUREMENT_PENDING') as Project['status'];
+      const gatePassed = isHandoverGatePassed(current, patch);
+      patch.status = (isPassed && gatePassed ? 'SCHEDULED' : 'MEASUREMENT_PENDING') as Project['status'];
     }
 
     await commit(
@@ -842,7 +1121,7 @@ export const App: React.FC = () => {
         setPreInspectionProject(null);
       }
     );
-    showToast('success', 'گزارش کارشناسی فضا و اندازه‌گیری دوم با موفقیت در سرور ثبت شد.');
+    showToast('success', 'برگه بازبینی و آمادگی فیزیکی بستر نصب با موفقیت در سرور ثبت شد.');
   };
 
   // 360-degree Personnel evaluation handler (atomic append via append_project_evaluation RPC)
@@ -920,6 +1199,56 @@ export const App: React.FC = () => {
     showToast('warning', 'پروژه به فهرست پروژه‌های متوقف‌شده ارجاع یافت و مهلت ۷۲ ساعته آغاز شد.');
   };
 
+  // Acknowledge receipt of transferred project by receiving lead technician (Phase P2.2)
+  const handleConfirmTransferReceipt = async (project: Project) => {
+    if (!currentUser) return;
+    try {
+      const patch = createConfirmTransferReceiptPayload(project, currentUser, currentUser.teamId);
+      await commit(
+        {
+          type: 'PATCH_PROJECT',
+          orderingKey: `project:${project.id}`,
+          payload: { id: project.id, patch },
+        },
+        () => {
+          const next = projectsRef.current.map((p) =>
+            p.id === project.id ? { ...p, ...patch } : p
+          );
+          setProjects(next);
+          projectsRef.current = next;
+        }
+      );
+      showToast('success', 'تحویل‌گیری رسمی کار و اقلام توسط سرپرست اکیپ با موفقیت ثبت شد.');
+    } catch (err: any) {
+      showToast('error', err.message || 'خطا در ثبت تحویل‌گیری');
+    }
+  };
+
+  // Manager override for pending team transfer (Phase P2.2 Hardening)
+  const handleManagerOverrideTransfer = async (project: Project, reason: string) => {
+    if (!currentUser || currentUser.role !== 'QC_MANAGER') return;
+    try {
+      const patch = createManagerOverrideTransferPayload({ project, user: currentUser, reason });
+      await commit(
+        {
+          type: 'PATCH_PROJECT',
+          orderingKey: `project:${project.id}`,
+          payload: { id: project.id, patch },
+        },
+        () => {
+          const next = projectsRef.current.map((p) =>
+            p.id === project.id ? { ...p, ...patch } : p
+          );
+          setProjects(next);
+          projectsRef.current = next;
+        }
+      );
+      showToast('success', 'رفع انسداد مدیریتی انتقال با موفقیت ثبت شد.');
+    } catch (err: any) {
+      showToast('error', err.message || 'خطا در رفع انسداد مدیریتی انتقال');
+    }
+  };
+
   // Ticket handlers
   const handleCreateTicket = async (newTicket: Ticket) => {
     if (!currentUser) return;
@@ -966,6 +1295,87 @@ export const App: React.FC = () => {
     showToast('success', 'تیکت با موفقیت به‌روزرسانی شد.');
   };
 
+  // Material Request handlers (Phase P2.3)
+  const handleCreateMaterialRequest = async (newRequest: MaterialRequest) => {
+    if (!currentUser) return;
+    await commit(
+      {
+        type: 'CREATE_MATERIAL_REQUEST',
+        orderingKey: `material:${newRequest.id}`,
+        payload: newRequest,
+      },
+      () => {
+        setMaterialRequests((prev) => [newRequest, ...prev]);
+        setMaterialModalProject(null);
+      }
+    );
+    showToast('success', 'درخواست متریال با موفقیت ثبت و جهت آماده‌سازی به دفتر ارسال شد.');
+  };
+
+  const handleUpdateMaterialRequest = async (updatedRequest: MaterialRequest) => {
+    if (!currentUser) return;
+    await commit(
+      {
+        type: 'PATCH_MATERIAL_REQUEST',
+        orderingKey: `material:${updatedRequest.id}`,
+        payload: { id: updatedRequest.id, patch: updatedRequest },
+      },
+      () => {
+        setMaterialRequests((prev) =>
+          prev.map((r) => (r.id === updatedRequest.id ? updatedRequest : r))
+        );
+      }
+    );
+    showToast('success', 'درخواست متریال با موفقیت به‌روزرسانی شد.');
+  };
+
+  const handleConfirmMaterialReceipt = async (request: MaterialRequest, dispatchId: string) => {
+    if (!currentUser) return;
+    try {
+      const project = projectsRef.current.find((p) => p.id === request.projectId);
+      const updated = createConfirmReceiptPayload(request, dispatchId, currentUser, project);
+      await commit(
+        {
+          type: 'PATCH_MATERIAL_REQUEST',
+          orderingKey: `material:${updated.id}`,
+          payload: { id: updated.id, patch: updated },
+        },
+        () => {
+          setMaterialRequests((prev) =>
+            prev.map((r) => (r.id === updated.id ? updated : r))
+          );
+        }
+      );
+      showToast('success', 'تحویل محموله متریال در محل کارگاه با موفقیت تایید شد.');
+    } catch (err: any) {
+      showToast('error', err.message || 'خطا در تایید تحویل متریال.');
+    }
+  };
+
+  const handleResolveDefect = async (
+    projectId: string,
+    defectId: string,
+    resolutionNotes: string,
+    photos?: string[]
+  ) => {
+    if (!currentUser) return;
+    const project = projectsRef.current.find((p) => p.id === projectId);
+    if (!project) return;
+    try {
+      const payload = createDefectResolutionPayload({
+        project,
+        defectId,
+        resolutionNotes,
+        resolutionPhotos: photos,
+        user: currentUser,
+      });
+      await handlePatchProject(projectId, payload);
+      showToast('success', 'اقدام اصلاحی و رفع نقص با موفقیت ثبت شد.');
+    } catch (err: any) {
+      showToast('error', err.message || 'خطا در ثبت رفع نقص');
+    }
+  };
+
   // Settings handler
   const handleUpdateSettings = async (newSettings: SystemSettings) => {
     if (!currentUser) return;
@@ -1004,11 +1414,77 @@ export const App: React.FC = () => {
     });
   };
 
-  // Clear local device cache & reload from cloud
-  const handleResetData = () => {
-    if (confirm('آیا مایلید حافظه محلی (کش) این مرورگر پاک‌سازی شود و داده‌ها مجدداً از سرور ابری دریافت شوند؟')) {
-      StorageService.resetAll();
+  const handleAssignTeamMember = async (
+    teamId: string,
+    userId: string,
+    roleInTeam: 'LEAD' | 'TECHNICIAN'
+  ) => {
+    const res = await SupabaseSyncService.adminAssignTeamMember(teamId, userId, roleInTeam);
+    if (res.success) {
+      try {
+        const [t, tm] = await Promise.all([
+          SupabaseSyncService.fetchInstallationTeams(),
+          SupabaseSyncService.fetchTeamMembers(),
+        ]);
+        setTeams(t);
+        setTeamMembers(tm);
+        showToast('success', 'عضو با موفقیت به اکیپ انتساب یافت.');
+      } catch (err) {
+        console.warn('Refresh teams failed:', err);
+      }
+    }
+    return res;
+  };
+
+  const handleRemoveTeamMember = async (userId: string) => {
+    const res = await SupabaseSyncService.adminRemoveTeamMember(userId);
+    if (res.success) {
+      try {
+        const [t, tm] = await Promise.all([
+          SupabaseSyncService.fetchInstallationTeams(),
+          SupabaseSyncService.fetchTeamMembers(),
+        ]);
+        setTeams(t);
+        setTeamMembers(tm);
+        showToast('success', 'عضو با موفقیت از اکیپ حذف شد.');
+      } catch (err) {
+        console.warn('Refresh teams failed:', err);
+      }
+    }
+    return res;
+  };
+
+  // Clear local device cache & reload from cloud with atomic coordinated outbox safety
+  const handleResetData = async () => {
+    try {
+      const pendingCount = await OfflineQueue.getPendingCount();
+      const failedCount = await OfflineQueue.getFailedCount();
+
+      if (pendingCount > 0 || failedCount > 0) {
+        const confirmed = window.confirm(
+          `هشدار مهم: تعداد ${toPersianDigits(pendingCount)} تغییر ارسال‌نشده و ${toPersianDigits(failedCount)} عملیات ناموفق در صف آفلاین این دستگاه وجود دارد.\n\n` +
+          `در صورت پاک‌سازی کش (Reset)، تمام این تغییرات برای همیشه از بین خواهند رفت و به سرور ارسال نخواهند شد.\n\n` +
+          `آیا با اطمینان کامل می‌خواهید داده‌ها و صف‌های ارسال‌نشده را حذف کرده و از سرور بازخوانی کنید؟`
+        );
+        if (!confirmed) {
+          return;
+        }
+      } else {
+        const confirmed = window.confirm(
+          'آیا مایلید حافظه محلی (کش) این مرورگر پاک‌سازی شود و داده‌ها مجدداً از سرور ابری دریافت شوند؟'
+        );
+        if (!confirmed) {
+          return;
+        }
+      }
+
+      await StorageService.executeFullReset();
       window.location.reload();
+    } catch (err: any) {
+      console.error('Coordinated reset failed:', err);
+      window.alert(
+        `خطا در پاک‌سازی حافظه دستگاه:\n${err?.message || 'عملیات با خطا متوقف شد.'}\n\nجهت حفظ یکپارچگی داده‌ها، صفحه بارگذاری مجدد نشد. لطفاً مجدداً تلاش کنید.`
+      );
     }
   };
 
@@ -1038,9 +1514,8 @@ export const App: React.FC = () => {
     setProjects([]);
     projectsRef.current = [];
     setTickets([]);
+    setMaterialRequests([]);
     setIsSyncedWithServer(false);
-    StorageService.saveProjects([]);
-    StorageService.saveTickets([]);
     showToast('info', 'با موفقیت از حساب کاربری خارج شدید.');
   };
 
@@ -1091,7 +1566,16 @@ export const App: React.FC = () => {
     p.qcStatus !== 'REJECTED';
   const pendingQcCount = projects.filter(isAwaitingQc).length;
 
+  const pendingMaterialCount = materialRequests.filter(
+    (r) =>
+      r.status === 'SUBMITTED' ||
+      r.status === 'IN_PROCUREMENT' ||
+      (r.dispatches && r.dispatches.some((d) => !d.receivedAtSiteConfirmed))
+  ).length;
+
   const isQcManager = currentUser.role === 'QC_MANAGER';
+  const isCoordinator = currentUser.role === 'SCHEDULING_COORDINATOR';
+  const isManagerOrCoordinator = isQcManager || isCoordinator;
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#FAF7F2] dark:bg-[#121212] text-[#212121] dark:text-[#F5EFEB] flex flex-col font-sans selection:bg-[#C1A056] selection:text-white transition-colors duration-200">
@@ -1130,8 +1614,8 @@ export const App: React.FC = () => {
 
       {/* Main Body */}
       <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
-        {isQcManager ? (
-          // ================= QC MANAGER VIEW =================
+        {isManagerOrCoordinator ? (
+          // ================= MANAGER / COORDINATOR VIEW =================
           <div className="flex gap-6 pb-20 lg:pb-6">
             <Sidebar
               activeTab={activeTab}
@@ -1139,15 +1623,35 @@ export const App: React.FC = () => {
               pendingQcCount={pendingQcCount}
               openStuckCount={openStuckCount}
               openTicketCount={openTicketCount}
+              pendingMaterialCount={pendingMaterialCount}
             />
 
             <div className="flex-1 min-w-0">
               <React.Suspense fallback={<DashboardSkeleton />}>
+                {activeTab === 'control' && (
+                  <OperationsControlCenter
+                    currentUser={currentUser}
+                    projects={projects}
+                    users={users}
+                    tickets={tickets}
+                    teamsWithMembers={teamsWithMembers}
+                    scheduleChangeRequests={scheduleChangeRequests}
+                    materialRequests={materialRequests}
+                    settings={settings}
+                    onNavigateTab={(tab) => setActiveTab(tab)}
+                    onOpenProject={(p) => setManagedProjectId(p.id)}
+                    onOpenScheduleRequests={() => setActiveTab('planner')}
+                  />
+                )}
+
                 {activeTab === 'planner' && (
                   <MonthPlanner
                     projects={projects}
                     users={users}
+                    teams={teams}
+                    currentUser={currentUser}
                     settings={settings}
+                    scheduleChangeRequests={scheduleChangeRequests}
                     onUpdateSettings={handleUpdateSettings}
                     onNewProject={handleOpenNewProject}
                     onEditProject={handleOpenEditProject}
@@ -1155,6 +1659,8 @@ export const App: React.FC = () => {
                     onMoveProjectDate={handleMoveProjectDate}
                     onViewProposal={(p) => setProposalModalProject(p)}
                     onOpenPreInspection={(p) => setPreInspectionProject(p)}
+                    onProposeScheduleChange={handleProposeScheduleChange}
+                    onReviewScheduleChange={handleReviewScheduleChange}
                   />
                 )}
 
@@ -1183,15 +1689,29 @@ export const App: React.FC = () => {
                 {activeTab === 'tickets' && (
                   <TicketCenter
                     tickets={tickets}
+                    currentUser={currentUser || undefined}
                     onUpdateTicket={handleUpdateTicket}
+                  />
+                )}
+
+                {activeTab === 'materials' && (
+                  <MaterialCenter
+                    materialRequests={materialRequests}
+                    currentUser={currentUser}
+                    users={users}
+                    onUpdateMaterialRequest={handleUpdateMaterialRequest}
                   />
                 )}
 
                 {activeTab === 'technicians' && (
                   <TechniciansManager
                     users={users}
+                    teams={teams}
+                    teamMembers={teamMembers}
                     onSaveUser={handleSaveUser}
                     onDeleteUser={handleDeleteUser}
+                    onAssignTeamMember={handleAssignTeamMember}
+                    onRemoveTeamMember={handleRemoveTeamMember}
                   />
                 )}
 
@@ -1215,6 +1735,7 @@ export const App: React.FC = () => {
               pendingQcCount={pendingQcCount}
               openStuckCount={openStuckCount}
               openTicketCount={openTicketCount}
+              pendingMaterialCount={pendingMaterialCount}
             />
           </div>
         ) : (
@@ -1233,6 +1754,11 @@ export const App: React.FC = () => {
               inFlightTransitions={inFlightTransitions}
               onOpenCertificate={(p) => setCertificateModalProject(p)}
               onReportStuck={handleReportStuck}
+              onConfirmTransfer={handleConfirmTransferReceipt}
+              materialRequests={materialRequests}
+              onOpenMaterialModal={(p) => setMaterialModalProject(p)}
+              onConfirmMaterialReceipt={handleConfirmMaterialReceipt}
+              onResolveDefect={handleResolveDefect}
             />
           </div>
         )}
@@ -1245,6 +1771,7 @@ export const App: React.FC = () => {
             project={editingProject}
             defaultDate={presetDateKey}
             users={users}
+            teams={teams}
             settings={settings}
             onClose={() => {
               setIsProjectFormOpen(false);
@@ -1279,15 +1806,25 @@ export const App: React.FC = () => {
           />
         )}
 
+        {materialModalProject && currentUser && (
+          <MaterialRequestModal
+            project={materialModalProject}
+            currentUser={currentUser}
+            onClose={() => setMaterialModalProject(null)}
+            onSubmit={handleCreateMaterialRequest}
+          />
+        )}
+
         {completionModalProject && (
           <ReportCompletionModal
             project={completionModalProject}
+            currentUser={currentUser || undefined}
             onClose={() => setCompletionModalProject(null)}
             onSubmit={handleReportCompletion}
           />
         )}
 
-        {isQcManager && managedProjectId && currentUser && (() => {
+        {(isQcManager || isCoordinator) && managedProjectId && currentUser && (() => {
           const managed = projects.find((p) => p.id === managedProjectId);
           if (!managed) return null;
           return (
@@ -1295,12 +1832,13 @@ export const App: React.FC = () => {
               project={managed}
               users={users}
               tickets={tickets}
+              teams={teams}
               currentUser={currentUser}
               isOnline={typeof navigator === 'undefined' || navigator.onLine}
               onClose={() => setManagedProjectId(null)}
               onEditInfo={(p) => handleOpenEditProject(p)}
               onApplyPatch={handleManagerPatch}
-              onDeleteProject={handleManagerDelete}
+              onDeleteProject={isQcManager ? handleManagerDelete : undefined}
               onOpenCertificate={(p) => setCertificateModalProject(p)}
               onViewProposal={(p) => setProposalModalProject(p)}
               fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}
@@ -1311,6 +1849,7 @@ export const App: React.FC = () => {
         {dailyLogModalProject && (
           <DailyLogModal
             project={dailyLogModalProject}
+            currentUser={currentUser}
             isOpen={!!dailyLogModalProject}
             onClose={() => setDailyLogModalProject(null)}
             onSubmit={handleEndDailyWork}
@@ -1332,6 +1871,24 @@ export const App: React.FC = () => {
             isOpen={!!preInspectionProject}
             onClose={() => setPreInspectionProject(null)}
             onSaveInspection={handleSavePreInspection}
+            onCreateTicket={({ projectId, title, description }) => {
+              const ticketId = 't-' + Date.now();
+              const proj = projects.find((p) => p.id === projectId);
+              handleCreateTicket({
+                id: ticketId,
+                projectId,
+                projectCode: proj?.code || '',
+                projectTitle: proj?.title || '',
+                authorId: currentUser?.id || '',
+                authorName: currentUser?.name || '',
+                type: 'WALL_ISSUE',
+                description: `${title}: ${description}`,
+                photos: [],
+                status: 'OPEN',
+                createdAt: new Date().toISOString(),
+              });
+              showToast('success', 'تیکت نقص بستر با موفقیت ایجاد شد.');
+            }}
           />
         )}
 
@@ -1360,9 +1917,11 @@ export const App: React.FC = () => {
         <FailedOperationsModal
           isOpen={isFailedOpsModalOpen}
           onClose={() => setIsFailedOpsModalOpen(false)}
+          currentUserId={currentUser?.id}
           onActionComplete={() => {
-            OfflineQueue.getFailedCount().then(setFailedQueueCount);
-            OfflineQueue.getPendingCount().then(setPendingQueueCount);
+            const uid = currentUser?.id;
+            OfflineQueue.getFailedCount(uid).then(setFailedQueueCount);
+            OfflineQueue.getPendingCount(uid).then(setPendingQueueCount);
           }}
         />
       </React.Suspense>

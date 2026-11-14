@@ -44,6 +44,11 @@ export const SettingsView: React.FC<Props> = ({
 }) => {
   const [companyName, setCompanyName] = useState(settings.companyName);
   const [visibilityDays, setVisibilityDays] = useState(settings.visibilityWindowDays);
+  const [defaultCapacityHours, setDefaultCapacityHours] = useState<string>(
+    settings.defaultTeamDailyCapacityHours !== undefined && settings.defaultTeamDailyCapacityHours !== null
+      ? String(settings.defaultTeamDailyCapacityHours)
+      : ''
+  );
   const [tools, setTools] = useState<string[]>([...settings.defaultTools]);
   const [newTool, setNewTool] = useState('');
 
@@ -91,11 +96,13 @@ export const SettingsView: React.FC<Props> = ({
 
   const handleSaveGeneral = (e: React.FormEvent) => {
     e.preventDefault();
+    const capNum = defaultCapacityHours.trim() ? parseFloat(defaultCapacityHours) : null;
     onUpdateSettings({
       ...settings,
       companyName: companyName.trim(),
       visibilityWindowDays: visibilityDays,
       defaultTools: tools,
+      defaultTeamDailyCapacityHours: capNum && !isNaN(capNum) && capNum > 0 ? capNum : null,
     });
     alert('تنظیمات سامانه با موفقیت ذخیره شد.');
   };
@@ -267,6 +274,31 @@ export const SettingsView: React.FC<Props> = ({
               />
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
                 تکنسین‌ها با ورود به اپ، فقط مأموریت‌های {toPersianDigits(visibilityDays)} روز آینده را مشاهده خواهند کرد و برنامه‌های بعدی تا زمان باز شدن موعد برایشان مخفی خواهد ماند.
+              </p>
+            </div>
+
+            <div className="sm:col-span-2 pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
+              <label htmlFor="settings-capacity" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                سقف ظرفیت کاری استاندارد روزانه اکیپ‌ها (ساعت در روز):
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  id="settings-capacity"
+                  type="number"
+                  min="1"
+                  max="24"
+                  step="0.5"
+                  placeholder="مثلاً ۸ (یا خالی برای حالت نامشخص)"
+                  value={defaultCapacityHours}
+                  onChange={(e) => setDefaultCapacityHours(e.target.value)}
+                  className="w-48 text-sm p-2.5 rounded-xl border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-[#FAF7F2] dark:bg-[#141414] dark:text-white"
+                />
+                <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {defaultCapacityHours ? `${toPersianDigits(defaultCapacityHours)} ساعت در روز` : 'تعیین‌نشده (هشدار عدم تنظیم ظرفیت)'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                این مقدار سقف پیش‌فرض کل سامانه است. اگر اکیپی سقف اختصاصی نداشته باشد، از این مقدار استفاده خواهد شد.
               </p>
             </div>
           </div>

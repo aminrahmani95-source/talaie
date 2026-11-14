@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient, User as SupabaseAuthUser } from '@supabase/supabase-js';
-import { Project, Ticket, User, SystemSettings, PersonnelEvaluation, ProjectAuditRecord } from '../types';
+import { Project, Ticket, User, SystemSettings, PersonnelEvaluation, ProjectAuditRecord, InstallationTeam, TeamMember, MaterialRequest } from '../types';
 import { toEnglishDigits } from './jalali';
 import { Outbox, OutboxOperation, PendingUpload, PermanentError } from './offlineQueue';
 
@@ -37,6 +37,7 @@ let projectsChannel: ReturnType<SupabaseClient['channel']> | null = null;
 let ticketsChannel: ReturnType<SupabaseClient['channel']> | null = null;
 let profilesChannel: ReturnType<SupabaseClient['channel']> | null = null;
 let settingsChannel: ReturnType<SupabaseClient['channel']> | null = null;
+let teamsChannel: ReturnType<SupabaseClient['channel']> | null = null;
 
 // Signed URL cache: path -> { url, expiresAt }
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
@@ -216,6 +217,7 @@ export const SupabaseSyncService = {
   },
 
   async signOut(): Promise<void> {
+    Outbox.abortActiveProcessing();
     saveCachedProfile(null);
     const client = this.getClient();
     if (client) {
@@ -505,6 +507,166 @@ export const SupabaseSyncService = {
   },
 
   // =========================================================================
+  // INSTALLATION TEAMS (۴ اکیپ نصب و اعضای آن‌ها)
+  // =========================================================================
+
+  async fetchInstallationTeams(): Promise<InstallationTeam[]> {
+    const client = this.getClient();
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
+
+    const { data, error, status } = await client
+      .from('installation_teams')
+      .select('id, name, code, supervisor_id, daily_capacity_hours, created_at, updated_at')
+      .order('code');
+
+    if (error) {
+      (error as any).status = status;
+      console.warn('Failed to fetch installation teams:', error);
+      throw error;
+    }
+
+    return (data || []).map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      code: t.code,
+      supervisorId: t.supervisor_id || undefined,
+      dailyCapacityHours:
+        t.daily_capacity_hours !== null && t.daily_capacity_hours !== undefined
+          ? Number(t.daily_capacity_hours)
+          : null,
+      createdAt: t.created_at,
+      updatedAt: t.updated_at,
+    }));
+  },
+
+  async updateTeamCapacity(teamId: string, dailyCapacityHours: number | null): Promise<void> {
+    const client = this.getClient();
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
+
+    const { error } = await client
+      .from('installation_teams')
+      .update({
+        daily_capacity_hours: dailyCapacityHours !== null && dailyCapacityHours > 0 ? dailyCapacityHours : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', teamId);
+
+    if (error) {
+      console.warn('Failed to update team capacity:', error);
+      throw error;
+    }
+  },
+
+  async fetchTeamMembers(): Promise<TeamMember[]> {
+    const client = this.getClient();
+    if (!client) {
+      throw new Error('عدم دسترسی به کلاینت Supabase.');
+    }
+
+    const { data, error, status } = await client
+      .from('team_members')
+      .select('id, team_id, user_id, role_in_team, joined_at');
+
+    if (error) {
+      (error as any).status = status;
+      console.warn('Failed to fetch team members:', error);
+      throw error;
+    }
+
+    return (data || []).map((m: any) => ({
+      id: m.id,
+      teamId: m.team_id,
+      userId: m.user_id,
+      roleInTeam: m.role_in_team,
+      joinedAt: m.joined_at,
+    }));
+  },
+
+  async adminAssignTeamMember(
+    teamId: string,
+    userId: string,
+    roleInTeam: 'LEAD' | 'TECHNICIAN'
+  ): Promise<{ success: boolean; error?: string }> {
+    const client = this.getClient();
+    if (!client) {
+      return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
+    }
+
+    try {
+      const { error } = await client.rpc('admin_assign_team_member', {
+        p_team_id: teamId,
+        p_user_id: userId,
+        p_role_in_team: roleInTeam,
+      });
+
+      if (error) {
+        return { success: false, error: error.message || 'خطا در انتساب عضو به اکیپ.' };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'خطای غیرمنتظره در ارتباط با سرور' };
+    }
+  },
+
+  async adminRemoveTeamMember(userId: string): Promise<{ success: boolean; error?: string }> {
+    const client = this.getClient();
+    if (!client) {
+      return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
+    }
+
+    try {
+      const { error } = await client.rpc('admin_remove_team_member', {
+        p_user_id: userId,
+      });
+
+      if (error) {
+        return { success: false, error: error.message || 'خطا در حذف عضو از اکیپ.' };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'خطای غیرمنتظره در ارتباط با سرور' };
+    }
+  },
+
+  subscribeTeams(onUpdate: () => void): (() => void) {
+    const client = this.getClient();
+    if (!client) return () => {};
+
+    try {
+      if (teamsChannel) {
+        client.removeChannel(teamsChannel);
+      }
+
+      teamsChannel = (client as any)
+        .channel('talaie_teams_channel')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'installation_teams' },
+          () => onUpdate()
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'team_members' },
+          () => onUpdate()
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn('Failed to subscribe to teams:', err);
+    }
+
+    return () => {
+      if (teamsChannel && client) {
+        client.removeChannel(teamsChannel);
+        teamsChannel = null;
+      }
+    };
+  },
+
+  // =========================================================================
   // PROJECTS (Row-by-Row in dedicated 'projects' table)
   // =========================================================================
 
@@ -537,6 +699,33 @@ export const SupabaseSyncService = {
     }
 
     return [];
+  },
+
+  async fetchMaterialRequests(): Promise<MaterialRequest[]> {
+    const client = this.getClient();
+    if (!client) return [];
+    try {
+      const { data, error } = await client
+        .from('material_requests')
+        .select('id, data, updated_at')
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        // Fallback gracefully if table is not yet created on server
+        return [];
+      }
+
+      if (Array.isArray(data)) {
+        return data.map((row: any) => ({
+          ...row.data,
+          id: row.id,
+          updatedAt: row.data?.updatedAt || row.updated_at,
+        }));
+      }
+      return [];
+    } catch {
+      return [];
+    }
   },
 
   async patchProject(projectId: string, patch: Record<string, any>): Promise<void> {
@@ -1112,6 +1301,61 @@ export const SupabaseSyncService = {
         await this.upsertSettings(settings);
         break;
       }
+      case 'CREATE_MATERIAL_REQUEST':
+      case 'PATCH_MATERIAL_REQUEST': {
+        const client = this.getClient();
+        if (!client) throw new Error('عدم دسترسی به سرور ابری.');
+        const id = op.payload?.id;
+        const patch = op.payload?.patch || op.payload;
+        if (!id) throw new Error('شناسه درخواست متریال نامعتبر است.');
+
+        // Attempt RPC first, fallback to direct table operation
+        const { error: rpcError } = await client.rpc('patch_material_request', {
+          id,
+          patch,
+        });
+
+        if (rpcError) {
+          if (rpcError.code === '42883' || rpcError.message.includes('function') || rpcError.message.includes('does not exist')) {
+            const { error: tableError } = await client.from('material_requests').upsert({
+              id,
+              project_id: patch.projectId || patch.project_id || '',
+              data: patch,
+              status: patch.status || 'SUBMITTED',
+              urgency: patch.urgency || 'NORMAL',
+              updated_at: new Date().toISOString(),
+            });
+            if (tableError) {
+              if (tableError.code === '42P01' || tableError.message.includes('does not exist')) {
+                const err = new Error('جدول درخواست‌های متریال در سرور در انتظار اجرای مایگریشن ۰۱۴ است.');
+                (err as any).code = 'FEATURE_NOT_IMPLEMENTED_ON_SERVER';
+                (err as any).isExpectedOffline = true;
+                throw err;
+              }
+              throw tableError;
+            }
+          } else {
+            throw rpcError;
+          }
+        }
+        break;
+      }
+      case 'DELETE_MATERIAL_REQUEST': {
+        const client = this.getClient();
+        if (!client) throw new Error('عدم دسترسی به سرور ابری.');
+        const id = op.payload?.id || op.payload;
+        const { error } = await client.from('material_requests').delete().eq('id', id);
+        if (error) {
+          if (error.code === '42P01' || error.message.includes('does not exist')) {
+            const err = new Error('جدول درخواست‌های متریال در سرور در انتظار اجرای مایگریشن ۰۱۴ است.');
+            (err as any).code = 'FEATURE_NOT_IMPLEMENTED_ON_SERVER';
+            (err as any).isExpectedOffline = true;
+            throw err;
+          }
+          throw error;
+        }
+        break;
+      }
       default:
         break;
     }
@@ -1174,6 +1418,21 @@ export const SupabaseSyncService = {
         return !!getCachedProfile();
       },
     });
+  },
+
+  /**
+   * Safe recovery entry point for material operations halted due to pending server migrations.
+   * Invoked explicitly upon admin action or verified server capability.
+   * Preserves FIFO, prevents duplicates, ignores unrelated permanent failures, and never loops infinitely.
+   */
+  async recoverPendingMaterialOperations(targetUserId: string): Promise<{
+    requeuedCount: number;
+    requeuedIds: string[];
+  }> {
+    if (!targetUserId || typeof targetUserId !== 'string' || targetUserId.trim() === '') {
+      return { requeuedCount: 0, requeuedIds: [] };
+    }
+    return await Outbox.requeueUnsupportedMaterialOperations(targetUserId.trim());
   },
 
   subscribeSettings(onUpdate: (settings: SystemSettings) => void): (() => void) {
@@ -1501,6 +1760,132 @@ export const SupabaseSyncService = {
 -- 002_tables.sql (فاز ۲: جدول‌های projects و tickets و باکت تصاویر)
 -- 003_migrate_user_ids.sql (فاز ۲: مهاجرت شناسه‌های پرسنل به UUID)
 `;
+  },
+
+  /**
+   * دریافت لیست درخواست‌های تغییر زمان‌بندی (P1 Task 2E)
+   */
+  async fetchScheduleChangeRequests(): Promise<any[]> {
+    const client = this.getClient();
+    if (!client) return [];
+    try {
+      const { data, error } = await client
+        .from('schedule_change_requests')
+        .select('*')
+        .order('requested_at', { ascending: false });
+      if (error || !data) return [];
+      return data.map((r: any) => ({
+        id: r.id,
+        projectId: r.project_id,
+        projectCode: r.project_code,
+        projectTitle: r.project_title,
+        previousScheduledDate: r.previous_scheduled_date,
+        proposedScheduledDate: r.proposed_scheduled_date,
+        previousEndDate: r.previous_end_date,
+        proposedEndDate: r.proposed_end_date,
+        previousTeamId: r.previous_team_id,
+        proposedTeamId: r.proposed_team_id,
+        previousTeamName: r.previous_team_name,
+        proposedTeamName: r.proposed_team_name,
+        reason: r.reason,
+        requestedByUserId: r.requested_by_user_id,
+        requestedByUserName: r.requested_by_user_name,
+        requestedAt: r.requested_at,
+        status: r.status,
+        reviewedByUserId: r.reviewed_by_user_id,
+        reviewedByUserName: r.reviewed_by_user_name,
+        reviewedAt: r.reviewed_at,
+        reviewNotes: r.review_notes,
+      }));
+    } catch {
+      return [];
+    }
+  },
+
+  /**
+   * ثبت پیشنهاد تغییر زمان‌بندی توسط مسئول هماهنگی
+   */
+  async proposeScheduleChange(
+    projectId: string,
+    proposedDate: string,
+    proposedEndDate?: string,
+    proposedTeamId?: string,
+    reason: string = ''
+  ): Promise<string> {
+    const client = this.getClient();
+    if (!client) throw new Error('ارتباط با سرور برقرار نیست');
+    const { data, error } = await client.rpc('propose_schedule_change', {
+      p_project_id: projectId,
+      p_proposed_date: proposedDate,
+      p_proposed_end_date: proposedEndDate || null,
+      p_proposed_team_id: proposedTeamId || null,
+      p_reason: reason.trim(),
+    });
+    if (error) throw error;
+    return data?.requestId || '';
+  },
+
+  /**
+   * بررسی و تصمیم‌گیری نهایی روی درخواست تغییر زمان‌بندی توسط مدیر QC
+   */
+  async reviewScheduleChange(
+    requestId: string,
+    decision: 'APPROVED' | 'REJECTED',
+    reviewNotes: string = ''
+  ): Promise<void> {
+    const client = this.getClient();
+    if (!client) throw new Error('ارتباط با سرور برقرار نیست');
+    const { error } = await client.rpc('review_schedule_change', {
+      p_request_id: requestId,
+      p_decision: decision,
+      p_review_notes: reviewNotes.trim(),
+    });
+    if (error) throw error;
+  },
+
+  /**
+   * تایید کنترل‌شده لاگ روزانه توسط سرپرست اکیپ یا مدیر QC
+   */
+  async confirmDailyLog(
+    projectId: string,
+    logId: string,
+    notes: string = ''
+  ): Promise<void> {
+    const client = this.getClient();
+    if (!client) throw new Error('ارتباط با سرور برقرار نیست');
+    const { error } = await client.rpc('confirm_daily_log', {
+      p_project_id: projectId,
+      p_log_id: logId,
+      p_notes: notes.trim() || null,
+    });
+    if (error) throw error;
+  },
+
+  /**
+   * اشتراک بیدرنگ تغییرات درخواست‌های زمان‌بندی
+   */
+  subscribeScheduleChanges(onReload: () => void): () => void {
+    const client = this.getClient();
+    if (!client) return () => {};
+    try {
+      const channel = (client as any)
+        .channel('talaie_schedule_changes_channel')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'schedule_change_requests' },
+          () => {
+            onReload();
+          }
+        )
+        .subscribe();
+      return () => {
+        try {
+          client.removeChannel(channel);
+        } catch {}
+      };
+    } catch {
+      return () => {};
+    }
   },
 };
 

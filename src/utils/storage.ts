@@ -1,4 +1,5 @@
-import { Project, User, Ticket, SystemSettings } from '../types';
+import { Project, User, Ticket, SystemSettings, MaterialRequest } from '../types';
+import { OfflineQueue } from './offlineQueue';
 
 export const DEFAULT_MASTER_TOOLS = [
   'دریل بتن‌کن و چکشی',
@@ -35,6 +36,7 @@ const STORAGE_KEYS = {
   TICKETS: 'talaie_tickets_v6',
   SETTINGS: 'talaie_settings_v6',
   CURRENT_USER: 'talaie_current_user_v6',
+  MATERIAL_REQUESTS: 'talaie_material_requests_v6',
 };
 
 // Clean up legacy v5 mock caches on module evaluation
@@ -51,8 +53,9 @@ const MOCK_USER_IDS = new Set(['u-admin-1', 'u-lead-1', 'u-tech-1']);
 const MOCK_TICKET_IDS = new Set(['t-1']);
 
 export const StorageService = {
-  getProjects(): Project[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.PROJECTS);
+  getProjects(userId?: string): Project[] {
+    const key = userId ? `${STORAGE_KEYS.PROJECTS}_${userId}` : STORAGE_KEYS.PROJECTS;
+    const raw = localStorage.getItem(key);
     if (!raw) {
       return [];
     }
@@ -77,8 +80,9 @@ export const StorageService = {
     }
   },
 
-  saveProjects(projects: Project[]) {
+  saveProjects(projects: Project[], userId?: string) {
     try {
+      const key = userId ? `${STORAGE_KEYS.PROJECTS}_${userId}` : STORAGE_KEYS.PROJECTS;
       // Lightweight cache: strip large base64 strings and __fromCache flag so it never causes QuotaExceededError
       const lightweightProjects = projects
         .filter((p) => p && p.id && !MOCK_PROJECT_IDS.has(p.id))
@@ -97,7 +101,7 @@ export const StorageService = {
           delete copy.__fromCache;
           return copy;
         });
-      localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(lightweightProjects));
+      localStorage.setItem(key, JSON.stringify(lightweightProjects));
     } catch (e) {
       console.warn('LocalStorage saveProjects failed (quota limit):', e);
     }
@@ -126,8 +130,9 @@ export const StorageService = {
     }
   },
 
-  getTickets(): Ticket[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.TICKETS);
+  getTickets(userId?: string): Ticket[] {
+    const key = userId ? `${STORAGE_KEYS.TICKETS}_${userId}` : STORAGE_KEYS.TICKETS;
+    const raw = localStorage.getItem(key);
     if (!raw) {
       return [];
     }
@@ -140,12 +145,38 @@ export const StorageService = {
     }
   },
 
-  saveTickets(tickets: Ticket[]) {
+  saveTickets(tickets: Ticket[], userId?: string) {
     try {
+      const key = userId ? `${STORAGE_KEYS.TICKETS}_${userId}` : STORAGE_KEYS.TICKETS;
       const filtered = tickets.filter((t) => t && t.id && !MOCK_TICKET_IDS.has(t.id));
-      localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(filtered));
+      localStorage.setItem(key, JSON.stringify(filtered));
     } catch (e) {
       console.warn('LocalStorage saveTickets failed:', e);
+    }
+  },
+
+  getMaterialRequests(userId?: string): MaterialRequest[] {
+    const key = userId ? `${STORAGE_KEYS.MATERIAL_REQUESTS}_${userId}` : STORAGE_KEYS.MATERIAL_REQUESTS;
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      return [];
+    }
+    try {
+      const parsed: MaterialRequest[] = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter((r) => r && r.id);
+    } catch {
+      return [];
+    }
+  },
+
+  saveMaterialRequests(requests: MaterialRequest[], userId?: string) {
+    try {
+      const key = userId ? `${STORAGE_KEYS.MATERIAL_REQUESTS}_${userId}` : STORAGE_KEYS.MATERIAL_REQUESTS;
+      const filtered = requests.filter((r) => r && r.id);
+      localStorage.setItem(key, JSON.stringify(filtered));
+    } catch (e) {
+      console.warn('LocalStorage saveMaterialRequests failed:', e);
     }
   },
 
@@ -188,12 +219,13 @@ export const StorageService = {
   // Export JSON backup for safe archiving
   exportBackup(): string {
     const backup = {
-      version: '2.0',
+      version: '2.3',
       brand: 'گالری طلایی',
       exportedAt: new Date().toISOString(),
       projects: this.getProjects(),
       users: this.getUsers(),
       tickets: this.getTickets(),
+      materialRequests: this.getMaterialRequests(),
       settings: this.getSettings(),
     };
     return JSON.stringify(backup, null, 2);
@@ -203,10 +235,14 @@ export const StorageService = {
   importBackup(jsonString: string): boolean {
     try {
       const data = JSON.parse(jsonString);
-      if (data.projects) this.saveProjects(data.projects);
-      if (data.users) this.saveUsers(data.users);
-      if (data.tickets) this.saveTickets(data.tickets);
-      if (data.settings) this.saveSettings(data.settings);
+      if (!data || typeof data !== 'object') {
+        return false;
+      }
+      if (Array.isArray(data.projects)) this.saveProjects(data.projects);
+      if (Array.isArray(data.users)) this.saveUsers(data.users);
+      if (Array.isArray(data.tickets)) this.saveTickets(data.tickets);
+      if (Array.isArray(data.materialRequests)) this.saveMaterialRequests(data.materialRequests);
+      if (data.settings && typeof data.settings === 'object') this.saveSettings(data.settings);
       return true;
     } catch (e) {
       console.error('Import failed', e);
@@ -216,13 +252,58 @@ export const StorageService = {
 
   // Reset local device cache
   resetAll() {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('talaie_') && key !== 'talaie_theme') {
+          keysToRemove.push(key);
+        }
+      }
+      for (const k of keysToRemove) {
+        localStorage.removeItem(k);
+      }
+    } catch {}
     localStorage.removeItem(STORAGE_KEYS.PROJECTS);
     localStorage.removeItem(STORAGE_KEYS.USERS);
     localStorage.removeItem(STORAGE_KEYS.TICKETS);
     localStorage.removeItem(STORAGE_KEYS.SETTINGS);
+    localStorage.removeItem(STORAGE_KEYS.MATERIAL_REQUESTS);
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
     localStorage.removeItem('talaie_projects_v5');
     localStorage.removeItem('talaie_users_v5');
     localStorage.removeItem('talaie_tickets_v5');
     localStorage.removeItem('talaie_settings_v5');
+  },
+
+  /**
+   * Coordinated atomic full reset across both IndexedDB Outbox and LocalStorage.
+   * Enforces strict two-phase reset:
+   * 1. Purges IndexedDB outbox stores first (async & failure-prone).
+   * 2. If IndexedDB purge fails, aborts immediately without touching LocalStorage.
+   * 3. Purges LocalStorage.
+   * 4. Post-verification: Verifies that both stores reached the empty state.
+   * 5. If post-verification fails, throws an error so user is notified and can retry.
+   */
+  async executeFullReset(): Promise<void> {
+    // Step 1: Purge IndexedDB outbox first
+    await OfflineQueue.purgeAll();
+
+    // Verify Outbox is genuinely empty
+    const pendingCount = await OfflineQueue.getPendingCount();
+    const failedCount = await OfflineQueue.getFailedCount();
+    if (pendingCount !== 0 || failedCount !== 0) {
+      throw new Error('پاک‌سازی صف آفلاین مرورگر با شکست مواجه شد. برخی عملیات‌ها باقی ماندند.');
+    }
+
+    // Step 2: Purge LocalStorage
+    this.resetAll();
+
+    // Verify LocalStorage business datasets are genuinely cleared
+    const remainingProjects = this.getProjects();
+    const remainingMaterials = this.getMaterialRequests();
+    if (remainingProjects.length !== 0 || remainingMaterials.length !== 0) {
+      throw new Error('پاک‌سازی حافظه محلی مرورگر با شکست مواجه شد.');
+    }
   },
 };

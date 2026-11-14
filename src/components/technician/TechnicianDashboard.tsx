@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Project, User, SystemSettings, ProjectStatus } from '../../types';
+import { Project, User, SystemSettings, ProjectStatus, MaterialRequest } from '../../types';
 import { ProjectCard } from './ProjectCard';
 import { Calendar, Users, WifiOff, AlertOctagon } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits, getTodayPersianString } from '../../utils/jalali';
@@ -18,6 +18,11 @@ interface Props {
   onUpdateStatus: (projectId: string, from: ProjectStatus, to: ProjectStatus) => void;
   onOpenCertificate?: (project: Project) => void;
   onReportStuck?: (project: Project) => void;
+  onConfirmTransfer?: (project: Project) => void;
+  materialRequests?: MaterialRequest[];
+  onOpenMaterialModal?: (project: Project) => void;
+  onConfirmMaterialReceipt?: (request: MaterialRequest, dispatchId: string) => void;
+  onResolveDefect?: (projectId: string, defectId: string, resolutionNotes: string, photos?: string[]) => void;
   inFlightTransitions?: Set<string>;
 }
 
@@ -33,6 +38,11 @@ export const TechnicianDashboard: React.FC<Props> = ({
   onUpdateStatus,
   onOpenCertificate,
   onReportStuck,
+  onConfirmTransfer,
+  materialRequests = [],
+  onOpenMaterialModal,
+  onConfirmMaterialReceipt,
+  onResolveDefect,
   inFlightTransitions,
 }) => {
   const isLead = currentUser.role === 'LEAD_TECHNICIAN';
@@ -92,7 +102,10 @@ export const TechnicianDashboard: React.FC<Props> = ({
     const isStuck = p.status === 'STUCK';
     const isPaused = p.status === 'PAUSED';
     const isQcRejected = p.qcStatus === 'REJECTED';
-    return isEnRouteOrInProgress || isStuck || isPaused || isQcRejected;
+    const hasUnresolvedDefects = Boolean(
+      p.qcDefects && p.qcDefects.some((d) => d.status !== 'RESOLVED' && d.status !== 'VERIFIED')
+    );
+    return isEnRouteOrInProgress || isStuck || isPaused || isQcRejected || hasUnresolvedDefects;
   });
 
   // OPEN PROJECT IDS for deduplication so no job ever appears twice!
@@ -201,6 +214,11 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 onUpdateStatus={onUpdateStatus}
                 onOpenCertificate={onOpenCertificate}
                 onReportStuck={onReportStuck}
+                onConfirmTransfer={onConfirmTransfer}
+                materialRequests={materialRequests}
+                onOpenMaterialModal={onOpenMaterialModal}
+                onConfirmMaterialReceipt={onConfirmMaterialReceipt}
+                onResolveDefect={onResolveDefect}
                 isTransitioning={inFlightTransitions?.has(proj.id)}
               />
             ))}
@@ -305,6 +323,11 @@ export const TechnicianDashboard: React.FC<Props> = ({
               onUpdateStatus={onUpdateStatus}
               onOpenCertificate={onOpenCertificate}
               onReportStuck={onReportStuck}
+              onConfirmTransfer={onConfirmTransfer}
+              materialRequests={materialRequests}
+              onOpenMaterialModal={onOpenMaterialModal}
+              onConfirmMaterialReceipt={onConfirmMaterialReceipt}
+              onResolveDefect={onResolveDefect}
               isTransitioning={inFlightTransitions?.has(proj.id)}
             />
           ))

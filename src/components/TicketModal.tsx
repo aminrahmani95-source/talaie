@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Project, Ticket, TicketType, User } from '../types';
+import { Project, Ticket, TicketType, IssueCategory, User } from '../types';
 import {
   AlertTriangle,
   Camera,
@@ -13,11 +13,14 @@ import {
   DoorClosed,
   HelpCircle,
   Trash2,
+  AlertOctagon,
+  ShieldAlert,
 } from 'lucide-react';
 import { toPersianDigits } from '../utils/jalali';
 import { compressImageFile } from '../utils/imageCompressor';
 import { CloudImage } from './common/CloudImage';
 import { getDisplayName } from '../utils/technicianName';
+import { getSlaDeadline, ISSUE_CATEGORY_LABELS } from '../utils/sla';
 
 interface Props {
   project: Project;
@@ -28,6 +31,7 @@ interface Props {
 
 interface TicketTypeConfig {
   type: TicketType;
+  category: IssueCategory;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   desc: string;
@@ -36,36 +40,42 @@ interface TicketTypeConfig {
 const TICKET_TYPES: TicketTypeConfig[] = [
   {
     type: 'DEFICIENCY_FABRIC',
+    category: 'PRODUCTION_DEFECT',
     label: 'کسری یا آسیب پارچه',
     icon: Scissors,
     desc: 'کمبود متراژ، زدگی، لکه یا مغایرت رنگ پارچه',
   },
   {
     type: 'DAMAGED_HARDWARE',
+    category: 'EQUIPMENT_DEFECT',
     label: 'خرابی یراق‌آلات یا موتور',
     icon: Settings2,
     desc: 'نقص گیربکس، سوختگی موتور، خرابی زنجیر یا پایه',
   },
   {
     type: 'WALL_ISSUE',
+    category: 'SITE_NOT_READY',
     label: 'مشکل زیرسازی و دیوار/سقف',
     icon: Hammer,
     desc: 'عدم استحکام کناف، لوله‌کشی توکار یا نیاز به شاسی‌کشی',
   },
   {
     type: 'MEASUREMENT_MISMATCH',
+    category: 'MEASUREMENT_ERROR',
     label: 'مغایرت ابعاد',
     icon: Ruler,
     desc: 'عدم تطابق عرض یا ارتفاع لت با قاب پنجره',
   },
   {
     type: 'CUSTOMER_ABSENT',
+    category: 'SITE_NOT_READY',
     label: 'عدم حضور کارفرما',
     icon: DoorClosed,
     desc: 'کارفرما در محل حضور ندارد یا درب واحد بسته است',
   },
   {
     type: 'OTHER',
+    category: 'OTHER',
     label: 'سایر موارد فنی',
     icon: HelpCircle,
     desc: 'مشکل متفرقه فنی که مانع پیشرفت نصب پروژه است',
@@ -74,10 +84,18 @@ const TICKET_TYPES: TicketTypeConfig[] = [
 
 export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, onSubmit }) => {
   const [selectedType, setSelectedType] = useState<TicketType>('DEFICIENCY_FABRIC');
+  const [selectedCategory, setSelectedCategory] = useState<IssueCategory>('PRODUCTION_DEFECT');
+  const [isBlocking, setIsBlocking] = useState<boolean>(false);
+  const [blockingReason, setBlockingReason] = useState<string>('');
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [ticketError, setTicketError] = useState<string | null>(null);
+
+  const handleSelectType = (type: TicketType, defaultCat: IssueCategory) => {
+    setSelectedType(type);
+    setSelectedCategory(defaultCat);
+  };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -108,7 +126,13 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
       return;
     }
 
+    if (isBlocking && !blockingReason.trim()) {
+      setTicketError('در صورت مسدودکننده بودن مشکل، لطفاً دلیل توقف عملیات را شرح دهید.');
+      return;
+    }
+
     setSubmitting(true);
+    const createdAt = new Date().toISOString();
 
     const newTicket: Ticket = {
       id: `t-${Date.now()}`,
@@ -118,10 +142,26 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
       authorId: currentUser.id,
       authorName: getDisplayName(currentUser.name),
       type: selectedType,
+      category: selectedCategory,
+      isBlocking,
+      blockingReason: isBlocking ? blockingReason.trim() : undefined,
+      assignedTeamId: project.assignedTeamId,
+      assignedTeamName: project.assignedTeamName,
+      resolutionDeadline: getSlaDeadline(createdAt),
       description: description.trim(),
       photos,
       status: 'OPEN',
-      createdAt: new Date().toISOString(),
+      createdAt,
+      actionHistory: [
+        {
+          id: `act-${Date.now()}`,
+          timestamp: createdAt,
+          action: 'CREATED',
+          byUserId: currentUser.id,
+          byUserName: getDisplayName(currentUser.name),
+          note: isBlocking ? `ثبت تیکت مسدودکننده: ${blockingReason.trim()}` : 'ثبت تیکت فنی سر پروژه',
+        },
+      ],
     };
 
     try {
@@ -184,7 +224,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                   <button
                     key={t.type}
                     type="button"
-                    onClick={() => setSelectedType(t.type)}
+                    onClick={() => handleSelectType(t.type, t.category)}
                     className={`flex items-start gap-2.5 p-3 rounded-2xl border text-right transition-all min-h-[52px] ${
                       isSelected
                         ? 'border-[#D5733A] bg-[#D5733A]/10 text-[#D5733A] dark:bg-[#D5733A]/20 dark:text-[#ff955c] ring-2 ring-[#D5733A]/30 shadow-sm'
@@ -210,6 +250,61 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                 );
               })}
             </div>
+          </div>
+
+          {/* Issue Category (8 Official Categories) */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-[#E8E4DC] mb-1.5">
+              دسته‌بندی استاندارد ایراد (جهت پایش کیفیت و ریشه‌یابی):
+            </label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value as IssueCategory)}
+              className="w-full text-xs p-3 rounded-xl border border-slate-300 dark:border-[#333333] bg-white dark:bg-[#222222] text-slate-800 dark:text-white"
+            >
+              {Object.entries(ISSUE_CATEGORY_LABELS).map(([catKey, catLabel]) => (
+                <option key={catKey} value={catKey}>
+                  {catLabel}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Blocking Toggle */}
+          <div className="p-3.5 rounded-2xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 space-y-2.5">
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isBlocking}
+                onChange={(e) => setIsBlocking(e.target.checked)}
+                className="mt-0.5 rounded border-rose-300 text-rose-600 focus:ring-rose-500 w-4 h-4"
+              />
+              <div>
+                <span className="text-xs font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+                  <AlertOctagon className="w-3.5 h-3.5 text-rose-600" />
+                  این مشکل مانع پیشرفت و ادامه عملیات نصب است (مسدودکننده / Blocking)
+                </span>
+                <span className="text-[11px] text-rose-700/80 dark:text-rose-400/80 block mt-0.5">
+                  تیکت‌های مسدودکننده در دسک کنترل توقف با اولویت بحرانی پیگیری می‌شوند.
+                </span>
+              </div>
+            </label>
+
+            {isBlocking && (
+              <div className="pt-2 border-t border-rose-200 dark:border-rose-900/30">
+                <label className="block text-xs font-bold text-rose-900 dark:text-rose-300 mb-1">
+                  علت توقف کار و مانع موجود:
+                </label>
+                <input
+                  type="text"
+                  value={blockingReason}
+                  onChange={(e) => setBlockingReason(e.target.value)}
+                  placeholder="مثال: عدم امکان ادامه به دلیل نبود برق / شکستگی بازو حین نصب"
+                  className="w-full text-xs p-2.5 rounded-xl border border-rose-300 dark:border-rose-800 bg-white dark:bg-[#1A1A1A] text-slate-800 dark:text-white"
+                  required={isBlocking}
+                />
+              </div>
+            )}
           </div>
 
           {/* Description */}

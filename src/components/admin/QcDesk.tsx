@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Project, User } from '../../types';
+import {
+  Project,
+  User,
+  QCDefect,
+  QCInspectionRecord,
+  QCDefectSeverity,
+  QCDefectCategory,
+  QCQualityScoreCriteria,
+} from '../../types';
 import {
   ShieldCheck,
   Star,
@@ -24,6 +32,11 @@ import {
   ChevronUp,
   ArrowRight,
   Settings2,
+  AlertTriangle,
+  Plus,
+  Info,
+  Check,
+  ShieldAlert,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toPersianDigits, formatJalali } from '../../utils/jalali';
@@ -38,6 +51,14 @@ import { StatusPill } from '../ui/StatusPill';
 import { Sheet } from '../ui/Sheet';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
+import {
+  calculateQualityScore,
+  hasUnresolvedCriticalDefects,
+  DEFAULT_QC_CHECKLIST_ITEMS,
+  createQCInspectionPayload,
+  createDefectVerificationPayload,
+  PROVISIONAL_SCORING_WEIGHTS,
+} from '../../utils/qcWorkflow';
 
 interface Props {
   projects: Project[];
@@ -73,6 +94,31 @@ export const QcDesk: React.FC<Props> = ({
   const [previewPhotoIndex, setPreviewPhotoIndex] = useState<number | null>(null);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState<boolean>(false);
   const [isDailyLogsOpen, setIsDailyLogsOpen] = useState<boolean>(true);
+
+  // Phase P3 States
+  const [qualityCriteria, setQualityCriteria] = useState<QCQualityScoreCriteria>({
+    levelingScore: 5,
+    fabricFinishScore: 5,
+    mechanicsScore: 5,
+    cleanlinessScore: 5,
+    complianceScore: 5,
+  });
+
+  const [checklistState, setChecklistState] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    DEFAULT_QC_CHECKLIST_ITEMS.forEach((item) => {
+      init[item.id] = true;
+    });
+    return init;
+  });
+
+  const [isDefectsOpen, setIsDefectsOpen] = useState<boolean>(true);
+  const [isInspectionsHistoryOpen, setIsInspectionsHistoryOpen] = useState<boolean>(false);
+  const [showAddDefect, setShowAddDefect] = useState<boolean>(false);
+  const [newDefectDesc, setNewDefectDesc] = useState<string>('');
+  const [newDefectSeverity, setNewDefectSeverity] = useState<QCDefectSeverity>('MAJOR');
+  const [newDefectCategory, setNewDefectCategory] = useState<QCDefectCategory>('LEVELING');
+  const [newDefectLocation, setNewDefectLocation] = useState<string>('');
 
   // Helper: check if project is strictly waiting for QC review
   const isAwaitingQc = (p: Project) => {
@@ -114,9 +160,14 @@ export const QcDesk: React.FC<Props> = ({
     }
   }, [selectedProject?.id]);
 
+  const isQcManager = currentUser?.role === 'QC_MANAGER';
+  const hasCriticalDefects = selectedProject ? hasUnresolvedCriticalDefects(selectedProject) : false;
+
   const canApprove =
+    isQcManager &&
     Boolean(selectedProject) &&
     Boolean(qcScore) &&
+    !hasCriticalDefects &&
     ((selectedProject.status === 'COMPLETED' && selectedProject.qcStatus === 'PENDING') ||
       (isEditingApproved && selectedProject.qcStatus === 'APPROVED'));
 
@@ -126,20 +177,37 @@ export const QcDesk: React.FC<Props> = ({
     setQcNotes(p.qcNotes || '');
     setIsEditingApproved(false);
     setIsMobileDetailOpen(true);
+    setShowAddDefect(false);
+    setNewDefectDesc('');
+    setNewDefectLocation('');
   };
 
   const handleApprove = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!selectedProject || !canApprove || !qcScore) return;
+    if (!selectedProject || !canApprove || !qcScore || !currentUser) return;
 
-    const patch: Partial<Project> = {
-      status: 'COMPLETED',
-      qcStatus: 'APPROVED',
-      qcScore,
-      qcNotes: qcNotes.trim() || 'نصب با رعایت کامل استانداردهای گالری طلایی انجام و تایید شد.',
-      qcReviewedAt: new Date().toISOString(),
-      qcReviewedBy: getDisplayName(currentUser?.name) || 'مسئول QC',
-    };
+    const defaultNote = selectedProject.isExceptionalCompletion
+      ? `تایید اتمام استثنایی با کسری اقلام توسط مدیر QC. اقلام باقیمانده: ${selectedProject.exceptionalCompletionDetails?.remainingActivities.map(a => `${a.title} (${toPersianDigits(a.remainingQuantity)} ${a.unit})`).join('، ')} (دلیل مستند تکنسین: ${selectedProject.exceptionalCompletionDetails?.documentedReason})`
+      : 'نصب با رعایت کامل استانداردهای گالری طلایی انجام و تایید شد.';
+
+    const checklistItems = DEFAULT_QC_CHECKLIST_ITEMS.map((item) => ({
+      id: item.id,
+      category: item.category,
+      title: item.title,
+      passed: checklistState[item.id] ?? true,
+    }));
+
+    const calculatedQuality = calculateQualityScore(qualityCriteria);
+
+    const { patch } = createQCInspectionPayload({
+      project: selectedProject,
+      user: currentUser,
+      result: 'PASS',
+      checklist: checklistItems,
+      qualityScoreDetails: calculatedQuality,
+      overallScore: qcScore || calculatedQuality.overallScore,
+      notes: qcNotes.trim() || defaultNote,
+    });
 
     onPatchProject(selectedProject.id, patch);
     setIsEditingApproved(false);
@@ -163,21 +231,75 @@ export const QcDesk: React.FC<Props> = ({
   };
 
   const handleRejectSubmit = (reason: string, newScheduledDate?: string) => {
-    if (!selectedProject) return;
+    if (!selectedProject || !currentUser) return;
 
-    const patch: Partial<Project> = {
-      status: 'IN_PROGRESS',
-      qcStatus: 'REJECTED',
-      qcNotes: reason,
-      reworkStartedAt: new Date().toISOString(),
-      qcReviewedAt: new Date().toISOString(),
-      qcReviewedBy: getDisplayName(currentUser?.name) || 'مسئول QC',
-      ...(newScheduledDate ? { scheduledDate: newScheduledDate } : {}),
-    };
+    const checklistItems = DEFAULT_QC_CHECKLIST_ITEMS.map((item) => ({
+      id: item.id,
+      category: item.category,
+      title: item.title,
+      passed: checklistState[item.id] ?? false,
+    }));
+
+    const calculatedQuality = calculateQualityScore(qualityCriteria);
+
+    const { patch } = createQCInspectionPayload({
+      project: selectedProject,
+      user: currentUser,
+      result: 'FAIL',
+      checklist: checklistItems,
+      qualityScoreDetails: calculatedQuality,
+      overallScore: qcScore || 2,
+      notes: reason,
+      reworkScheduledDate: newScheduledDate,
+    });
 
     onPatchProject(selectedProject.id, patch);
     setIsRejectModalOpen(false);
     setIsMobileDetailOpen(false);
+  };
+
+  const handleVerifyDefect = (defectId: string) => {
+    if (!selectedProject || !currentUser || !isQcManager) return;
+    try {
+      const patch = createDefectVerificationPayload({
+        project: selectedProject,
+        defectId,
+        user: currentUser,
+        verificationNotes: 'تایید راستی‌آزمایی رفع نقص توسط مسئول QC',
+      });
+      onPatchProject(selectedProject.id, patch);
+    } catch (err: any) {
+      alert(err.message || 'خطا در تایید رفع نقص');
+    }
+  };
+
+  const handleAddDefect = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProject || !currentUser || !newDefectDesc.trim()) return;
+
+    const newDefect: QCDefect = {
+      id: `def-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      description: newDefectDesc.trim(),
+      category: newDefectCategory,
+      severity: newDefectSeverity,
+      location: newDefectLocation.trim() || undefined,
+      assignedTeamId: selectedProject.assignedTeamId,
+      assignedTeamName: selectedProject.assignedTeamName,
+      createdAt: new Date().toISOString(),
+      createdByUserId: currentUser.id,
+      createdByUserName: currentUser.name,
+      status: 'OPEN',
+    };
+
+    const nextDefects = [...(selectedProject.qcDefects || []), newDefect];
+    onPatchProject(selectedProject.id, {
+      qcDefects: nextDefects,
+      updatedAt: new Date().toISOString(),
+    });
+
+    setNewDefectDesc('');
+    setNewDefectLocation('');
+    setShowAddDefect(false);
   };
 
   const handleMarkAsReadyForQc = (p: Project) => {
@@ -366,6 +488,22 @@ export const QcDesk: React.FC<Props> = ({
             </span>
           </div>
 
+          {selectedProject.isExceptionalCompletion && selectedProject.exceptionalCompletionDetails && (
+            <div className="bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/40 rounded-xl p-3 text-xs space-y-1.5 animate-in fade-in duration-150">
+              <div className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-300">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>اتمام استثنایی با کسری اقلام اجرایی (تحویل ناقص پروژه)</span>
+              </div>
+              <p className="text-xs text-[#181818] dark:text-[#F5F3EF] leading-relaxed">
+                <span className="font-bold text-rose-600 block mb-0.5">علت مستند عدم اجرای اقلام باقیمانده:</span>
+                «{selectedProject.exceptionalCompletionDetails.documentedReason}»
+              </p>
+              <div className="pt-1 text-[11px] text-[#69655F] dark:text-[#9E988D]">
+                اقلام اجرا‌نشده: {selectedProject.exceptionalCompletionDetails.remainingActivities.map(a => `${a.title} (${toPersianDigits(a.remainingQuantity)} ${a.unit})`).join('، ')}
+              </div>
+            </div>
+          )}
+
           {selectedProject.completionNotes ? (
             <p className="text-xs text-[#4A4742] dark:text-[#BDB8AF] bg-white dark:bg-[#141414] p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] leading-relaxed">
               <span className="font-bold text-[#181818] dark:text-[#F5F3EF] block mb-0.5">توضیح تکنسین:</span>
@@ -548,6 +686,293 @@ export const QcDesk: React.FC<Props> = ({
           </div>
         </div>
 
+        {/* Customer Acceptance & Sign-off Details (Phase P3) */}
+        {selectedProject.customerAcceptance && (
+          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+                <PenTool className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+                <span>صورت‌جلسه تحویل و وضعیت کارفرما / نماینده کارگاه:</span>
+              </h4>
+              <span
+                className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                  selectedProject.customerAcceptance.status === 'ACCEPTED'
+                    ? 'text-emerald-700 bg-emerald-50 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400'
+                    : selectedProject.customerAcceptance.status === 'REJECTED'
+                    ? 'text-rose-700 bg-rose-50 border-rose-300 dark:bg-rose-950/40 dark:text-rose-400'
+                    : 'text-amber-700 bg-amber-50 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400'
+                }`}
+              >
+                {selectedProject.customerAcceptance.status === 'ACCEPTED'
+                  ? 'تایید و امضا شده'
+                  : selectedProject.customerAcceptance.status === 'REJECTED'
+                  ? 'عدم پذیرش کارفرما'
+                  : 'عدم حضور کارفرما (معافیت)'}
+              </span>
+            </div>
+            <div className="bg-white dark:bg-[#141414] p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] text-xs space-y-1.5 text-[#4A4742] dark:text-[#BDB8AF]">
+              <div className="flex items-center justify-between">
+                <span>تحویل‌گیرنده: <strong className="text-[#181818] dark:text-[#F5F3EF]">{selectedProject.customerAcceptance.representativeName}</strong> {selectedProject.customerAcceptance.representativeRole ? `(${selectedProject.customerAcceptance.representativeRole})` : ''}</span>
+                {selectedProject.customerAcceptance.acceptedAt && (
+                  <span>زمان: {formatJalali(selectedProject.customerAcceptance.acceptedAt)}</span>
+                )}
+              </div>
+              {selectedProject.customerAcceptance.unavailabilityReason && (
+                <div className="p-2 rounded bg-amber-50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-900/40">
+                  <span className="font-bold block mb-0.5">دلیل مستند عدم حضور کارفرما:</span>
+                  «{selectedProject.customerAcceptance.unavailabilityReason}»
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Defect Management & Corrective Actions Tracker (Phase P3) */}
+        <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-3">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setIsDefectsOpen((prev) => !prev)}
+              className="flex items-center gap-2 text-right cursor-pointer select-none font-black text-xs text-[#181818] dark:text-[#F5F3EF]"
+            >
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>مدیریت عدم‌انطباق‌ها و عیوب کیفی ({toPersianDigits((selectedProject.qcDefects || []).length)} مورد ثبت‌شده):</span>
+              {isDefectsOpen ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
+            </button>
+
+            {isQcManager && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowAddDefect((prev) => !prev)}
+                icon={<Plus className="w-3.5 h-3.5" />}
+              >
+                ثبت نقص جدید
+              </Button>
+            )}
+          </div>
+
+          {/* Form to add new Defect */}
+          {showAddDefect && isQcManager && (
+            <form onSubmit={handleAddDefect} className="bg-white dark:bg-[#141414] p-3.5 rounded-xl border border-amber-300 dark:border-amber-800/40 space-y-3">
+              <div className="font-bold text-xs text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+                <Plus className="w-3.5 h-3.5 text-amber-600" />
+                <span>ثبت مورد جدید عدم‌انطباق کیفی:</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <div>
+                  <label className="block mb-1 font-semibold text-zinc-600 dark:text-zinc-400">شدت نقص (Severity):</label>
+                  <select
+                    value={newDefectSeverity}
+                    onChange={(e) => setNewDefectSeverity(e.target.value as QCDefectSeverity)}
+                    className="w-full p-2 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#1E1E1E]"
+                  >
+                    <option value="CRITICAL">بحرانی (CRITICAL) — مانع تایید نهایی</option>
+                    <option value="MAJOR">عمده (MAJOR)</option>
+                    <option value="MINOR">جزیی (MINOR)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-semibold text-zinc-600 dark:text-zinc-400">دسته‌بندی نقص:</label>
+                  <select
+                    value={newDefectCategory}
+                    onChange={(e) => setNewDefectCategory(e.target.value as QCDefectCategory)}
+                    className="w-full p-2 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#1E1E1E]"
+                  >
+                    <option value="LEVELING">تراز و شاقول بودن</option>
+                    <option value="FABRIC">کیفیت پارچه و اتو</option>
+                    <option value="MOTOR_REMOTE">موتور و ریموت</option>
+                    <option value="HARDWARE">کرپی‌ها و اتصالات</option>
+                    <option value="CLEANLINESS">نظافت کارگاه</option>
+                    <option value="DAMAGE">آسیب به محل نصب</option>
+                    <option value="OTHER">سایر موارد</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-semibold text-zinc-600 dark:text-zinc-400">موقعیت/پنجره (اختیاری):</label>
+                  <input
+                    type="text"
+                    placeholder="مثلاً پنجره سالن اصلی"
+                    value={newDefectLocation}
+                    onChange={(e) => setNewDefectLocation(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#1E1E1E]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block mb-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400">شرح دقیق عدم‌انطباق:</label>
+                <textarea
+                  rows={2}
+                  required
+                  placeholder="شرح دقیق نقص کیفی و علت عدم پذیرش..."
+                  value={newDefectDesc}
+                  onChange={(e) => setNewDefectDesc(e.target.value)}
+                  className="w-full p-2 rounded-lg text-xs border border-[#E2DDD4] dark:border-[#2C2C2C] bg-[#FAF7F2] dark:bg-[#1E1E1E]"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowAddDefect(false)}>
+                  انصراف
+                </Button>
+                <Button type="submit" variant="primary" size="sm">
+                  ثبت نقص کیفی
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {/* List of Defects */}
+          {isDefectsOpen && (
+            <div className="space-y-2">
+              {(selectedProject.qcDefects && selectedProject.qcDefects.length > 0) ? (
+                selectedProject.qcDefects.map((defect) => (
+                  <div
+                    key={defect.id}
+                    className={`p-3 rounded-xl border text-xs space-y-1.5 transition ${
+                      defect.severity === 'CRITICAL'
+                        ? 'bg-rose-500/10 border-rose-500/40 dark:bg-rose-950/20'
+                        : defect.severity === 'MAJOR'
+                        ? 'bg-amber-500/10 border-amber-500/40 dark:bg-amber-950/20'
+                        : 'bg-blue-500/10 border-blue-500/30 dark:bg-blue-950/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`font-bold px-2 py-0.5 rounded text-[11px] ${
+                            defect.severity === 'CRITICAL'
+                              ? 'bg-rose-600 text-white'
+                              : defect.severity === 'MAJOR'
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-blue-600 text-white'
+                          }`}
+                        >
+                          {defect.severity === 'CRITICAL' ? 'بحرانی' : defect.severity === 'MAJOR' ? 'عمده' : 'جزیی'}
+                        </span>
+                        <span className="font-bold text-[#181818] dark:text-[#F5F3EF]">
+                          {defect.description}
+                        </span>
+                        {defect.location && (
+                          <span className="text-zinc-500 text-[11px]">({defect.location})</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
+                            defect.status === 'VERIFIED'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : defect.status === 'RESOLVED'
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                          }`}
+                        >
+                          {defect.status === 'VERIFIED'
+                            ? 'تایید راستی‌آزمایی QC'
+                            : defect.status === 'RESOLVED'
+                            ? 'رفع‌شده توسط اکیپ'
+                            : defect.status === 'IN_PROGRESS'
+                            ? 'در حال اصلاح'
+                            : 'باز'}
+                        </span>
+
+                        {isQcManager && defect.status === 'RESOLVED' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleVerifyDefect(defect.id)}
+                            icon={<Check className="w-3.5 h-3.5 text-emerald-600" />}
+                          >
+                            تایید رفع نقص
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {defect.resolutionNotes && (
+                      <div className="p-2 bg-white dark:bg-[#141414] rounded-lg border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-700 dark:text-zinc-300">
+                        <span className="font-bold text-blue-600 block mb-0.5">گزارش رفع نقص توسط اکیپ ({defect.resolvedByUserName}):</span>
+                        «{defect.resolutionNotes}»
+                      </div>
+                    )}
+
+                    {defect.verificationNotes && defect.status === 'VERIFIED' && (
+                      <div className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800/40 text-[11px] text-emerald-800 dark:text-emerald-300">
+                        <span className="font-bold block mb-0.5">تایید راستی‌آزمایی مدیر QC ({defect.verifiedByUserName}):</span>
+                        «{defect.verificationNotes}»
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs text-zinc-500 bg-white dark:bg-[#141414] p-3 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 text-center">
+                  هیچ نقص کیفی برای این پروژه ثبت نشده است.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Historical Inspections Timeline (Phase P3) */}
+        {selectedProject.qcInspections && selectedProject.qcInspections.length > 0 && (
+          <div className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-3">
+            <button
+              type="button"
+              onClick={() => setIsInspectionsHistoryOpen((prev) => !prev)}
+              className="w-full flex items-center justify-between text-right cursor-pointer select-none font-black text-xs text-[#181818] dark:text-[#F5F3EF]"
+            >
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
+                <span>تاریخچه نوبت‌های بازرسی QC ({toPersianDigits(selectedProject.qcInspections.length)} بازرسی ثبت‌شده):</span>
+              </span>
+              {isInspectionsHistoryOpen ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
+            </button>
+
+            {isInspectionsHistoryOpen && (
+              <div className="space-y-2.5 pt-1">
+                {selectedProject.qcInspections.map((insp, idx) => (
+                  <div
+                    key={insp.id || idx}
+                    className="p-3 bg-white dark:bg-[#141414] rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded font-bold text-[11px] ${
+                            insp.result === 'PASS'
+                              ? 'bg-emerald-600 text-white'
+                              : insp.result === 'FAIL'
+                              ? 'bg-rose-600 text-white'
+                              : 'bg-amber-600 text-white'
+                          }`}
+                        >
+                          {insp.result === 'PASS' ? 'تایید (PASS)' : insp.result === 'FAIL' ? 'عدم تایید (FAIL)' : 'مشروط (CONDITIONAL)'}
+                        </span>
+                        <span className="font-bold text-[#181818] dark:text-[#F5F3EF]">
+                          نوبت #{toPersianDigits(idx + 1)} — {formatJalali(insp.inspectionDate)}
+                        </span>
+                      </div>
+                      <span className="text-zinc-500 text-[11px]">بازرس: {insp.inspectorUserName}</span>
+                    </div>
+
+                    {insp.overallScore && (
+                      <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                        امتیاز کیفی بازرسی: <strong className="text-[#181818] dark:text-zinc-200">{toPersianDigits(insp.overallScore)} از ۵</strong>
+                      </div>
+                    )}
+
+                    {insp.notes && (
+                      <p className="text-[11px] text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900 p-2 rounded-lg">
+                        «{insp.notes}»
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Action: If IN_PROGRESS, allow manager to mark ready for QC */}
         {selectedProject.status === 'IN_PROGRESS' && (
           <div className="bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -611,57 +1036,122 @@ export const QcDesk: React.FC<Props> = ({
           </div>
         )}
 
-        {/* QC Evaluation & Decision Form */}
+        {/* QC Evaluation, Quality Scoring & Decision Form */}
         {(isAwaitingQc(selectedProject) || isEditingApproved || selectedProject.qcStatus === 'REJECTED') && (
           <form onSubmit={handleApprove} className="bg-[#FAF7F2] dark:bg-[#1E1E1E] rounded-2xl p-4 border border-[#C1A056]/40 space-y-4">
             <h4 className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-[#8E6F27] dark:text-[#E5CA8F]" />
-              <span>ارزیابی و تصمیم نهایی:</span>
+              <span>ارزیابی و بازرسی کنترل کیفی نهایی:</span>
             </h4>
 
-            {/* Rating Stars */}
-            <div>
-              <label className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1.5">
-                امتیاز کیفی به عملکرد اکیپ (۱ تا ۵ ستاره):
-              </label>
-              <div className="flex items-center gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setQcScore(star)}
-                    className="p-1 transition hover:scale-110 cursor-pointer"
-                    aria-label={`${star} ستاره`}
-                  >
-                    <Star
-                      className={`w-6 h-6 ${
-                        qcScore && star <= qcScore
-                          ? 'text-[#C1A056] fill-[#C1A056]'
-                          : 'text-zinc-300 dark:text-zinc-600'
-                      }`}
-                    />
-                  </button>
+            {!isQcManager && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl text-xs text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 shrink-0 text-blue-600" />
+                <span>شما به عنوان مسئول هماهنگی و زمان‌بندی به این برگه دسترسی دارید؛ تأیید نهایی و امتیازدهی کیفی منحصراً در صلاحیت مدیر ارشد QC است.</span>
+              </div>
+            )}
+
+            {/* Critical Defect Gate Warning */}
+            {hasCriticalDefects && (
+              <div className="p-3 bg-rose-500/15 dark:bg-rose-950/40 border border-rose-500 rounded-xl text-xs flex items-start gap-2 text-rose-800 dark:text-rose-200">
+                <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block mb-0.5">تأیید نهایی QC مسدود است:</span>
+                  پروژه دارای عدم‌انطباق یا نقص بحرانی (CRITICAL) حل‌نشده است. تا پیش از ثبت رفع نقص توسط اکیپ و تایید راستی‌آزمایی اصلاح توسط مدیر QC، صدور تایید نهایی ممکن نیست.
+                </div>
+              </div>
+            )}
+
+            {/* Quality Scoring Criteria (5-Criteria Internal Scoring) */}
+            <div className="bg-white dark:bg-[#141414] p-3.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#8E6F27] dark:text-[#E5CA8F]" />
+                  <span>معیارهای پنج‌گانه کیفیت داخلی نصب (۱ تا ۵):</span>
+                </label>
+                <div className="text-xs bg-[#FAF7F2] dark:bg-[#1E1E1E] px-2.5 py-1 rounded-lg border border-[#C1A056]/30 font-bold text-[#8E6F27] dark:text-[#E5CA8F]">
+                  نمره نهایی محاسبه‌شده: {toPersianDigits(calculateQualityScore(qualityCriteria).overallScore)} از ۵
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                {[
+                  { key: 'levelingScore', label: 'تراز و شاقول بودن (وزن موقت ۲۵٪)', val: qualityCriteria.levelingScore },
+                  { key: 'fabricFinishScore', label: 'کیفیت پارچه و اتو (وزن موقت ۲۵٪)', val: qualityCriteria.fabricFinishScore },
+                  { key: 'mechanicsScore', label: 'مکانیک و ریموت موتور (وزن موقت ۲۰٪)', val: qualityCriteria.mechanicsScore },
+                  { key: 'cleanlinessScore', label: 'نظافت کارگاه و حفاظت کف (وزن موقت ۱۵٪)', val: qualityCriteria.cleanlinessScore },
+                  { key: 'complianceScore', label: 'انطباق با استاندارد و طرح (وزن موقت ۱۵٪)', val: qualityCriteria.complianceScore },
+                ].map((crit) => (
+                  <div key={crit.key} className="flex items-center justify-between p-2 rounded-lg bg-[#FAF7F2] dark:bg-[#1E1E1E]">
+                    <span className="text-[#4A4742] dark:text-[#BDB8AF] text-[11px]">{crit.label}:</span>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => {
+                            const nextCrit = { ...qualityCriteria, [crit.key]: s };
+                            setQualityCriteria(nextCrit);
+                            const score = calculateQualityScore(nextCrit).overallScore;
+                            setQcScore(Math.round(score));
+                          }}
+                          className={`w-6 h-6 rounded flex items-center justify-center font-bold text-xs cursor-pointer transition ${
+                            crit.val === s
+                              ? 'bg-[#212121] text-[#E5CA8F] dark:bg-[#E5CA8F] dark:text-[#212121]'
+                              : 'bg-white dark:bg-[#141414] text-zinc-500 border border-zinc-200 dark:border-zinc-800'
+                          }`}
+                        >
+                          {toPersianDigits(s)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
-                {qcScore ? (
-                  <span className="text-xs font-bold text-[#181818] dark:text-[#F5F3EF] mr-2">
-                    {toPersianDigits(qcScore)} از 5
-                  </span>
-                ) : (
-                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400 mr-2">
-                    (انتخاب امتیاز الزامی است)
-                  </span>
-                )}
+              </div>
+              <div className="text-[10px] text-zinc-500 flex items-center gap-1 pt-1">
+                <Info className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <span>توجه: اوزان ۲۵٪، ۲۵٪، ۲۰٪، ۱۵٪، ۱۵٪ به عنوان ساختار موقت و شفاف اعمال شده و نیازمند تصویب نهایی مدیریت است.</span>
+              </div>
+            </div>
+
+            {/* Checklist Toggles */}
+            <div className="bg-white dark:bg-[#141414] p-3.5 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] space-y-2">
+              <label className="block text-xs font-bold text-[#181818] dark:text-[#F5F3EF]">
+                چک‌لیست تطبیق استانداردهای بازرسی کنترل کیفیت:
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {DEFAULT_QC_CHECKLIST_ITEMS.map((item) => {
+                  const isPassed = checklistState[item.id] ?? true;
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() =>
+                        setChecklistState((prev) => ({ ...prev, [item.id]: !isPassed }))
+                      }
+                      className={`p-2.5 rounded-lg border flex items-center justify-between cursor-pointer transition select-none ${
+                        isPassed
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-300'
+                      }`}
+                    >
+                      <span className="text-[11px] leading-snug">{item.title}</span>
+                      <span className="font-bold text-xs shrink-0 mr-2">
+                        {isPassed ? '✓ تایید' : '✗ نقص'}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* QC Notes */}
             <div>
               <label className="block text-xs font-semibold text-[#4A4742] dark:text-[#BDB8AF] mb-1.5">
-                توضیحات و نکات کنترلی:
+                توضیحات و نکات کنترلی مسئول بازرسی:
               </label>
               <textarea
                 rows={2}
-                placeholder="توضیحات نهایی جهت ثبت در سابقه پروژه..."
+                placeholder="توضیحات نهایی جهت درج در صورت‌جلسه بازرسی QC..."
                 value={qcNotes}
                 onChange={(e) => setQcNotes(e.target.value)}
                 className="w-full text-xs p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2C2C2C] focus:ring-2 focus:ring-[#C1A056] bg-white dark:bg-[#141414] dark:text-white"
@@ -678,7 +1168,11 @@ export const QcDesk: React.FC<Props> = ({
                 className="flex-1"
                 icon={<CheckCircle2 className="w-4 h-4" />}
               >
-                تایید نهایی کیفی و ثبت در سابقه
+                {hasCriticalDefects
+                  ? 'تأیید مسدود (نقص بحرانی حل‌نشده)'
+                  : selectedProject.isExceptionalCompletion
+                  ? 'تأیید تحویل ناقص و اتمام استثنایی'
+                  : 'تایید نهایی کیفی و ثبت در سابقه'}
               </Button>
 
               <Button
@@ -688,7 +1182,9 @@ export const QcDesk: React.FC<Props> = ({
                 onClick={handleOpenReject}
                 icon={<XCircle className="w-4 h-4" />}
               >
-                نیاز به اصلاح
+                {selectedProject.isExceptionalCompletion
+                  ? 'رد استثنا و الزام به تکمیل'
+                  : 'نیاز به اصلاح / رد بازرسی'}
               </Button>
             </div>
           </form>

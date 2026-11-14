@@ -76,6 +76,12 @@ export const Avatar: React.FC<AvatarProps> = ({
           title="مسئول QC"
         />
       )}
+      {role === 'SCHEDULING_COORDINATOR' && (
+        <span
+          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-blue-500 border-2 border-white dark:border-[#121212] rounded-full"
+          title="مسئول هماهنگی و زمان‌بندی"
+        />
+      )}
       {role === 'LEAD_TECHNICIAN' && (
         <span
           className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-amber-500 border-2 border-white dark:border-[#121212] rounded-full"

@@ -1,4 +1,8 @@
-export type UserRole = 'QC_MANAGER' | 'LEAD_TECHNICIAN' | 'TECHNICIAN';
+export type UserRole = 
+  | 'QC_MANAGER' 
+  | 'SCHEDULING_COORDINATOR' 
+  | 'LEAD_TECHNICIAN' 
+  | 'TECHNICIAN';
 
 export interface User {
   id: string;
@@ -7,6 +11,134 @@ export interface User {
   role: UserRole;
   avatar?: string;
   active: boolean;
+  teamId?: string; // شناسه اکیپ منتسب (در صورت عضویت در یکی از ۴ اکیپ)
+}
+
+export type QCInspectionResult = 'PASS' | 'FAIL' | 'CONDITIONAL';
+
+export type QCDefectSeverity = 'CRITICAL' | 'MAJOR' | 'MINOR';
+
+export type QCDefectStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'VERIFIED';
+
+export type QCDefectCategory =
+  | 'LEVELING'      // تراز و شاقول نبودن ریل یا لت‌ها
+  | 'FABRIC'        // چروک، نخ‌کشی یا عیوب دوخت و پرده
+  | 'MOTOR_REMOTE'  // نقص موتور، تنظیم لیمیت یا کد ریموت
+  | 'HARDWARE'      // شل بودن کرپی‌ها، پایه‌ها یا اتصالات
+  | 'CLEANLINESS'   // نظافت ناکافی و عدم جمع‌آوری ضایعات
+  | 'DAMAGE'        // آسیب به دیوار، قرنیز، سقف یا اقلام مشتری
+  | 'OTHER';        // سایر موارد
+
+export interface QCDefect {
+  id: string;
+  description: string;
+  category: QCDefectCategory;
+  severity: QCDefectSeverity;
+  activityId?: string;
+  activityTitle?: string;
+  location?: string; // مثلاً پنجره سالن شمالی
+  photos?: string[];
+  assignedTeamId?: string;
+  assignedTeamName?: string;
+  assignedUserId?: string;
+  assignedUserName?: string;
+  createdAt: string;
+  createdByUserId: string;
+  createdByUserName: string;
+  status: QCDefectStatus;
+  resolutionNotes?: string;
+  resolutionPhotos?: string[];
+  resolvedAt?: string;
+  resolvedByUserId?: string;
+  resolvedByUserName?: string;
+  verificationNotes?: string;
+  verifiedAt?: string;
+  verifiedByUserId?: string;
+  verifiedByUserName?: string;
+}
+
+export interface QCInspectionChecklistItem {
+  id: string;
+  category: 'LEVELING' | 'FABRIC' | 'MECHANICS' | 'CLEANLINESS' | 'DOCUMENTATION';
+  title: string;
+  passed: boolean;
+  notes?: string;
+}
+
+export interface QCQualityScoreCriteria {
+  levelingScore: number;     // ۱ تا ۵: تراز و شاقول بودن ریل و لت‌ها
+  fabricFinishScore: number; // ۱ تا ۵: کیفیت اتوکشی، ایستایی و عدم چروک
+  mechanicsScore: number;    // ۱ تا ۵: حرکت روان ریل، بی‌صدایی و کالیبراسیون موتور
+  cleanlinessScore: number;  // ۱ تا ۵: نظافت، جمع‌آوری کارگاه و کرپی‌ها
+  complianceScore: number;   // ۱ تا ۵: انطباق با طرح و استانداردهای گالری طلایی
+}
+
+export interface QCQualityScore {
+  overallScore: number; // ۱ تا ۵ (میانگین وزنی محاسبه‌شده)
+  criteria: QCQualityScoreCriteria;
+  isProvisionalWeights: boolean; // پرچم نشان‌دهنده موقت بودن اوزان تا تصویب نهایی مدیریت
+  calculatedAt: string;
+}
+
+export type CustomerAcceptanceStatus = 'ACCEPTED' | 'REJECTED' | 'UNAVAILABLE';
+
+export interface CustomerAcceptanceRecord {
+  status: CustomerAcceptanceStatus;
+  representativeName?: string;
+  representativeRole?: string; // مثلاً کارفرما، مهندس ناظر، سرپرست کارگاه
+  representativePhone?: string;
+  acceptedAt?: string;
+  notes?: string;
+  signature?: string; // Base64
+  unavailabilityReason?: string;
+  unavailabilityPhotos?: string[];
+  customerSatisfaction?: number; // ۱ تا ۵ ستاره
+}
+
+export interface QCInspectionRecord {
+  id: string;
+  projectId: string;
+  inspectionDate: string; // ISO
+  inspectorUserId: string;
+  inspectorUserName: string;
+  inspectorRole: 'QC_MANAGER';
+  result: QCInspectionResult;
+  overallScore?: number; // ۱ تا ۵
+  qualityScoreDetails?: QCQualityScore;
+  checklist: QCInspectionChecklistItem[];
+  defects: QCDefect[];
+  notes?: string;
+  photos?: string[];
+  customerAcceptanceSnapshot?: CustomerAcceptanceRecord;
+  createdAt: string;
+}
+
+// ساختار ۴ اکیپ نصب (هر اکیپ: ۱ سرپرست + ۲ تکنسین = ۱۲ نفر)
+export interface InstallationTeam {
+  id: string;
+  name: string; // نام اکیپ (مثلاً «اکیپ نصب ۱»)
+  code: string; // کد اکیپ (مثلاً «TEAM_1»)
+  supervisorId?: string; // شناسه سرپرست اکیپ
+  supervisorName?: string;
+  dailyCapacityHours?: number | null; // ظرفیت کاری روزانه اکیپ به ساعت (اختیاری)
+  workingDays?: number[]; // روزهای کاری مجاز در هفته (۰=یکشنبه تا ۶=شنبه)
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamMember {
+  id: string;
+  teamId: string;
+  userId: string;
+  userName?: string;
+  roleInTeam: 'LEAD' | 'TECHNICIAN';
+  joinedAt: string;
+}
+
+export interface InstallationTeamWithMembers extends InstallationTeam {
+  supervisor?: User;
+  technicians: User[];
+  totalMembers: number; // سقف ۳ نفر
 }
 
 export type ProjectStatus = 
@@ -43,7 +175,7 @@ export interface HandoverChecklist {
   handoverChecklistNotes?: Record<string, string>; // توضیحات موارد تاییدنشده
 }
 
-// بازدید پیش از نصب و اندازه‌گیری دوم (BPMN Step: کارشناس فنی)
+// بازدید پیش از نصب و اندازه‌گیری دوم (BPMN Step: کارشناس فنی - جهت سازگاری گذشته)
 export interface PreInstallationInspection {
   drywallStructureOk: boolean; // قوطی‌کشی کناف و مهاربندی سقف کاذب بررسی شد
   electricalWiringOk: boolean; // کابل‌کشی و تغذیه برق موتورهای برقی آماده است
@@ -53,6 +185,47 @@ export interface PreInstallationInspection {
   inspectedBy?: string;
   inspectedAt?: string;
   notes?: string;
+}
+
+// چک‌لیست و فرآیند مستقل آمادگی فیزیکی بستر نصب (مرحله ۳ - تفکیک از اندازه‌گیری دوم)
+export type SiteChecklistState = 'CONFIRMED' | 'ISSUE_DETECTED' | 'NOT_APPLICABLE';
+
+export interface SiteReadinessItem {
+  id: string;
+  title: string;
+  category: 'CEILING_DRYWALL' | 'ELECTRICAL' | 'ACCESS_SPACE' | 'CUSTOM';
+  state?: SiteChecklistState;
+  notes?: string;
+}
+
+export interface SiteReadinessInspection {
+  inspectionType: 'IN_PERSON' | 'REMOTE'; // بازبینی حضوری در محل / از راه دور
+  status: 'PASSED' | 'ACTION_REQUIRED' | 'PENDING';
+  items: SiteReadinessItem[];
+  inspectedBy: string;
+  inspectedAt: string;
+  photos: string[];
+  generalNotes?: string;
+  linkedTicketId?: string;
+  isReady?: boolean;
+}
+
+// گیت‌های پیش‌نیاز ورود رسمی پروژه به دپارتمان فنی و زمان‌بندی (مرحله ۱)
+export interface HandoverPrerequisite {
+  confirmed: boolean;
+  confirmedBy?: string;
+  confirmedAt?: string;
+  notes?: string;
+  evidenceUrl?: string;
+}
+
+export interface ProjectTechnicalHandover {
+  isHandoverComplete: boolean;
+  officialHandoverDate?: string;
+  productionConfirmation: HandoverPrerequisite;
+  warehouseConfirmation: HandoverPrerequisite;
+  unlockedAt?: string;
+  isHistoricalMigration?: boolean;
 }
 
 // رخداد استاک (پروژه‌های گیر کرده نیازمند اقدام فوری زیر 72 ساعت طبق KPI دفتر)
@@ -111,6 +284,101 @@ export interface CustomerSurvey {
   surveyedAt: string;
 }
 
+// دسته‌بندی فعالیت‌ها و اقلام کار در طرح اولیه نصب (فاز P2.1)
+export type PlanActivityCategory = 'SHADE' | 'CURTAIN' | 'MOTOR' | 'ACCESSORY' | 'CUSTOM';
+
+// قلم فعالیت در طرح اولیه نصب (کاملاً تغییرناپذیر پس از قفل اولیه)
+export interface PlanActivityItem {
+  id: string; // شناسه یکتا و پایدار فعالیت (مثلاً act-shade-1)
+  title: string; // عنوان فعالیت (مثلاً شید رول دستی، پرده تور و...)
+  category?: PlanActivityCategory;
+  plannedQuantity: number; // حجم/تعداد برنامه‌ریزی‌شده اولیه (تغییرناپذیر)
+  unit: string; // واحد اندازه‌گیری (لت، متر، دستگاه، عدد)
+  technicalDetails?: string; // توضیحات فنی یا نوع پارچه و مکانیسم
+}
+
+// ساختار طرح اولیه نصب (Original Installation Plan)
+export interface InstallationPlan {
+  activities: PlanActivityItem[];
+  lockedAt?: string; // زمان قفل شدن بیس‌لاین
+  notes?: string;
+}
+
+// بازنگری و اصلاحات استثنایی طرح (Plan Amendments - تغییرناپذیری بیس‌لاین)
+export interface PlanAmendment {
+  id: string;
+  activityId: string;
+  activityTitle: string;
+  previousQuantity: number;
+  newQuantity: number;
+  reason: string;
+  requestedByUserId: string;
+  requestedByUserName: string;
+  requestedAt: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewedByUserId?: string;
+  reviewedByUserName?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+  evidenceUrl?: string;
+}
+
+// پیشرفت ثبت‌شده برای یک فعالیت مشخص در یک گزارش کار
+export interface DailyActivityProgress {
+  activityId: string;
+  activityTitle?: string;
+  completedQuantity: number; // مقدار اجراشده در این روز کاری
+  unit?: string;
+}
+
+// جزئیات اتمام استثنایی پروژه با کسری اقلام اجرایی
+export interface ExceptionalCompletionDetails {
+  hasIncompleteActivities: boolean;
+  remainingActivities: {
+    activityId: string;
+    title: string;
+    remainingQuantity: number;
+    unit: string;
+  }[];
+  documentedReason: string;
+  confirmedBySupervisor: string;
+  confirmedAt: string;
+}
+
+// صورت‌جلسه و رکورد تحویل اقلام در انتقال رسمی پروژه بین اکیپ‌ها (فاز P2.2)
+export interface HandoverInventoryItem {
+  activityId: string;
+  activityTitle: string;
+  remainingQuantity: number;
+  unit: string;
+  notes?: string;
+}
+
+export interface TeamTransferRecord {
+  id: string;
+  fromTeamId: string;
+  fromTeamName: string;
+  toTeamId: string;
+  toTeamName: string;
+  transferredAt: string; // ISO timestamp
+  transferredByUserId: string;
+  transferredByUserName: string;
+  reason: string;
+  transferredWorkloadHours?: number;
+  notes?: string;
+  handoverInventory?: HandoverInventoryItem[];
+  receivingLeadConfirmed?: boolean;
+  receivingLeadConfirmedAt?: string;
+  receivingLeadConfirmedBy?: string;
+  // تفکیک رسمی رفع انسداد مدیریتی مدیر QC (P2.2 Hardening)
+  isManagerOverride?: boolean;
+  managerOverrideAt?: string;
+  managerOverrideByUserId?: string;
+  managerOverrideByUserName?: string;
+  managerOverrideRole?: 'QC_MANAGER';
+  managerOverrideReason?: string;
+}
+
 // ثبت جلسات کاری روزانه برای پروژه‌های چندروزه
 export interface WorkSession {
   date: string; // YYYY-MM-DD
@@ -120,14 +388,26 @@ export interface WorkSession {
   byUserName: string;
 }
 
-// گزارش پیشرفت روزانه برای پروژه‌های چندروزه
+// گزارش پیشرفت روزانه برای پروژه‌های چندروزه و تک‌روزه
 export interface DailyLog {
   id: string;
   date: string; // YYYY-MM-DD
-  note: string; // گزارش کار امروز
-  photos: string[]; // تصاویر ارسالی از پیشرفت امروز
+  startTime?: string; // مثلاً 09:30
+  endTime?: string; // مثلاً 17:00
+  completedQuantity?: number; // حجم/تعداد لت نصب‌شده در این روز کاری (سازگار با نسخه قبل)
+  remainingQuantity?: number; // حجم/تعداد لت باقی‌مانده (سازگار با نسخه قبل)
+  quantityUnit?: string; // مثلاً «لت»، «متر»، «دستگاه»
+  activityProgress?: DailyActivityProgress[]; // تفکیک پیشرفت فعالیت‌ها در فاز P2.1
+  note?: string; // شرح گزارش کار امروز (اختیاری در عملیات عادی)
+  obstacles?: string; // موانع، تاخیرات یا چالش‌های فیزیکی بستر
+  equipmentIssues?: string; // کسری یا نقص ابزار و متریال
+  photos: string[]; // تصاویر ارسالی از پیشرفت امروز (اختیاری در عملیات عادی)
+  plannedContinuationDate?: string; // تاریخ پیشنهادی برای ادامه کار (YYYY-MM-DD)
   byUserId: string;
   byUserName: string;
+  supervisorConfirmed?: boolean; // تایید سرپرست اکیپ
+  supervisorConfirmedBy?: string;
+  supervisorConfirmedAt?: string;
   createdAt: string; // ISO timestamp
 }
 
@@ -156,9 +436,19 @@ export interface Project {
   scheduledTime: string; // مثلاً 09:30 یا 14:00
   
   // اکیپ نصب
+  assignedTeamId?: string; // شناسه یکی از ۴ اکیپ نصب
+  assignedTeamName?: string; // نام اکیپ منتسب
   leadTechnicianId?: string; // شناسه سرپرست اکیپ نصب
   assignedTechnicianIds: string[]; // تمام اعضای اکیپ
   
+  // بار کاری و اسناد فنی
+  estimatedWorkload?: number; // حجم برآورد شده کار (تعداد لت یا واحد)
+  requiredDurationHours?: number; // تخمین کل ساعات اجرای نصب
+  secondMeasurementDoc?: string; // تصویر یا سند قطعی اندازه‌گیری دوم
+  
+  // گیت ورود رسمی پروژه به واحد فنی (مرحله ۱)
+  technicalHandover?: ProjectTechnicalHandover;
+
   // چک‌لیست ابزار
   isFullTools: boolean; // آیا دکمه «فول ابزار» زده شده؟
   toolsRequired: string[]; // لیست نام ابزارهای لازم
@@ -176,8 +466,9 @@ export interface Project {
   beforePhotos?: string[]; // عکس‌های وضعیت پنجره و کناف قبل از شروع
   afterPhotos?: string[]; // عکس‌های نهایی پرده و شید بعد از اتمام نصب
   
-  // بازدید پیش از نصب و اندازه‌گیری دوم
-  preInspection?: PreInstallationInspection;
+  // بازدید بستر و پیش از نصب
+  preInspection?: PreInstallationInspection; // سازگار با گذشته
+  siteReadiness?: SiteReadinessInspection; // فرآیند مستقل ۳ حالته مرحله ۳
   
   // چک‌لیست استانداردهای طلایی تحویل
   handoverChecklist?: HandoverChecklist;
@@ -187,10 +478,30 @@ export interface Project {
   stuckIncident?: StuckIncident; // سابقه تکی سازگار با گذشته
   stuckIncidents?: StuckIncident[]; // آرایه کامل حوادث استاک پروژه
   
-  // رضایت، امضا و نظرسنجی کارفرما
+  // رضایت، امضا و نظرسنجی کارفرما / نماینده پروژه
+  handoverSigneeType?: HandoverSigneeType; // نوع تحویل‌گیرنده: مسکونی، نماینده کارگاه یا غایب
+  representativeName?: string; // نام نماینده کارگاه / مهندس ناظر
+  representativeRole?: string; // سمت نماینده (مثلاً مهندس ناظر، سرپرست کارگاه)
+  representativePhone?: string; // شماره تماس نماینده
+  unavailabilityReason?: string; // در صورت عدم حضور کارفرما: شرح دلیل و شرایط عدم امکان امضا
+  unavailabilityPhotos?: string[]; // مدارک تصویری اتمام کار و ترک ایمن محل
   customerSignature?: string;
-  customerSatisfaction?: number; // 1 تا 5 ستاره
+  customerSatisfaction?: number; // 1 تا 5 ستاره (اختیاری)
   customerSurvey?: CustomerSurvey;
+  
+  // اقدام اصلاحی صادر شده توسط QC
+  qcCorrectiveAction?: {
+    required: boolean;
+    issue: string;
+    assignedTeamId?: string;
+    deadline?: string;
+    completed?: boolean;
+    completedAt?: string;
+  };
+  
+  // مدیریت تغییرات زمان‌بندی (P1 Task 2E)
+  scheduleChangeRequests?: ScheduleChangeRequest[];
+  pendingScheduleChange?: ScheduleChangeRequest;
   
   // ارزیابی پرسنل توسط مسئولین فنی
   evaluations?: PersonnelEvaluation[];
@@ -206,9 +517,55 @@ export interface Project {
   workSessions?: WorkSession[];
   dailyLogs?: DailyLog[];
 
+  // طرح اولیه نصب و بازنگری‌های استثنایی (فاز P2.1)
+  originalPlan?: InstallationPlan;
+  planAmendments?: PlanAmendment[];
+
+  // ثبت اتمام استثنایی با کسری اقلام اجرایی
+  isExceptionalCompletion?: boolean;
+  exceptionalCompletionDetails?: ExceptionalCompletionDetails;
+
+  // سابقه انتقال رسمی پروژه بین اکیپ‌ها و صورت‌جلسه تحویل (فاز P2.2)
+  teamTransfers?: TeamTransferRecord[];
+
+  // بازرسی نهایی کنترل کیفیت، مدیریت عدم انطباق‌ها و تحویل رسمی (فاز P3)
+  qcInspections?: QCInspectionRecord[];
+  qcDefects?: QCDefect[];
+  customerAcceptance?: CustomerAcceptanceRecord;
+
   createdAt: string;
   updatedAt: string;
   __fromCache?: boolean; // علامت‌گذاری موقت برای پروژه‌های خوانده‌شده از کش محلی
+}
+
+export type HandoverSigneeType =
+  | 'RESIDENTIAL_CUSTOMER'        // کارفرمای خانگی / شخص مشتری
+  | 'CONSTRUCTION_REPRESENTATIVE'  // نماینده کارگاه / مهندس ناظر / سرپرست پروژه
+  | 'UNAVAILABLE_EXEMPT';         // عدم حضور کارفرما / مستندسازی دلیل با شواهد
+
+export type IssueCategory =
+  | 'MEASUREMENT_ERROR'          // ۱. مغایرت یا خطای اندازه‌گیری اولیه
+  | 'MEASUREMENT_RECORD_ERROR'   // ۲. خطا در جابه‌جایی یا ثبت مشخصات اندازه‌گیری
+  | 'PRODUCTION_DEFECT'          // ۳. نقص، دوخت ناصحیح یا کسری تولید
+  | 'WAREHOUSE_DELIVERY_ISSUE'   // ۴. کسری یا اشتباه در تحویل و بسته‌بندی انبار
+  | 'TRANSIT_DAMAGE'             // ۵. آسیب حین بارگیری، حمل یا ترانزیت
+  | 'SITE_NOT_READY'             // ۶. عدم آمادگی بستر ساختمان، کناف یا برق
+  | 'EQUIPMENT_DEFECT'           // ۷. کسری، نقص یا خرابی تجهیزات، یراق و ابزار
+  | 'OTHER';                     // ۸. سایر موارد عملیاتی
+
+export type SlaStatus =
+  | 'OPEN_IN_SLA'        // باز — در محدوده ۷۲ ساعت استاندارد
+  | 'OPEN_OVERDUE'       // باز — عبور از ۷۲ ساعت و دارای تاخیر بحرانی
+  | 'RESOLVED_IN_SLA'    // حل‌شده — در موعد مقرر زیر ۷۲ ساعت
+  | 'RESOLVED_OVERDUE';  // حل‌شده — با تاخیر پس از ۷۲ ساعت
+
+export interface TicketActionLog {
+  id: string;
+  timestamp: string;
+  action: string;
+  byUserId: string;
+  byUserName: string;
+  note?: string;
 }
 
 export type TicketType = 
@@ -229,18 +586,85 @@ export interface Ticket {
   authorId: string;
   authorName: string;
   type: TicketType;
+  category?: IssueCategory; // دسته‌بندی ۸ گانه عملیاتی P1
   description: string;
   photos: string[];
   status: TicketStatus;
+  
+  // انتساب به اکیپ و مسئول پیگیری
+  assignedTeamId?: string;
+  assignedTeamName?: string;
+  assignedUserId?: string;
+  assignedUserName?: string;
+  
+  // انسداد عملیات (Blocking behavior)
+  isBlocking?: boolean; // آیا باعث توقف کار نصب شده؟
+  blockingReason?: string; // شرح علت توقف
+  
+  // مهلت و تاریخچه SLA
+  resolutionDeadline?: string; // ضرب‌الاجل ۷۲ ساعته
   resolutionNote?: string;
   createdAt: string;
   resolvedAt?: string;
+  verifiedByUserId?: string;
+  verifiedByUserName?: string;
+  verifiedAt?: string;
+  actionHistory?: TicketActionLog[];
+}
+
+export interface ScheduleChangeRequest {
+  id: string;
+  projectId: string;
+  projectCode: string;
+  projectTitle: string;
+  customerName?: string;
+  durationHours?: number;
+  previousScheduledDate: string;
+  proposedScheduledDate: string;
+  previousEndDate?: string;
+  proposedEndDate?: string;
+  previousTeamId?: string;
+  proposedTeamId?: string;
+  previousTeamName?: string;
+  proposedTeamName?: string;
+  reason: string;
+  requestedByUserId: string;
+  requestedByUserName: string;
+  requestedAt: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewedByUserId?: string;
+  reviewedByUserName?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+}
+
+export interface TeamOperationalStatus {
+  team: InstallationTeam;
+  supervisor?: User;
+  technicians: User[];
+  currentMission?: {
+    projectId: string;
+    projectCode: string;
+    projectTitle: string;
+    status: ProjectStatus;
+    isMultiDay: boolean;
+    durationHours: number;
+    customerName: string;
+  };
+  currentWorkloadHours: number;
+  maxCapacityHours: number | null; // در صورت عدم تنظیم سقف ظرفیت، null است
+  remainingCapacityHours: number | null; // در صورت عدم تنظیم سقف ظرفیت، null است
+  isCapacityConfigured: boolean;
+  capacitySource: 'TEAM' | 'SYSTEM' | 'UNCONFIGURED';
+  status: 'AVAILABLE' | 'ON_MISSION' | 'OVERLOADED' | 'STANDBY' | 'UNCONFIGURED';
 }
 
 export interface SystemSettings {
   visibilityWindowDays: number; // تعداد روزهای قابل مشاهده برای تکنسین‌ها (پیش‌فرض 4 روز)
   companyName: string;
   defaultTools: string[];
+  defaultTeamDailyCapacityHours?: number | null; // ظرفیت کاری پیش‌فرض روزانه اکیپ‌ها به ساعت (تعیین توسط مدیر QC)
+  workingDaysPerWeek?: number[]; // روزهای کاری مجاز هفته (پیش‌فرض: [0, 1, 2, 3, 4, 6] بدون جمعه)
 }
 
 export interface ProjectAuditRecord {
@@ -253,4 +677,111 @@ export interface ProjectAuditRecord {
   old_data?: Partial<Project> | null;
   new_data?: Partial<Project> | null;
   reason?: string | null;
+}
+
+// ==============================================================================
+// گردش کار مستقل درخواست متریال و پیگیری کسری سر کارگاه (فاز P2.3)
+// تفکیک قطعی از تیکت‌های خرابی/کیفی (QC Tickets)
+// ==============================================================================
+
+export type MaterialCategory =
+  | 'FABRIC'          // پارچه و تور
+  | 'HARDWARE'        // یراق‌آلات، پایه‌ها، براکت و گیربکس
+  | 'PROFILE_TRACK'   // ریل، قاب و پروفیل
+  | 'MOTOR'           // موتور برقی و ملحقات هوشمند
+  | 'ACCESSORY'       // ملحقات، اکسسوری، سرب و وزنه
+  | 'OTHER';          // سایر اقلام مصرفی و ابزار
+
+export type MaterialRequestReason =
+  | 'SHORTAGE'                  // کسری متراژ یا تعداد از ابتدا
+  | 'DEFECT_DAMAGE'             // آسیب‌دیدگی یا نقص فنی قطعه سر کارگاه
+  | 'INCORRECT_SPEC'            // مغایرت با ابعاد یا مشخصات فنی
+  | 'ADDITIONAL_CLIENT_REQUEST';// درخواست اضافه توسط کارفرما سر کارگاه
+
+export type MaterialRequestStatus =
+  | 'SUBMITTED'             // ثبت اولیه توسط تکنسین در محل پروژه
+  | 'IN_PROCUREMENT'        // در حال تامین و آماده‌سازی در انبار/کارگاه
+  | 'PARTIALLY_DISPATCHED'  // ارسال بخشی از اقلام به محل پروژه
+  | 'DISPATCHED'            // ارسال تمام اقلام درخواستی
+  | 'DELIVERED_CONFIRMED'   // تایید قطعی تحویل در محل کارگاه توسط سرپرست/تکنسین
+  | 'REJECTED'              // رد شده توسط دفتر/مدیریت با ذکر دلیل
+  | 'CANCELLED';            // لغو شده با حفظ کامل سوابق و تاریخچه
+
+export type MaterialUrgency = 'NORMAL' | 'URGENT' | 'CRITICAL_BLOCKING';
+
+export interface MaterialRequestItem {
+  id: string;
+  title: string;
+  category: MaterialCategory;
+  requestedQty: number;
+  unit: string; // عدد، متر، جفت، طاقه، بسته، شاخه
+  notes?: string;
+}
+
+export interface MaterialDispatchItem {
+  itemId: string;
+  title?: string;
+  dispatchedQty: number;
+  unit?: string;
+  serialOrBatch?: string;
+}
+
+export interface MaterialDispatchRecord {
+  id: string;
+  dispatchedAt: string; // ISO timestamp
+  dispatchedByUserId: string;
+  dispatchedByUserName: string;
+  courierInfo: string; // اطلاعات پیک، نام راننده، کد اسنپ‌باکس یا پلاک وانت
+  trackingCode?: string;
+  notes?: string;
+  items: MaterialDispatchItem[];
+  receivedAtSiteConfirmed: boolean;
+  receivedAtSiteConfirmedAt?: string;
+  receivedAtSiteConfirmedByUserId?: string;
+  receivedAtSiteConfirmedByUserName?: string;
+  isManagementOverride?: boolean; // آیا با تایید استثنایی مدیریت ثبت شده است؟
+  overrideReason?: string; // علت ثبت تایید تحویل توسط مدیریت
+}
+
+export interface MaterialActionLog {
+  id: string;
+  timestamp: string;
+  action: string;
+  byUserId: string;
+  byUserName: string;
+  note?: string;
+}
+
+export interface MaterialRequest {
+  id: string;
+  projectId: string;
+  projectCode: string;
+  projectTitle: string;
+  customerName?: string;
+  customerAddress?: string;
+  customerPhone?: string;
+
+  assignedTeamId?: string; // شناسه اکیپ در زمان ثبت درخواست
+  assignedTeamName?: string; // نام اکیپ در زمان ثبت درخواست
+
+  requestedByUserId: string;
+  requestedByUserName: string;
+  requestedAt: string; // ISO timestamp
+
+  category: MaterialCategory;
+  reason: MaterialRequestReason;
+  urgency: MaterialUrgency;
+  notes?: string;
+
+  items: MaterialRequestItem[];
+  dispatches: MaterialDispatchRecord[];
+
+  status: MaterialRequestStatus;
+
+  assignedFollowUpUserId?: string;
+  assignedFollowUpUserName?: string;
+
+  history: MaterialActionLog[];
+  createdAt: string;
+  updatedAt: string;
 }

@@ -24,6 +24,22 @@ export function getCalendarDayDiff(fromYmd: string, toYmd: string): number {
 }
 
 /**
+ * Returns array of all YYYY-MM-DD date strings between scheduledDate and endDate (inclusive).
+ */
+export function getMultiDayDateRange(scheduledDate: string, endDate: string): string[] {
+  if (!scheduledDate || !endDate || endDate < scheduledDate) return [scheduledDate].filter(Boolean);
+  const result: string[] = [];
+  const cur = new Date(scheduledDate + 'T00:00:00Z');
+  const end = new Date(endDate + 'T00:00:00Z');
+
+  while (cur <= end) {
+    result.push(cur.toISOString().slice(0, 10));
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  return result;
+}
+
+/**
  * Returns total days count for a project (1 for single-day, >= 2 for multi-day).
  */
 export function getMultiDayTotalDays(
