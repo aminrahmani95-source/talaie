@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Project, User } from '../types';
 import {
   Printer,
@@ -29,6 +30,13 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
     window.print();
   };
 
+  useEffect(() => {
+    document.body.classList.add('printing-certificate-open');
+    return () => {
+      document.body.classList.remove('printing-certificate-open');
+    };
+  }, []);
+
   const rawLead = users.find((u) => u.id === project.leadTechnicianId)?.name;
   const leadTech = rawLead ? getDisplayName(rawLead) : 'تکنسین گالری طلایی';
   const beforePhoto = project.beforePhotos?.find((ph) => Boolean(ph && ph.trim() !== ''));
@@ -37,7 +45,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
     project.completionPhotos?.find((ph) => Boolean(ph && ph.trim() !== ''));
   const checklist = project.handoverChecklist;
 
-  return (
+  const content = (
     <div
       role="dialog"
       aria-modal="true"
@@ -429,4 +437,6 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(content, document.body) : content;
 };
