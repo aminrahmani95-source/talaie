@@ -586,7 +586,8 @@ export const ProjectCard: React.FC<Props> = ({
         {project.customerPhone ? (
           <a
             href={`tel:${project.customerPhone}`}
-            className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98]"
+            aria-label={`تماس تلفنی با مشتری ${project.customerName || ''}`}
+            className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
             title={`تماس با ${project.customerPhone}`}
           >
             <Phone className="w-4 h-4 text-[#C5A059] mb-0.5" />
@@ -606,7 +607,8 @@ export const ProjectCard: React.FC<Props> = ({
           }
           target="_blank"
           rel="noreferrer"
-          className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98]"
+          aria-label={`مسیریابی آدرس ${project.address}`}
+          className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
           title="مسیریابی هوشمند نشان / بلد"
         >
           <Navigation className="w-4 h-4 text-[#C5A059] mb-0.5" />
@@ -616,7 +618,8 @@ export const ProjectCard: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => onViewProposal(project)}
-          className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98] cursor-pointer"
+          aria-label="مشاهده پروپوزال و جزئیات فنی"
+          className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
         >
           <FileText className="w-4 h-4 text-[#C5A059] mb-0.5" />
           <span className="text-xs font-bold">پروپوزال</span>
@@ -625,7 +628,8 @@ export const ProjectCard: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => onOpenToolChecklist(project)}
-          className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98] cursor-pointer"
+          aria-label="چک‌لیست ابزار مورد نیاز"
+          className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
         >
           <Wrench className="w-4 h-4 text-[#C5A059] mb-0.5" />
           <span className="text-xs font-bold">ابزار</span>
@@ -714,7 +718,7 @@ export const ProjectCard: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => onOpenTicketModal(project)}
-                    className="py-2.5 px-3 bg-[#111620] hover:bg-[#1C232D] text-amber-300 border border-amber-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    className="py-2.5 px-3 bg-[#111620] hover:bg-[#1C232D] text-amber-300 border border-amber-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
                   >
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                     <span>ثبت کسری / مشکل</span>
@@ -723,7 +727,7 @@ export const ProjectCard: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => onReportStuck(project)}
-                      className="py-2.5 px-3 bg-[#111620] hover:bg-[#1C232D] text-rose-300 border border-rose-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                      className="py-2.5 px-3 bg-[#111620] hover:bg-[#1C232D] text-rose-300 border border-rose-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
                     >
                       <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
                       <span>اعلام توقف (نیمه‌کاره)</span>
@@ -851,7 +855,7 @@ export const ProjectCard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => onOpenMaterialModal(project)}
-                className="text-xs text-indigo-700 dark:text-indigo-400 font-bold hover:underline cursor-pointer min-h-[44px] px-2 flex items-center gap-1"
+                className="text-xs text-purple-400 hover:text-purple-300 font-bold hover:underline cursor-pointer min-h-[44px] px-2 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
               >
                 <Package className="w-3.5 h-3.5" />
                 <span>درخواست متریال</span>

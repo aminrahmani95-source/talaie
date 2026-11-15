@@ -116,7 +116,7 @@ export const Sidebar: React.FC<Props> = ({
               type="button"
               onClick={() => onSelectTab(item.id)}
               aria-current={isSelected ? 'page' : undefined}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-bold text-xs transition-all duration-150 cursor-pointer select-none ${
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-bold text-xs transition-all duration-150 cursor-pointer select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] ${
                 isSelected
                   ? 'bg-[#1C232D] text-[#C5A059] border border-[#C5A059]/40 shadow-xs'
                   : 'text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#151B23] border border-transparent'
@@ -129,7 +129,7 @@ export const Sidebar: React.FC<Props> = ({
 
               {item.badge !== undefined && (
                 <span
-                  className={`min-w-[18px] h-4 px-1.5 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                  className={`min-w-[18px] h-4 px-1.5 rounded-full text-[10px] font-bold flex items-center justify-center tabular-nums ${
                     item.badgeColor || 'bg-[#2D3748] text-[#9BA7B6]'
                   }`}
                 >
@@ -156,7 +156,7 @@ export const Sidebar: React.FC<Props> = ({
               type="button"
               onClick={() => onSelectTab(item.id)}
               aria-current={isSelected ? 'page' : undefined}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-md font-medium text-xs transition-all duration-150 cursor-pointer select-none ${
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-md font-medium text-xs transition-all duration-150 cursor-pointer select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] ${
                 isSelected
                   ? 'bg-[#1C232D] text-[#C5A059] border border-[#C5A059]/40 font-bold shadow-xs'
                   : 'text-[#637184] hover:text-[#9BA7B6] hover:bg-[#151B23] border border-transparent'
@@ -169,7 +169,7 @@ export const Sidebar: React.FC<Props> = ({
 
               {item.badge !== undefined && (
                 <span
-                  className={`min-w-[18px] h-4 px-1.5 rounded text-[10px] font-bold flex items-center justify-center ${
+                  className={`min-w-[18px] h-4 px-1.5 rounded text-[10px] font-bold flex items-center justify-center tabular-nums ${
                     isSelected
                       ? 'bg-[#C5A059] text-[#0D1117]'
                       : item.badgeColor || 'bg-[#2D3748] text-[#9BA7B6]'

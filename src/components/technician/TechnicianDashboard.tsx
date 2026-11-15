@@ -162,7 +162,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setViewScope('MY_JOBS')}
-                className={`min-h-[36px] min-w-[36px] px-3 py-1.5 rounded font-semibold transition cursor-pointer flex items-center justify-center ${
+                className={`min-h-[36px] min-w-[36px] px-3 py-1.5 rounded font-semibold transition cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] active:scale-95 ${
                   viewScope === 'MY_JOBS'
                     ? 'bg-[#C5A059] text-[#0D1117]'
                     : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
@@ -173,7 +173,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setViewScope('ALL_DAY_JOBS')}
-                className={`min-h-[36px] min-w-[36px] px-3 py-1.5 rounded font-semibold transition cursor-pointer flex items-center justify-center ${
+                className={`min-h-[36px] min-w-[36px] px-3 py-1.5 rounded font-semibold transition cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] active:scale-95 ${
                   viewScope === 'ALL_DAY_JOBS'
                     ? 'bg-[#C5A059] text-[#0D1117]'
                     : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
@@ -260,7 +260,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setSelectedDateKey(day.dateKey)}
-                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[72px] min-h-[64px] py-2 px-2.5 rounded-md border transition text-center active:scale-95 cursor-pointer ${
+                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[72px] min-h-[64px] py-2 px-2.5 rounded-md border transition text-center active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] ${
                   isSelected
                     ? 'bg-[#1C232D] text-[#E5CA8F] border-[#C5A059] ring-1 ring-[#C5A059]/40 font-bold'
                     : 'bg-[#151B23] text-[#9BA7B6] border-[#212835] hover:border-[#2D3748] hover:text-[#F0F4F8]'

@@ -17,6 +17,7 @@ import {
   Layers,
   ChevronDown,
   Filter,
+  X,
 } from 'lucide-react';
 import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 import { ProjectPassportPrint } from '../common/ProjectPassportPrint';
@@ -150,18 +151,29 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
       <div className="bg-[#151B23] rounded-2xl p-4 border border-[#212835] flex flex-col md:flex-row items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative w-full md:w-96">
-          <Search className="w-4 h-4 text-[#637184] absolute right-3.5 top-3" />
+          <Search className="w-4 h-4 text-[#637184] absolute right-3.5 top-3 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="جستجو با نام پروژه، کارفرما، کد سفارش، نشانی، اکیپ..."
-            className="w-full text-xs pr-10 pl-3 py-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059] outline-none"
+            className="w-full text-xs pr-10 pl-9 py-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] placeholder-[#637184] focus:border-[#C5A059] focus-visible:ring-1 focus-visible:ring-[#C5A059] outline-none transition"
+            aria-label="جستجوی پروژه‌ها"
           />
+          {searchQuery.trim() && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute left-2.5 top-2.5 text-[#637184] hover:text-[#F0F4F8] p-0.5 rounded-md transition cursor-pointer"
+              aria-label="پاک کردن متن جستجو"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Status Filter Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0" role="tablist">
           {[
             { id: 'ALL', label: 'همه مأموریت‌ها' },
             { id: 'APPROVED', label: 'تایید QC شده ✅' },
@@ -174,10 +186,12 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
               <button
                 key={item.id}
                 type="button"
+                role="tab"
+                aria-selected={isSelected}
                 onClick={() => setStatusFilter(item.id as any)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] ${
                   isSelected
-                    ? 'bg-[#C5A059] text-[#0D1117]'
+                    ? 'bg-[#C5A059] text-[#0D1117] shadow-xs'
                     : 'bg-[#111620] text-[#9BA7B6] hover:text-white border border-[#212835]'
                 }`}
               >
@@ -259,7 +273,8 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
                     <button
                       type="button"
                       onClick={() => setPrintingProject(p)}
-                      className="px-3.5 py-1.5 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-md cursor-pointer"
+                      aria-label={`چاپ شناسنامه رسمی پروژه ${p.title}`}
+                      className="px-3.5 py-1.5 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-sm active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
                     >
                       <Printer className="w-3.5 h-3.5" />
                       <span>چاپ شناسنامه A4</span>

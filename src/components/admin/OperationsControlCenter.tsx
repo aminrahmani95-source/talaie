@@ -193,12 +193,12 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               </span>
               <span className="text-xs text-[#9BA7B6] font-medium">{todayPersian}</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-[#F0F4F8] tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-[#F0F4F8] tracking-tight text-balance">
               صف اقدام و فرماندهی عملیات اجرایی
             </h1>
             <div className="flex items-center gap-2 mt-1.5 text-xs">
               {totalUrgentCount > 0 ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-300 font-bold border border-rose-500/30">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-300 font-bold border border-rose-500/30 tabular-nums">
                   <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
                   {toPersianDigits(totalUrgentCount)} موضوع نیازمند تصمیم و اقدام شماست
                 </span>
@@ -217,7 +217,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               <button
                 type="button"
                 onClick={onNewProject}
-                className="px-3.5 py-2 rounded-lg bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-black text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer min-h-[38px]"
+                className="px-3.5 py-2 rounded-lg bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-black text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer min-h-[38px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
                 ثبت پروژه جدید
@@ -227,7 +227,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             <button
               type="button"
               onClick={() => onNavigateTab('planner')}
-              className="px-3.5 py-2 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#F0F4F8] font-bold text-xs transition flex items-center gap-1.5 border border-[#2D3748] cursor-pointer min-h-[38px]"
+              className="px-3.5 py-2 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#F0F4F8] font-bold text-xs transition flex items-center gap-1.5 border border-[#2D3748] cursor-pointer min-h-[38px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
             >
               <Calendar className="w-4 h-4 text-[#C5A059]" />
               تقویم ۴ روزه
@@ -236,7 +236,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             <button
               type="button"
               onClick={() => onNavigateTab('registry')}
-              className="px-3.5 py-2 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#F0F4F8] font-bold text-xs transition flex items-center gap-1.5 border border-[#2D3748] cursor-pointer min-h-[38px]"
+              className="px-3.5 py-2 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#F0F4F8] font-bold text-xs transition flex items-center gap-1.5 border border-[#2D3748] cursor-pointer min-h-[38px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
             >
               <FileText className="w-4 h-4 text-blue-400" />
               شناسنامه پروژه‌ها
@@ -251,7 +251,9 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           <button
             type="button"
             onClick={() => setActiveSubTab('ACTIONS')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 min-h-[36px] ${
+            aria-selected={activeSubTab === 'ACTIONS'}
+            role="tab"
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 min-h-[36px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] ${
               activeSubTab === 'ACTIONS'
                 ? 'bg-[#C5A059] text-[#0D1117] shadow-xs'
                 : 'bg-[#151B23] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#212835]'
@@ -261,7 +263,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             <span>صف اقدام و دیده‌بانی روز</span>
             {totalUrgentCount > 0 && (
               <span
-                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full tabular-nums ${
                   activeSubTab === 'ACTIONS'
                     ? 'bg-[#0D1117] text-[#C5A059]'
                     : 'bg-rose-500 text-white'
@@ -275,7 +277,9 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           <button
             type="button"
             onClick={() => setActiveSubTab('ANALYTICS')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 min-h-[36px] ${
+            aria-selected={activeSubTab === 'ANALYTICS'}
+            role="tab"
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 min-h-[36px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] ${
               activeSubTab === 'ANALYTICS'
                 ? 'bg-[#C5A059] text-[#0D1117] shadow-xs'
                 : 'bg-[#151B23] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#212835]'
@@ -286,7 +290,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           </button>
         </div>
 
-        <span className="text-[11px] text-[#637184] hidden sm:inline">
+        <span className="text-[11px] text-[#9BA7B6] hidden sm:inline">
           {activeSubTab === 'ACTIONS'
             ? 'اولویت‌های نیازمند اقدام + وضعیت زنده اکیپ‌ها'
             : 'کیفیت، رعایت SLA و راندمان اکیپ‌ها'}
@@ -299,24 +303,24 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           <section className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h2 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
+                <h2 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2 text-balance">
                   <span className="flex h-2.5 w-2.5 relative">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
                   </span>
                   نیازمند اقدام فوری من
                 </h2>
-                <p className="text-xs text-[#9BA7B6] mt-0.5">
+                <p className="text-xs text-[#9BA7B6] mt-0.5 text-pretty">
                   پروژه‌های متوقف، ورودی‌های بلاتکلیف فروش و پروژه‌های آماده تایید نهایی QC
                 </p>
               </div>
 
               {/* فیلتر دسته‌بندی کارتابل */}
-              <div className="flex items-center gap-1.5 bg-[#111620] p-1 rounded-lg border border-[#212835]">
+              <div className="flex items-center gap-1.5 bg-[#111620] p-1 rounded-lg border border-[#212835] tabular-nums">
                 <button
                   type="button"
                   onClick={() => setActiveUrgentCategory('ALL')}
-                  className={`px-2.5 py-1 rounded text-[11px] font-bold transition cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] ${
                     activeUrgentCategory === 'ALL'
                       ? 'bg-[#C5A059] text-[#0D1117]'
                       : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
@@ -327,7 +331,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                 <button
                   type="button"
                   onClick={() => setActiveUrgentCategory('STUCK')}
-                  className={`px-2.5 py-1 rounded text-[11px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition cursor-pointer flex items-center gap-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500 ${
                     activeUrgentCategory === 'STUCK'
                       ? 'bg-rose-600 text-white'
                       : 'text-rose-400 hover:text-rose-300'
@@ -338,7 +342,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                 <button
                   type="button"
                   onClick={() => setActiveUrgentCategory('INCOMING')}
-                  className={`px-2.5 py-1 rounded text-[11px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition cursor-pointer flex items-center gap-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500 ${
                     activeUrgentCategory === 'INCOMING'
                       ? 'bg-amber-500 text-[#0D1117]'
                       : 'text-amber-400 hover:text-amber-300'
@@ -349,7 +353,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                 <button
                   type="button"
                   onClick={() => setActiveUrgentCategory('QC')}
-                  className={`px-2.5 py-1 rounded text-[11px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition cursor-pointer flex items-center gap-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-purple-500 ${
                     activeUrgentCategory === 'QC'
                       ? 'bg-purple-600 text-white'
                       : 'text-purple-400 hover:text-purple-300'
@@ -420,7 +424,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         <button
                           type="button"
                           onClick={() => onOpenProject(p)}
-                          className="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                          className="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
                         >
                           بررسی و رفع توقف
                           <ChevronLeft className="w-3.5 h-3.5" />
@@ -428,7 +432,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         <button
                           type="button"
                           onClick={() => onNavigateTab('stuck')}
-                          className="px-3 py-1.5 rounded-lg bg-[#111620] hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] font-medium text-[11px] transition border border-[#212835] text-center cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-[#111620] hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] font-medium text-[11px] transition border border-[#212835] text-center cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059]"
                         >
                           مشاهده در دسک متوقف‌ها
                         </button>
@@ -461,7 +465,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                       <button
                         type="button"
                         onClick={() => onNavigateTab('tickets')}
-                        className="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                        className="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
                       >
                         رسیدگی در مرکز تیکت
                         <ChevronLeft className="w-3.5 h-3.5" />
@@ -496,19 +500,20 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                           {p.customerPhone && (
                             <a
                               href={`tel:${p.customerPhone}`}
+                              aria-label={`تماس با کارفرما: ${p.customerName}`}
                               className="text-[#C5A059] hover:underline flex items-center gap-1"
                             >
                               <Phone className="w-3 h-3" />
-                              {p.customerPhone}
+                              <span className="tabular-nums" dir="ltr">{p.customerPhone}</span>
                             </a>
                           )}
                           <span>ثبت‌شده توسط: <strong className="text-[#F0F4F8]">{p.salesRepName || 'واحد فروش'}</strong></span>
                           <span>
-                            حجم اقلام: <strong className="text-[#C5A059]">{toPersianDigits((p.shadePanels || 0) + (p.curtainPanels || 0))} لت</strong>
+                            حجم اقلام: <strong className="text-[#C5A059] tabular-nums">{toPersianDigits((p.shadePanels || 0) + (p.curtainPanels || 0))} لت</strong>
                           </span>
                         </div>
 
-                        <div className="mt-2 text-[11px] text-[#637184]">
+                        <div className="mt-2 text-[11px] text-[#9BA7B6]">
                           وضعیت تحویل فنی / اندازه‌گیری ۲:
                           {p.technicalHandover?.isHandoverComplete ? (
                             <span className="text-emerald-400 font-bold mr-1">تایید فنی نهایی شده (آماده نصب)</span>
@@ -523,7 +528,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         <button
                           type="button"
                           onClick={() => onOpenProject(p)}
-                          className="px-3.5 py-2 rounded-lg bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-black text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                          className="px-3.5 py-2 rounded-lg bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-black text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
                         >
                           تخصیص اکیپ و تاریخ
                           <ChevronLeft className="w-3.5 h-3.5" />
@@ -531,7 +536,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         <button
                           type="button"
                           onClick={() => onNavigateTab('planner')}
-                          className="px-3 py-1.5 rounded-lg bg-[#111620] hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] font-medium text-[11px] transition border border-[#212835] text-center cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-[#111620] hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] font-medium text-[11px] transition border border-[#212835] text-center cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059]"
                         >
                           تنظیم در تقویم ۴ روزه
                         </button>
@@ -565,7 +570,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                           <span>کارفرما: <strong className="text-[#F0F4F8]">{p.customerName}</strong></span>
                           <span>اکیپ نصب: <strong className="text-purple-300">{p.assignedTeamId || 'اکیپ فنی'}</strong></span>
                           {p.customerSatisfaction && (
-                            <span className="flex items-center gap-1 text-amber-400 font-bold">
+                            <span className="flex items-center gap-1 text-amber-400 font-bold tabular-nums">
                               <Star className="w-3 h-3 fill-amber-400" />
                               رضایت کارفرما: {toPersianDigits(p.customerSatisfaction)} از ۵
                             </span>
@@ -575,7 +580,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                           )}
                         </div>
 
-                        <p className="mt-1.5 text-[11px] text-[#637184]">
+                        <p className="mt-1.5 text-[11px] text-[#9BA7B6] text-pretty">
                           عملیات نصب پایان یافته و منتظر ارزیابی استانداردهای کیفی جهت صدور شناسنامه گارانتی است.
                         </p>
                       </div>
@@ -585,7 +590,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         <button
                           type="button"
                           onClick={() => onOpenProject(p)}
-                          className="px-3.5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                          className="px-3.5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
                         >
                           تایید کیفی و صدور شناسنامه
                           <ShieldCheck className="w-3.5 h-3.5" />
@@ -593,7 +598,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         <button
                           type="button"
                           onClick={() => onNavigateTab('qc')}
-                          className="px-3 py-1.5 rounded-lg bg-[#111620] hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] font-medium text-[11px] transition border border-[#212835] text-center cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-[#111620] hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] font-medium text-[11px] transition border border-[#212835] text-center cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059]"
                         >
                           مشاهده در میز تخصصی QC
                         </button>
@@ -750,7 +755,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         <button
                           type="button"
                           onClick={() => onOpenProject(activeProject)}
-                          className="w-full py-1.5 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#C5A059] hover:text-[#D4AF37] text-xs font-bold transition flex items-center justify-center gap-1 border border-[#C5A059]/30 cursor-pointer"
+                          className="w-full py-1.5 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#C5A059] hover:text-[#D4AF37] text-xs font-bold transition flex items-center justify-center gap-1 border border-[#C5A059]/30 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
                         >
                           مشاهده پرونده پروژه
                           <ExternalLink className="w-3 h-3" />
@@ -759,7 +764,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         <button
                           type="button"
                           onClick={() => onNavigateTab('planner')}
-                          className="w-full py-1.5 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] text-xs font-semibold transition border border-[#212835] cursor-pointer"
+                          className="w-full py-1.5 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] text-xs font-semibold transition border border-[#212835] cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
                         >
                           تخصیص ماموریت در تقویم
                         </button>

@@ -48,12 +48,12 @@ export const Header: React.FC<Props> = ({
   return (
     <header className="sticky top-0 z-40 bg-[#0D1117]/95 backdrop-blur-md border-b border-[#212835] transition-colors duration-150">
       <div className="max-w-7xl mx-auto px-3 sm:px-6">
-        <div className="flex items-center justify-between h-13 sm:h-14 gap-3">
+        <div className="flex items-center justify-between h-14 gap-3">
           {/* Logo & Brand Name on ONE single line */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-md bg-[#151B23] p-1.5 border border-[#C5A059]/40 flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#151B23] p-1.5 border border-[#C5A059]/40 flex items-center justify-center shrink-0 shadow-xs">
               <img
-                src="./talaei-lion-gold.png"
+                src="/talaei-lion-gold.png"
                 alt="لوگوی گالری طلایی"
                 className="w-full h-full object-contain"
               />
@@ -75,15 +75,16 @@ export const Header: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={onOpenFailedOperations}
-                className="flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-rose-500/15 text-rose-300 border border-rose-500/40 rounded-md text-xs font-bold transition hover:bg-rose-500/25 cursor-pointer animate-pulse"
+                className="flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-rose-500/15 text-rose-300 border border-rose-500/40 rounded-lg text-xs font-bold transition hover:bg-rose-500/25 cursor-pointer animate-pulse tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                 title={`${failedQueueCount} عملیات ناموفق — کلیک جهت بررسی`}
+                aria-label={`${failedQueueCount} عملیات همگام‌سازی ناموفق`}
               >
                 <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
                 <span>{failedQueueCount} ناموفق</span>
               </button>
             ) : isOfflineMode ? (
               <div
-                className="flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-md text-xs font-bold"
+                className="flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold"
                 title="سامانه در حالت آفلاین کار می‌کند"
               >
                 <CloudOff className="w-3.5 h-3.5 text-amber-400" />
@@ -91,7 +92,7 @@ export const Header: React.FC<Props> = ({
               </div>
             ) : pendingQueueCount > 0 ? (
               <div
-                className="flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-md text-xs font-bold animate-pulse"
+                className="flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold animate-pulse tabular-nums"
                 title={`${pendingQueueCount} تغییر محلی در صف همگام‌سازی`}
               >
                 <Cloud className="w-3.5 h-3.5 text-amber-400" />
@@ -99,7 +100,7 @@ export const Header: React.FC<Props> = ({
               </div>
             ) : (
               <div
-                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-md text-xs font-bold"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold"
                 title="سامانه همگام با سرور ابری است"
               >
                 <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -112,7 +113,7 @@ export const Header: React.FC<Props> = ({
               <IconButton
                 variant="ghost"
                 size="sm"
-                aria-label={isDarkMode ? 'حالت روز' : 'حالت شب'}
+                aria-label={isDarkMode ? 'تغییر به حالت روز' : 'تغییر به حالت شب'}
                 onClick={onToggleDarkMode}
                 icon={
                   isDarkMode ? (
@@ -129,8 +130,8 @@ export const Header: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setIsMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 p-1 rounded-md hover:bg-[#1C232D] transition active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059]"
-                aria-label={`پروفایل ${getDisplayName(currentUser.name)}`}
+                className="flex items-center gap-2 p-1 rounded-lg hover:bg-[#1C232D] transition active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
+                aria-label={`پروفایل کاربری ${getDisplayName(currentUser.name)}`}
                 aria-expanded={isMenuOpen}
               >
                 <Avatar
@@ -152,7 +153,7 @@ export const Header: React.FC<Props> = ({
                     onClick={() => setIsMenuOpen(false)}
                     aria-hidden="true"
                   />
-                  <div className="absolute left-0 top-11 mt-2 w-64 bg-[#151B23] rounded-lg shadow-xl border border-[#2D3748] p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="absolute left-0 top-11 mt-2 w-64 bg-[#151B23] rounded-xl shadow-2xl border border-[#2D3748] p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
                     <div className="flex items-start justify-between pb-3 border-b border-[#212835]">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Avatar
@@ -165,11 +166,11 @@ export const Header: React.FC<Props> = ({
                           <div className="font-bold text-sm text-[#F0F4F8] truncate">
                             {getDisplayName(currentUser.name)}
                           </div>
-                          <div className="text-xs text-[#C5A059] font-semibold mt-0.5">
+                          <div className="text-xs text-[#C5A059] font-bold mt-0.5">
                             {roleTitle}
                           </div>
                           {currentUser.phone && (
-                            <div className="text-xs text-[#9BA7B6] font-mono mt-0.5" dir="ltr">
+                            <div className="text-xs text-[#9BA7B6] font-mono mt-0.5 tabular-nums" dir="ltr">
                               {currentUser.phone}
                             </div>
                           )}
@@ -178,7 +179,7 @@ export const Header: React.FC<Props> = ({
                       <button
                         type="button"
                         onClick={() => setIsMenuOpen(false)}
-                        className="text-[#637184] hover:text-[#F0F4F8] p-1 cursor-pointer"
+                        className="text-[#637184] hover:text-[#F0F4F8] p-1 rounded-md hover:bg-[#1C232D] transition cursor-pointer"
                         aria-label="بستن منو"
                       >
                         <X className="w-4 h-4" />
@@ -192,7 +193,7 @@ export const Header: React.FC<Props> = ({
                           setIsMenuOpen(false);
                           onLogout();
                         }}
-                        className="w-full min-h-[38px] py-1.5 px-3 rounded-md text-xs font-bold text-rose-400 hover:bg-rose-500/15 flex items-center justify-center gap-2 transition cursor-pointer border border-rose-500/30"
+                        className="w-full min-h-[38px] py-1.5 px-3 rounded-lg text-xs font-bold text-rose-400 hover:bg-rose-500/15 flex items-center justify-center gap-2 transition cursor-pointer border border-rose-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>خروج از حساب کاربری</span>

@@ -384,7 +384,7 @@ export const SalesPortal: React.FC<Props> = ({
                 min={0}
                 value={shadePanels}
                 onChange={(e) => setShadePanels(Number(e.target.value))}
-                className="w-full text-xs p-3 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] font-bold"
+                className="w-full text-xs p-3 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] font-bold tabular-nums focus:border-[#C5A059] focus-visible:ring-1 focus-visible:ring-[#C5A059] outline-none"
               />
             </div>
             <div>
@@ -396,7 +396,7 @@ export const SalesPortal: React.FC<Props> = ({
                 min={0}
                 value={curtainPanels}
                 onChange={(e) => setCurtainPanels(Number(e.target.value))}
-                className="w-full text-xs p-3 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] font-bold"
+                className="w-full text-xs p-3 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] font-bold tabular-nums focus:border-[#C5A059] focus-visible:ring-1 focus-visible:ring-[#C5A059] outline-none"
               />
             </div>
           </div>
@@ -468,7 +468,8 @@ export const SalesPortal: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => setProposalImages((prev) => prev.filter((_, idx) => idx !== i))}
-                      className="absolute top-1 left-1 bg-rose-600 text-white rounded-full p-0.5 hover:bg-rose-700 shadow"
+                      className="absolute top-1 left-1 bg-rose-600 text-white rounded-full p-0.5 hover:bg-rose-700 shadow cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white"
+                      aria-label="حذف این تصویر پروپوزال"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -488,7 +489,7 @@ export const SalesPortal: React.FC<Props> = ({
               value={specialNotes}
               onChange={(e) => setSpecialNotes(e.target.value)}
               placeholder="نکات خاص پارچه، هماهنگی با لابی ساختمان، زمان حضور کارفرما..."
-              className="w-full text-xs p-3 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059] outline-none resize-none leading-relaxed"
+              className="w-full text-xs p-3 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059] focus-visible:ring-1 focus-visible:ring-[#C5A059] outline-none resize-none leading-relaxed"
             />
           </div>
 
@@ -503,14 +504,14 @@ export const SalesPortal: React.FC<Props> = ({
             <button
               type="button"
               onClick={handleResetForm}
-              className="px-5 py-3 rounded-xl text-xs font-bold bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition"
+              className="px-5 py-3 rounded-xl text-xs font-bold bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059]"
             >
               پاک کردن فرم
             </button>
             <button
               type="submit"
               disabled={isSubmitting || isUploadingProposal}
-              className="px-7 py-3 rounded-xl text-xs font-black bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] flex items-center gap-2 shadow-lg shadow-[#C5A059]/20 transition disabled:opacity-50 cursor-pointer"
+              className="px-7 py-3 rounded-xl text-xs font-black bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] flex items-center gap-2 shadow-lg shadow-[#C5A059]/20 transition disabled:opacity-50 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
             >
               {isSubmitting ? (
                 <>

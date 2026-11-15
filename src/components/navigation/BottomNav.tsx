@@ -83,7 +83,7 @@ export const BottomNav: React.FC<Props> = ({
                 key={item.id}
                 type="button"
                 onClick={() => onSelectTab(item.id)}
-                className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] transition-all select-none cursor-pointer ${
+                className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] transition-all select-none cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] ${
                   isSelected
                     ? 'text-[#C5A059] font-bold'
                     : 'text-[#637184] hover:text-[#F0F4F8]'
@@ -97,7 +97,7 @@ export const BottomNav: React.FC<Props> = ({
                   />
                   {item.badge !== undefined && (
                     <span
-                      className={`absolute -top-1 -right-2 min-w-[15px] h-3.5 px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                      className={`absolute -top-1 -right-2 min-w-[15px] h-3.5 px-1 rounded-full text-[10px] font-bold flex items-center justify-center tabular-nums ${
                         item.badgeColor || 'bg-[#C5A059] text-[#0D1117]'
                       }`}
                     >
