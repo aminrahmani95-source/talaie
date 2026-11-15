@@ -149,6 +149,9 @@ export const ProjectFormModal: React.FC<Props> = ({
     project?.toolsRequired || settings.defaultTools
   );
   const [customToolsNotes, setCustomToolsNotes] = useState(project?.customToolsNotes || '');
+  const [specialTools, setSpecialTools] = useState<string[]>(project?.specialTools || []);
+  const [isForceMajeure, setIsForceMajeure] = useState<boolean>(project?.isForceMajeure ?? false);
+  const [salesRepName, setSalesRepName] = useState<string>(project?.salesRepName || '');
 
   // Proposal images
   const [proposalImages, setProposalImages] = useState<ProposalImage[]>(
@@ -320,6 +323,10 @@ export const ProjectFormModal: React.FC<Props> = ({
           isFullTools,
           toolsRequired,
           customToolsNotes: customToolsNotes.trim(),
+          specialTools,
+          isForceMajeure,
+          priority: isForceMajeure ? 'HIGH' : (project.priority || 'NORMAL'),
+          salesRepName: salesRepName.trim() || undefined,
           status,
           qcStatus: status === 'COMPLETED' && qcStatus === 'NOT_STARTED' ? 'PENDING' : qcStatus,
           updatedAt: new Date().toISOString(),
@@ -367,6 +374,10 @@ export const ProjectFormModal: React.FC<Props> = ({
           isFullTools,
           toolsRequired,
           customToolsNotes: customToolsNotes.trim(),
+          specialTools,
+          isForceMajeure,
+          priority: isForceMajeure ? 'HIGH' : 'NORMAL',
+          salesRepName: salesRepName.trim() || undefined,
           status,
           beforePhotos: [],
           afterPhotos: [],
@@ -455,6 +466,31 @@ export const ProjectFormModal: React.FC<Props> = ({
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                 />
+              </div>
+
+              <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-2 p-2.5 bg-black/30 rounded-lg border border-[#212835]">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={isForceMajeure}
+                    onChange={(e) => setIsForceMajeure(e.target.checked)}
+                    className="w-4 h-4 rounded text-rose-500 accent-rose-500 focus:ring-rose-500"
+                  />
+                  <span className={`text-xs font-bold ${isForceMajeure ? 'text-rose-400' : 'text-[#9BA7B6]'}`}>
+                    🔥 پروژه فورس‌ماژور (اولویت آنی و اقدام سریع)
+                  </span>
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#9BA7B6]">کارشناس فروش:</span>
+                  <input
+                    type="text"
+                    placeholder="مثال: خانم سلیمانی"
+                    value={salesRepName}
+                    onChange={(e) => setSalesRepName(e.target.value)}
+                    className="text-xs p-1.5 rounded border border-[#212835] bg-[#0D1117] text-white w-36"
+                  />
+                </div>
               </div>
 
               <div>
@@ -975,10 +1011,50 @@ export const ProjectFormModal: React.FC<Props> = ({
 
           {/* Section 5: Tools Checklist */}
           <div className="bg-[#111620] border border-[#212835] rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between">
+            {/* Special Tools (فارسی‌بر، دریل سرکج، نردبان ۴ متری، تراز ۳۶۰ و ...) */}
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-300">
+                  ⚡ ابزارهای ویژه و کم‌تعداد (تحویل به این اکیپ):
+                </span>
+                <span className="text-[11px] text-amber-400">رهگیری ابزارهای خاص محدود</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'فارسی‌بر',
+                  'دریل سرکج',
+                  'نردبان ۴ متری',
+                  'تراز لیزری ۳۶۰',
+                  'دستگاه شیارزن',
+                  'پیچ‌بند ضربه‌ای',
+                ].map((tool) => {
+                  const isChecked = specialTools.includes(tool);
+                  return (
+                    <button
+                      key={tool}
+                      type="button"
+                      onClick={() =>
+                        setSpecialTools((prev) =>
+                          prev.includes(tool) ? prev.filter((t) => t !== tool) : [...prev, tool]
+                        )
+                      }
+                      className={`text-xs px-2.5 py-1 rounded-md font-bold transition flex items-center gap-1 cursor-pointer ${
+                        isChecked
+                          ? 'bg-amber-400 text-black shadow-sm'
+                          : 'bg-black/40 text-gray-300 border border-[#212835] hover:border-amber-400/50'
+                      }`}
+                    >
+                      {isChecked ? '✓' : '+'} {tool}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
               <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
                 <Wrench className="w-4 h-4 text-[#C5A059]" />
-                <span>چک‌لیست ابزار و تجهیزات</span>
+                <span>چک‌لیست ابزار عمومی</span>
               </h4>
 
               <button

@@ -24,6 +24,7 @@ import {
   XCircle,
   Send,
   ArrowRightLeft,
+  Wrench,
 } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits, localDateKey } from '../../utils/jalali';
 import { PageHeader } from '../ui/PageHeader';
@@ -85,7 +86,7 @@ export const MonthPlanner: React.FC<Props> = ({
   const isQcManager = currentUser?.role === 'QC_MANAGER';
 
   // View modes: '4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'
-  const [viewMode, setViewMode] = useState<'4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'>('TIMELINE');
+  const [viewMode, setViewMode] = useState<'4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'>('4DAYS');
   const [startIndex, setStartIndex] = useState(0);
   const [isAlertsOpen, setIsAlertsOpen] = useState(true);
 
@@ -531,6 +532,27 @@ export const MonthPlanner: React.FC<Props> = ({
                             {proj.code}
                           </span>
                           <StatusPill status={proj.status} qcStatus={proj.qcStatus} size="sm" />
+                        </div>
+
+                        {/* Special Badges: Force Majeure, Warehouse Ready, Special Tools */}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {proj.isForceMajeure && (
+                            <span className="text-[10px] bg-rose-500/20 text-rose-300 font-bold px-1.5 py-0.5 rounded border border-rose-500/30 flex items-center gap-0.5">
+                              <span>🔥 فورس‌ماژور</span>
+                            </span>
+                          )}
+                          {proj.warehousePrep?.isPackedAndReady && (
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                              <span>بار آماده ✅</span>
+                            </span>
+                          )}
+                          {proj.specialTools && proj.specialTools.length > 0 && (
+                            <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                              <Wrench className="w-3 h-3 text-amber-400" />
+                              <span>{proj.specialTools.join('، ')}</span>
+                            </span>
+                          )}
                         </div>
 
                         <div>

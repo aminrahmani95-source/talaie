@@ -1,8 +1,12 @@
 export type UserRole = 
-  | 'QC_MANAGER' 
-  | 'SCHEDULING_COORDINATOR' 
-  | 'LEAD_TECHNICIAN' 
-  | 'TECHNICIAN';
+  | 'CEO'                     // مدیرعامل (دسترسی انحصاری به شناسنامه جامع پروژه‌ها و پرینت)
+  | 'QC_MANAGER'              // مدیر فنی و QC (کاربر اصلی با دسترسی کامل عملیاتی)
+  | 'SALES'                   // کارشناسان فروش (ثبت ۲ بخشی با تیک فورس‌ماژور و پیگیری وضعیت)
+  | 'MEASUREMENT_LEAD'        // مسئول اندازه‌گیری دوم و تایید بستر فضا (۱ نفر)
+  | 'LEAD_TECHNICIAN'         // سرپرست اکیپ نصب
+  | 'TECHNICIAN'              // تکنسین نصب
+  | 'WAREHOUSE'               // مسئول انبار و پیگیری تامین (۲ نفر)
+  | 'SCHEDULING_COORDINATOR'; // هماهنگ‌کننده زمان‌بندی (سازگار با گذشته)
 
 export interface User {
   id: string;
@@ -427,8 +431,53 @@ export interface Project {
   approximateArea?: number; // متراژ تقریبی به متر مربع
   specialNotes?: string; // توضیحات ویژه سفارش فروش
   
-  // تصاویر پروپوزال واحد فروش
+  // تصاویر پروپوزال واحد فروش و کارشناس ثبت‌کننده
   proposalImages: ProposalImage[];
+  isForceMajeure?: boolean; // پروژه اضطراری و فوری فروش (🔥)
+  priority?: 'NORMAL' | 'HIGH';
+  preInstallPhotosConfirmed?: boolean;
+  salesRepName?: string; // نام کارشناس فروش ثبت‌کننده
+  specialTools?: string[]; // ابزارهای ویژه تخصیص‌یافته (فارسی‌بر، دریل سرکج، نردبان بلند)
+  customerDisclaimerAgreed?: boolean; // تایید سلب مسئولیت حقوقی توسط کارفرما
+
+  // صورت‌جلسه تحویل کارگاه به اکیپ بعدی در پروژه‌های متوقف/نیمه‌کاره
+  interTeamHandover?: {
+    fromTeamId: string;
+    fromTeamName: string;
+    reportedByUserId: string;
+    reportedByUserName: string;
+    stoppedAt: string;
+    reason: string;
+    completedWork: string;
+    remainingWork: string;
+    requiredParts?: string;
+    photos: string[];
+  };
+
+  // اطلاعات اندازه‌گیری دوم و تایید بستر فضا
+  secondMeasurementDetails?: {
+    verifiedDimensions: string;
+    siteReadinessNotes?: string;
+    photos?: string[];
+    isReadinessApproved: boolean;
+    inspectedAt?: string;
+    inspectorId?: string;
+    inspectorName?: string;
+  };
+
+  // وضعیت آماده‌سازی و بسته‌بندی در انبار
+  warehousePrep?: {
+    isPackedAndReady: boolean;
+    packedAt?: string;
+    packedByUserId?: string;
+    packedByUserName?: string;
+    notes?: string;
+  };
+
+  // زیرساخت آماده برای مشخصات فنی آینده (بدون تحمیل به رابط کاربری فعلی)
+  motorSide?: 'RIGHT' | 'LEFT';
+  mountType?: 'INSIDE' | 'OUTSIDE';
+  roomTag?: string;
   
   // زمان‌بندی
   scheduledDate: string; // YYYY-MM-DD (جلالی یا میلادی استاندارد)

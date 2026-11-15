@@ -16,6 +16,7 @@ interface Props {
   onOpenCompletionModal: (project: Project) => void;
   onOpenDailyLogModal?: (project: Project) => void;
   onUpdateStatus: (projectId: string, from: ProjectStatus, to: ProjectStatus) => void;
+  onSavePreInstallPhotosAndStart?: (projectId: string, photos: string[]) => Promise<void> | void;
   onOpenCertificate?: (project: Project) => void;
   onReportStuck?: (project: Project) => void;
   onConfirmTransfer?: (project: Project) => void;
@@ -36,6 +37,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
   onOpenCompletionModal,
   onOpenDailyLogModal,
   onUpdateStatus,
+  onSavePreInstallPhotosAndStart,
   onOpenCertificate,
   onReportStuck,
   onConfirmTransfer,
@@ -212,6 +214,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 onOpenCompletionModal={onOpenCompletionModal}
                 onOpenDailyLogModal={onOpenDailyLogModal}
                 onUpdateStatus={onUpdateStatus}
+                onSavePreInstallPhotosAndStart={onSavePreInstallPhotosAndStart}
                 onOpenCertificate={onOpenCertificate}
                 onReportStuck={onReportStuck}
                 onConfirmTransfer={onConfirmTransfer}
@@ -321,6 +324,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               onOpenCompletionModal={onOpenCompletionModal}
               onOpenDailyLogModal={onOpenDailyLogModal}
               onUpdateStatus={onUpdateStatus}
+              onSavePreInstallPhotosAndStart={onSavePreInstallPhotosAndStart}
               onOpenCertificate={onOpenCertificate}
               onReportStuck={onReportStuck}
               onConfirmTransfer={onConfirmTransfer}

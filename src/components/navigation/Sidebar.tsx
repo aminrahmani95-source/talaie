@@ -8,6 +8,7 @@ import {
   Package,
   Users,
   Settings,
+  FileCheck2,
 } from 'lucide-react';
 import { ManagerTab } from './BottomNav';
 
@@ -39,6 +40,12 @@ export const Sidebar: React.FC<Props> = ({
       id: 'planner' as const,
       label: 'برنامه',
       icon: CalendarDays,
+      badge: undefined,
+    },
+    {
+      id: 'registry' as const,
+      label: 'شناسنامه پروژه‌ها',
+      icon: FileCheck2,
       badge: undefined,
     },
     {

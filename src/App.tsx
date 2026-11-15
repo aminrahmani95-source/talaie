@@ -84,6 +84,18 @@ const PersonnelEvaluationModal = React.lazy(() =>
 const FailedOperationsModal = React.lazy(() =>
   import('./components/admin/FailedOperationsModal').then((m) => ({ default: m.FailedOperationsModal }))
 );
+const CeoMasterRegistry = React.lazy(() =>
+  import('./components/ceo/CeoMasterRegistry').then((m) => ({ default: m.CeoMasterRegistry }))
+);
+const SalesPortal = React.lazy(() =>
+  import('./components/sales/SalesPortal').then((m) => ({ default: m.SalesPortal }))
+);
+const MeasurementDashboard = React.lazy(() =>
+  import('./components/measurement/MeasurementDashboard').then((m) => ({ default: m.MeasurementDashboard }))
+);
+const WarehouseDesk = React.lazy(() =>
+  import('./components/warehouse/WarehouseDesk').then((m) => ({ default: m.WarehouseDesk }))
+);
 
 // Code-split Modals loaded on demand
 const ProjectFormModal = React.lazy(() =>
@@ -582,8 +594,13 @@ export const App: React.FC = () => {
             return false;
           }
         }
-      } else if (mutation.type === 'CREATE_PROJECT' || mutation.type === 'DELETE_PROJECT') {
-        showToast('error', 'تنها مدیر ارشد QC مجاز به ثبت یا حذف مستقیم پروژه است.');
+      } else if (mutation.type === 'CREATE_PROJECT') {
+        if (currentUser.role !== 'SALES' && currentUser.role !== 'SCHEDULING_COORDINATOR') {
+          showToast('error', 'تنها مدیر ارشد QC یا کارشناس فروش مجاز به ثبت پروژه است.');
+          return false;
+        }
+      } else if (mutation.type === 'DELETE_PROJECT') {
+        showToast('error', 'تنها مدیر ارشد QC مجاز به حذف مستقیم پروژه است.');
         return false;
       } else if (mutation.type === 'APPEND_PROJECT_EVALUATION') {
         try {
@@ -1201,12 +1218,12 @@ export const App: React.FC = () => {
     showToast('success', `ارزیابی عملکرد ${evaluation.userName} با موفقیت در سرور ثبت گردید.`);
   };
 
-  // On-site acute stoppage / Stuck report handler (<72h KPI)
+  // On-site acute stoppage / Stuck report handler (<72h KPI) with Inter-Team Handover
   const handleReportStuck = (project: Project) => {
     setStuckModalProject(project);
   };
 
-  const handleConfirmReportStuck = async (incident: StuckIncident) => {
+  const handleConfirmReportStuck = async (incident: StuckIncident, handoverPayload?: any) => {
     if (!stuckModalProject || !currentUser) return;
     const projectId = stuckModalProject.id;
     const current = projectsRef.current.find((p) => p.id === projectId);
@@ -1229,6 +1246,10 @@ export const App: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
 
+    if (handoverPayload) {
+      patch.interTeamHandover = handoverPayload;
+    }
+
     await commit(
       {
         type: 'PATCH_PROJECT',
@@ -1244,7 +1265,216 @@ export const App: React.FC = () => {
         setStuckModalProject(null);
       }
     );
-    showToast('warning', 'پروژه به فهرست پروژه‌های متوقف‌شده ارجاع یافت و مهلت ۷۲ ساعته آغاز شد.');
+    showToast('warning', 'پروژه به فهرست پروژه‌های متوقف‌شده ارجاع یافت و شناسنامه تحویل به اکیپ بعدی ثبت شد.');
+  };
+
+  // Pre-Install Photos Confirmation and Start Execution Gate
+  const handleSavePreInstallPhotosAndStart = async (projectId: string, photos: string[]) => {
+    if (!currentUser) return;
+    const current = projectsRef.current.find((p) => p.id === projectId);
+    if (!current) return;
+
+    const nowIso = new Date().toISOString();
+    const existingSessions = current.workSessions || [];
+    const hasOpenSession = existingSessions.some((s) => !s.endedAt);
+    const updatedSessions = hasOpenSession
+      ? existingSessions
+      : [
+          ...existingSessions,
+          {
+            date: localDateKey(),
+            startedAt: nowIso,
+            byUserId: currentUser.id,
+            byUserName: currentUser.name,
+          },
+        ];
+
+    const patch: Partial<Project> = {
+      status: 'IN_PROGRESS',
+      beforePhotos: [...(current.beforePhotos || []), ...photos],
+      preInstallPhotosConfirmed: true,
+      startedAt: current.startedAt || nowIso,
+      workSessions: updatedSessions,
+      updatedAt: nowIso,
+    };
+
+    await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, patch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId ? { ...p, ...patch } : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+      }
+    );
+    showToast('success', 'عکس‌های قبل از نصب تایید و وضعیت پروژه به «در حال اجرا» تغییر یافت.');
+  };
+
+  // Sales Portal: Intake new project for installation
+  const handleSaveNewProjectFromSales = async (projectData: Partial<Project>) => {
+    if (!currentUser) return;
+    const nowIso = new Date().toISOString();
+    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `proj-${Date.now()}`;
+    const code = `TAL-${Date.now().toString().slice(-4)}`;
+
+    const newProj: Project = {
+      id: newId,
+      code,
+      title: projectData.title || 'پروژه جدید فروش',
+      customerName: projectData.customerName || projectData.title || 'نامشخص',
+      customerPhone: projectData.customerPhone || '',
+      address: projectData.address || '',
+      status: 'MEASUREMENT_PENDING',
+      scheduledDate: projectData.scheduledDate || '',
+      priority: projectData.isForceMajeure ? 'HIGH' : 'NORMAL',
+      isForceMajeure: Boolean(projectData.isForceMajeure),
+      salesRepName: projectData.salesRepName || currentUser.name,
+      proposalImages: projectData.proposalImages || [],
+      specialNotes: projectData.specialNotes || '',
+      shadePanels: projectData.shadePanels ?? 0,
+      curtainPanels: projectData.curtainPanels ?? 0,
+      scheduledTime: projectData.scheduledTime || '09:30',
+      assignedTechnicianIds: projectData.assignedTechnicianIds || [],
+      isFullTools: true,
+      toolsRequired: [],
+      completionPhotos: [],
+      qcStatus: 'NOT_STARTED',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      technicalHandover: {
+        isHandoverComplete: false,
+        productionConfirmation: { confirmed: false },
+        warehouseConfirmation: { confirmed: false },
+      },
+    };
+
+    await commit(
+      {
+        type: 'CREATE_PROJECT',
+        orderingKey: `project:${newProj.id}`,
+        payload: newProj,
+      },
+      () => {
+        const next = [newProj, ...projectsRef.current];
+        setProjects(next);
+        projectsRef.current = next;
+      }
+    );
+    showToast('success', `پروژه «${newProj.title}» با موفقیت توسط فروش ثبت گردید و در صف کار قرار گرفت.`);
+  };
+
+  // 2nd Measurement Lead: Save verification and readiness checks
+  const handleSaveMeasurement = async (projectId: string, details: any) => {
+    if (!currentUser) return;
+    const current = projectsRef.current.find((p) => p.id === projectId);
+    if (!current) return;
+
+    const patch: Partial<Project> = {
+      secondMeasurementDetails: details,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, patch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId ? { ...p, ...patch } : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+      }
+    );
+    showToast('success', 'تاییدیه اندازه‌گیری دوم و ارزیابی بستر فضا با موفقیت ذخیره شد.');
+  };
+
+  // Warehouse: Confirm packing ready
+  const handleConfirmWarehousePacking = async (projectId: string, notes?: string) => {
+    if (!currentUser) return;
+    const current = projectsRef.current.find((p) => p.id === projectId);
+    if (!current) return;
+
+    const prep = {
+      isPackedAndReady: true,
+      packedAt: new Date().toISOString(),
+      packedBy: currentUser.name,
+      packingNotes: notes || '',
+    };
+
+    const patch: Partial<Project> = {
+      warehousePrep: prep,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, patch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId ? { ...p, ...patch } : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+      }
+    );
+    showToast('success', `بسته‌بندی پروژه ${current.code || current.title} تایید شد و پرچم «بار آماده ✅» در تقویم مدیریت فعال گردید.`);
+  };
+
+  // Warehouse: Resolve urgent site ticket
+  const handleResolveWarehouseTicket = async (
+    ticketId: string,
+    action: 'SUPPLIED' | 'DISPATCHED_COURIER' | 'DELAYED',
+    payload?: {
+      courierInfo?: string;
+      trackingCode?: string;
+      delayReason?: string;
+      estimatedAvailableDate?: string;
+    }
+  ) => {
+    if (!currentUser) return;
+    const ticket = tickets.find((t) => t.id === ticketId);
+    if (!ticket) return;
+
+    let resolutionText = '';
+    let status: Ticket['status'] = 'OPEN';
+    if (action === 'SUPPLIED') {
+      resolutionText = `تحویل حضوری از انبار: قطعه توسط انباردار (${currentUser.name}) تامین و تحویل گردید.`;
+      status = 'RESOLVED';
+    } else if (action === 'DISPATCHED_COURIER') {
+      resolutionText = `ارسال با پیک/اسنپ به کارگاه: ${payload?.courierInfo || ''} — کد رهگیری: ${payload?.trackingCode || 'ندارد'} (ثبت شده توسط ${currentUser.name})`;
+      status = 'RESOLVED';
+    } else if (action === 'DELAYED') {
+      resolutionText = `تاخیر در تامین: ${payload?.delayReason || 'عدم موجودی فعلی'}. تاریخ تخمینی موجودی: ${payload?.estimatedAvailableDate || 'نامشخص'}`;
+      status = 'OPEN';
+    }
+
+    const patch: Partial<Ticket> = {
+      status,
+      resolutionNote: resolutionText,
+    };
+
+    await commit(
+      {
+        type: 'PATCH_TICKET',
+        orderingKey: `ticket:${ticketId}`,
+        payload: { id: ticketId, patch },
+      },
+      () => {
+        setTickets((prev) => prev.map((t) => (t.id === ticketId ? { ...t, ...patch } : t)));
+      }
+    );
+    showToast('success', 'وضعیت تیکت انبار با موفقیت به‌روزرسانی شد.');
   };
 
   // Acknowledge receipt of transferred project by receiving lead technician (Phase P2.2)
@@ -1670,7 +1900,47 @@ export const App: React.FC = () => {
 
       {/* Main Body */}
       <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
-        {isManagerOrCoordinator ? (
+        {currentUser.role === 'CEO' ? (
+          // ================= CEO / EXECUTIVE ARCHIVE VIEW =================
+          <React.Suspense fallback={<DashboardSkeleton />}>
+            <CeoMasterRegistry
+              currentUser={currentUser}
+              projects={projects}
+              users={users}
+            />
+          </React.Suspense>
+        ) : currentUser.role === 'SALES' ? (
+          // ================= SALES TEAM PORTAL =================
+          <React.Suspense fallback={<DashboardSkeleton />}>
+            <SalesPortal
+              currentUser={currentUser}
+              projects={projects}
+              onSaveNewProject={handleSaveNewProjectFromSales}
+              onViewProposal={(p) => setProposalModalProject(p)}
+            />
+          </React.Suspense>
+        ) : currentUser.role === 'MEASUREMENT_LEAD' ? (
+          // ================= 2ND MEASUREMENT & SITE READINESS DESK =================
+          <React.Suspense fallback={<DashboardSkeleton />}>
+            <MeasurementDashboard
+              currentUser={currentUser}
+              projects={projects}
+              onSaveMeasurement={handleSaveMeasurement}
+              onViewProposal={(p) => setProposalModalProject(p)}
+            />
+          </React.Suspense>
+        ) : currentUser.role === 'WAREHOUSE' ? (
+          // ================= WAREHOUSE PREPARATION & SITE DISPATCH DESK =================
+          <React.Suspense fallback={<DashboardSkeleton />}>
+            <WarehouseDesk
+              currentUser={currentUser}
+              projects={projects}
+              tickets={tickets}
+              onConfirmPacking={handleConfirmWarehousePacking}
+              onResolveTicket={handleResolveWarehouseTicket}
+            />
+          </React.Suspense>
+        ) : isManagerOrCoordinator ? (
           // ================= MANAGER / COORDINATOR VIEW =================
           <div className="flex gap-6 pb-20 lg:pb-6">
             <Sidebar
@@ -1684,6 +1954,14 @@ export const App: React.FC = () => {
 
             <div className="flex-1 min-w-0">
               <React.Suspense fallback={<DashboardSkeleton />}>
+                {activeTab === 'registry' && (
+                  <CeoMasterRegistry
+                    currentUser={currentUser}
+                    projects={projects}
+                    users={users}
+                  />
+                )}
+
                 {activeTab === 'control' && (
                   <OperationsControlCenter
                     currentUser={currentUser}
@@ -1807,6 +2085,7 @@ export const App: React.FC = () => {
               onOpenCompletionModal={(p) => setCompletionModalProject(p)}
               onOpenDailyLogModal={(p) => setDailyLogModalProject(p)}
               onUpdateStatus={transitionStatus}
+              onSavePreInstallPhotosAndStart={handleSavePreInstallPhotosAndStart}
               inFlightTransitions={inFlightTransitions}
               onOpenCertificate={(p) => setCertificateModalProject(p)}
               onReportStuck={handleReportStuck}

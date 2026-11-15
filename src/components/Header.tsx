@@ -29,8 +29,16 @@ export const Header: React.FC<Props> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const roleTitle =
-    currentUser.role === 'QC_MANAGER'
-      ? 'مدیر کنترل کیفیت'
+    currentUser.role === 'CEO'
+      ? 'مدیرعامل'
+      : currentUser.role === 'QC_MANAGER'
+      ? 'مدیر کنترل کیفیت و فنی'
+      : currentUser.role === 'SALES'
+      ? 'کارشناس فروش'
+      : currentUser.role === 'MEASUREMENT_LEAD'
+      ? 'مسئول متراژ و تایید بستر'
+      : currentUser.role === 'WAREHOUSE'
+      ? 'مسئول انبار و پیگیری تامین'
       : currentUser.role === 'SCHEDULING_COORDINATOR'
       ? 'مسئول هماهنگی و زمان‌بندی'
       : currentUser.role === 'LEAD_TECHNICIAN'

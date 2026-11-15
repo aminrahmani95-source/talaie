@@ -18,6 +18,8 @@ import {
   Moon,
   ArrowRightLeft,
   Package,
+  Camera,
+  Flame,
 } from 'lucide-react';
 import { toPersianDigits, localDateKey } from '../../utils/jalali';
 import { ActiveJobTimer } from '../ActiveJobTimer';
@@ -25,6 +27,7 @@ import { StatusPill } from '../ui/StatusPill';
 import { getMultiDayProgress } from '../../utils/multiDay';
 import { calculateActivityProgress } from '../../utils/planProgress';
 import { getLatestTeamTransfer, isPendingTransferAcknowledgment, hasPendingTransfer } from '../../utils/teamTransfer';
+import { PreInstallPhotoModal } from './PreInstallPhotoModal';
 
 interface Props {
   project: Project;
@@ -35,6 +38,7 @@ interface Props {
   onOpenCompletionModal: (project: Project) => void;
   onOpenDailyLogModal?: (project: Project) => void;
   onUpdateStatus: (projectId: string, from: ProjectStatus, to: ProjectStatus) => void;
+  onSavePreInstallPhotosAndStart?: (projectId: string, photos: string[]) => Promise<void> | void;
   onOpenCertificate?: (project: Project) => void;
   onReportStuck?: (project: Project) => void;
   onConfirmTransfer?: (project: Project) => void;
@@ -54,6 +58,7 @@ export const ProjectCard: React.FC<Props> = ({
   onOpenCompletionModal,
   onOpenDailyLogModal,
   onUpdateStatus,
+  onSavePreInstallPhotosAndStart,
   onOpenCertificate,
   onReportStuck,
   onConfirmTransfer,
@@ -64,6 +69,7 @@ export const ProjectCard: React.FC<Props> = ({
   isTransitioning = false,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isPreInstallModalOpen, setIsPreInstallModalOpen] = useState(false);
   const [resolvingDefectId, setResolvingDefectId] = useState<string | null>(null);
   const [resolvingNotes, setResolvingNotes] = useState<string>('');
   const [confirmingReceiptTarget, setConfirmingReceiptTarget] = useState<{
@@ -126,6 +132,12 @@ export const ProjectCard: React.FC<Props> = ({
               {multiDayProgress.badgeText}
             </span>
           )}
+          {project.isForceMajeure && (
+            <span className="flex items-center gap-1 text-[11px] bg-rose-600/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded font-black animate-pulse">
+              <Flame className="w-3.5 h-3.5 text-rose-400" />
+              <span>فورس‌ماژور</span>
+            </span>
+          )}
           <div className="flex items-center gap-1 text-xs font-bold text-[#9BA7B6]">
             <Clock className="w-3.5 h-3.5 text-[#C5A059]" />
             <span className="font-mono">{toPersianDigits(project.scheduledTime)}</span>
@@ -160,6 +172,62 @@ export const ProjectCard: React.FC<Props> = ({
             <div className="bg-[#0D1117] p-2 rounded border border-rose-500/30 text-[#F0F4F8] text-xs leading-relaxed">
               <span className="font-bold text-rose-400 block mb-0.5">نکات QC:</span>
               «{project.qcNotes}»
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Special Tools Assigned Banner */}
+      {project.specialTools && project.specialTools.length > 0 && (
+        <div className="bg-[#1C232D] border border-[#C5A059]/40 rounded-md p-2.5 text-xs flex items-center justify-between text-[#E5CA8F]">
+          <div className="flex items-center gap-2 font-bold">
+            <Wrench className="w-4 h-4 text-[#C5A059] shrink-0" />
+            <span>ابزار ویژه تحویلی این مأموریت: {project.specialTools.join('، ')}</span>
+          </div>
+          <span className="text-[10px] bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded font-bold shrink-0">
+            همراه خودرو
+          </span>
+        </div>
+      )}
+
+      {/* Inter-Team Handover Dossier (from previous crew) */}
+      {project.interTeamHandover && (
+        <div className="bg-sky-500/10 border border-sky-500/30 rounded-md p-3 text-xs space-y-2 text-sky-200">
+          <div className="flex items-center justify-between font-bold">
+            <span className="flex items-center gap-1.5">
+              <Layers className="w-4 h-4 text-sky-400 shrink-0" />
+              <span>صورت‌جلسه کارگاه تحویلی از «{project.interTeamHandover.fromTeamName}»</span>
+            </span>
+            <span className="text-[10px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded font-bold">
+              ادامه مأموریت
+            </span>
+          </div>
+          <div className="text-[11px] text-[#F0F4F8] space-y-1.5 bg-[#0D1117] p-2.5 rounded border border-sky-500/20 leading-relaxed">
+            <p>
+              <strong className="text-emerald-400">اقدامات انجام‌شده: </strong>
+              {project.interTeamHandover.completedWork}
+            </p>
+            <p>
+              <strong className="text-amber-400">کارهای باقیمانده: </strong>
+              {project.interTeamHandover.remainingWork}
+            </p>
+            {project.interTeamHandover.requiredParts && (
+              <p>
+                <strong className="text-purple-400">قطعات مورد نیاز: </strong>
+                {project.interTeamHandover.requiredParts}
+              </p>
+            )}
+          </div>
+          {project.interTeamHandover.photos && project.interTeamHandover.photos.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pt-1">
+              {project.interTeamHandover.photos.map((ph, i) => (
+                <img
+                  key={i}
+                  src={ph}
+                  alt={`عکس تحویل ${i + 1}`}
+                  className="w-12 h-12 rounded object-cover border border-[#212835]"
+                />
+              ))}
             </div>
           )}
         </div>
@@ -620,51 +688,79 @@ export const ProjectCard: React.FC<Props> = ({
             )}
 
             {isEnRoute && (
-              <button
-                type="button"
-                disabled={isTransitioning}
-                onClick={() => onUpdateStatus(project.id, 'EN_ROUTE', 'IN_PROGRESS')}
-                className="w-full py-3.5 px-4 bg-[#C5A059] hover:bg-[#D4AF37] disabled:opacity-50 text-[#0D1117] rounded-md text-sm font-bold shadow-xs transition flex items-center justify-center gap-2.5 active:scale-[0.99] min-h-[48px] cursor-pointer border border-[#C5A059]"
-              >
-                {isTransitioning ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Play className="w-5 h-5" />
-                )}
-                <span>{isTransitioning ? 'در حال ثبت...' : 'رسیدم، شروع نصب'}</span>
-              </button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  disabled={isTransitioning}
+                  onClick={() => setIsPreInstallModalOpen(true)}
+                  className="w-full py-3.5 px-4 bg-[#C5A059] hover:bg-[#D4AF37] disabled:opacity-50 text-[#0D1117] rounded-md text-sm font-black shadow-lg shadow-[#C5A059]/20 transition flex items-center justify-center gap-2.5 active:scale-[0.99] min-h-[48px] cursor-pointer border border-[#C5A059]"
+                >
+                  {isTransitioning ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Camera className="w-5 h-5 text-[#0D1117]" />
+                  )}
+                  <span>
+                    {isTransitioning ? 'در حال ثبت...' : 'رسیدم سر کارگاه (ثبت الزامی عکس‌های قبل نصب)'}
+                  </span>
+                </button>
+              </div>
             )}
 
             {isInProgress && (
-              isBeforeEndDate ? (
-                <div className="space-y-2">
+              <div className="space-y-2.5">
+                {/* Fast Action Toolbar during Installation */}
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => onOpenDailyLogModal?.(project)}
-                    className="w-full py-3 px-4 bg-[#151B23] hover:bg-[#1C232D] text-[#C5A059] border border-[#C5A059] rounded-md text-xs sm:text-sm font-bold shadow-xs transition flex items-center justify-center gap-2 active:scale-[0.99] min-h-[46px] cursor-pointer"
+                    onClick={() => onOpenTicketModal(project)}
+                    className="py-2.5 px-3 bg-[#111620] hover:bg-[#1C232D] text-amber-300 border border-amber-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                   >
-                    <Moon className="w-4 h-4 text-[#C5A059]" />
-                    <span>پایان شیفت امروز (ثبت پیشرفت و ادامه در روز بعد)</span>
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    <span>ثبت کسری / مشکل</span>
                   </button>
+                  {onReportStuck && (
+                    <button
+                      type="button"
+                      onClick={() => onReportStuck(project)}
+                      className="py-2.5 px-3 bg-[#111620] hover:bg-[#1C232D] text-rose-300 border border-rose-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
+                      <span>اعلام توقف (نیمه‌کاره)</span>
+                    </button>
+                  )}
+                </div>
+
+                {isBeforeEndDate ? (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => onOpenDailyLogModal?.(project)}
+                      className="w-full py-2.5 px-4 bg-[#151B23] hover:bg-[#1C232D] text-[#C5A059] border border-[#C5A059] rounded-md text-xs sm:text-sm font-bold shadow-xs transition flex items-center justify-center gap-2 active:scale-[0.99] min-h-[44px] cursor-pointer"
+                    >
+                      <Moon className="w-4 h-4 text-[#C5A059]" />
+                      <span>پایان شیفت امروز (ثبت پیشرفت و ادامه در روز بعد)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenCompletionModal(project)}
+                      className="w-full py-3 px-4 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-md text-xs sm:text-sm font-black shadow-xs transition flex items-center justify-center gap-2 active:scale-[0.99] min-h-[46px] cursor-pointer border border-[#C5A059]"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-[#0D1117]" />
+                      <span>نصب کل پروژه امروز تمام شد؟ ثبت اتمام کامل و ارسال به QC</span>
+                    </button>
+                  </div>
+                ) : (
                   <button
                     type="button"
                     onClick={() => onOpenCompletionModal(project)}
-                    className="w-full py-3 px-4 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-md text-xs sm:text-sm font-bold shadow-xs transition flex items-center justify-center gap-2 active:scale-[0.99] min-h-[46px] cursor-pointer border border-[#C5A059]"
+                    className="w-full py-3.5 px-4 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-md text-sm font-black shadow-lg shadow-[#C5A059]/20 transition flex items-center justify-center gap-2.5 active:scale-[0.99] min-h-[48px] cursor-pointer border border-[#C5A059]"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-[#0D1117]" />
-                    <span>نصب کل پروژه امروز تمام شد؟ ثبت اتمام کامل و ارسال به QC</span>
+                    <CheckCircle2 className="w-5 h-5 text-[#0D1117]" />
+                    <span>ثبت اتمام کار و ارسال به QC</span>
                   </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onOpenCompletionModal(project)}
-                  className="w-full py-3.5 px-4 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-md text-sm font-bold shadow-xs transition flex items-center justify-center gap-2.5 active:scale-[0.99] min-h-[48px] cursor-pointer border border-[#C5A059]"
-                >
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span>ثبت اتمام کار و ارسال به QC</span>
-                </button>
-              )
+                )}
+              </div>
             )}
           </>
         )}
@@ -833,6 +929,20 @@ export const ProjectCard: React.FC<Props> = ({
           </div>
         </div>
       )}
+
+      {/* Pre-Installation Photos Mandatory Gate Modal */}
+      <PreInstallPhotoModal
+        project={project}
+        isOpen={isPreInstallModalOpen}
+        onClose={() => setIsPreInstallModalOpen(false)}
+        onSubmit={async (photos) => {
+          if (onSavePreInstallPhotosAndStart) {
+            await onSavePreInstallPhotosAndStart(project.id, photos);
+          } else {
+            onUpdateStatus(project.id, 'EN_ROUTE', 'IN_PROGRESS');
+          }
+        }}
+      />
     </div>
   );
 };

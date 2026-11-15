@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Sheet } from '../ui/Sheet';
 
-export type ManagerTab = 'control' | 'planner' | 'qc' | 'stuck' | 'tickets' | 'materials' | 'technicians' | 'settings';
+export type ManagerTab = 'control' | 'planner' | 'qc' | 'stuck' | 'tickets' | 'materials' | 'technicians' | 'settings' | 'registry';
 
 interface Props {
   activeTab: ManagerTab;

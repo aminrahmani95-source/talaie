@@ -244,15 +244,18 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
     visibility: hidden;
   }
 
-  /* Only display certificate modal hierarchy */
+  /* Only display certificate & passport modal hierarchy */
   .certificate-modal-overlay,
-  .certificate-modal-overlay * {
+  .certificate-modal-overlay *,
+  .passport-print-overlay,
+  .passport-print-overlay * {
     visibility: visible;
   }
 
-  .certificate-modal-overlay {
+  .certificate-modal-overlay,
+  .passport-print-overlay {
     position: static !important;
-    background: transparent !important;
+    background: #ffffff !important;
     padding: 0 !important;
     margin: 0 !important;
     overflow: visible !important;
@@ -262,7 +265,8 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
     display: block !important;
   }
 
-  .certificate-modal-container {
+  .certificate-modal-container,
+  .passport-print-container {
     position: static !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -270,8 +274,24 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
     padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    background: transparent !important;
+    background: #ffffff !important;
+    color: #000000 !important;
     overflow: visible !important;
+  }
+
+  .passport-a4-sheet {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
   }
 
   .no-print {

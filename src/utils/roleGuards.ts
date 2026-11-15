@@ -34,6 +34,11 @@ export const ALLOWED_TECHNICIAN_PATCH_KEYS = new Set([
   'representativePhone',
   'unavailabilityReason',
   'unavailabilityPhotos',
+  'interTeamHandover',
+  'customerDisclaimerAgreed',
+  'preInstallPhotosConfirmed',
+  'secondMeasurementDetails',
+  'warehousePrep',
 ]);
 
 export function isHandoverGatePassed(project: Partial<Project>, patch?: Record<string, any>): boolean {
@@ -60,7 +65,16 @@ export function isHandoverGatePassed(project: Partial<Project>, patch?: Record<s
 
 export function canAccessProject(user: User, project: Project, userTeamId?: string): boolean {
   if (!user.active) return false;
-  if (user.role === 'QC_MANAGER' || user.role === 'SCHEDULING_COORDINATOR') return true;
+  if (
+    user.role === 'CEO' ||
+    user.role === 'QC_MANAGER' ||
+    user.role === 'SCHEDULING_COORDINATOR' ||
+    user.role === 'SALES' ||
+    user.role === 'WAREHOUSE' ||
+    user.role === 'MEASUREMENT_LEAD'
+  ) {
+    return true;
+  }
   if (project.leadTechnicianId === user.id) return true;
   if ((project.assignedTechnicianIds || []).includes(user.id)) return true;
   if (userTeamId && project.assignedTeamId && userTeamId === project.assignedTeamId) return true;
@@ -437,6 +451,44 @@ export function validateProjectPatchRoleGuards(
     return;
   }
 
+  // نقش مدیر عامل (CEO) - صرفاً دسترسی مشاهده دارد
+  if (user.role === 'CEO') {
+    throw new PermanentError('دسترسی غیرمجاز: مدیر عامل صرفاً دسترسی مشاهده شناسنامه جامع پروژه‌ها را دارد.');
+  }
+
+  // نقش مسئول اندازه‌گیری دوم (MEASUREMENT_LEAD)
+  if (user.role === 'MEASUREMENT_LEAD') {
+    const allowedLeadKeys = new Set(['secondMeasurementDetails', 'siteReadiness', 'notes', 'updatedAt']);
+    for (const key of Object.keys(patch)) {
+      if (!allowedLeadKeys.has(key)) {
+        throw new PermanentError(`دسترسی غیرمجاز: مسئول اندازه‌گیری دوم اجازه تغییر فیلد «${key}» را ندارد.`);
+      }
+    }
+    return;
+  }
+
+  // نقش انباردار و پیگیری تامین (WAREHOUSE)
+  if (user.role === 'WAREHOUSE') {
+    const allowedWarehouseKeys = new Set(['warehousePrep', 'updatedAt']);
+    for (const key of Object.keys(patch)) {
+      if (!allowedWarehouseKeys.has(key)) {
+        throw new PermanentError(`دسترسی غیرمجاز: مسئول انبار اجازه تغییر فیلد «${key}» را ندارد.`);
+      }
+    }
+    return;
+  }
+
+  // نقش کارشناس فروش (SALES)
+  if (user.role === 'SALES') {
+    const allowedSalesKeys = new Set(['proposalImages', 'notes', 'updatedAt', 'isForceMajeure', 'clientName', 'address', 'phone']);
+    for (const key of Object.keys(patch)) {
+      if (!allowedSalesKeys.has(key)) {
+        throw new PermanentError(`دسترسی غیرمجاز: کارشناس فروش اجازه تغییر فیلد «${key}» را ندارد.`);
+      }
+    }
+    return;
+  }
+
   // ۱. بررسی تخصیص پروژه به کاربر یا اکیپ او
   const isDirectlyAssigned =
     project.leadTechnicianId === user.id ||
@@ -615,6 +667,11 @@ export function validateTicketRoleGuards(
   userTeamId?: string
 ): void {
   if (user.role === 'QC_MANAGER') {
+    return;
+  }
+
+  // مسئول انبار مجاز به تغییر و تعیین وضعیت تیکت‌های فوری و قطعات است
+  if (user.role === 'WAREHOUSE') {
     return;
   }
 

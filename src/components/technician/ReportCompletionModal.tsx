@@ -801,6 +801,14 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     </span>
                   </div>
 
+                  {/* Legal Disclaimer Box */}
+                  <div className="p-3 rounded-lg bg-[#C5A059]/10 border border-[#C5A059]/30 text-xs text-[#E5CA8F] space-y-1">
+                    <span className="font-bold text-[#F0F4F8] block">متن رسمی و حقوقی تاییدیه تحویل کارفرما:</span>
+                    <p className="leading-relaxed text-[11px] text-[#E5CA8F]">
+                      «اینجانب کارفرما، صحت عملکرد و سلامت کامل پرده‌ها و شیدها، کالیبراسیون مکانیزم‌ها، و همچنین نظافت و عدم وجود هرگونه خسارت به محیط کارگاه/ساختمان را تحویل گرفته و تایید می‌نمایم.»
+                    </p>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-medium text-[#9BA7B6] mb-1 flex items-center gap-1.5">
                       <PenTool className="w-3.5 h-3.5 text-[#C5A059]" />

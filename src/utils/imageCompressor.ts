@@ -5,10 +5,18 @@
  */
 export async function compressImageFile(
   file: File,
-  maxWidth = 1280,
+  maxWidthOrOptions: number | { maxWidth?: number; maxHeight?: number; quality?: number } = 1280,
   maxHeight = 1280,
   quality = 0.75
 ): Promise<string> {
+  let maxWidth = 1280;
+  if (typeof maxWidthOrOptions === 'object') {
+    maxWidth = maxWidthOrOptions.maxWidth ?? 1280;
+    maxHeight = maxWidthOrOptions.maxHeight ?? 1280;
+    quality = maxWidthOrOptions.quality ?? 0.75;
+  } else {
+    maxWidth = maxWidthOrOptions;
+  }
   return new Promise((resolve, reject) => {
     // If SVG or non-image, fallback to raw data URL
     if (file.type === 'image/svg+xml' || !file.type.startsWith('image/')) {
