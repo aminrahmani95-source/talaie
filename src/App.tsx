@@ -41,6 +41,13 @@ import {
 import { createDefectResolutionPayload } from './utils/qcWorkflow';
 import { getDisplayName } from './utils/technicianName';
 import { localDateKey, toPersianDigits } from './utils/jalali';
+import {
+  DEMO_USERS,
+  DEMO_TEAMS,
+  DEMO_TEAM_MEMBERS,
+  getDemoProjects,
+  getDemoTickets,
+} from './utils/demoData';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
 import { TechnicianDashboard } from './components/technician/TechnicianDashboard';
@@ -139,11 +146,20 @@ export const App: React.FC = () => {
   const [failedQueueCount, setFailedQueueCount] = useState<number>(0);
   const [isFailedOpsModalOpen, setIsFailedOpsModalOpen] = useState<boolean>(false);
 
-  const [users, setUsers] = useState<User[]>(() => StorageService.getUsers());
-  const [teams, setTeams] = useState<InstallationTeam[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [users, setUsers] = useState<User[]>(() => {
+    const u = StorageService.getUsers();
+    return u.length > 0 ? u : DEMO_USERS;
+  });
+  const [teams, setTeams] = useState<InstallationTeam[]>(DEMO_TEAMS);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(DEMO_TEAM_MEMBERS);
+  const [projects, setProjects] = useState<Project[]>(() => {
+    const p = StorageService.getProjects();
+    return p.length > 0 ? p : getDemoProjects();
+  });
+  const [tickets, setTickets] = useState<Ticket[]>(() => {
+    const t = StorageService.getTickets();
+    return t.length > 0 ? t : getDemoTickets();
+  });
   const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(() => StorageService.getSettings());
   const [scheduleChangeRequests, setScheduleChangeRequests] = useState<ScheduleChangeRequest[]>([]);
@@ -157,13 +173,22 @@ export const App: React.FC = () => {
       if (cachedProjects.length > 0) {
         setProjects(cachedProjects);
         projectsRef.current = cachedProjects;
+      } else {
+        const demo = getDemoProjects();
+        setProjects(demo);
+        projectsRef.current = demo;
       }
       if (cachedTickets.length > 0) {
         setTickets(cachedTickets);
+      } else {
+        setTickets(getDemoTickets());
       }
       if (cachedMaterials.length > 0) {
         setMaterialRequests(cachedMaterials);
       }
+      setTeams((prev) => (prev.length > 0 ? prev : DEMO_TEAMS));
+      setTeamMembers((prev) => (prev.length > 0 ? prev : DEMO_TEAM_MEMBERS));
+      setUsers((prev) => (prev.length > 0 ? prev : DEMO_USERS));
     }
   }, [currentUser?.id]);
 
@@ -270,6 +295,12 @@ export const App: React.FC = () => {
 
     // 1. Fetch initial server data after login
     const loadCloudData = async () => {
+      const client = SupabaseSyncService.getClient();
+      if (!client) {
+        setIsSyncedWithServer(true);
+        setIsOfflineMode(false);
+        return;
+      }
       const currentSeq = ++fetchSeqRef.current;
       try {
         const [cloudProjects, cloudTickets, cloudUsers, cloudSettings, cloudTeams, cloudTeamMembers, cloudScheduleChanges, cloudMaterials] = await Promise.all([
