@@ -2006,6 +2006,7 @@ export const App: React.FC = () => {
                     onNavigateTab={(tab) => setActiveTab(tab)}
                     onOpenProject={(p) => setManagedProjectId(p.id)}
                     onOpenScheduleRequests={() => setActiveTab('planner')}
+                    onNewProject={handleOpenNewProject}
                   />
                 )}
 
