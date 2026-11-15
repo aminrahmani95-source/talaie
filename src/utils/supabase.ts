@@ -95,15 +95,18 @@ function createCustomFetch() {
   };
 }
 
+const PRODUCTION_SUPABASE_URL = 'https://jlrjiiyobukeeralxkpb.supabase.co';
+const PRODUCTION_SUPABASE_ANON_KEY = 'sb_publishable_qVjiN5u3V0QMU-ji0pvrcw_GzAIYk0S';
+
 export const SupabaseSyncService = {
   /**
    * Returns or initializes the singleton Supabase client.
-   * Credentials come strictly from environment variables (.env).
+   * Credentials come from environment variables (.env) with production fallback.
    * Session is persisted in localStorage by Supabase Auth (persistSession: true).
    */
   getClient(): SupabaseClient | null {
-    const finalUrl = import.meta.env.VITE_SUPABASE_URL;
-    const finalKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const finalUrl = import.meta.env.VITE_SUPABASE_URL || PRODUCTION_SUPABASE_URL;
+    const finalKey = import.meta.env.VITE_SUPABASE_ANON_KEY || PRODUCTION_SUPABASE_ANON_KEY;
     if (!finalUrl || !finalKey) return null;
 
     if (supabaseInstance && currentUrl === finalUrl && currentKey === finalKey) {

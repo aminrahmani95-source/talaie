@@ -49,8 +49,9 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const MOCK_PROJECT_IDS = new Set(['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6']);
-const MOCK_USER_IDS = new Set(['u-admin-1', 'u-lead-1', 'u-tech-1']);
-const MOCK_TICKET_IDS = new Set(['t-1']);
+const isMockProjectId = (id: string) => !id || MOCK_PROJECT_IDS.has(id) || id.startsWith('p-demo-');
+const isMockTicketId = (id: string) => !id || id === 't-1' || id.startsWith('t-demo-');
+const isMockUserId = (id: string) => !id || id.startsWith('u-demo-');
 
 export const StorageService = {
   getProjects(userId?: string): Project[] {
@@ -63,7 +64,7 @@ export const StorageService = {
       const parsed: Project[] = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
       // Filter out any legacy mock/test projects
-      const filtered = parsed.filter((p) => p && p.id && !MOCK_PROJECT_IDS.has(p.id));
+      const filtered = parsed.filter((p) => p && p.id && !isMockProjectId(p.id));
       return filtered.map((p) => ({
         ...p,
         __fromCache: true,
@@ -85,7 +86,7 @@ export const StorageService = {
       const key = userId ? `${STORAGE_KEYS.PROJECTS}_${userId}` : STORAGE_KEYS.PROJECTS;
       // Lightweight cache: strip large base64 strings and __fromCache flag so it never causes QuotaExceededError
       const lightweightProjects = projects
-        .filter((p) => p && p.id && !MOCK_PROJECT_IDS.has(p.id))
+        .filter((p) => p && p.id && !isMockProjectId(p.id))
         .map((p) => {
           const copy: any = {
             ...p,
@@ -115,7 +116,7 @@ export const StorageService = {
     try {
       const parsed: User[] = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
-      return parsed.filter((u) => u && u.id && !MOCK_USER_IDS.has(u.id));
+      return parsed.filter((u) => u && u.id && !isMockUserId(u.id));
     } catch {
       return [];
     }
@@ -123,7 +124,7 @@ export const StorageService = {
 
   saveUsers(users: User[]) {
     try {
-      const filtered = users.filter((u) => u && u.id && !MOCK_USER_IDS.has(u.id));
+      const filtered = users.filter((u) => u && u.id && !isMockUserId(u.id));
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(filtered));
     } catch (e) {
       console.warn('LocalStorage saveUsers failed:', e);
@@ -139,7 +140,7 @@ export const StorageService = {
     try {
       const parsed: Ticket[] = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
-      return parsed.filter((t) => t && t.id && !MOCK_TICKET_IDS.has(t.id));
+      return parsed.filter((t) => t && t.id && !isMockTicketId(t.id));
     } catch {
       return [];
     }
@@ -148,7 +149,7 @@ export const StorageService = {
   saveTickets(tickets: Ticket[], userId?: string) {
     try {
       const key = userId ? `${STORAGE_KEYS.TICKETS}_${userId}` : STORAGE_KEYS.TICKETS;
-      const filtered = tickets.filter((t) => t && t.id && !MOCK_TICKET_IDS.has(t.id));
+      const filtered = tickets.filter((t) => t && t.id && !isMockTicketId(t.id));
       localStorage.setItem(key, JSON.stringify(filtered));
     } catch (e) {
       console.warn('LocalStorage saveTickets failed:', e);
