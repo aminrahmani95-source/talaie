@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Camera, X, CheckCircle2, Upload, AlertTriangle, Loader2 } from 'lucide-react';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { Project } from '../../types';
+import { CloudImage } from '../common/CloudImage';
 
 interface Props {
   project: Project;
@@ -152,7 +153,7 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-48 overflow-y-auto p-1 bg-[#0D1117] rounded-lg border border-[#212835]">
                 {photos.map((url, idx) => (
                   <div key={idx} className="relative aspect-square rounded-md overflow-hidden border border-[#212835] group">
-                    <img src={url} alt={`پیش‌نصب ${idx + 1}`} className="w-full h-full object-cover" />
+                    <CloudImage src={url} alt={`پیش‌نصب ${idx + 1}`} className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => handleRemovePhoto(idx)}

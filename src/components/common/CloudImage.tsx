@@ -15,37 +15,46 @@ export const CloudImage: React.FC<Props> = ({
 }) => {
   const [resolvedSrc, setResolvedSrc] = useState<string | undefined>(() => {
     if (!src) return undefined;
+    const trimmed = src.trim();
     if (
-      src.startsWith('data:') ||
-      src.startsWith('http://') ||
-      src.startsWith('https://') ||
-      src.startsWith('blob:')
+      trimmed.startsWith('data:') ||
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('blob:')
     ) {
-      return src;
+      return trimmed;
     }
     return undefined;
   });
 
+  const [hasError, setHasError] = useState(false);
+
   useEffect(() => {
-    if (!src) {
+    setHasError(false);
+    if (!src || src.trim() === '') {
       setResolvedSrc(undefined);
       return;
     }
 
+    const trimmed = src.trim();
     if (
-      src.startsWith('data:') ||
-      src.startsWith('http://') ||
-      src.startsWith('https://') ||
-      src.startsWith('blob:')
+      trimmed.startsWith('data:') ||
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('blob:')
     ) {
-      setResolvedSrc(src);
+      setResolvedSrc(trimmed);
       return;
     }
 
     let isMounted = true;
-    SupabaseSyncService.getSignedPhotoUrl(src).then((url) => {
+    SupabaseSyncService.getSignedPhotoUrl(trimmed).then((url) => {
       if (isMounted) {
-        setResolvedSrc(url);
+        if (url) {
+          setResolvedSrc(url);
+        } else {
+          setHasError(true);
+        }
       }
     });
 
@@ -54,21 +63,35 @@ export const CloudImage: React.FC<Props> = ({
     };
   }, [src]);
 
-  if (!src || src.trim() === '') {
+  if (!src || src.trim() === '' || hasError) {
     if (fallback) return <>{fallback}</>;
-    return null;
+    return (
+      <div
+        className={`bg-stone-100 text-stone-400 text-[10px] flex items-center justify-center rounded p-1 text-center ${className}`}
+      >
+        <span>تصویر در دسترس نیست</span>
+      </div>
+    );
   }
 
   if (!resolvedSrc) {
     if (fallback) return <>{fallback}</>;
     return (
       <div
-        className={`bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded-lg flex items-center justify-center text-zinc-400 text-xs ${className}`}
+        className={`bg-stone-200 animate-pulse rounded flex items-center justify-center text-stone-500 text-[10px] ${className}`}
       >
-        <span>در حال بارگذاری...</span>
+        <span>در حال بارگذاری تصویر...</span>
       </div>
     );
   }
 
-  return <img src={resolvedSrc} alt={alt} className={className} {...rest} />;
+  return (
+    <img
+      src={resolvedSrc}
+      alt={alt}
+      className={className}
+      onError={() => setHasError(true)}
+      {...rest}
+    />
+  );
 };

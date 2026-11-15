@@ -734,7 +734,7 @@ export const SalesPortal: React.FC<Props> = ({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 cursor-zoom-out"
         >
           <div className="relative max-w-2xl max-h-[90vh] rounded-xl overflow-hidden shadow-2xl">
-            <img src={previewPhotoUrl} alt="تصویر پروژه" className="w-full h-full object-contain" />
+            <CloudImage src={previewPhotoUrl} alt="تصویر پروژه" className="w-full h-full object-contain" />
             <button
               type="button"
               onClick={() => setPreviewPhotoUrl(null)}

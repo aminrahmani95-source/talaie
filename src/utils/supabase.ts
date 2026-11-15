@@ -1634,18 +1634,21 @@ export const SupabaseSyncService = {
    * If it's a Supabase Storage path, returns a cached or freshly generated signed URL.
    */
   async getSignedPhotoUrl(path: string): Promise<string> {
-    if (!path) return '';
+    if (!path || typeof path !== 'string') return '';
+    const trimmed = path.trim();
+    if (!trimmed) return '';
+
     if (
-      path.startsWith('data:') ||
-      path.startsWith('http://') ||
-      path.startsWith('https://') ||
-      path.startsWith('blob:')
+      trimmed.startsWith('data:') ||
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('blob:')
     ) {
-      return path;
+      return trimmed;
     }
 
     // Check memory cache
-    const cached = signedUrlCache.get(path);
+    const cached = signedUrlCache.get(trimmed);
     if (cached && cached.expiresAt > Date.now() + 60000) {
       return cached.url;
     }
@@ -1653,21 +1656,36 @@ export const SupabaseSyncService = {
     const client = this.getClient();
     if (!client) return '';
 
+    // Strip leading slashes and optional redundant bucket prefix
+    const cleanPath = trimmed.replace(/^(\/+)|(talaie-photos\/+)/g, '').replace(/^\/+/, '');
+
     try {
       const { data, error } = await client.storage
         .from('talaie-photos')
-        .createSignedUrl(path, 3600); // 1 hour validity
+        .createSignedUrl(cleanPath, 3600); // 1 hour validity
 
-      if (error || !data?.signedUrl) {
-        return '';
+      if (data?.signedUrl) {
+        signedUrlCache.set(trimmed, {
+          url: data.signedUrl,
+          expiresAt: Date.now() + 3500 * 1000,
+        });
+        return data.signedUrl;
       }
 
-      signedUrlCache.set(path, {
-        url: data.signedUrl,
-        expiresAt: Date.now() + 3500 * 1000,
-      });
+      // Fallback: try public URL if createSignedUrl failed
+      const { data: pubData } = client.storage
+        .from('talaie-photos')
+        .getPublicUrl(cleanPath);
 
-      return data.signedUrl;
+      if (pubData?.publicUrl) {
+        signedUrlCache.set(trimmed, {
+          url: pubData.publicUrl,
+          expiresAt: Date.now() + 3500 * 1000,
+        });
+        return pubData.publicUrl;
+      }
+
+      return '';
     } catch {
       return '';
     }

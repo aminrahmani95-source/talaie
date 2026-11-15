@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
+import { CloudImage } from '../common/CloudImage';
 
 interface Props {
   currentUser: User;
@@ -315,12 +316,13 @@ export const MeasurementDashboard: React.FC<Props> = ({
                         {photos.length > 0 && (
                           <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1">
                             {photos.map((p, i) => (
-                              <img
-                                key={i}
-                                src={p}
-                                alt="عکس کارگاه"
-                                className="w-14 h-14 rounded-lg object-cover border border-[#212835]"
-                              />
+                              <div key={i} className="w-14 h-14 rounded-lg overflow-hidden shrink-0 border border-[#212835]">
+                                <CloudImage
+                                  src={p}
+                                  alt="عکس کارگاه"
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
                             ))}
                           </div>
                         )}

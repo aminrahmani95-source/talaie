@@ -16,6 +16,7 @@ import {
 import { getUpcomingDays } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
 import { compressImageFile } from '../../utils/imageCompressor';
+import { CloudImage } from '../common/CloudImage';
 
 interface Props {
   project: Project;
@@ -390,7 +391,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                     key={idx}
                     className="relative group aspect-square rounded-md overflow-hidden border border-[#212835] bg-zinc-100 dark:bg-zinc-800"
                   >
-                    <img
+                    <CloudImage
                       src={photo}
                       alt={`مستند ${idx + 1}`}
                       className="w-full h-full object-cover"

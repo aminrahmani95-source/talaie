@@ -3,6 +3,7 @@ import { Project, StuckIncident, StuckCategory } from '../../types';
 import { AlertOctagon, X, ShieldAlert, Send, Camera, Upload, Loader2, CheckCircle2 } from 'lucide-react';
 import { getDisplayName } from '../../utils/technicianName';
 import { compressImageFile } from '../../utils/imageCompressor';
+import { CloudImage } from '../common/CloudImage';
 
 interface Props {
   project: Project;
@@ -285,7 +286,7 @@ export const ReportStuckModal: React.FC<Props> = ({
                 <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1">
                   {photos.map((p, i) => (
                     <div key={i} className="relative w-14 h-14 rounded overflow-hidden border border-[#212835] shrink-0">
-                      <img src={p} alt="وضعیت توقف" className="w-full h-full object-cover" />
+                      <CloudImage src={p} alt="وضعیت توقف" className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
+import { CloudImage } from './CloudImage';
 
 interface Props {
   project: Project;
@@ -31,8 +32,10 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
   const leadName = users.find((u) => u.id === project.leadTechnicianId)?.name;
   const leadTech = leadName ? getDisplayName(leadName) : project.assignedTeamName || 'اکیپ رسمی طلائیه';
 
-  const beforePhoto = project.beforePhotos?.[0];
-  const afterPhoto = project.afterPhotos?.[0] || project.completionPhotos?.[0];
+  const beforePhoto = project.beforePhotos?.find((ph) => Boolean(ph && ph.trim() !== ''));
+  const afterPhoto =
+    project.afterPhotos?.find((ph) => Boolean(ph && ph.trim() !== '')) ||
+    project.completionPhotos?.find((ph) => Boolean(ph && ph.trim() !== ''));
 
   const content = (
     <div
@@ -165,7 +168,7 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
                 <span className="text-[10px] font-bold text-stone-600 block">تصویر وضعیت فضا پیش از نصب</span>
                 <div className="h-28 sm:h-32 w-full rounded overflow-hidden bg-stone-200 border border-stone-300 flex items-center justify-center">
                   {beforePhoto ? (
-                    <img src={beforePhoto} alt="قبل نصب" className="w-full h-full object-cover" />
+                    <CloudImage src={beforePhoto} alt="قبل نصب" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-[10px] text-stone-500">تصویر ثبت نشده</span>
                   )}
@@ -177,7 +180,7 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
                 <span className="text-[10px] font-bold text-stone-600 block">تصویر کار تکمیل‌شده نهایی</span>
                 <div className="h-28 sm:h-32 w-full rounded overflow-hidden bg-stone-200 border border-stone-300 flex items-center justify-center">
                   {afterPhoto ? (
-                    <img src={afterPhoto} alt="بعد نصب" className="w-full h-full object-cover" />
+                    <CloudImage src={afterPhoto} alt="بعد نصب" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-[10px] text-stone-500">تصویر ثبت نشده</span>
                   )}
@@ -203,11 +206,13 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
               <div className="text-center">
                 <span className="text-[9px] text-stone-500 block mb-0.5">امضای دیجیتال کارفرما:</span>
                 {project.customerSignature ? (
-                  <img
-                    src={project.customerSignature}
-                    alt="امضای کارفرما"
-                    className="h-10 sm:h-12 w-28 object-contain border border-stone-300 rounded bg-white"
-                  />
+                  <div className="h-10 sm:h-12 w-28 border border-stone-300 rounded bg-white overflow-hidden p-0.5 flex items-center justify-center">
+                    <CloudImage
+                      src={project.customerSignature}
+                      alt="امضای کارفرما"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
                 ) : (
                   <div className="h-10 w-24 border border-dashed border-stone-400 rounded flex items-center justify-center text-[9px] text-stone-400">
                     امضا در سیستم موجود نیست

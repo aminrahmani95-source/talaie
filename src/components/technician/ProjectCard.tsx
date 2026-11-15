@@ -28,6 +28,7 @@ import { getMultiDayProgress } from '../../utils/multiDay';
 import { calculateActivityProgress } from '../../utils/planProgress';
 import { getLatestTeamTransfer, isPendingTransferAcknowledgment, hasPendingTransfer } from '../../utils/teamTransfer';
 import { PreInstallPhotoModal } from './PreInstallPhotoModal';
+import { CloudImage } from '../common/CloudImage';
 
 interface Props {
   project: Project;
@@ -221,12 +222,13 @@ export const ProjectCard: React.FC<Props> = ({
           {project.interTeamHandover.photos && project.interTeamHandover.photos.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-x-auto pt-1">
               {project.interTeamHandover.photos.map((ph, i) => (
-                <img
-                  key={i}
-                  src={ph}
-                  alt={`عکس تحویل ${i + 1}`}
-                  className="w-12 h-12 rounded object-cover border border-[#212835]"
-                />
+                <div key={i} className="w-12 h-12 rounded overflow-hidden shrink-0 border border-[#212835]">
+                  <CloudImage
+                    src={ph}
+                    alt={`عکس تحویل ${i + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               ))}
             </div>
           )}
