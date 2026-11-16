@@ -15,6 +15,9 @@ import {
   Users,
   ShieldCheck,
   Check,
+  Truck,
+  Send,
+  Package,
 } from 'lucide-react';
 import { toPersianDigits, formatJalaliDateTime } from '../../utils/jalali';
 import { CloudImage } from '../common/CloudImage';
@@ -34,39 +37,72 @@ interface Props {
   tickets: Ticket[];
   onUpdateTicket: (ticket: Ticket) => void;
   currentUser?: User;
+  users?: User[];
 }
 
-type SlaFilterTab = 'ALL' | 'OPEN_IN_SLA' | 'OPEN_OVERDUE' | 'RESOLVED_IN_SLA' | 'RESOLVED_OVERDUE';
+type TicketStatusFilter = 'ALL' | 'OPEN' | 'CRITICAL' | 'RESOLVED';
 
-export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, currentUser }) => {
-  const [filter, setFilter] = useState<SlaFilterTab>('ALL');
+export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, currentUser, users }) => {
+  const [filter, setFilter] = useState<TicketStatusFilter>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
-  const [blockingOnly, setBlockingOnly] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
+  // Referral to Warehouse states
+  const [referringTicketId, setReferringTicketId] = useState<string | null>(null);
+  const [referralTargetUserId, setReferralTargetUserId] = useState<string>('');
+  const [referralNoteText, setReferralNoteText] = useState<string>('');
+  const [referralUrgent, setReferralUrgent] = useState<boolean>(true);
+  const [referralError, setReferralError] = useState<string>('');
+
+  // Extract warehouse personnel
+  const warehouseUsers = useMemo(() => {
+    const list = (users || []).filter((u) => u.role === 'WAREHOUSE' && u.active !== false);
+    if (list.length > 0) return list;
+    return [
+      {
+        id: 'wh-davood',
+        name: 'داوود حسینی',
+        role: 'WAREHOUSE' as const,
+        active: true,
+      },
+    ];
+  }, [users]);
+
   // Compute SLA Metrics
   const slaMetrics = useMemo(() => computeSlaMetrics(tickets), [tickets]);
+
+  // Filter counts
+  const criticalCount = useMemo(() => {
+    return tickets.filter((t) => t.status === 'OPEN' && (t.isBlocking || getTicketSlaStatus(t) === 'OPEN_OVERDUE')).length;
+  }, [tickets]);
+
+  const openInSlaCount = useMemo(() => {
+    return tickets.filter((t) => t.status === 'OPEN' && !t.isBlocking && getTicketSlaStatus(t) !== 'OPEN_OVERDUE').length;
+  }, [tickets]);
+
+  const resolvedCount = useMemo(() => {
+    return tickets.filter((t) => t.status === 'RESOLVED').length;
+  }, [tickets]);
 
   // Filtered tickets
   const filteredTickets = useMemo(() => {
     return tickets.filter((t) => {
-      const slaStatus = getTicketSlaStatus(t);
+      const isCritical = t.isBlocking || getTicketSlaStatus(t) === 'OPEN_OVERDUE';
 
-      // SLA Status filter
-      if (filter !== 'ALL' && slaStatus !== filter) {
-        return false;
+      // Status filter
+      if (filter === 'OPEN') {
+        if (t.status !== 'OPEN' || isCritical) return false;
+      } else if (filter === 'CRITICAL') {
+        if (t.status !== 'OPEN' || !isCritical) return false;
+      } else if (filter === 'RESOLVED') {
+        if (t.status !== 'RESOLVED') return false;
       }
 
       // Category filter
       if (categoryFilter !== 'ALL' && t.category !== categoryFilter) {
-        return false;
-      }
-
-      // Blocking filter
-      if (blockingOnly && !t.isBlocking) {
         return false;
       }
 
@@ -84,7 +120,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
 
       return true;
     });
-  }, [tickets, filter, categoryFilter, blockingOnly, searchQuery]);
+  }, [tickets, filter, categoryFilter, searchQuery]);
 
   const handleResolve = (ticket: Ticket) => {
     if (!resolutionNote.trim()) {
@@ -118,6 +154,59 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
     setResolutionNote('');
   };
 
+  const handleStartReferral = (ticket: Ticket) => {
+    setReferringTicketId(ticket.id);
+    setResolvingId(null);
+    setReferralError('');
+    setReferralTargetUserId(ticket.assignedUserId || warehouseUsers[0]?.id || 'wh-davood');
+    setReferralNoteText(ticket.referralNote || '');
+    setReferralUrgent(ticket.isBlocking ?? true);
+  };
+
+  const handleConfirmReferral = (ticket: Ticket) => {
+    if (!referralNoteText.trim()) {
+      setReferralError('لطفاً شرح اقلام مورد نیاز یا دستور ارسال پیک را بنویسید.');
+      return;
+    }
+
+    const targetUser = warehouseUsers.find((u) => u.id === referralTargetUserId) || warehouseUsers[0];
+    const targetName = targetUser ? getDisplayName(targetUser.name) : 'داوود حسینی (مسئول انبار)';
+    const senderName = currentUser ? getDisplayName(currentUser.name) : 'مدیریت و هماهنگی';
+    const nowIso = new Date().toISOString();
+
+    const updated: Ticket = {
+      ...ticket,
+      assignedRole: 'WAREHOUSE',
+      assignedDepartment: 'انبار و تدارکات',
+      assignedTeamName: 'انبار مرکزی و لجستیک',
+      assignedUserId: targetUser?.id || 'wh-davood',
+      assignedUserName: targetName,
+      referralNote: referralNoteText.trim(),
+      referredAt: nowIso,
+      referredByUserName: senderName,
+      isBlocking: referralUrgent,
+      blockingReason: referralUrgent
+        ? (ticket.blockingReason || `کسری متریال سر پروژه: ${referralNoteText.trim()}`)
+        : ticket.blockingReason,
+      actionHistory: [
+        ...(ticket.actionHistory || []),
+        {
+          id: `act-${Date.now()}`,
+          timestamp: nowIso,
+          action: 'REFERRED_TO_WAREHOUSE',
+          byUserId: currentUser?.id || 'coord-mgr',
+          byUserName: senderName,
+          note: `ارجاع به ${targetName}: ${referralNoteText.trim()}${referralUrgent ? ' (ارسال فوری/بحرانی)' : ''}`,
+        },
+      ],
+    };
+
+    onUpdateTicket(updated);
+    setReferringTicketId(null);
+    setReferralNoteText('');
+    setReferralError('');
+  };
+
   const getCategoryTitle = (ticket: Ticket) => {
     if (ticket.category && ISSUE_CATEGORY_LABELS[ticket.category]) {
       return ISSUE_CATEGORY_LABELS[ticket.category];
@@ -142,7 +231,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
     <div className="space-y-6 pb-12">
       {/* Page Header */}
       <PageHeader
-        title="مرکز تیکت‌ها و پایش SLA ۷۲ ساعته"
+        title="مرکز تیکت‌ها و پایش SLA 72 ساعته"
         subtitle="مدیریت یکپارچه نواقص اجرایی، خرابی‌های ابزار، تطابق استانداردها و حل بحران‌ها"
       />
 
@@ -151,7 +240,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
         {/* Metric 1: SLA Compliance */}
         <div className="bg-[#151B23] rounded-lg p-4 border border-[#212835]  space-y-2">
           <div className="flex items-center justify-between text-neutral-500">
-            <span className="text-xs font-bold">نرخ رعایت SLA ۷۲h</span>
+            <span className="text-xs font-bold">نرخ رعایت SLA 72h</span>
             <Activity className="w-4 h-4 text-[#C5A059]" />
           </div>
           <div className="flex items-baseline gap-2">
@@ -189,7 +278,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
               {toPersianDigits(slaMetrics.openOverdue)}
             </span>
             <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold">
-              {slaMetrics.openOverdue > 0 ? 'عبور از ۷۲ ساعت' : 'صفر (عالی)'}
+              {slaMetrics.openOverdue > 0 ? 'عبور از 72 ساعت' : 'صفر (عالی)'}
             </span>
           </div>
           <span className="text-[11px] text-neutral-400 block truncate">
@@ -231,25 +320,24 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-[#151B23] rounded-lg p-4 border border-[#212835]  space-y-3">
-        {/* SLA Status Tabs */}
+      <div className="bg-[#151B23] rounded-lg p-4 border border-[#212835] space-y-3">
+        {/* Status Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
           {[
             { id: 'ALL', label: 'همه تیکت‌ها', count: tickets.length },
-            { id: 'OPEN_IN_SLA', label: 'باز در مهلت', count: slaMetrics.openInSla },
-            { id: 'OPEN_OVERDUE', label: 'بحرانی منقضی', count: slaMetrics.openOverdue, alert: true },
-            { id: 'RESOLVED_IN_SLA', label: 'حل به موقع', count: slaMetrics.resolvedInSla },
-            { id: 'RESOLVED_OVERDUE', label: 'حل با تاخیر', count: slaMetrics.resolvedOverdue },
+            { id: 'OPEN', label: 'باز در مهلت', count: openInSlaCount },
+            { id: 'CRITICAL', label: 'بحرانی و مسدودکننده', count: criticalCount, alert: true },
+            { id: 'RESOLVED', label: 'حل‌شده', count: resolvedCount },
           ].map((tab) => {
             const isActive = filter === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setFilter(tab.id as SlaFilterTab)}
-                className={`px-3 py-1.5 rounded-md font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
+                onClick={() => setFilter(tab.id as TicketStatusFilter)}
+                className={`px-3 py-1.5 rounded-md font-bold whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
                   isActive
-                    ? 'bg-[#212121] dark:bg-[#C1A056] text-white dark:text-[#141414] '
+                    ? 'bg-[#C5A059] text-[#0D1117] shadow-xs'
                     : 'bg-[#111620] border border-[#212835] text-[#9BA7B6] hover:bg-[#1C232D] hover:text-[#F0F4F8]'
                 }`}
               >
@@ -259,8 +347,8 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                     tab.alert && tab.count > 0
                       ? 'bg-rose-500 text-white'
                       : isActive
-                      ? 'bg-white/20 text-current'
-                      : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'
+                      ? 'bg-[#0D1117] text-[#C5A059]'
+                      : 'bg-[#212835] text-[#9BA7B6]'
                   }`}
                 >
                   {toPersianDigits(tab.count)}
@@ -271,15 +359,15 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
         </div>
 
         {/* Category & Search Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-[#212835]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-[#212835]">
           {/* Category Dropdown */}
           <div>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#111620] dark:text-white"
+              className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#111620] text-[#F0F4F8] focus:border-[#C5A059]"
             >
-              <option value="ALL">همه دسته‌بندی‌های ایراد (۸ گانه)</option>
+              <option value="ALL">همه دسته‌بندی‌های ایراد (8 گانه)</option>
               {Object.entries(ISSUE_CATEGORY_LABELS).map(([catKey, catLabel]) => (
                 <option key={catKey} value={catKey}>
                   {catLabel}
@@ -295,24 +383,8 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="جستجو بر اساس پروژه، کد یا فرستنده..."
-              className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#111620] dark:text-white"
+              className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#111620] text-[#F0F4F8] focus:border-[#C5A059]"
             />
-          </div>
-
-          {/* Blocking Only Toggle */}
-          <div className="flex items-center">
-            <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-neutral-700 dark:text-neutral-300">
-              <input
-                type="checkbox"
-                checked={blockingOnly}
-                onChange={(e) => setBlockingOnly(e.target.checked)}
-                className="rounded border-neutral-300 text-rose-600 focus:ring-rose-500 w-4 h-4"
-              />
-              <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400">
-                <AlertOctagon className="w-3.5 h-3.5" />
-                فقط موارد مسدودکننده (Blocking)
-              </span>
-            </label>
           </div>
         </div>
       </div>
@@ -392,7 +464,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                 <div className="p-2 rounded-md bg-[#111620] border border-[#212835] flex items-center justify-between text-xs">
                   <span className="text-neutral-500 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-neutral-400" />
-                    <span>وضعیت مهلت ۷۲h:</span>
+                    <span>وضعیت مهلت 72h:</span>
                   </span>
                   {t.status === 'OPEN' ? (
                     remainingHours > 0 ? (
@@ -442,6 +514,41 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                   </div>
                 )}
 
+                {/* Referral to Warehouse Status Card */}
+                {(t.assignedRole === 'WAREHOUSE' || Boolean(t.referralNote)) && (
+                  <div className="bg-purple-950/25 border border-purple-500/40 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-purple-300">
+                      <span className="flex items-center gap-1.5">
+                        <Truck className="w-4 h-4 text-purple-400" />
+                        <span>ارجاع شده به انبار و لجستیک</span>
+                      </span>
+                      {t.referredAt && (
+                        <span className="text-[10px] text-purple-400/80 font-normal">
+                          {formatJalaliDateTime(t.referredAt)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-[#C5A059] bg-[#111620] px-2.5 py-1.5 rounded border border-[#212835]">
+                      <span className="text-neutral-400">تحویل‌گیرنده اقدام:</span>
+                      <span className="font-bold text-white flex items-center gap-1">
+                        <Package className="w-3.5 h-3.5 text-purple-400" />
+                        {t.assignedUserName || 'داوود حسینی (مسئول انبار)'}
+                      </span>
+                    </div>
+                    {t.referralNote && (
+                      <div className="text-xs text-[#F0F4F8] bg-[#0D1117] p-2.5 rounded border border-purple-500/20 space-y-1">
+                        <span className="text-[11px] text-purple-300 font-bold block">دستور اقدام و تامین قطعه:</span>
+                        <p className="text-xs text-[#9BA7B6] leading-relaxed">{t.referralNote}</p>
+                      </div>
+                    )}
+                    {t.referredByUserName && (
+                      <span className="text-[10px] text-neutral-500 block">
+                        ارسال‌شده توسط: {t.referredByUserName}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Action History / Resolution Details */}
                 {t.status === 'RESOLVED' && (
                   <div className="bg-[#111620] rounded-md p-3 border border-[#C5A059]/30 text-xs text-[#F0F4F8] space-y-1">
@@ -467,9 +574,95 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
 
                 {/* Action Form for Open Tickets */}
                 {t.status === 'OPEN' && (
-                  <div className="pt-2 border-t border-[#212835]">
-                    {resolvingId === t.id ? (
-                      <div className="space-y-2">
+                  <div className="pt-2 border-t border-[#212835] space-y-2">
+                    {/* If this ticket is being referred */}
+                    {referringTicketId === t.id ? (
+                      <div className="bg-[#111620] border border-purple-500/50 rounded-lg p-3.5 space-y-3">
+                        <div className="flex items-center justify-between text-purple-300 font-bold text-xs pb-1 border-b border-[#212835]">
+                          <span className="flex items-center gap-1.5">
+                            <Truck className="w-4 h-4 text-purple-400" />
+                            <span>ارجاع به مسئول انبار و لجستیک جهت ارسال پیک / قطعه</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setReferringTicketId(null)}
+                            className="text-neutral-400 hover:text-white"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Warehouse Officer Selector */}
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-neutral-300 block">
+                            انتخاب مسئول انبار و تامین:
+                          </label>
+                          <select
+                            value={referralTargetUserId}
+                            onChange={(e) => setReferralTargetUserId(e.target.value)}
+                            className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#0D1117] text-white"
+                          >
+                            {warehouseUsers.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {getDisplayName(u.name)} (مسئول انبار و لجستیک)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Referral Instructions Note */}
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-neutral-300 block">
+                            دستور اقدام و شرح اقلام درخواستی: *
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={referralNoteText}
+                            onChange={(e) => {
+                              setReferralNoteText(e.target.value);
+                              if (referralError) setReferralError('');
+                            }}
+                            placeholder="مثال: کسری ۲ عدد براکت و رول پارچه - لطفاً سریعاً با پیک اسنپ به آدرس پروژه ارسال شود..."
+                            className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] text-white focus:border-purple-500 focus:outline-none"
+                          />
+                          {referralError && (
+                            <p className="text-[11px] text-rose-400 font-bold">{referralError}</p>
+                          )}
+                        </div>
+
+                        {/* Urgent/Blocking Toggle */}
+                        <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-neutral-300">
+                          <input
+                            type="checkbox"
+                            checked={referralUrgent}
+                            onChange={(e) => setReferralUrgent(e.target.checked)}
+                            className="rounded border-neutral-600 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                          />
+                          <span>ارسال با اولویت فوری (اعلام به عنوان مانع کار نصاب)</span>
+                        </label>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleConfirmReferral(t)}
+                            className="flex-1 py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>تایید و ارسال به کارتابل انبار</span>
+                          </button>
+                          <Button variant="ghost" size="sm" onClick={() => setReferringTicketId(null)}>
+                            انصراف
+                          </Button>
+                        </div>
+                      </div>
+                    ) : resolvingId === t.id ? (
+                      /* Direct Resolution Form */
+                      <div className="space-y-2 bg-[#111620] border border-[#212835] rounded-lg p-3">
+                        <div className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>ثبت اقدام و بستن مستقیم تیکت توسط QC / مدیریت</span>
+                        </div>
                         <textarea
                           rows={2}
                           value={resolutionNote}
@@ -493,15 +686,32 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                         </div>
                       </div>
                     ) : (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setResolvingId(t.id)}
-                        icon={<CheckCircle2 className="w-4 h-4" />}
-                        className="w-full"
-                      >
-                        اقدام و رفع مشکل
-                      </Button>
+                      /* Dual Action Buttons */
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleStartReferral(t)}
+                          className="w-full py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow cursor-pointer border border-purple-500/30"
+                        >
+                          <Truck className="w-3.5 h-3.5" />
+                          <span>
+                            {t.assignedRole === 'WAREHOUSE' ? 'ویرایش ارجاع به انبار' : 'ارجاع به انبار و لجستیک'}
+                          </span>
+                        </button>
+
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setResolvingId(t.id);
+                            setReferringTicketId(null);
+                          }}
+                          icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                          className="w-full"
+                        >
+                          اقدام و رفع مستقیم
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}

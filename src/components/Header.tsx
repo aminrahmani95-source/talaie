@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { Moon, Sun, LogOut, X, Cloud, CloudOff, AlertOctagon, Check, FileCheck2, LayoutDashboard } from 'lucide-react';
+import { Moon, Sun, LogOut, X, Cloud, CloudOff, AlertOctagon, Check } from 'lucide-react';
 import { Avatar } from './ui/Avatar';
 import { IconButton } from './ui/IconButton';
 import { getDisplayName } from '../utils/technicianName';
@@ -14,8 +14,6 @@ interface Props {
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
   onLogout: () => void;
-  activeTab?: string;
-  onSelectTab?: (tab: any) => void;
 }
 
 export const Header: React.FC<Props> = ({
@@ -27,8 +25,6 @@ export const Header: React.FC<Props> = ({
   isDarkMode = false,
   onToggleDarkMode,
   onLogout,
-  activeTab,
-  onSelectTab,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -72,34 +68,8 @@ export const Header: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Right Controls: Manager Dashboard Switcher + Sync Pill + Theme Toggle + User Avatar */}
+          {/* Right Controls: Sync Pill + Theme Toggle + User Avatar */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Direct Switcher to General Manager Dashboard */}
-            {onSelectTab && (currentUser.role === 'QC_MANAGER' || currentUser.role === 'SCHEDULING_COORDINATOR' || currentUser.role === 'CEO') && (
-              <button
-                type="button"
-                onClick={() => onSelectTab(activeTab === 'registry' ? 'control' : 'registry')}
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 min-h-[34px] rounded-lg text-xs font-black transition cursor-pointer border active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] ${
-                  activeTab === 'registry'
-                    ? 'bg-[#C5A059] text-[#0D1117] border-[#C5A059] shadow-xs ring-1 ring-[#C5A059]/40'
-                    : 'bg-[#151B23] text-[#E5CA8F] border-[#C5A059]/40 hover:bg-[#1C232D]'
-                }`}
-                title={activeTab === 'registry' ? 'سوئیچ به میز کار عملیاتی' : 'سوئیچ به داشبورد مدیر کل'}
-              >
-                {activeTab === 'registry' ? (
-                  <>
-                    <LayoutDashboard className="w-3.5 h-3.5" />
-                    <span>میز کار عملیاتی</span>
-                  </>
-                ) : (
-                  <>
-                    <FileCheck2 className="w-3.5 h-3.5 text-[#C5A059]" />
-                    <span>داشبورد مدیر کل</span>
-                  </>
-                )}
-              </button>
-            )}
-
             {/* Sync Status Indicator Pill */}
             {failedQueueCount > 0 ? (
               <button

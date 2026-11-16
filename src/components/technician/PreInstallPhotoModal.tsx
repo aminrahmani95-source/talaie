@@ -3,6 +3,7 @@ import { Camera, X, CheckCircle2, Upload, AlertTriangle, Loader2 } from 'lucide-
 import { compressImageFile } from '../../utils/imageCompressor';
 import { Project } from '../../types';
 import { CloudImage } from '../common/CloudImage';
+import { toPersianDigits } from '../../utils/jalali';
 
 interface Props {
   project: Project;
@@ -148,7 +149,7 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
           {photos.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs font-bold text-[#9BA7B6]">
-                <span>تصاویر ثبت‌شده ({photos.length} مورد):</span>
+                <span>تصاویر ثبت‌شده ({toPersianDigits(photos.length)} مورد):</span>
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-48 overflow-y-auto p-1 bg-[#0D1117] rounded-lg border border-[#212835]">
                 {photos.map((url, idx) => (
@@ -157,7 +158,7 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => handleRemovePhoto(idx)}
-                      className="absolute top-1 left-1 w-6 h-6 rounded-full bg-rose-600/90 text-white flex items-center justify-center opacity-90 hover:opacity-100 transition shadow-md"
+                      className="absolute top-1 left-1 w-6 h-6 rounded-full bg-rose-600/90 text-white flex items-center justify-center opacity-90 hover:opacity-100 transition shadow-md cursor-pointer"
                       title="حذف تصویر"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -180,7 +181,7 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2.5 rounded-lg text-xs font-bold bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] transition"
+              className="px-4 py-2.5 rounded-lg text-xs font-bold bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
             >
               انصراف
             </button>

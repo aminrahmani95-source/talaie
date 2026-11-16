@@ -30,7 +30,7 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
   }, []);
 
   const leadName = users.find((u) => u.id === project.leadTechnicianId)?.name;
-  const leadTech = leadName ? getDisplayName(leadName) : project.assignedTeamName || 'اکیپ رسمی طلائیه';
+  const leadTech = leadName ? getDisplayName(leadName) : project.assignedTeamName || 'اکیپ رسمی گالری طلایی';
 
   const beforePhoto = project.beforePhotos?.find((ph) => Boolean(ph && ph.trim() !== ''));
   const afterPhoto =
@@ -52,7 +52,7 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
             </div>
             <div>
               <h3 className="font-black text-base text-[#F0F4F8]">
-                شناسنامه رسمی و پرونده ۳۶۰ درجه پروژه
+                شناسنامه رسمی و پرونده 360 درجه پروژه
               </h3>
               <p className="text-xs text-[#9BA7B6]">
                 <span className="font-mono text-[#C5A059] font-bold">{project.code}</span> • {project.title}
@@ -91,7 +91,7 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
               />
               <div>
                 <h1 className="text-lg sm:text-xl font-black text-stone-900 tracking-tight">
-                  گالری پرده و شید طلائیه
+                  گالری طلایی
                 </h1>
                 <p className="text-[11px] font-bold text-stone-600 mt-0.5">
                   شناسنامه رسمی عملیات، تحویل کارفرما و تاییدیه کنترل کیفیت (QC)
@@ -238,7 +238,7 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
                   />
                 ))}
                 <span className="font-black text-stone-900 mr-1.5 text-xs">
-                  {toPersianDigits(project.qcScore || 5)} از ۵ ستاره
+                  {toPersianDigits(project.qcScore || 5)} از 5 ستاره
                 </span>
               </div>
               {project.qcNotes && (

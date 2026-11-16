@@ -295,7 +295,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="text-xs font-semibold text-[#F0F4F8]">
-            مأموریت‌های {selectedDayInfo?.persianDayName} {selectedDayInfo?.persianDayNum}{' '}
+            مأموریت‌های {selectedDayInfo?.persianDayName} {selectedDayInfo?.persianDayNum ? toPersianDigits(selectedDayInfo.persianDayNum) : ''}{' '}
             {selectedDayInfo?.persianMonthName}:
           </div>
           <span className="text-xs text-[#9BA7B6] font-medium tabular-nums">

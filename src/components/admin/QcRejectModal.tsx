@@ -158,7 +158,7 @@ export const QcRejectModal: React.FC<Props> = ({
                 setReason(e.target.value);
                 setError('');
               }}
-              placeholder="مثال: چین لت سمت چپ ۲ سانتیمتر نامتقارن است و نیاز به بخاردهی مجدد دارد..."
+              placeholder="مثال: چین لت سمت چپ 2 سانتیمتر نامتقارن است و نیاز به بخاردهی مجدد دارد..."
               className="w-full text-xs p-3 rounded-md border border-[#2D3748] focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-[#0D1117] text-[#F0F4F8] leading-relaxed resize-none"
             />
             {error && <p className="text-rose-400 text-xs font-bold mt-1">{error}</p>}

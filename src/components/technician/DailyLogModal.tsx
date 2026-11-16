@@ -304,7 +304,7 @@ export const DailyLogModal: React.FC<Props> = ({
                       step="0.5"
                       value={todayInputs[act.activityId] || ''}
                       onChange={(e) => handleInputChange(act.activityId, e.target.value)}
-                      placeholder="۰"
+                      placeholder="0"
                       className="w-full text-center text-xs font-bold font-mono tabular-nums p-2 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059]"
                     />
                   </div>

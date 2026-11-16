@@ -1,10 +1,10 @@
 // ==============================================================================
 // گالری طلایی | منطق انتقال رسمی پروژه بین اکیپ‌ها و صورت‌جلسه تحویل (فاز P2.2)
 // قوانین:
-// ۱. انتقال پروژه صرفاً در صلاحیت مدیر QC و مسئول هماهنگی و زمان‌بندی است.
-// ۲. سرپرست اکیپ اجازه انتقال پروژه را ندارد و صرفاً تحویل‌گیری را تایید می‌کند.
-// ۳. پروژه همواره دارای ۱ رکورد پایدار است؛ هیچ پروژه تکراری ساخته نمی‌شود.
-// ۴. اقلام باقیمانده کار محاسبه و در صورت‌جلسه تحویل ثبت می‌گردد.
+// 1. انتقال پروژه صرفاً در صلاحیت مدیر QC و مسئول هماهنگی و زمان‌بندی است.
+// 2. سرپرست اکیپ اجازه انتقال پروژه را ندارد و صرفاً تحویل‌گیری را تایید می‌کند.
+// 3. پروژه همواره دارای 1 رکورد پایدار است؛ هیچ پروژه تکراری ساخته نمی‌شود.
+// 4. اقلام باقیمانده کار محاسبه و در صورت‌جلسه تحویل ثبت می‌گردد.
 // ==============================================================================
 
 import { Project, User, InstallationTeam, TeamTransferRecord, HandoverInventoryItem } from '../types';
@@ -52,9 +52,9 @@ export function getLatestTeamTransfer(project: Project): TeamTransferRecord | un
 /**
  * بررسی اینکه آیا انتقال تایید یا رفع انسداد شده است (توسط سرپرست اکیپ مقصد یا مدیر QC).
  * قوانین اعتبارسنجی:
- * ۱. سازگاری با سوابق تاریخی: در سوابق گذشته یا تاییدهای رسمی سرپرست، اگر receivingLeadConfirmed === true باشد
+ * 1. سازگاری با سوابق تاریخی: در سوابق گذشته یا تاییدهای رسمی سرپرست، اگر receivingLeadConfirmed === true باشد
  *    و ادعای همزمان پرچم جعلی override وجود نداشته باشد، معتبر تلقی می‌شود.
- * ۲. رفع انسداد مدیریتی جدید (Manager Override): صرفاً زمانی معتبر است که تمام شرایط زیر برقرار باشد:
+ * 2. رفع انسداد مدیریتی جدید (Manager Override): صرفاً زمانی معتبر است که تمام شرایط زیر برقرار باشد:
  *    - isManagerOverride دقیقا true باشد
  *    - managerOverrideByUserId شناسه غیرخالی و معتبر کاربر باشد
  *    - managerOverrideRole دقیقا برابر 'QC_MANAGER' باشد
@@ -65,7 +65,7 @@ export function getLatestTeamTransfer(project: Project): TeamTransferRecord | un
 export function isTransferResolved(transfer: TeamTransferRecord | undefined): boolean {
   if (!transfer) return true;
 
-  // ۱. سازگاری کامل با رکوردهای تاریخی و تایید رسمی سرپرست اکیپ مقصد
+  // 1. سازگاری کامل با رکوردهای تاریخی و تایید رسمی سرپرست اکیپ مقصد
   if (transfer.receivingLeadConfirmed === true) {
     // ادعای همزمان پرچم override و تایید فیزیکی سرپرست دستکاری‌شده است و معتبر نیست
     if (transfer.isManagerOverride === true) {
@@ -74,7 +74,7 @@ export function isTransferResolved(transfer: TeamTransferRecord | undefined): bo
     return true;
   }
 
-  // ۲. اعتبارسنجی دقیق متادیتای ممیزی در صورت رفع انسداد مدیریتی
+  // 2. اعتبارسنجی دقیق متادیتای ممیزی در صورت رفع انسداد مدیریتی
   if (transfer.isManagerOverride === true) {
     // الف) شناسه کاربر مدیر ثبت‌کننده
     if (
@@ -129,9 +129,9 @@ export function hasPendingTransfer(project: Project): boolean {
 /**
  * بررسی اینکه آیا پروژه به اکیپ فعلی منتقل شده و در انتظار تایید تحویل توسط سرپرست رسمی اکیپ جدید است.
  * الزامات اکید:
- * ۱. user.id === project.leadTechnicianId
- * ۲. user.role === 'LEAD_TECHNICIAN'
- * ۳. اکیپ منتسب کاربر باید دقیقاً با latestTransfer.toTeamId مطابقت داشته باشد
+ * 1. user.id === project.leadTechnicianId
+ * 2. user.role === 'LEAD_TECHNICIAN'
+ * 3. اکیپ منتسب کاربر باید دقیقاً با latestTransfer.toTeamId مطابقت داشته باشد
  */
 export function isPendingTransferAcknowledgment(
   project: Project,
@@ -189,7 +189,7 @@ export function createTeamTransferPayload(params: CreateTeamTransferParams): {
     throw new Error('ثبت دلیل مستند برای انتقال رسمی پروژه به اکیپ دیگر الزامی است.');
   }
 
-  // ۱. محاسبه اقلام باقیمانده کار جهت درج در صورت‌جلسه تحویل به اکیپ جدید
+  // 1. محاسبه اقلام باقیمانده کار جهت درج در صورت‌جلسه تحویل به اکیپ جدید
   const progressList = calculateActivityProgress(project);
   const handoverInventory: HandoverInventoryItem[] = progressList.map((item) => ({
     activityId: item.activityId,
@@ -198,7 +198,7 @@ export function createTeamTransferPayload(params: CreateTeamTransferParams): {
     unit: item.unit,
   }));
 
-  // ۲. استخراج شناسه سرپرست و اعضای اکیپ جدید
+  // 2. استخراج شناسه سرپرست و اعضای اکیپ جدید
   const supervisorId = targetSupervisor?.id || targetTeam.supervisorId || undefined;
   const assignedTechnicianIds = targetTeamMembers.length > 0
     ? targetTeamMembers.map((m) => m.id)
@@ -214,7 +214,7 @@ export function createTeamTransferPayload(params: CreateTeamTransferParams): {
   const transferId = 'trf-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
   const nowIso = new Date().toISOString();
 
-  // ۳. ایجاد رکورد رسمی صورت‌جلسه انتقال
+  // 3. ایجاد رکورد رسمی صورت‌جلسه انتقال
   const transferRecord: TeamTransferRecord = {
     id: transferId,
     fromTeamId,
@@ -233,7 +233,7 @@ export function createTeamTransferPayload(params: CreateTeamTransferParams): {
 
   const existingTransfers = project.teamTransfers || [];
 
-  // ۴. تولید پچ جامع پروژه با حفظ رکورد یکتای پروژه
+  // 4. تولید پچ جامع پروژه با حفظ رکورد یکتای پروژه
   const patch: Partial<Project> = {
     assignedTeamId: targetTeam.id,
     assignedTeamName: targetTeam.name,

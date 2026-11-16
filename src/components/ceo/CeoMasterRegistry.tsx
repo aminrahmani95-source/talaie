@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Filter,
   X,
+  Check,
 } from 'lucide-react';
 import { toPersianDigits, getTodayPersianString, formatJalali } from '../../utils/jalali';
 import { ProjectPassportPrint } from '../common/ProjectPassportPrint';
@@ -107,7 +108,7 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
             </span>
           </div>
           <p className="text-xs sm:text-sm text-[#9BA7B6] mt-1.5 leading-relaxed">
-            کارتابل اشراف ۳۶۰ درجه، آمار کلان اجرایی و صدور شناسنامه رسمی پروژه‌های گالری طلائیه
+            کارتابل اشراف 360 درجه، آمار کلان اجرایی و صدور شناسنامه رسمی پروژه‌های گالری طلایی
           </p>
         </div>
 
@@ -116,42 +117,129 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
         </div>
       </div>
 
-      {/* KPI Cards Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-[#151B23] rounded-2xl p-4 border border-[#212835] space-y-1">
-          <span className="text-xs text-[#9BA7B6] font-bold">کل مأموریت‌ها</span>
-          <p className="text-2xl font-black text-[#F0F4F8] tabular-nums">
-            {toPersianDigits(metrics.total)}
-          </p>
-        </div>
+      {/* Interactive KPI Filter Cards (Acts as Primary Status Filter) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" role="tablist" aria-label="فیلتر وضعیت پروژه‌ها">
+        {[
+          {
+            id: 'ALL' as const,
+            label: 'همه مأموریت‌ها',
+            count: metrics.total,
+            icon: Layers,
+            desc: 'تمام پرونده‌های فعال',
+            badgeClass: 'bg-[#C5A059] text-[#0D1117]',
+            activeClass: 'border-[#C5A059] ring-2 ring-[#C5A059]/50 bg-[#C5A059]/10 shadow-lg shadow-[#C5A059]/10 scale-[1.02]',
+            activeTextClass: 'text-[#C5A059]',
+          },
+          {
+            id: 'APPROVED' as const,
+            label: 'تایید QC شده ✅',
+            count: metrics.approved,
+            icon: CheckCircle2,
+            desc: 'تکمیل و شناسنامه‌دار',
+            badgeClass: 'bg-emerald-500 text-[#0D1117]',
+            activeClass: 'border-emerald-500 ring-2 ring-emerald-500/50 bg-emerald-500/10 shadow-lg shadow-emerald-500/10 scale-[1.02]',
+            activeTextClass: 'text-emerald-400',
+          },
+          {
+            id: 'IN_PROGRESS' as const,
+            label: 'در حال نصب',
+            count: metrics.inProgress,
+            icon: Flame,
+            desc: 'اکیپ فعال سر کارگاه',
+            badgeClass: 'bg-amber-400 text-[#0D1117]',
+            activeClass: 'border-amber-400 ring-2 ring-amber-400/50 bg-amber-400/10 shadow-lg shadow-amber-400/10 scale-[1.02]',
+            activeTextClass: 'text-amber-400',
+          },
+          {
+            id: 'SCHEDULED' as const,
+            label: 'در صف اجرا و متراژ',
+            count: metrics.scheduled,
+            icon: Clock,
+            desc: 'زمان‌بندی و اعزام',
+            badgeClass: 'bg-sky-400 text-[#0D1117]',
+            activeClass: 'border-sky-400 ring-2 ring-sky-400/50 bg-sky-400/10 shadow-lg shadow-sky-400/10 scale-[1.02]',
+            activeTextClass: 'text-sky-400',
+          },
+          {
+            id: 'STUCK' as const,
+            label: 'متوقف یا نیاز به اقدام ⚠️',
+            count: metrics.stuck,
+            icon: AlertTriangle,
+            desc: 'پیگیری فوری مدیریتی',
+            badgeClass: 'bg-rose-500 text-white',
+            activeClass: 'border-rose-500 ring-2 ring-rose-500/50 bg-rose-500/10 shadow-lg shadow-rose-500/10 scale-[1.02]',
+            activeTextClass: 'text-rose-400',
+          },
+        ].map((card) => {
+          const isSelected = statusFilter === card.id;
+          const Icon = card.icon;
+          return (
+            <button
+              key={card.id}
+              type="button"
+              role="tab"
+              aria-selected={isSelected}
+              onClick={() => setStatusFilter(card.id)}
+              className={`group relative p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 text-right focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] ${
+                isSelected
+                  ? card.activeClass
+                  : 'bg-[#151B23] border-[#212835] hover:border-[#384457] hover:bg-[#1A222D] hover:-translate-y-0.5'
+              }`}
+            >
+              {/* Card Top: Icon + Selection Badge */}
+              <div className="flex items-center justify-between w-full">
+                <div
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                    isSelected
+                      ? `${card.badgeClass} shadow-sm`
+                      : 'bg-[#0D1117] text-[#9BA7B6] group-hover:text-white group-hover:bg-[#212835]'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                </div>
 
-        <div className="bg-[#151B23] rounded-2xl p-4 border border-emerald-500/30 space-y-1">
-          <span className="text-xs text-emerald-400 font-bold">تکمیل و تایید QC ✅</span>
-          <p className="text-2xl font-black text-emerald-400 tabular-nums">
-            {toPersianDigits(metrics.approved)}
-          </p>
-        </div>
+                {isSelected ? (
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs ${card.badgeClass}`}>
+                    <Check className="w-3 h-3 stroke-[3]" />
+                    فیلتر فعال
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-[#637184] group-hover:text-[#9BA7B6] font-medium transition-colors">
+                    کلیک برای فیلتر
+                  </span>
+                )}
+              </div>
 
-        <div className="bg-[#151B23] rounded-2xl p-4 border border-[#C5A059]/30 space-y-1">
-          <span className="text-xs text-[#C5A059] font-bold">در حال اجرا سر کارگاه</span>
-          <p className="text-2xl font-black text-[#C5A059] tabular-nums">
-            {toPersianDigits(metrics.inProgress)}
-          </p>
-        </div>
-
-        <div className="bg-[#151B23] rounded-2xl p-4 border border-rose-500/30 space-y-1">
-          <span className="text-xs text-rose-400 font-bold">متوقف یا نیازمند توجه ⚠️</span>
-          <p className="text-2xl font-black text-rose-400 tabular-nums">
-            {toPersianDigits(metrics.stuck)}
-          </p>
-        </div>
+              {/* Card Bottom: Number + Label + Desc */}
+              <div>
+                <p
+                  className={`text-2xl sm:text-3xl font-black tabular-nums transition-colors ${
+                    isSelected ? card.activeTextClass : 'text-[#F0F4F8]'
+                  }`}
+                >
+                  {toPersianDigits(card.count)}
+                </p>
+                <div className="mt-1">
+                  <span
+                    className={`text-xs font-bold transition-colors ${
+                      isSelected ? card.activeTextClass : 'text-[#9BA7B6] group-hover:text-[#F0F4F8]'
+                    }`}
+                  >
+                    {card.label}
+                  </span>
+                </div>
+                <p className="text-[10px] text-[#637184] mt-0.5 truncate">{card.desc}</p>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Search & Status Filters */}
-      <div className="bg-[#151B23] rounded-2xl p-4 border border-[#212835] flex flex-col md:flex-row items-center justify-between gap-3">
+      {/* Search & Results Summary Bar (Filter Chips completely removed) */}
+      <div className="bg-[#151B23] rounded-2xl p-3 sm:p-4 border border-[#212835] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search Input */}
-        <div className="relative w-full md:w-96">
-          <Search className="w-4 h-4 text-[#637184] absolute right-3.5 top-3 pointer-events-none" />
+        <div className="relative flex-1 max-w-xl">
+          <Search className="w-4 h-4 text-[#637184] absolute right-3.5 top-3.5 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -172,33 +260,30 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
           )}
         </div>
 
-        {/* Status Filter Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0" role="tablist">
-          {[
-            { id: 'ALL', label: 'همه مأموریت‌ها' },
-            { id: 'APPROVED', label: 'تایید QC شده ✅' },
-            { id: 'IN_PROGRESS', label: 'در حال نصب' },
-            { id: 'SCHEDULED', label: 'زمان‌بندی‌شده' },
-            { id: 'STUCK', label: 'متوقف ⚠️' },
-          ].map((item) => {
-            const isSelected = statusFilter === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={isSelected}
-                onClick={() => setStatusFilter(item.id as any)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] ${
-                  isSelected
-                    ? 'bg-[#C5A059] text-[#0D1117] shadow-xs'
-                    : 'bg-[#111620] text-[#9BA7B6] hover:text-white border border-[#212835]'
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
+        {/* Live Filter Indicator & Reset */}
+        <div className="flex items-center justify-between md:justify-end gap-2 text-xs">
+          <div className="px-3 py-1.5 rounded-xl bg-[#0D1117] border border-[#212835] text-[#9BA7B6] flex items-center gap-1.5">
+            <span className="text-[#637184]">نمایش پرونده‌ها:</span>
+            <strong className="text-[#F0F4F8] font-bold">
+              {toPersianDigits(filteredProjects.length)}
+            </strong>
+            <span className="text-[#637184]">از</span>
+            <span className="text-[#9BA7B6] font-mono">{toPersianDigits(projects.length)}</span>
+          </div>
+
+          {(statusFilter !== 'ALL' || searchQuery.trim() !== '') && (
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter('ALL');
+                setSearchQuery('');
+              }}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#C5A059] hover:bg-[#C5A059]/10 border border-[#C5A059]/30 transition cursor-pointer flex items-center gap-1 active:scale-95"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>پاک‌کردن فیلترها</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -214,6 +299,7 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
             const isApproved = p.status === 'COMPLETED' && p.qcStatus === 'APPROVED';
             const isStuck = p.status === 'STUCK';
             const isInProgress = p.status === 'IN_PROGRESS';
+            const stuckIncident = p.stuckIncident || (p.stuckIncidents && p.stuckIncidents[p.stuckIncidents.length - 1]);
 
             return (
               <div
@@ -319,7 +405,7 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
                         />
                       ))}
                       <span className="font-bold text-[#F0F4F8] mr-1">
-                        {toPersianDigits(p.qcScore || 5)} از ۵
+                        {toPersianDigits(p.qcScore || 5)} از 5
                       </span>
                     </div>
                     <p className="text-[#9BA7B6]">
@@ -331,13 +417,13 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
                 </div>
 
                 {/* Stuck incident banner if any */}
-                {isStuck && p.stuckIncident && (
+                {isStuck && stuckIncident && (
                   <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 text-xs text-rose-300 space-y-1">
                     <span className="font-black flex items-center gap-1">
                       <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
                       علت توقف مأموریت:
                     </span>
-                    <p className="text-[11px] text-[#F0F4F8] leading-relaxed">{p.stuckIncident.description}</p>
+                    <p className="text-[11px] text-[#F0F4F8] leading-relaxed">{stuckIncident.description}</p>
                   </div>
                 )}
               </div>

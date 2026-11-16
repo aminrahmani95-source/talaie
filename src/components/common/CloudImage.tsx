@@ -46,15 +46,27 @@ export const CloudImage: React.FC<Props> = ({
     }
 
     let isMounted = true;
-    SupabaseSyncService.getSignedPhotoUrl(trimmed).then((url) => {
-      if (isMounted) {
-        if (url) {
-          setResolvedSrc(url);
-        } else {
-          setHasError(true);
+    SupabaseSyncService.getSignedPhotoUrl(trimmed)
+      .then((url) => {
+        if (isMounted) {
+          if (url) {
+            setResolvedSrc(url);
+          } else if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            setResolvedSrc(trimmed);
+          } else {
+            setHasError(true);
+          }
         }
-      }
-    });
+      })
+      .catch(() => {
+        if (isMounted) {
+          if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            setResolvedSrc(trimmed);
+          } else {
+            setHasError(true);
+          }
+        }
+      });
 
     return () => {
       isMounted = false;

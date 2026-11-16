@@ -47,7 +47,7 @@ export const Sidebar: React.FC<Props> = ({
     },
     {
       id: 'planner' as const,
-      label: 'تقویم اجرایی ۴ روزه',
+      label: 'تقویم اجرایی 4 روزه',
       icon: CalendarDays,
       badge: undefined,
     },
@@ -59,7 +59,7 @@ export const Sidebar: React.FC<Props> = ({
       label: 'بررسی کیفی QC',
       icon: ShieldCheck,
       badge: pendingQcCount > 0 ? pendingQcCount : undefined,
-      badgeColor: 'bg-[#C1A056] text-[#212121]',
+      badgeColor: 'bg-[#C5A059] text-[#0D1117]',
     },
     {
       id: 'stuck' as const,

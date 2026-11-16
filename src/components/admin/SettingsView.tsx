@@ -288,7 +288,7 @@ export const SettingsView: React.FC<Props> = ({
                   min="1"
                   max="24"
                   step="0.5"
-                  placeholder="مثلاً ۸ (یا خالی برای حالت نامشخص)"
+                  placeholder="مثلاً 8 (یا خالی برای حالت نامشخص)"
                   value={defaultCapacityHours}
                   onChange={(e) => setDefaultCapacityHours(e.target.value)}
                   className="w-48 text-sm p-2.5 rounded-md border border-[#E8E4DC] dark:border-[#333333] focus:ring-2 focus:ring-[#C1A056] bg-[#111620] dark:text-white"

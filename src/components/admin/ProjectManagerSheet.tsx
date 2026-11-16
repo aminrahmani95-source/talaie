@@ -38,6 +38,7 @@ import { getDisplayName } from '../../utils/technicianName';
 import {
   calculateActivityProgress,
   getEffectiveProjectPlan,
+  getEffectivePlannedQuantity,
   createPlanAmendment,
   reviewPlanAmendment,
 } from '../../utils/planProgress';
@@ -195,10 +196,12 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
     const newQtyNum = parseFloat(amendNewQty);
     if (isNaN(newQtyNum) || newQtyNum < 0) return;
 
+    const { effectivePlannedQuantity } = getEffectivePlannedQuantity(act, project.planAmendments);
+
     const amendment = createPlanAmendment(
       act.id,
       act.title,
-      act.plannedQuantity,
+      effectivePlannedQuantity,
       newQtyNum,
       amendReason.trim(),
       currentUser,
@@ -385,7 +388,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
                 className={inputCls}
                 value={amendReason}
                 onChange={(e) => setAmendReason(e.target.value)}
-                placeholder="مثال: افزایش ۲ لت پرده سالن به درخواست کارفرما"
+                placeholder="مثال: افزایش 2 لت پرده سالن به درخواست کارفرما"
               />
             </label>
             <div className="flex gap-2">
@@ -672,11 +675,20 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
                     <option value="">-- انتخاب اکیپ مقصد --</option>
                     {teams
                       .filter((t) => t.id !== project.assignedTeamId)
-                      .map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
+                      .map((t) => {
+                        const supUser = users.find((u) => u.id === t.supervisorId);
+                        const supDisplayName = t.supervisorName
+                          ? getDisplayName(t.supervisorName)
+                          : supUser
+                          ? getDisplayName(supUser.name)
+                          : undefined;
+                        const displayName = supDisplayName ? `اکیپ نصب ${supDisplayName}` : t.name;
+                        return (
+                          <option key={t.id} value={t.id}>
+                            {displayName} ({t.code})
+                          </option>
+                        );
+                      })}
                   </select>
                 </label>
                 <label className="space-y-1">
@@ -703,7 +715,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
                   className={inputCls}
                   value={transferReason}
                   onChange={(e) => setTransferReason(e.target.value)}
-                  placeholder="مثال: توقف کار اکیپ ۱ ناشی از تداخل برنامه، اعزام اکیپ ۲ برای تکمیل شیدها"
+                  placeholder="مثال: توقف کار اکیپ 1 ناشی از تداخل برنامه، اعزام اکیپ 2 برای تکمیل شیدها"
                 />
               </label>
 
@@ -841,12 +853,31 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
             </select>
           </label>
         </div>
-        {!reasonOk && <p className="text-[11px] text-[#8A8378]">برای تغییر دستی، دلیل تغییر را بنویسید.</p>}
+
+        {/* فیلد مستقیم برای تایپ دلیل تغییر وضعیت */}
+        <div className="space-y-1.5 pt-1">
+          <label htmlFor="manual-status-reason" className="block text-xs font-bold text-[#F0F4F8]">
+            دلیل تغییر وضعیت: <span className="font-normal text-[#8A8378]">(اختیاری — پیش‌فرض: تغییر دستی وضعیت توسط مدیر)</span>
+          </label>
+          <input
+            id="manual-status-reason"
+            type="text"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="مثلاً: هماهنگی تلفنی با کارفرما یا اصلاح سیستمی..."
+            className={inputCls}
+          />
+        </div>
+
         <Button
           variant="secondary"
-          disabled={busy || !reasonOk || (manualStatus === project.status && manualQc === project.qcStatus)}
+          disabled={busy || (manualStatus === project.status && manualQc === project.qcStatus)}
           onClick={() =>
-            run({ status: manualStatus, qcStatus: manualQc }, 'وضعیت پروژه تغییر کرد.', reasonTrim)
+            run(
+              { status: manualStatus, qcStatus: manualQc },
+              'وضعیت پروژه با موفقیت تغییر کرد.',
+              reasonTrim || 'تغییر دستی وضعیت توسط مدیر'
+            )
           }
         >
           اعمال وضعیت
@@ -1026,7 +1057,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
           </div>
         )}
         {typeof project.customerSatisfaction === 'number' && (
-          <Row label="رضایت مشتری">{toPersianDigits(project.customerSatisfaction)} از ۵</Row>
+          <Row label="رضایت مشتری">{toPersianDigits(project.customerSatisfaction)} از 5</Row>
         )}
       </div>
 
@@ -1050,7 +1081,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
       )}
       {!auditLoading && audit && audit.length === 0 && (
         <p className="text-sm text-[#637184]">
-          هنوز تغییری ثبت نشده است. (تاریخچه از زمان اجرای مایگریشن ۰۰۸ ثبت می‌شود.)
+          هنوز تغییری ثبت نشده است. (تاریخچه از زمان اجرای مایگریشن 008 ثبت می‌شود.)
         </p>
       )}
       {!auditLoading && audit && audit.length > 0 && (

@@ -34,6 +34,7 @@ import {
   Percent,
 } from 'lucide-react';
 import { toPersianDigits, getTodayPersianString, localDateKey } from '../../utils/jalali';
+import { getDisplayName } from '../../utils/technicianName';
 import { isProjectMultiDay, isProjectScheduledOnDate } from '../../utils/multiDay';
 import { computeSlaMetrics } from '../../utils/sla';
 
@@ -76,9 +77,9 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   const todayKey = useMemo(() => localDateKey(new Date()), []);
   const todayPersian = useMemo(() => getTodayPersianString(), []);
 
-  // ================= ۱. صف نیازمند اقدام فوری (ACTION INBOX) =================
+  // ================= 1. صف نیازمند اقدام فوری (ACTION INBOX) =================
 
-  // ۱. الف: پروژه‌های متوقف و موانع بحرانی کارگاه
+  // 1. الف: پروژه‌های متوقف و موانع بحرانی کارگاه
   const stuckProjects = useMemo(() => {
     return projects.filter((p) => p.status === 'STUCK');
   }, [projects]);
@@ -87,7 +88,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
     return tickets.filter((t) => t.status === 'OPEN' && t.isBlocking);
   }, [tickets]);
 
-  // ۱. ب: ورودی‌های جدید فروش (در انتظار تخصیص اکیپ یا تاریخ زمان‌بندی)
+  // 1. ب: ورودی‌های جدید فروش (در انتظار تخصیص اکیپ یا تاریخ زمان‌بندی)
   const incomingProjects = useMemo(() => {
     return projects.filter(
       (p) =>
@@ -97,7 +98,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
     );
   }, [projects]);
 
-  // ۱. ج: پروژه‌های اتمام‌یافته در انتظار تایید QC و صدور شناسنامه
+  // 1. ج: پروژه‌های اتمام‌یافته در انتظار تایید QC و صدور شناسنامه
   const pendingQcProjects = useMemo(() => {
     return projects.filter(
       (p) => p.status === 'COMPLETED' && (p.qcStatus === 'PENDING' || !p.qcStatus)
@@ -108,16 +109,16 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   const totalUrgentCount =
     stuckProjects.length + blockingTickets.length + incomingProjects.length + pendingQcProjects.length;
 
-  // ================= ۲. وضعیت زنده ۴ اکیپ نصب در امروز =================
+  // ================= 2. وضعیت زنده 4 اکیپ نصب در امروز =================
   const liveTeams = useMemo(() => {
-    // اطمینان از وجود ۴ اکیپ
+    // اطمینان از وجود 4 اکیپ
     const targetTeams: InstallationTeamWithMembers[] = teamsWithMembers && teamsWithMembers.length > 0
       ? teamsWithMembers
       : [
-          { id: 'TEAM_1', name: 'اکیپ نصب ۱ (نقدعلیان)', code: 'TEAM_1', supervisorId: 'u-lead-1', supervisor: { id: 'u-lead-1', name: 'فرخ نقدعلیان', role: 'LEAD_TECHNICIAN', phone: '09121111111', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
-          { id: 'TEAM_2', name: 'اکیپ نصب ۲ (مرادی)', code: 'TEAM_2', supervisor: { id: 'u-lead-2', name: 'علیرضا مرادی', role: 'LEAD_TECHNICIAN', phone: '09122222222', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
-          { id: 'TEAM_3', name: 'اکیپ نصب ۳ (سهرابی)', code: 'TEAM_3', supervisor: { id: 'u-lead-3', name: 'مهدی سهرابی', role: 'LEAD_TECHNICIAN', phone: '09123333333', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
-          { id: 'TEAM_4', name: 'اکیپ نصب ۴ (رحمانی)', code: 'TEAM_4', supervisor: { id: 'u-lead-4', name: 'حسین رحمانی', role: 'LEAD_TECHNICIAN', phone: '09124444444', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
+          { id: 'TEAM_1', name: 'اکیپ نصب 1 (نقدعلیان)', code: 'TEAM_1', supervisorId: 'u-lead-1', supervisor: { id: 'u-lead-1', name: 'فرخ نقدعلیان', role: 'LEAD_TECHNICIAN', phone: '09121111111', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
+          { id: 'TEAM_2', name: 'اکیپ نصب 2 (مرادی)', code: 'TEAM_2', supervisor: { id: 'u-lead-2', name: 'علیرضا مرادی', role: 'LEAD_TECHNICIAN', phone: '09122222222', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
+          { id: 'TEAM_3', name: 'اکیپ نصب 3 (سهرابی)', code: 'TEAM_3', supervisor: { id: 'u-lead-3', name: 'مهدی سهرابی', role: 'LEAD_TECHNICIAN', phone: '09123333333', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
+          { id: 'TEAM_4', name: 'اکیپ نصب 4 (رحمانی)', code: 'TEAM_4', supervisor: { id: 'u-lead-4', name: 'حسین رحمانی', role: 'LEAD_TECHNICIAN', phone: '09124444444', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
         ];
 
     return targetTeams.map((team) => {
@@ -160,7 +161,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
     });
   }, [teamsWithMembers, projects, todayKey]);
 
-  // ================= ۳. شاخص‌های آماری و کلان =================
+  // ================= 3. شاخص‌های آماری و کلان =================
   const slaMetrics = useMemo(() => computeSlaMetrics(tickets), [tickets]);
 
   const approvedQcCount = useMemo(() => {
@@ -230,7 +231,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               className="px-3.5 py-2 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#F0F4F8] font-bold text-xs transition flex items-center gap-1.5 border border-[#2D3748] cursor-pointer min-h-[38px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
             >
               <Calendar className="w-4 h-4 text-[#C5A059]" />
-              تقویم ۴ روزه
+              تقویم 4 روزه
             </button>
 
             <button
@@ -299,7 +300,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
 
       {activeSubTab === 'ACTIONS' ? (
         <>
-          {/* ================= بخش ۱: نیازمند اقدام فوری من (ACTION INBOX) ================= */}
+          {/* ================= بخش 1: نیازمند اقدام فوری من (ACTION INBOX) ================= */}
           <section className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
@@ -366,7 +367,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
 
             {/* محتوای صف اقدام */}
             <div className="space-y-3">
-              {/* ۱. الف: پروژه‌های متوقف و موانع کارگاهی */}
+              {/* 1. الف: پروژه‌های متوقف و موانع کارگاهی */}
               {(activeUrgentCategory === 'ALL' || activeUrgentCategory === 'STUCK') &&
                 stuckProjects.map((p) => (
                   <div
@@ -419,8 +420,8 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         </div>
                       </div>
 
-                      {/* دکمه‌های اقدام روی کارت */}
-                      <div className="flex sm:flex-col gap-2 shrink-0 justify-end">
+                      {/* دکمه اقدام روی کارت */}
+                      <div className="flex shrink-0 justify-end items-center">
                         <button
                           type="button"
                           onClick={() => onOpenProject(p)}
@@ -428,13 +429,6 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         >
                           بررسی و رفع توقف
                           <ChevronLeft className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onNavigateTab('stuck')}
-                          className="px-3 py-1.5 rounded-lg bg-[#111620] hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] font-medium text-[11px] transition border border-[#212835] text-center cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059]"
-                        >
-                          مشاهده در دسک متوقف‌ها
                         </button>
                       </div>
                     </div>
@@ -474,7 +468,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                   </div>
                 ))}
 
-              {/* ۱. ب: ورودی‌های جدید فروش (در انتظار تخصیص اکیپ یا تاریخ زمان‌بندی) */}
+              {/* 1. ب: ورودی‌های جدید فروش (در انتظار تخصیص اکیپ یا تاریخ زمان‌بندی) */}
               {(activeUrgentCategory === 'ALL' || activeUrgentCategory === 'INCOMING') &&
                 incomingProjects.map((p) => (
                   <div
@@ -514,7 +508,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         </div>
 
                         <div className="mt-2 text-[11px] text-[#9BA7B6]">
-                          وضعیت تحویل فنی / اندازه‌گیری ۲:
+                          وضعیت تحویل فنی / اندازه‌گیری 2:
                           {p.technicalHandover?.isHandoverComplete ? (
                             <span className="text-emerald-400 font-bold mr-1">تایید فنی نهایی شده (آماده نصب)</span>
                           ) : (
@@ -523,8 +517,8 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         </div>
                       </div>
 
-                      {/* دکمه‌های اقدام روی کارت */}
-                      <div className="flex sm:flex-col gap-2 shrink-0 justify-end">
+                      {/* دکمه اقدام روی کارت */}
+                      <div className="flex shrink-0 justify-end items-center">
                         <button
                           type="button"
                           onClick={() => onOpenProject(p)}
@@ -533,19 +527,12 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                           تخصیص اکیپ و تاریخ
                           <ChevronLeft className="w-3.5 h-3.5" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => onNavigateTab('planner')}
-                          className="px-3 py-1.5 rounded-lg bg-[#111620] hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] font-medium text-[11px] transition border border-[#212835] text-center cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059]"
-                        >
-                          تنظیم در تقویم ۴ روزه
-                        </button>
                       </div>
                     </div>
                   </div>
                 ))}
 
-              {/* ۱. ج: پروژه‌های اتمام‌یافته در انتظار تایید QC */}
+              {/* 1. ج: پروژه‌های اتمام‌یافته در انتظار تایید QC */}
               {(activeUrgentCategory === 'ALL' || activeUrgentCategory === 'QC') &&
                 pendingQcProjects.map((p) => (
                   <div
@@ -572,7 +559,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                           {p.customerSatisfaction && (
                             <span className="flex items-center gap-1 text-amber-400 font-bold tabular-nums">
                               <Star className="w-3 h-3 fill-amber-400" />
-                              رضایت کارفرما: {toPersianDigits(p.customerSatisfaction)} از ۵
+                              رضایت کارفرما: {toPersianDigits(p.customerSatisfaction)} از 5
                             </span>
                           )}
                           {p.customerSignature && (
@@ -585,8 +572,8 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         </p>
                       </div>
 
-                      {/* دکمه‌های اقدام روی کارت */}
-                      <div className="flex sm:flex-col gap-2 shrink-0 justify-end">
+                      {/* دکمه اقدام روی کارت */}
+                      <div className="flex shrink-0 justify-end items-center">
                         <button
                           type="button"
                           onClick={() => onOpenProject(p)}
@@ -594,13 +581,6 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                         >
                           تایید کیفی و صدور شناسنامه
                           <ShieldCheck className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onNavigateTab('qc')}
-                          className="px-3 py-1.5 rounded-lg bg-[#111620] hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] font-medium text-[11px] transition border border-[#212835] text-center cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059]"
-                        >
-                          مشاهده در میز تخصصی QC
                         </button>
                       </div>
                     </div>
@@ -622,13 +602,13 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             </div>
           </section>
 
-          {/* ================= بخش ۲: تخته زنده ۴ اکیپ نصب در امروز ================= */}
+          {/* ================= بخش 2: تخته زنده 4 اکیپ نصب در امروز ================= */}
           <section className="space-y-4 pt-4 border-t border-[#212835]">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
                   <Users className="w-4 h-4 text-[#C5A059]" />
-                  وضعیت زنده ۴ اکیپ نصب در امروز
+                  وضعیت زنده 4 اکیپ نصب در امروز
                 </h2>
                 <p className="text-xs text-[#9BA7B6] mt-0.5">
                   پروژه جاری هر اکیپ، سرپرست، و وضعیت تحویل متریال از انبار
@@ -639,7 +619,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                 onClick={() => onNavigateTab('planner')}
                 className="text-xs font-bold text-[#C5A059] hover:underline flex items-center gap-1 cursor-pointer"
               >
-                باز کردن تقویم ۴ روزه
+                باز کردن تقویم 4 روزه
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -691,10 +671,12 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                       <div className="flex items-start justify-between gap-2 mb-3">
                         <div>
                           <h3 className="font-bold text-sm text-[#F0F4F8]">
-                            {team.name}
+                            {team.supervisorName
+                              ? `اکیپ نصب ${getDisplayName(team.supervisorName)}`
+                              : team.name}
                           </h3>
                           <p className="text-xs text-[#9BA7B6] mt-0.5">
-                            سرپرست: {team.supervisorName || 'آقای نقدعلیان'}
+                            سرپرست: {team.supervisorName || 'تعیین نشده'}
                           </p>
                         </div>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${statusBadge.cls}`}>
@@ -776,7 +758,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             </div>
           </section>
 
-          {/* ================= بخش ۳: دسترسی‌های سریع و نبض روزانه ================= */}
+          {/* ================= بخش 3: دسترسی‌های سریع و نبض روزانه ================= */}
           <section className="pt-4 border-t border-[#212835]">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3.5 rounded-xl bg-[#151B23] border border-[#212835]">
@@ -801,7 +783,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
 
               <div className="p-3.5 rounded-xl bg-[#151B23] border border-[#212835]">
                 <div className="flex items-center justify-between text-[#9BA7B6] text-xs mb-1">
-                  <span>تعهد ۷۲ ساعته SLA</span>
+                  <span>تعهد 72 ساعته SLA</span>
                   <Clock className="w-3.5 h-3.5 text-blue-400" />
                 </div>
                 <div className="text-xl font-black text-blue-400 tabular-nums">
@@ -815,7 +797,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                   <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                 </div>
                 <div className="text-xl font-black text-[#F0F4F8] tabular-nums">
-                  {avgSatisfaction > 0 ? `${toPersianDigits(avgSatisfaction)} از ۵` : '—'}
+                  {avgSatisfaction > 0 ? `${toPersianDigits(avgSatisfaction)} از 5` : '—'}
                 </div>
               </div>
             </div>

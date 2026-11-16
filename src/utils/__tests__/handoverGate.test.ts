@@ -48,16 +48,11 @@ describe('Official Technical Handover Gate (Gating & Verification)', () => {
       expect(isHandoverGatePassed(rawProject)).toBe(false);
     });
 
-    it('returns false when only production confirmation is confirmed', () => {
+    it('returns false when warehouse confirmation is not confirmed', () => {
       const p: Project = {
         ...rawProject,
         technicalHandover: {
           isHandoverComplete: false,
-          productionConfirmation: {
-            confirmed: true,
-            confirmedAt: '2026-11-08T10:00:00Z',
-            confirmedBy: 'مسئول هماهنگی',
-          },
           warehouseConfirmation: {
             confirmed: false,
           },
@@ -66,54 +61,26 @@ describe('Official Technical Handover Gate (Gating & Verification)', () => {
       expect(isHandoverGatePassed(p)).toBe(false);
     });
 
-    it('returns false when only warehouse confirmation is confirmed', () => {
-      const p: Project = {
-        ...rawProject,
-        technicalHandover: {
-          isHandoverComplete: false,
-          productionConfirmation: {
-            confirmed: false,
-          },
-          warehouseConfirmation: {
-            confirmed: true,
-            confirmedAt: '2026-11-08T10:00:00Z',
-            confirmedBy: 'مسئول هماهنگی',
-          },
-        },
-      };
-      expect(isHandoverGatePassed(p)).toBe(false);
-    });
-
-    it('returns true when both production and warehouse confirmations are confirmed', () => {
+    it('returns true when warehouse confirmation is confirmed', () => {
       const p: Project = {
         ...rawProject,
         technicalHandover: {
           isHandoverComplete: true,
-          productionConfirmation: {
-            confirmed: true,
-            confirmedAt: '2026-11-08T10:00:00Z',
-            confirmedBy: 'مسئول هماهنگی',
-          },
           warehouseConfirmation: {
             confirmed: true,
             confirmedAt: '2026-11-08T11:00:00Z',
-            confirmedBy: 'مسئول هماهنگی',
+            confirmedBy: 'مسئول انبار',
           },
         },
       };
       expect(isHandoverGatePassed(p)).toBe(true);
     });
 
-    it('returns true when patch completes the missing confirmation', () => {
+    it('returns true when patch completes warehouse confirmation', () => {
       const p: Project = {
         ...rawProject,
         technicalHandover: {
           isHandoverComplete: false,
-          productionConfirmation: {
-            confirmed: true,
-            confirmedAt: '2026-11-08T10:00:00Z',
-            confirmedBy: 'مسئول هماهنگی',
-          },
           warehouseConfirmation: {
             confirmed: false,
           },
@@ -125,7 +92,7 @@ describe('Official Technical Handover Gate (Gating & Verification)', () => {
           warehouseConfirmation: {
             confirmed: true,
             confirmedAt: '2026-11-08T11:00:00Z',
-            confirmedBy: 'مسئول هماهنگی',
+            confirmedBy: 'مسئول انبار',
           },
         },
       };
@@ -138,7 +105,6 @@ describe('Official Technical Handover Gate (Gating & Verification)', () => {
         technicalHandover: {
           isHandoverComplete: true,
           isHistoricalMigration: true,
-          productionConfirmation: { confirmed: true },
           warehouseConfirmation: { confirmed: true },
         },
       };
@@ -170,7 +136,7 @@ describe('Official Technical Handover Gate (Gating & Verification)', () => {
       ).toThrow(PermanentError);
       expect(() =>
         validateProjectPatchRoleGuards(coordinator, rawProject, { status: 'SCHEDULED' })
-      ).toThrow('پروژه تا زمان ثبت و تأیید هر دو پیش‌نیاز اتمام تولید و تحویل به انبار، قابل زمان‌بندی و اعزام اکیپ نیست');
+      ).toThrow('پروژه تا زمان ثبت و تأیید پیش‌نیاز تحویل و ورود کالا به انبار، قابل زمان‌بندی و اعزام اکیپ نیست');
     });
 
     it('blocks setting scheduledDate when handover gate is incomplete', () => {
@@ -191,22 +157,17 @@ describe('Official Technical Handover Gate (Gating & Verification)', () => {
       ).toThrow(PermanentError);
     });
 
-    it('permits scheduling once both confirmations are supplied in the patch', () => {
+    it('permits scheduling once warehouse confirmation is supplied in the patch', () => {
       const validPatch = {
         status: 'SCHEDULED',
         scheduledDate: '2026-11-15',
         assignedTeamId: 'team-1',
         technicalHandover: {
           isHandoverComplete: true,
-          productionConfirmation: {
-            confirmed: true,
-            confirmedAt: '2026-11-08T10:00:00Z',
-            confirmedBy: 'مسئول هماهنگی',
-          },
           warehouseConfirmation: {
             confirmed: true,
             confirmedAt: '2026-11-08T11:00:00Z',
-            confirmedBy: 'مسئول هماهنگی',
+            confirmedBy: 'مسئول انبار',
           },
         },
       };
@@ -230,6 +191,56 @@ describe('Official Technical Handover Gate (Gating & Verification)', () => {
       expect(() =>
         validateProjectPatchRoleGuards(coordinator, rawProject, forgedPatch)
       ).toThrow('امکان تغییر یا انتساب دستی پرچم سوابق تاریخی وجود ندارد');
+    });
+
+    it('permits warehouse user to confirm warehouse receipt in technicalHandover', () => {
+      const warehouseUser: User = {
+        id: 'u-warehouse',
+        name: 'داوود حسینی (مسئول انبار)',
+        phone: '09125555551',
+        role: 'WAREHOUSE',
+        active: true,
+      };
+
+      const patch = {
+        technicalHandover: {
+          isHandoverComplete: true,
+          warehouseConfirmation: {
+            confirmed: true,
+            confirmedBy: 'داوود حسینی',
+            confirmedAt: '2026-11-16T10:00:00Z',
+            shelfLocation: 'قفسه B-12',
+            notes: 'اقلام کامل تحویل شد',
+          },
+        },
+        updatedAt: '2026-11-16T10:00:00Z',
+      };
+
+      expect(() =>
+        validateProjectPatchRoleGuards(warehouseUser, rawProject, patch)
+      ).not.toThrow();
+    });
+
+    it('blocks warehouse user from patching unauthorized fields', () => {
+      const warehouseUser: User = {
+        id: 'u-warehouse',
+        name: 'داوود حسینی (مسئول انبار)',
+        phone: '09125555551',
+        role: 'WAREHOUSE',
+        active: true,
+      };
+
+      const unauthorizedPatch = {
+        customerName: 'مشتری تغییریافته',
+        address: 'آدرس جدید',
+      };
+
+      expect(() =>
+        validateProjectPatchRoleGuards(warehouseUser, rawProject, unauthorizedPatch)
+      ).toThrow(PermanentError);
+      expect(() =>
+        validateProjectPatchRoleGuards(warehouseUser, rawProject, unauthorizedPatch)
+      ).toThrow('مسئول انبار اجازه تغییر فیلد «customerName» را ندارد.');
     });
   });
 });

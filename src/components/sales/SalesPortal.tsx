@@ -198,7 +198,7 @@ export const SalesPortal: React.FC<Props> = ({
       <div className="bg-[#151B23] rounded-2xl p-5 border border-[#212835] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg sm:text-xl font-black text-[#F0F4F8] flex items-center gap-2">
-            <span>درگاه واحد فروش و سفارش‌گذاری طلائیه</span>
+            <span>درگاه واحد فروش و سفارش‌گذاری گالری طلایی</span>
             <span className="text-xs font-bold bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/30 px-2.5 py-0.5 rounded-full">
               تیم فروشگاه
             </span>
@@ -644,7 +644,7 @@ export const SalesPortal: React.FC<Props> = ({
                       <p className="flex items-center gap-1.5">
                         <span className="font-bold text-[#F0F4F8]">{p.customerName}</span>
                         {p.customerPhone && (
-                          <a href={`tel:${p.customerPhone}`} className="text-[#C5A059] font-mono hover:underline">
+                          <a href={`tel:${p.customerPhone}`} dir="ltr" className="text-[#C5A059] font-mono hover:underline">
                             ({p.customerPhone})
                           </a>
                         )}
@@ -670,15 +670,19 @@ export const SalesPortal: React.FC<Props> = ({
                     </div>
 
                     {/* Stuck reason if any */}
-                    {isStuck && p.stuckIncident && (
-                      <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 text-xs text-rose-300 space-y-1">
-                        <span className="font-black flex items-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                          علت توقف کار:
-                        </span>
-                        <p className="text-[11px] leading-relaxed text-[#F0F4F8]">{p.stuckIncident.description}</p>
-                      </div>
-                    )}
+                    {(() => {
+                      const stuck = p.stuckIncident || (p.stuckIncidents && p.stuckIncidents[p.stuckIncidents.length - 1]);
+                      if (!isStuck || !stuck) return null;
+                      return (
+                        <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 text-xs text-rose-300 space-y-1">
+                          <span className="font-black flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                            علت توقف کار:
+                          </span>
+                          <p className="text-[11px] leading-relaxed text-[#F0F4F8]">{stuck.description}</p>
+                        </div>
+                      );
+                    })()}
 
                     {/* Photos Showcase (Before / After) */}
                     {(p.beforePhotos?.length || p.afterPhotos?.length || p.proposalImages?.length) && (
@@ -691,7 +695,7 @@ export const SalesPortal: React.FC<Props> = ({
                               className="text-[11px] font-bold text-[#9BA7B6] hover:text-[#C5A059] flex items-center gap-1 cursor-pointer"
                             >
                               <Camera className="w-3.5 h-3.5" />
-                              <span>عکس قبل نصب ({p.beforePhotos.length})</span>
+                              <span>عکس قبل نصب ({toPersianDigits(p.beforePhotos.length)})</span>
                             </button>
                           )}
                           {p.afterPhotos && p.afterPhotos.length > 0 && (
@@ -701,7 +705,7 @@ export const SalesPortal: React.FC<Props> = ({
                               className="text-[11px] font-bold text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer mr-2"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>عکس نهایی ({p.afterPhotos.length})</span>
+                              <span>عکس نهایی ({toPersianDigits(p.afterPhotos.length)})</span>
                             </button>
                           )}
                         </div>
@@ -738,7 +742,7 @@ export const SalesPortal: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setPreviewPhotoUrl(null)}
-              className="absolute top-3 left-3 bg-black/70 text-white rounded-full p-2 hover:bg-black"
+              className="absolute top-3 left-3 bg-black/70 text-white rounded-full p-2 hover:bg-black cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>

@@ -1,4 +1,4 @@
-import { Project, User, Ticket, SystemSettings, MaterialRequest } from '../types';
+import { Project, User, Ticket, SystemSettings, MaterialRequest, InstallationTeam, TeamMember } from '../types';
 import { OfflineQueue } from './offlineQueue';
 
 export const DEFAULT_MASTER_TOOLS = [
@@ -37,6 +37,8 @@ const STORAGE_KEYS = {
   SETTINGS: 'talaie_settings_v6',
   CURRENT_USER: 'talaie_current_user_v6',
   MATERIAL_REQUESTS: 'talaie_material_requests_v6',
+  TEAMS: 'talaie_teams_v6',
+  TEAM_MEMBERS: 'talaie_team_members_v6',
 };
 
 // Clean up legacy v5 mock caches on module evaluation
@@ -178,6 +180,44 @@ export const StorageService = {
       localStorage.setItem(key, JSON.stringify(filtered));
     } catch (e) {
       console.warn('LocalStorage saveMaterialRequests failed:', e);
+    }
+  },
+
+  getTeams(): InstallationTeam[] {
+    const raw = localStorage.getItem(STORAGE_KEYS.TEAMS);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveTeams(teams: InstallationTeam[]) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.TEAMS, JSON.stringify(teams));
+    } catch (e) {
+      console.warn('LocalStorage saveTeams failed:', e);
+    }
+  },
+
+  getTeamMembers(): TeamMember[] {
+    const raw = localStorage.getItem(STORAGE_KEYS.TEAM_MEMBERS);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveTeamMembers(teamMembers: TeamMember[]) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.TEAM_MEMBERS, JSON.stringify(teamMembers));
+    } catch (e) {
+      console.warn('LocalStorage saveTeamMembers failed:', e);
     }
   },
 

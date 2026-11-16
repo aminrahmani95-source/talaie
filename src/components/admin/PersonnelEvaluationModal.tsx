@@ -82,7 +82,6 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
     try {
       await onSaveEvaluation(evaluation);
       onClose();
-      alert(`ارزیابی عملکرد ${getDisplayName(targetUser.name)} با موفقیت در سوابق و شاخص‌های ارزیابی ثبت شد.`);
     } catch (err: any) {
       setError(err.message || 'خطا در ثبت ارزیابی عملکرد پرسنل.');
     } finally {
@@ -138,7 +137,7 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
             </div>
             <div>
               <h3 className="font-black text-base text-white">
-                برگه ارزیابی عملکرد و شاخص ۳۶۰ درجه پرسنل
+                برگه ارزیابی عملکرد و شاخص 360 درجه پرسنل
               </h3>
               <p className="text-xs text-[#C5A059] font-bold line-clamp-1">{project.title}</p>
             </div>
@@ -200,7 +199,7 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
           {/* 3 Evaluation Criteria */}
           <div className="bg-[#1C232D] rounded-lg p-4 border border-[#212835] space-y-4">
             {renderStarPicker(
-              '۱. مهارت فنی، تراز و کیفیت نهایی اجرا',
+              '1. مهارت فنی، تراز و کیفیت نهایی اجرا',
               'دقت در شاقول بودن قاب، عدم چروک در لت‌های شید و عملکرد نرم موتور سامفی',
               technicalScore,
               setTechnicalScore
@@ -209,7 +208,7 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
             <div className="border-t border-[#E8E4DC] dark:border-[#2E2E2E]" />
 
             {renderStarPicker(
-              '۲. آراستگی، اخلاق حرفه‌ای و تعامل با مشتری',
+              '2. آراستگی، اخلاق حرفه‌ای و تعامل با مشتری',
               'برخورد رسمی با کارفرما، خوش‌قولی و ارائه آموزش نحوه کارکرد ریموت کنترل',
               behavioralScore,
               setBehavioralScore
@@ -218,7 +217,7 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
             <div className="border-t border-[#E8E4DC] dark:border-[#2E2E2E]" />
 
             {renderStarPicker(
-              '۳. استانداردهای لوکس طلایی و نظافت محیط',
+              '3. استانداردهای لوکس طلایی و نظافت محیط',
               'پهن کردن آستری زیر جعبه ابزار، اتوکشی پرده و جمع‌آوری کامل براده‌ها',
               cleanlinessScore,
               setCleanlinessScore

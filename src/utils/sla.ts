@@ -4,24 +4,24 @@ export const SLA_HOURS_LIMIT = 72;
 export const SLA_MS_LIMIT = SLA_HOURS_LIMIT * 60 * 60 * 1000;
 
 export const ISSUE_CATEGORY_LABELS: Record<IssueCategory, string> = {
-  MEASUREMENT_ERROR: '۱. مغایرت ابعاد یا خطای اندازه‌گیری اولیه',
-  MEASUREMENT_RECORD_ERROR: '۲. خطا در جابه‌جایی یا ثبت مشخصات اندازه‌گیری',
-  PRODUCTION_DEFECT: '۳. نقص، دوخت ناصحیح یا کسری تولید',
-  WAREHOUSE_DELIVERY_ISSUE: '۴. کسری یا اشتباه در تحویل و بسته‌بندی انبار',
-  TRANSIT_DAMAGE: '۵. آسیب حین بارگیری، حمل یا ترانزیت',
-  SITE_NOT_READY: '۶. عدم آمادگی بستر ساختمان، کناف یا برق',
-  EQUIPMENT_DEFECT: '۷. کسری، نقص یا خرابی تجهیزات، یراق و ابزار',
-  OTHER: '۸. سایر موارد عملیاتی',
+  MEASUREMENT_ERROR: '1. مغایرت ابعاد یا خطای اندازه‌گیری اولیه',
+  MEASUREMENT_RECORD_ERROR: '2. خطا در جابه‌جایی یا ثبت مشخصات اندازه‌گیری',
+  PRODUCTION_DEFECT: '3. نقص، دوخت ناصحیح یا کسری تولید',
+  WAREHOUSE_DELIVERY_ISSUE: '4. کسری یا اشتباه در تحویل و بسته‌بندی انبار',
+  TRANSIT_DAMAGE: '5. آسیب حین بارگیری، حمل یا ترانزیت',
+  SITE_NOT_READY: '6. عدم آمادگی بستر ساختمان، کناف یا برق',
+  EQUIPMENT_DEFECT: '7. کسری، نقص یا خرابی تجهیزات، یراق و ابزار',
+  OTHER: '8. سایر موارد عملیاتی',
 };
 
 export const SLA_STATUS_LABELS: Record<SlaStatus, { label: string; badgeCls: string; textColor: string }> = {
   OPEN_IN_SLA: {
-    label: 'در جریان (زیر ۷۲ ساعت)',
+    label: 'در جریان (زیر 72 ساعت)',
     badgeCls: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30',
     textColor: 'text-amber-600 dark:text-amber-400',
   },
   OPEN_OVERDUE: {
-    label: 'بحرانی (عبور از ۷۲ ساعت)',
+    label: 'بحرانی (عبور از 72 ساعت)',
     badgeCls: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/40 animate-pulse',
     textColor: 'text-rose-600 dark:text-rose-400',
   },
@@ -99,7 +99,7 @@ export interface SlaMetricsSummary {
   resolvedCount: number;
   resolvedInSla: number;
   resolvedOverdue: number;
-  onTimeRate: number; // درصد رعایت مهلت استاندارد ۷۲ ساعته
+  onTimeRate: number; // درصد رعایت مهلت استاندارد 72 ساعته
   averageResolutionHours: number; // میانگین زمان حل به ساعت
   breakdownByCategory: Record<string, { total: number; resolvedInSla: number; overdue: number }>;
   breakdownByTeam: Record<string, { teamName: string; total: number; overdue: number; onTimeRate: number }>;

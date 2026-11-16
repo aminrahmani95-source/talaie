@@ -218,7 +218,7 @@ export const QcDesk: React.FC<Props> = ({
         particleCount: 80,
         spread: 60,
         origin: { y: 0.6 },
-        colors: ['#C1A056', '#212121', '#FAF7F2'],
+        colors: ['#C5A059', '#0D1117', '#151B23'],
       });
     } catch {
       // Ignore
@@ -639,7 +639,7 @@ export const QcDesk: React.FC<Props> = ({
           <div className="bg-[#111620] rounded-lg p-4 border border-[#212835] space-y-2.5">
             <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
               <CheckSquare className="w-4 h-4 text-[#C5A059]" />
-              <span>چک‌لیست استانداردهای تحویل (۶ مورد):</span>
+              <span>چک‌لیست استانداردهای تحویل (6 مورد):</span>
             </h4>
 
             <div className="space-y-1.5">
@@ -795,19 +795,19 @@ export const QcDesk: React.FC<Props> = ({
                     placeholder="مثلاً پنجره سالن اصلی"
                     value={newDefectLocation}
                     onChange={(e) => setNewDefectLocation(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-[#212835] bg-[#111620]"
+                    className="w-full p-2 rounded-lg border border-[#212835] bg-[#111620] text-[#F0F4F8] placeholder-[#637184] outline-none focus:border-[#C5A059]"
                   />
                 </div>
               </div>
               <div>
-                <label className="block mb-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400">شرح دقیق عدم‌انطباق:</label>
+                <label className="block mb-1 text-xs font-semibold text-[#9BA7B6]">شرح دقیق عدم‌انطباق:</label>
                 <textarea
                   rows={2}
                   required
                   placeholder="شرح دقیق نقص کیفی و علت عدم پذیرش..."
                   value={newDefectDesc}
                   onChange={(e) => setNewDefectDesc(e.target.value)}
-                  className="w-full p-2 rounded-lg text-xs border border-[#212835] bg-[#111620]"
+                  className="w-full p-2 rounded-lg text-xs border border-[#212835] bg-[#111620] text-[#F0F4F8] placeholder-[#637184] outline-none focus:border-[#C5A059]"
                 />
               </div>
               <div className="flex items-center justify-end gap-2">
@@ -957,7 +957,7 @@ export const QcDesk: React.FC<Props> = ({
 
                     {insp.overallScore && (
                       <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                        امتیاز کیفی بازرسی: <strong className="text-[#181818] dark:text-zinc-200">{toPersianDigits(insp.overallScore)} از ۵</strong>
+                        امتیاز کیفی بازرسی: <strong className="text-[#181818] dark:text-zinc-200">{toPersianDigits(insp.overallScore)} از 5</strong>
                       </div>
                     )}
 
@@ -1067,20 +1067,20 @@ export const QcDesk: React.FC<Props> = ({
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
                   <SlidersHorizontal className="w-3.5 h-3.5 text-[#C5A059]" />
-                  <span>معیارهای پنج‌گانه کیفیت داخلی نصب (۱ تا ۵):</span>
+                  <span>معیارهای پنج‌گانه کیفیت داخلی نصب (1 تا 5):</span>
                 </label>
                 <div className="text-xs bg-[#111620] px-2.5 py-1 rounded-lg border border-[#C5A059]/30 font-bold text-[#C5A059]">
-                  نمره نهایی محاسبه‌شده: {toPersianDigits(calculateQualityScore(qualityCriteria).overallScore)} از ۵
+                  نمره نهایی محاسبه‌شده: {toPersianDigits(calculateQualityScore(qualityCriteria).overallScore)} از 5
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                 {[
-                  { key: 'levelingScore', label: 'تراز و شاقول بودن (وزن موقت ۲۵٪)', val: qualityCriteria.levelingScore },
-                  { key: 'fabricFinishScore', label: 'کیفیت پارچه و اتو (وزن موقت ۲۵٪)', val: qualityCriteria.fabricFinishScore },
-                  { key: 'mechanicsScore', label: 'مکانیک و ریموت موتور (وزن موقت ۲۰٪)', val: qualityCriteria.mechanicsScore },
-                  { key: 'cleanlinessScore', label: 'نظافت کارگاه و حفاظت کف (وزن موقت ۱۵٪)', val: qualityCriteria.cleanlinessScore },
-                  { key: 'complianceScore', label: 'انطباق با استاندارد و طرح (وزن موقت ۱۵٪)', val: qualityCriteria.complianceScore },
+                  { key: 'levelingScore', label: 'تراز و شاقول بودن (وزن موقت 25٪)', val: qualityCriteria.levelingScore },
+                  { key: 'fabricFinishScore', label: 'کیفیت پارچه و اتو (وزن موقت 25٪)', val: qualityCriteria.fabricFinishScore },
+                  { key: 'mechanicsScore', label: 'مکانیک و ریموت موتور (وزن موقت 20٪)', val: qualityCriteria.mechanicsScore },
+                  { key: 'cleanlinessScore', label: 'نظافت کارگاه و حفاظت کف (وزن موقت 15٪)', val: qualityCriteria.cleanlinessScore },
+                  { key: 'complianceScore', label: 'انطباق با استاندارد و طرح (وزن موقت 15٪)', val: qualityCriteria.complianceScore },
                 ].map((crit) => (
                   <div key={crit.key} className="flex items-center justify-between p-2 rounded-lg bg-[#111620]">
                     <span className="text-[#9BA7B6] text-[11px]">{crit.label}:</span>
@@ -1110,7 +1110,7 @@ export const QcDesk: React.FC<Props> = ({
               </div>
               <div className="text-[10px] text-zinc-500 flex items-center gap-1 pt-1">
                 <Info className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                <span>توجه: اوزان ۲۵٪، ۲۵٪، ۲۰٪، ۱۵٪، ۱۵٪ به عنوان ساختار موقت و شفاف اعمال شده و نیازمند تصویب نهایی مدیریت است.</span>
+                <span>توجه: اوزان 25٪، 25٪، 20٪، 15٪، 15٪ به عنوان ساختار موقت و شفاف اعمال شده و نیازمند تصویب نهایی مدیریت است.</span>
               </div>
             </div>
 
@@ -1154,7 +1154,7 @@ export const QcDesk: React.FC<Props> = ({
                 placeholder="توضیحات نهایی جهت درج در صورت‌جلسه بازرسی QC..."
                 value={qcNotes}
                 onChange={(e) => setQcNotes(e.target.value)}
-                className="w-full text-xs p-3 rounded-md border border-[#212835] focus:ring-2 focus:ring-[#C1A056] bg-[#111620] dark:text-white"
+                className="w-full text-xs p-3 rounded-md border border-[#212835] focus:ring-2 focus:ring-[#C5A059] bg-[#111620] text-[#F0F4F8] placeholder-[#637184] outline-none"
               />
             </div>
 
@@ -1251,7 +1251,7 @@ export const QcDesk: React.FC<Props> = ({
                     onClick={() => handleSelectProject(p)}
                     className={`p-3.5 rounded-lg border cursor-pointer transition select-none relative ${
                       isSelected
-                        ? 'border-[#C5A059] bg-[#1C232D]  ring-2 ring-[#C1A056]/30'
+                        ? 'border-[#C5A059] bg-[#1C232D] ring-2 ring-[#C5A059]/30'
                         : awaitingQc
                         ? 'border-[#C5A059]/50 bg-[#151B23] hover:border-[#C5A059]'
                         : 'border-[#212835] bg-[#151B23] hover:border-[#C5A059]/40'

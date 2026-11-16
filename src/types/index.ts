@@ -1,11 +1,11 @@
 export type UserRole = 
   | 'CEO'                     // مدیرعامل (دسترسی انحصاری به شناسنامه جامع پروژه‌ها و پرینت)
   | 'QC_MANAGER'              // مدیر فنی و QC (کاربر اصلی با دسترسی کامل عملیاتی)
-  | 'SALES'                   // کارشناسان فروش (ثبت ۲ بخشی با تیک فورس‌ماژور و پیگیری وضعیت)
-  | 'MEASUREMENT_LEAD'        // مسئول اندازه‌گیری دوم و تایید بستر فضا (۱ نفر)
+  | 'SALES'                   // کارشناسان فروش (ثبت 2 بخشی با تیک فورس‌ماژور و پیگیری وضعیت)
+  | 'MEASUREMENT_LEAD'        // مسئول اندازه‌گیری دوم و تایید بستر فضا (1 نفر)
   | 'LEAD_TECHNICIAN'         // سرپرست اکیپ نصب
   | 'TECHNICIAN'              // تکنسین نصب
-  | 'WAREHOUSE'               // مسئول انبار و پیگیری تامین (۲ نفر)
+  | 'WAREHOUSE'               // مسئول انبار و پیگیری تامین (2 نفر)
   | 'SCHEDULING_COORDINATOR'; // هماهنگ‌کننده زمان‌بندی (سازگار با گذشته)
 
 export interface User {
@@ -15,7 +15,7 @@ export interface User {
   role: UserRole;
   avatar?: string;
   active: boolean;
-  teamId?: string; // شناسه اکیپ منتسب (در صورت عضویت در یکی از ۴ اکیپ)
+  teamId?: string; // شناسه اکیپ منتسب (در صورت عضویت در یکی از 4 اکیپ)
 }
 
 export type QCInspectionResult = 'PASS' | 'FAIL' | 'CONDITIONAL';
@@ -70,15 +70,15 @@ export interface QCInspectionChecklistItem {
 }
 
 export interface QCQualityScoreCriteria {
-  levelingScore: number;     // ۱ تا ۵: تراز و شاقول بودن ریل و لت‌ها
-  fabricFinishScore: number; // ۱ تا ۵: کیفیت اتوکشی، ایستایی و عدم چروک
-  mechanicsScore: number;    // ۱ تا ۵: حرکت روان ریل، بی‌صدایی و کالیبراسیون موتور
-  cleanlinessScore: number;  // ۱ تا ۵: نظافت، جمع‌آوری کارگاه و کرپی‌ها
-  complianceScore: number;   // ۱ تا ۵: انطباق با طرح و استانداردهای گالری طلایی
+  levelingScore: number;     // 1 تا 5: تراز و شاقول بودن ریل و لت‌ها
+  fabricFinishScore: number; // 1 تا 5: کیفیت اتوکشی، ایستایی و عدم چروک
+  mechanicsScore: number;    // 1 تا 5: حرکت روان ریل، بی‌صدایی و کالیبراسیون موتور
+  cleanlinessScore: number;  // 1 تا 5: نظافت، جمع‌آوری کارگاه و کرپی‌ها
+  complianceScore: number;   // 1 تا 5: انطباق با طرح و استانداردهای گالری طلایی
 }
 
 export interface QCQualityScore {
-  overallScore: number; // ۱ تا ۵ (میانگین وزنی محاسبه‌شده)
+  overallScore: number; // 1 تا 5 (میانگین وزنی محاسبه‌شده)
   criteria: QCQualityScoreCriteria;
   isProvisionalWeights: boolean; // پرچم نشان‌دهنده موقت بودن اوزان تا تصویب نهایی مدیریت
   calculatedAt: string;
@@ -96,7 +96,7 @@ export interface CustomerAcceptanceRecord {
   signature?: string; // Base64
   unavailabilityReason?: string;
   unavailabilityPhotos?: string[];
-  customerSatisfaction?: number; // ۱ تا ۵ ستاره
+  customerSatisfaction?: number; // 1 تا 5 ستاره
 }
 
 export interface QCInspectionRecord {
@@ -107,7 +107,7 @@ export interface QCInspectionRecord {
   inspectorUserName: string;
   inspectorRole: 'QC_MANAGER';
   result: QCInspectionResult;
-  overallScore?: number; // ۱ تا ۵
+  overallScore?: number; // 1 تا 5
   qualityScoreDetails?: QCQualityScore;
   checklist: QCInspectionChecklistItem[];
   defects: QCDefect[];
@@ -117,15 +117,15 @@ export interface QCInspectionRecord {
   createdAt: string;
 }
 
-// ساختار ۴ اکیپ نصب (هر اکیپ: ۱ سرپرست + ۲ تکنسین = ۱۲ نفر)
+// ساختار 4 اکیپ نصب (هر اکیپ: 1 سرپرست + 2 تکنسین = 12 نفر)
 export interface InstallationTeam {
   id: string;
-  name: string; // نام اکیپ (مثلاً «اکیپ نصب ۱»)
+  name: string; // نام اکیپ (مثلاً «اکیپ نصب 1»)
   code: string; // کد اکیپ (مثلاً «TEAM_1»)
   supervisorId?: string; // شناسه سرپرست اکیپ
   supervisorName?: string;
   dailyCapacityHours?: number | null; // ظرفیت کاری روزانه اکیپ به ساعت (اختیاری)
-  workingDays?: number[]; // روزهای کاری مجاز در هفته (۰=یکشنبه تا ۶=شنبه)
+  workingDays?: number[]; // روزهای کاری مجاز در هفته (0=یکشنبه تا 6=شنبه)
   createdAt: string;
   updatedAt: string;
 }
@@ -142,7 +142,7 @@ export interface TeamMember {
 export interface InstallationTeamWithMembers extends InstallationTeam {
   supervisor?: User;
   technicians: User[];
-  totalMembers: number; // سقف ۳ نفر
+  totalMembers: number; // سقف 3 نفر
 }
 
 export type ProjectStatus = 
@@ -173,7 +173,7 @@ export interface HandoverChecklist {
   floorProtectiveClothUsed: boolean; // پهن کردن آستری محافظ کف زیر ابزار جهت جلوگیری از خط و خش روی پارکت/سنگ
   cradleBracketsSecured: boolean; // مهاربندی کرپی‌های شید و عودت کرپی‌های خالی به وانت
   remoteTested: boolean; // تست حرکت روان ریل، موتور سامفی و ریموت کنترل برقی
-  leveled: boolean; // بررسی تراز لیزری ۳۶۰ درجه و شاقول بودن قاب و پایه‌ها
+  leveled: boolean; // بررسی تراز لیزری 360 درجه و شاقول بودن قاب و پایه‌ها
   ironedPleated: boolean; // مرتب‌سازی چین‌ها و اتوکشی نهایی پرده
   cleaned: boolean; // نظافت کامل محیط و جمع‌آوری تمام ضایعات و گرد و خاک
   handoverChecklistNotes?: Record<string, string>; // توضیحات موارد تاییدنشده
@@ -191,7 +191,7 @@ export interface PreInstallationInspection {
   notes?: string;
 }
 
-// چک‌لیست و فرآیند مستقل آمادگی فیزیکی بستر نصب (مرحله ۳ - تفکیک از اندازه‌گیری دوم)
+// چک‌لیست و فرآیند مستقل آمادگی فیزیکی بستر نصب (مرحله 3 - تفکیک از اندازه‌گیری دوم)
 export type SiteChecklistState = 'CONFIRMED' | 'ISSUE_DETECTED' | 'NOT_APPLICABLE';
 
 export interface SiteReadinessItem {
@@ -214,19 +214,20 @@ export interface SiteReadinessInspection {
   isReady?: boolean;
 }
 
-// گیت‌های پیش‌نیاز ورود رسمی پروژه به دپارتمان فنی و زمان‌بندی (مرحله ۱)
+// گیت‌های پیش‌نیاز ورود رسمی پروژه به دپارتمان فنی و زمان‌بندی (مرحله 1)
 export interface HandoverPrerequisite {
   confirmed: boolean;
   confirmedBy?: string;
   confirmedAt?: string;
   notes?: string;
   evidenceUrl?: string;
+  shelfLocation?: string; // موقعیت چیدمان و قفسه در انبار مرکزی
 }
 
 export interface ProjectTechnicalHandover {
   isHandoverComplete: boolean;
   officialHandoverDate?: string;
-  productionConfirmation: HandoverPrerequisite;
+  productionConfirmation?: HandoverPrerequisite; // اختیاری شده جهت سازگاری، تایید صرفاً بر عهده انبار است
   warehouseConfirmation: HandoverPrerequisite;
   unlockedAt?: string;
   isHistoricalMigration?: boolean;
@@ -265,7 +266,7 @@ export interface StuckIncident {
   previousStatus?: ProjectStatus; // وضعیت قبلی پروژه پیش از ورود به استاک
 }
 
-// ارزیابی ۳۶۰ درجه پرسنل توسط مسئولین فنی
+// ارزیابی 360 درجه پرسنل توسط مسئولین فنی
 export interface PersonnelEvaluation {
   id: string;
   userId: string;
@@ -485,7 +486,7 @@ export interface Project {
   scheduledTime: string; // مثلاً 09:30 یا 14:00
   
   // اکیپ نصب
-  assignedTeamId?: string; // شناسه یکی از ۴ اکیپ نصب
+  assignedTeamId?: string; // شناسه یکی از 4 اکیپ نصب
   assignedTeamName?: string; // نام اکیپ منتسب
   leadTechnicianId?: string; // شناسه سرپرست اکیپ نصب
   assignedTechnicianIds: string[]; // تمام اعضای اکیپ
@@ -495,7 +496,7 @@ export interface Project {
   requiredDurationHours?: number; // تخمین کل ساعات اجرای نصب
   secondMeasurementDoc?: string; // تصویر یا سند قطعی اندازه‌گیری دوم
   
-  // گیت ورود رسمی پروژه به واحد فنی (مرحله ۱)
+  // گیت ورود رسمی پروژه به واحد فنی (مرحله 1)
   technicalHandover?: ProjectTechnicalHandover;
 
   // چک‌لیست ابزار
@@ -517,7 +518,7 @@ export interface Project {
   
   // بازدید بستر و پیش از نصب
   preInspection?: PreInstallationInspection; // سازگار با گذشته
-  siteReadiness?: SiteReadinessInspection; // فرآیند مستقل ۳ حالته مرحله ۳
+  siteReadiness?: SiteReadinessInspection; // فرآیند مستقل 3 حالته مرحله 3
   
   // چک‌لیست استانداردهای طلایی تحویل
   handoverChecklist?: HandoverChecklist;
@@ -593,20 +594,20 @@ export type HandoverSigneeType =
   | 'UNAVAILABLE_EXEMPT';         // عدم حضور کارفرما / مستندسازی دلیل با شواهد
 
 export type IssueCategory =
-  | 'MEASUREMENT_ERROR'          // ۱. مغایرت یا خطای اندازه‌گیری اولیه
-  | 'MEASUREMENT_RECORD_ERROR'   // ۲. خطا در جابه‌جایی یا ثبت مشخصات اندازه‌گیری
-  | 'PRODUCTION_DEFECT'          // ۳. نقص، دوخت ناصحیح یا کسری تولید
-  | 'WAREHOUSE_DELIVERY_ISSUE'   // ۴. کسری یا اشتباه در تحویل و بسته‌بندی انبار
-  | 'TRANSIT_DAMAGE'             // ۵. آسیب حین بارگیری، حمل یا ترانزیت
-  | 'SITE_NOT_READY'             // ۶. عدم آمادگی بستر ساختمان، کناف یا برق
-  | 'EQUIPMENT_DEFECT'           // ۷. کسری، نقص یا خرابی تجهیزات، یراق و ابزار
-  | 'OTHER';                     // ۸. سایر موارد عملیاتی
+  | 'MEASUREMENT_ERROR'          // 1. مغایرت یا خطای اندازه‌گیری اولیه
+  | 'MEASUREMENT_RECORD_ERROR'   // 2. خطا در جابه‌جایی یا ثبت مشخصات اندازه‌گیری
+  | 'PRODUCTION_DEFECT'          // 3. نقص، دوخت ناصحیح یا کسری تولید
+  | 'WAREHOUSE_DELIVERY_ISSUE'   // 4. کسری یا اشتباه در تحویل و بسته‌بندی انبار
+  | 'TRANSIT_DAMAGE'             // 5. آسیب حین بارگیری، حمل یا ترانزیت
+  | 'SITE_NOT_READY'             // 6. عدم آمادگی بستر ساختمان، کناف یا برق
+  | 'EQUIPMENT_DEFECT'           // 7. کسری، نقص یا خرابی تجهیزات، یراق و ابزار
+  | 'OTHER';                     // 8. سایر موارد عملیاتی
 
 export type SlaStatus =
-  | 'OPEN_IN_SLA'        // باز — در محدوده ۷۲ ساعت استاندارد
-  | 'OPEN_OVERDUE'       // باز — عبور از ۷۲ ساعت و دارای تاخیر بحرانی
-  | 'RESOLVED_IN_SLA'    // حل‌شده — در موعد مقرر زیر ۷۲ ساعت
-  | 'RESOLVED_OVERDUE';  // حل‌شده — با تاخیر پس از ۷۲ ساعت
+  | 'OPEN_IN_SLA'        // باز — در محدوده 72 ساعت استاندارد
+  | 'OPEN_OVERDUE'       // باز — عبور از 72 ساعت و دارای تاخیر بحرانی
+  | 'RESOLVED_IN_SLA'    // حل‌شده — در موعد مقرر زیر 72 ساعت
+  | 'RESOLVED_OVERDUE';  // حل‌شده — با تاخیر پس از 72 ساعت
 
 export interface TicketActionLog {
   id: string;
@@ -635,7 +636,7 @@ export interface Ticket {
   authorId: string;
   authorName: string;
   type: TicketType;
-  category?: IssueCategory; // دسته‌بندی ۸ گانه عملیاتی P1
+  category?: IssueCategory; // دسته‌بندی 8 گانه عملیاتی P1
   description: string;
   photos: string[];
   status: TicketStatus;
@@ -645,13 +646,18 @@ export interface Ticket {
   assignedTeamName?: string;
   assignedUserId?: string;
   assignedUserName?: string;
+  assignedRole?: string;
+  assignedDepartment?: string;
+  referralNote?: string;
+  referredAt?: string;
+  referredByUserName?: string;
   
   // انسداد عملیات (Blocking behavior)
   isBlocking?: boolean; // آیا باعث توقف کار نصب شده؟
   blockingReason?: string; // شرح علت توقف
   
   // مهلت و تاریخچه SLA
-  resolutionDeadline?: string; // ضرب‌الاجل ۷۲ ساعته
+  resolutionDeadline?: string; // ضرب‌الاجل 72 ساعته
   resolutionNote?: string;
   createdAt: string;
   resolvedAt?: string;

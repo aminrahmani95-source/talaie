@@ -44,7 +44,7 @@ interface Props {
   onRemoveTeamMember?: (userId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-type TabFilter = 'ALL' | 'QC_LEADS' | 'COORDINATORS' | 'CREW_LEADS' | 'CREW';
+type TabFilter = 'ALL' | 'QC_LEADS' | 'COORDINATORS' | 'CREW_LEADS' | 'CREW' | 'OFFICE';
 type MainSection = 'PERSONNEL' | 'TEAMS';
 
 export const TechniciansManager: React.FC<Props> = ({
@@ -133,7 +133,7 @@ export const TechniciansManager: React.FC<Props> = ({
         return;
       }
       if (password.trim().length < 8) {
-        setModalError('رمز عبور باید حداقل ۸ کاراکتر باشد.');
+        setModalError('رمز عبور باید حداقل 8 کاراکتر باشد.');
         return;
       }
     }
@@ -204,7 +204,7 @@ export const TechniciansManager: React.FC<Props> = ({
       return;
     }
     if (newPassword.trim().length < 8) {
-      setResetError('رمز عبور باید حداقل ۸ کاراکتر باشد.');
+      setResetError('رمز عبور باید حداقل 8 کاراکتر باشد.');
       return;
     }
 
@@ -258,6 +258,9 @@ export const TechniciansManager: React.FC<Props> = ({
   const coordinators = users.filter((u) => u.role === 'SCHEDULING_COORDINATOR');
   const crewLeads = users.filter((u) => u.role === 'LEAD_TECHNICIAN');
   const crewMembers = users.filter((u) => u.role === 'TECHNICIAN');
+  const officePersonnel = users.filter((u) =>
+    ['CEO', 'SALES', 'MEASUREMENT_LEAD', 'WAREHOUSE'].includes(u.role)
+  );
 
   const filteredByRole =
     tabFilter === 'QC_LEADS'
@@ -268,6 +271,8 @@ export const TechniciansManager: React.FC<Props> = ({
       ? crewLeads
       : tabFilter === 'CREW'
       ? crewMembers
+      : tabFilter === 'OFFICE'
+      ? officePersonnel
       : users;
 
   const filteredUsers = filteredByRole.filter((u) => {
@@ -277,40 +282,70 @@ export const TechniciansManager: React.FC<Props> = ({
   });
 
   const getRoleBadge = (u: User) => {
+    if (u.role === 'CEO') {
+      return {
+        label: 'مدیرعامل',
+        classes: 'bg-purple-500/20 text-purple-300 border border-purple-500/40',
+      };
+    }
     if (u.role === 'QC_MANAGER') {
       return {
         label: 'مسئول QC و فنی',
-        classes: 'bg-[#212121] text-[#E5CA8F]',
+        classes: 'bg-[#C5A059]/20 text-[#E5CA8F] border border-[#C5A059]/40',
       };
     }
     if (u.role === 'SCHEDULING_COORDINATOR') {
       return {
         label: 'مسئول هماهنگی و زمان‌بندی',
-        classes: 'bg-blue-500/20 text-blue-700 dark:text-blue-300',
+        classes: 'bg-blue-500/20 text-blue-300 border border-blue-500/40',
+      };
+    }
+    if (u.role === 'SALES') {
+      return {
+        label: 'کارشناس فروش',
+        classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
+      };
+    }
+    if (u.role === 'MEASUREMENT_LEAD') {
+      return {
+        label: 'مسئول متراژ دوم',
+        classes: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40',
+      };
+    }
+    if (u.role === 'WAREHOUSE') {
+      return {
+        label: 'مسئول انبار و تامین',
+        classes: 'bg-orange-500/20 text-orange-300 border border-orange-500/40',
       };
     }
     if (u.role === 'LEAD_TECHNICIAN') {
       return {
         label: 'سرپرست اکیپ نصب',
-        classes: 'bg-[#C1A056]/20 text-[#C5A059]',
+        classes: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40',
       };
     }
     return {
       label: 'تکنسین نصب',
-      classes: 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300',
+      classes: 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/40',
     };
   };
 
   const defaultTeams: InstallationTeam[] = [
-    { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', createdAt: '', updatedAt: '' },
-    { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', createdAt: '', updatedAt: '' },
-    { id: 'TEAM_3', name: 'اکیپ نصب ۳', code: 'TEAM_3', createdAt: '', updatedAt: '' },
-    { id: 'TEAM_4', name: 'اکیپ نصب ۴', code: 'TEAM_4', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_1', name: 'اکیپ نصب فرخ نقدعلیان', code: 'TEAM_1', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_2', name: 'اکیپ نصب اصغر فرهادی', code: 'TEAM_2', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_3', name: 'اکیپ نصب محسن رضایی', code: 'TEAM_3', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_4', name: 'اکیپ نصب حمید کاظمی', code: 'TEAM_4', createdAt: '', updatedAt: '' },
   ];
   const effectiveTeams = teams && teams.length > 0 ? teams : defaultTeams;
 
   // Map of team members
-  const assignedUserIds = new Set<string>((teamMembers || []).map((m) => m.userId));
+  const assignedUserIds = React.useMemo(() => {
+    const ids = new Set<string>((teamMembers || []).map((m) => m.userId));
+    effectiveTeams.forEach((t) => {
+      if (t.supervisorId) ids.add(t.supervisorId);
+    });
+    return ids;
+  }, [teamMembers, effectiveTeams]);
 
   const handleAssignMember = async (teamId: string, userId: string, roleInTeam: 'LEAD' | 'TECHNICIAN') => {
     if (!userId) return;
@@ -410,7 +445,7 @@ export const TechniciansManager: React.FC<Props> = ({
         <SegmentedControl
           options={[
             { id: 'PERSONNEL', label: 'حساب‌های پرسنل و دسترسی‌ها', badge: users.length },
-            { id: 'TEAMS', label: '۴ اکیپ نصب فنی (۱۲ نفر)', badge: effectiveTeams.length },
+            { id: 'TEAMS', label: '4 اکیپ نصب فنی (12 نفر)', badge: effectiveTeams.length },
           ]}
           value={mainSection}
           onChange={(val) => setMainSection(val as MainSection)}
@@ -423,10 +458,10 @@ export const TechniciansManager: React.FC<Props> = ({
             <div>
               <h4 className="text-sm font-bold text-[#F0F4F8] flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-[#C5A059]" />
-                <span>سازماندهی ۴ اکیپ نصب فنی شرکت گالری طلایی</span>
+                <span>سازماندهی 4 اکیپ نصب فنی شرکت گالری طلایی</span>
               </h4>
               <p className="text-xs text-[#637184] mt-1 leading-relaxed">
-                دپارتمان فنی دارای ۴ اکیپ رسمی نصب است. هر اکیپ حداکثر متشکل از ۱ سرپرست و ۲ تکنسین (مجموعاً ۳ نفر) است که کل کادر ۱۲ نفره را پوشش می‌دهد. هر کاربر در یک زمان فقط عضو یک اکیپ می‌تواند باشد.
+                دپارتمان فنی دارای 4 اکیپ رسمی نصب است. هر اکیپ حداکثر متشکل از 1 سرپرست و 2 تکنسین (مجموعاً 3 نفر) است که کل کادر 12 نفره را پوشش می‌دهد. هر کاربر در یک زمان فقط عضو یک اکیپ می‌تواند باشد.
               </p>
             </div>
           </div>
@@ -458,9 +493,13 @@ export const TechniciansManager: React.FC<Props> = ({
               const isFull = totalCount >= 3;
 
               // Users available to be assigned (active, not already assigned to any team)
-              const availableUsers = users.filter(
-                (u) => u.active !== false && !assignedUserIds.has(u.id)
-              );
+              const availableUsers = users
+                .filter((u) => u.active !== false && !assignedUserIds.has(u.id))
+                .sort((a, b) => {
+                  const aTech = a.role === 'LEAD_TECHNICIAN' || a.role === 'TECHNICIAN' ? 1 : 0;
+                  const bTech = b.role === 'LEAD_TECHNICIAN' || b.role === 'TECHNICIAN' ? 1 : 0;
+                  return bTech - aTech;
+                });
 
               return (
                 <div
@@ -475,7 +514,7 @@ export const TechniciansManager: React.FC<Props> = ({
                       </div>
                       <div>
                         <h4 className="font-bold text-sm text-[#F0F4F8]">
-                          {team.name}
+                          {supervisorUser ? `اکیپ نصب ${getDisplayName(supervisorUser.name)}` : team.name}
                         </h4>
                         <span className="text-xs font-mono text-zinc-500">{team.code}</span>
                       </div>
@@ -488,7 +527,7 @@ export const TechniciansManager: React.FC<Props> = ({
                           : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30'
                       }`}
                     >
-                      {toPersianDigits(totalCount)} از ۳ نفر {isFull ? '(تکمیل)' : `(${toPersianDigits(3 - totalCount)} جای خالی)`}
+                      {toPersianDigits(totalCount)} از 3 نفر {isFull ? '(تکمیل)' : `(${toPersianDigits(3 - totalCount)} جای خالی)`}
                     </span>
                   </div>
 
@@ -497,7 +536,7 @@ export const TechniciansManager: React.FC<Props> = ({
                     <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
-                        <span>سرپرست اکیپ (۱ نفر):</span>
+                        <span>سرپرست اکیپ (1 نفر):</span>
                       </span>
                       {supervisorUser && (
                         <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
@@ -540,10 +579,14 @@ export const TechniciansManager: React.FC<Props> = ({
                           }
                           className="flex-1 text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                         >
-                          <option value="">انتخاب سرپرست از پرسنل آزاد...</option>
+                          <option value="">
+                            {availableUsers.length > 0
+                              ? `انتخاب سرپرست از پرسنل آزاد (${toPersianDigits(availableUsers.length)} نفر)...`
+                              : 'هیچ پرسنل آزادی موجود نیست'}
+                          </option>
                           {availableUsers.map((u) => (
                             <option key={u.id} value={u.id}>
-                              {u.name} ({u.phone}) - {u.role === 'LEAD_TECHNICIAN' ? 'سرپرست' : 'تکنسین'}
+                              {u.name} ({u.phone}) — {u.role === 'LEAD_TECHNICIAN' ? 'سرپرست' : u.role === 'TECHNICIAN' ? 'تکنسین' : u.role}
                             </option>
                           ))}
                         </select>
@@ -571,7 +614,7 @@ export const TechniciansManager: React.FC<Props> = ({
                     <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
                         <Wrench className="w-3.5 h-3.5 text-[#C5A059]" />
-                        <span>تکنسین‌های نصب ({toPersianDigits(techUsers.length)} از ۲ نفر):</span>
+                        <span>تکنسین‌های نصب ({toPersianDigits(techUsers.length)} از 2 نفر):</span>
                       </span>
                     </span>
 
@@ -620,10 +663,14 @@ export const TechniciansManager: React.FC<Props> = ({
                           }
                           className="flex-1 text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                         >
-                          <option value="">افزودن تکنسین از پرسنل آزاد...</option>
+                          <option value="">
+                            {availableUsers.length > 0
+                              ? `افزودن تکنسین از پرسنل آزاد (${toPersianDigits(availableUsers.length)} نفر)...`
+                              : 'هیچ تکنسین آزادی موجود نیست'}
+                          </option>
                           {availableUsers.map((u) => (
                             <option key={u.id} value={u.id}>
-                              {u.name} ({u.phone})
+                              {u.name} ({u.phone}) — {u.role === 'TECHNICIAN' ? 'تکنسین' : u.role === 'LEAD_TECHNICIAN' ? 'سرپرست' : u.role}
                             </option>
                           ))}
                         </select>
@@ -707,10 +754,11 @@ export const TechniciansManager: React.FC<Props> = ({
             <SegmentedControl
               options={[
                 { id: 'ALL', label: 'همه', badge: users.length },
-                { id: 'QC_LEADS', label: 'مسئولین QC', badge: qcLeads.length },
+                { id: 'QC_LEADS', label: 'QC', badge: qcLeads.length },
                 { id: 'COORDINATORS', label: 'هماهنگی', badge: coordinators.length },
                 { id: 'CREW_LEADS', label: 'سرپرستان', badge: crewLeads.length },
                 { id: 'CREW', label: 'تکنسین‌ها', badge: crewMembers.length },
+                { id: 'OFFICE', label: 'دفتر و فروش', badge: officePersonnel.length },
               ]}
               value={tabFilter}
               onChange={(val) => setTabFilter(val as TabFilter)}
@@ -873,7 +921,7 @@ export const TechniciansManager: React.FC<Props> = ({
                 type="password"
                 required
                 minLength={8}
-                placeholder="حداقل ۸ کاراکتر"
+                placeholder="حداقل 8 کاراکتر"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full text-sm p-2.5 rounded-md border border-[#212835] font-mono text-left bg-[#0D1117] dark:text-white"
@@ -889,11 +937,22 @@ export const TechniciansManager: React.FC<Props> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
+                onClick={() => setRole('CEO')}
+                className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                  role === 'CEO'
+                    ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                }`}
+              >
+                مدیرعامل
+              </button>
+              <button
+                type="button"
                 onClick={() => setRole('QC_MANAGER')}
-                className={`p-2.5 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'QC_MANAGER'
-                    ? 'border-[#C5A059] bg-[#212121] text-[#E5CA8F]'
-                    : 'border-[#212835] text-[#637184]'
+                    ? 'border-[#C5A059] bg-[#C5A059]/20 text-[#E5CA8F]'
+                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
                 }`}
               >
                 مدیر QC
@@ -901,21 +960,54 @@ export const TechniciansManager: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setRole('SCHEDULING_COORDINATOR')}
-                className={`p-2.5 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'SCHEDULING_COORDINATOR'
-                    ? 'border-blue-500 bg-blue-500/20 text-blue-800 dark:text-blue-300'
-                    : 'border-[#212835] text-[#637184]'
+                    ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
                 }`}
               >
                 مسئول هماهنگی
               </button>
               <button
                 type="button"
+                onClick={() => setRole('SALES')}
+                className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                  role === 'SALES'
+                    ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
+                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                }`}
+              >
+                کارشناس فروش
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('MEASUREMENT_LEAD')}
+                className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                  role === 'MEASUREMENT_LEAD'
+                    ? 'border-cyan-500 bg-cyan-500/20 text-cyan-300'
+                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                }`}
+              >
+                مسئول متراژ دوم
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('WAREHOUSE')}
+                className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                  role === 'WAREHOUSE'
+                    ? 'border-orange-500 bg-orange-500/20 text-orange-300'
+                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                }`}
+              >
+                مسئول انبار
+              </button>
+              <button
+                type="button"
                 onClick={() => setRole('LEAD_TECHNICIAN')}
-                className={`p-2.5 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'LEAD_TECHNICIAN'
-                    ? 'border-[#C5A059] bg-[#1C232D] text-[#C5A059]'
-                    : 'border-[#212835] text-[#637184]'
+                    ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300'
+                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
                 }`}
               >
                 سرپرست اکیپ
@@ -923,10 +1015,10 @@ export const TechniciansManager: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setRole('TECHNICIAN')}
-                className={`p-2.5 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
+                className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'TECHNICIAN'
-                    ? 'border-[#212121] dark:border-[#C5A059] bg-[#212121] dark:bg-[#202020] text-[#E5CA8F]'
-                    : 'border-[#212835] text-[#637184]'
+                    ? 'border-zinc-500 bg-zinc-500/20 text-zinc-300'
+                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
                 }`}
               >
                 تکنسین نصب
@@ -944,7 +1036,7 @@ export const TechniciansManager: React.FC<Props> = ({
                   type="checkbox"
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
-                  className="w-4 h-4 accent-[#C1A056] rounded cursor-pointer"
+                  className="w-4 h-4 accent-[#C5A059] rounded cursor-pointer"
                 />
               </label>
             </div>
@@ -1009,7 +1101,7 @@ export const TechniciansManager: React.FC<Props> = ({
                 type="password"
                 required
                 minLength={8}
-                placeholder="حداقل ۸ کاراکتر"
+                placeholder="حداقل 8 کاراکتر"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full text-sm p-2.5 rounded-md border border-[#212835] font-mono text-left bg-[#0D1117] dark:text-white"

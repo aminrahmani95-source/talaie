@@ -185,6 +185,9 @@ describe('Role Guards & State Machine Validation', () => {
           status: 'COMPLETED',
           qcStatus: 'PENDING',
           completedAt: new Date().toISOString(),
+          representativeName: 'مهندس رضایی',
+          representativeRole: 'مهندس ناظر',
+          representativePhone: '09121112233',
         });
       }).not.toThrow();
     });

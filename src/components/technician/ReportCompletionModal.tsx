@@ -224,7 +224,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
     if (incompleteReport.hasIncomplete) {
       if (completionMode === 'EXCEPTIONAL_PARTIAL') {
         if (exceptionalReason.trim().length < 10) {
-          setUploadError('برای ثبت اتمام استثنایی با کسری اقلام، درج علت مستند (حداقل ۱۰ کاراکتر) الزامی است.');
+          setUploadError('برای ثبت اتمام استثنایی با کسری اقلام، درج علت مستند (حداقل 10 کاراکتر) الزامی است.');
           return;
         }
       } else {
@@ -346,7 +346,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                 : 'border-transparent text-[#9BA7B6] hover:text-[#F0F4F8]'
             }`}
           >
-            ۱. عکس‌های کار ({toPersianDigits(beforePhotos.length + afterPhotos.length)})
+            1. عکس‌های کار ({toPersianDigits(beforePhotos.length + afterPhotos.length)})
           </button>
           <button
             type="button"
@@ -357,7 +357,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                 : 'border-transparent text-[#9BA7B6] hover:text-[#F0F4F8]'
             }`}
           >
-            ۲. چک‌لیست تحویل
+            2. چک‌لیست تحویل
           </button>
           <button
             type="button"
@@ -368,7 +368,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                 : 'border-transparent text-[#9BA7B6] hover:text-[#F0F4F8]'
             }`}
           >
-            ۳. تحویل و امضا
+            3. تحویل و امضا
           </button>
         </div>
 
@@ -443,10 +443,10 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     />
                     <div className="space-y-1 flex-1">
                       <span className="font-semibold text-[#F0F4F8] block">
-                        ۱. تمام اقلام باقیمانده امروز به طور کامل نصب شدند
+                        1. تمام اقلام باقیمانده امروز به طور کامل نصب شدند
                       </span>
                       <p className="text-[11px] text-[#9BA7B6]">
-                        کار نصب ۱۰۰٪ تکمیل شده است و هیچ موردی ناتمام باقی نمانده است.
+                        کار نصب 100٪ تکمیل شده است و هیچ موردی ناتمام باقی نمانده است.
                       </p>
                       {completionMode === 'FULL_COMPLETED_TODAY' && (
                         <label className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed border-[#212835] cursor-pointer text-[11px] text-emerald-400 font-medium">
@@ -472,7 +472,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                     />
                     <div className="space-y-1.5 flex-1">
                       <span className="font-semibold text-rose-300 block">
-                        ۲. اتمام استثنایی با کسری اقلام اجرایی (تحویل ناقص پروژه)
+                        2. اتمام استثنایی با کسری اقلام اجرایی (تحویل ناقص پروژه)
                       </span>
                       <p className="text-[11px] text-rose-400">
                         به دلیل موانع کناف، عدم آمادگی بستر ساختمانی یا دستور کارفرما، اقلام فوق نصب نشدند و با تایید سرپرست پرونده بسته می‌شود.
@@ -480,7 +480,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                       {completionMode === 'EXCEPTIONAL_PARTIAL' && (
                         <div className="space-y-1 pt-1">
                           <label className="block text-[11px] font-semibold text-rose-300">
-                            علت مستند عدم اجرای اقلام باقیمانده (الزامی - حداقل ۱۰ کاراکتر):
+                            علت مستند عدم اجرای اقلام باقیمانده (الزامی - حداقل 10 کاراکتر):
                           </label>
                           <textarea
                             rows={2}
@@ -630,7 +630,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-[#F0F4F8]">
-                  چک‌لیست استانداردهای تحویل (۶ مورد):
+                  چک‌لیست استانداردهای تحویل (6 مورد):
                 </span>
                 <button
                   type="button"
@@ -856,7 +856,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                       ))}
                       {satisfaction && (
                         <span className="text-xs font-semibold text-[#E5CA8F] mr-2 tabular-nums">
-                          {toPersianDigits(satisfaction)} از ۵ ستاره
+                          {toPersianDigits(satisfaction)} از 5 ستاره
                         </span>
                       )}
                     </div>
@@ -971,7 +971,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
                       rows={3}
                       value={unavailabilityReason}
                       onChange={(e) => setUnavailabilityReason(e.target.value)}
-                      placeholder="مثال: کارفرما طبق تماس تلفنی ساعت ۱۸ امکان حضور نداشتند و هماهنگ شد کلید به نگهبانی تحویل گردد..."
+                      placeholder="مثال: کارفرما طبق تماس تلفنی ساعت 18 امکان حضور نداشتند و هماهنگ شد کلید به نگهبانی تحویل گردد..."
                       className="w-full text-xs p-3 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] leading-relaxed focus:border-[#C5A059]"
                       required
                     />

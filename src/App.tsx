@@ -16,8 +16,10 @@ import {
   ScheduleChangeRequest,
   MaterialRequest,
   CustomerAcceptanceRecord,
+  ProjectTechnicalHandover,
 } from './types';
 import { StorageService } from './utils/storage';
+import { TEST_USERS, DEFAULT_TEAMS, DEFAULT_TEAM_MEMBERS } from './utils/testUsers';
 import { SupabaseSyncService } from './utils/supabase';
 import { Outbox, OutboxMutation, OfflineQueue } from './utils/offlineQueue';
 import {
@@ -139,9 +141,18 @@ export const App: React.FC = () => {
   const [failedQueueCount, setFailedQueueCount] = useState<number>(0);
   const [isFailedOpsModalOpen, setIsFailedOpsModalOpen] = useState<boolean>(false);
 
-  const [users, setUsers] = useState<User[]>(() => StorageService.getUsers());
-  const [teams, setTeams] = useState<InstallationTeam[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [users, setUsers] = useState<User[]>(() => {
+    const stored = StorageService.getUsers();
+    return stored.length > 0 ? stored : TEST_USERS;
+  });
+  const [teams, setTeams] = useState<InstallationTeam[]>(() => {
+    const stored = StorageService.getTeams();
+    return stored.length > 0 ? stored : DEFAULT_TEAMS;
+  });
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
+    const stored = StorageService.getTeamMembers();
+    return stored.length > 0 ? stored : DEFAULT_TEAM_MEMBERS;
+  });
   const [projects, setProjects] = useState<Project[]>(() => StorageService.getProjects());
   const [tickets, setTickets] = useState<Ticket[]>(() => StorageService.getTickets());
   const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>([]);
@@ -170,14 +181,24 @@ export const App: React.FC = () => {
   const teamsWithMembers: InstallationTeamWithMembers[] = useMemo(() => {
     return teams.map((team) => {
       const leadMember = teamMembers.find((m) => m.teamId === team.id && m.roleInTeam === 'LEAD');
-      const supervisor = leadMember ? users.find((u) => u.id === leadMember.userId) : undefined;
+      const supervisor = leadMember
+        ? users.find((u) => u.id === leadMember.userId)
+        : team.supervisorId
+        ? users.find((u) => u.id === team.supervisorId)
+        : undefined;
+      const supervisorDisplayName = supervisor ? getDisplayName(supervisor.name) : undefined;
+      const dynamicName = supervisorDisplayName
+        ? `اکیپ نصب ${supervisorDisplayName}`
+        : team.name;
       const techMembers = teamMembers.filter((m) => m.teamId === team.id && m.roleInTeam === 'TECHNICIAN');
       const technicians = techMembers
         .map((m) => users.find((u) => u.id === m.userId))
         .filter(Boolean) as User[];
       return {
         ...team,
+        name: dynamicName,
         supervisor,
+        supervisorName: supervisorDisplayName,
         technicians,
         totalMembers: (supervisor ? 1 : 0) + technicians.length,
       };
@@ -573,6 +594,24 @@ export const App: React.FC = () => {
     }
   }, [settings, currentUser]);
 
+  useEffect(() => {
+    if (teams.length > 0) {
+      StorageService.saveTeams(teams);
+    }
+  }, [teams]);
+
+  useEffect(() => {
+    if (teamMembers.length > 0) {
+      StorageService.saveTeamMembers(teamMembers);
+    }
+  }, [teamMembers]);
+
+  useEffect(() => {
+    if (users.length > 0) {
+      StorageService.saveUsers(users);
+    }
+  }, [users]);
+
   // Unified single write path (Outbox Pattern)
   const commit = async (
     mutation: OutboxMutation,
@@ -587,7 +626,7 @@ export const App: React.FC = () => {
     }
 
     // Client-side role guards: validate before pushing to outbox
-    if (currentUser.role !== 'QC_MANAGER') {
+    if (currentUser.role !== 'QC_MANAGER' && currentUser.role !== 'CEO') {
       if (mutation.type === 'PATCH_PROJECT') {
         const projectId = mutation.payload?.id || mutation.orderingKey.replace('project:', '');
         const currentProject = projectsRef.current.find((p) => p.id === projectId);
@@ -755,13 +794,13 @@ export const App: React.FC = () => {
     );
   };
 
-  // ---- Full manager control (QC_MANAGER only) ----
+  // ---- Manager / Coordinator control ----
   const handleManagerPatch = async (
     projectId: string,
     patch: Record<string, unknown>,
     successMessage: string
   ) => {
-    if (!currentUser || currentUser.role !== 'QC_MANAGER') return;
+    if (!currentUser || (currentUser.role !== 'QC_MANAGER' && currentUser.role !== 'SCHEDULING_COORDINATOR' && currentUser.role !== 'CEO')) return;
     if (!projectsRef.current.some((p) => p.id === projectId)) {
       showToast('error', 'این پروژه دیگر وجود ندارد.');
       setManagedProjectId(null);
@@ -1253,7 +1292,10 @@ export const App: React.FC = () => {
     };
 
     if (handoverPayload) {
-      patch.interTeamHandover = handoverPayload;
+      patch.interTeamHandover = {
+        ...handoverPayload,
+        reportedByUserId: currentUser.id,
+      };
     }
 
     await commit(
@@ -1354,7 +1396,6 @@ export const App: React.FC = () => {
       updatedAt: nowIso,
       technicalHandover: {
         isHandoverComplete: false,
-        productionConfirmation: { confirmed: false },
         warehouseConfirmation: { confirmed: false },
       },
     };
@@ -1411,8 +1452,9 @@ export const App: React.FC = () => {
     const prep = {
       isPackedAndReady: true,
       packedAt: new Date().toISOString(),
-      packedBy: currentUser.name,
-      packingNotes: notes || '',
+      packedByUserId: currentUser.id,
+      packedByUserName: currentUser.name,
+      notes: notes || '',
     };
 
     const patch: Partial<Project> = {
@@ -1435,6 +1477,76 @@ export const App: React.FC = () => {
       }
     );
     showToast('success', `بسته‌بندی پروژه ${current.code || current.title} تایید شد و پرچم «بار آماده ✅» در تقویم مدیریت فعال گردید.`);
+  };
+
+  // Warehouse: Confirm arrival of goods into central warehouse (Official Handover Gate)
+  const handleConfirmWarehouseReceipt = async (
+    projectId: string,
+    params: {
+      confirmed: boolean;
+      notes?: string;
+      shelfLocation?: string;
+    }
+  ) => {
+    if (!currentUser) return;
+    const current = projectsRef.current.find((p) => p.id === projectId);
+    if (!current) return;
+
+    const existingHandover = current.technicalHandover || {
+      isHandoverComplete: false,
+      warehouseConfirmation: { confirmed: false },
+    };
+
+    const isConfirmed = params.confirmed;
+    const newIsHandoverComplete = isConfirmed;
+
+    const updatedHandover: ProjectTechnicalHandover = {
+      ...existingHandover,
+      warehouseConfirmation: {
+        confirmed: isConfirmed,
+        confirmedBy: isConfirmed ? (getDisplayName(currentUser.name) || currentUser.name) : undefined,
+        confirmedAt: isConfirmed ? new Date().toISOString() : undefined,
+        notes: params.notes?.trim() || undefined,
+        shelfLocation: params.shelfLocation?.trim() || undefined,
+      },
+      isHandoverComplete: newIsHandoverComplete,
+      officialHandoverDate: newIsHandoverComplete
+        ? (existingHandover.officialHandoverDate || new Date().toISOString())
+        : undefined,
+      unlockedAt: newIsHandoverComplete
+        ? (existingHandover.unlockedAt || new Date().toISOString())
+        : undefined,
+    };
+
+    if ('isHistoricalMigration' in updatedHandover && !current.technicalHandover?.isHistoricalMigration) {
+      delete (updatedHandover as any).isHistoricalMigration;
+    }
+
+    const patch: Partial<Project> = {
+      technicalHandover: updatedHandover,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: `project:${projectId}`,
+        payload: { id: projectId, patch },
+      },
+      () => {
+        const next = projectsRef.current.map((p) =>
+          p.id === projectId ? { ...p, ...patch } : p
+        );
+        setProjects(next);
+        projectsRef.current = next;
+      }
+    );
+
+    if (isConfirmed) {
+      showToast('success', `ورود کالا به انبار تایید شد. گیت تحویل فنی پروژه ${current.code || current.title} باز شد و آماده زمان‌بندی نصب است.`);
+    } else {
+      showToast('info', `تاییدیه ورود کالا به انبار برای پروژه ${current.code || current.title} لغو شد.`);
+    }
   };
 
   // Warehouse: Resolve urgent site ticket
@@ -1468,6 +1580,20 @@ export const App: React.FC = () => {
     const patch: Partial<Ticket> = {
       status,
       resolutionNote: resolutionText,
+      resolvedAt: status === 'RESOLVED' ? new Date().toISOString() : undefined,
+      verifiedByUserId: currentUser.id,
+      verifiedByUserName: currentUser.name,
+      actionHistory: [
+        ...(ticket.actionHistory || []),
+        {
+          id: `act-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          action,
+          byUserId: currentUser.id,
+          byUserName: currentUser.name,
+          note: resolutionText,
+        },
+      ],
     };
 
     await commit(
@@ -1710,39 +1836,94 @@ export const App: React.FC = () => {
     userId: string,
     roleInTeam: 'LEAD' | 'TECHNICIAN'
   ) => {
-    const res = await SupabaseSyncService.adminAssignTeamMember(teamId, userId, roleInTeam);
-    if (res.success) {
-      try {
-        const [t, tm] = await Promise.all([
-          SupabaseSyncService.fetchInstallationTeams(),
-          SupabaseSyncService.fetchTeamMembers(),
-        ]);
-        setTeams(t);
-        setTeamMembers(tm);
-        showToast('success', 'عضو با موفقیت به اکیپ انتساب یافت.');
-      } catch (err) {
-        console.warn('Refresh teams failed:', err);
-      }
+    try {
+      await SupabaseSyncService.adminAssignTeamMember(teamId, userId, roleInTeam);
+    } catch (e) {
+      console.warn('Supabase adminAssignTeamMember background sync:', e);
     }
-    return res;
+
+    setTeamMembers((prev) => {
+      const filtered = prev.filter((m) => m.userId !== userId);
+      const withoutExistingLead = roleInTeam === 'LEAD'
+        ? filtered.filter((m) => !(m.teamId === teamId && m.roleInTeam === 'LEAD'))
+        : filtered;
+      const updated: TeamMember[] = [
+        ...withoutExistingLead,
+        {
+          id: `tm-${Date.now()}-${userId}`,
+          teamId,
+          userId,
+          roleInTeam,
+          joinedAt: new Date().toISOString(),
+        },
+      ];
+      StorageService.saveTeamMembers(updated);
+      return updated;
+    });
+
+    if (roleInTeam === 'LEAD') {
+      const supervisor = users.find((u) => u.id === userId);
+      const supervisorName = supervisor ? getDisplayName(supervisor.name) : '';
+      setTeams((prev) => {
+        const updated = prev.map((t) =>
+          t.id === teamId
+            ? {
+                ...t,
+                supervisorId: userId,
+                name: supervisorName ? `اکیپ نصب ${supervisorName}` : t.name,
+              }
+            : t
+        );
+        StorageService.saveTeams(updated);
+        return updated;
+      });
+    }
+
+    setUsers((prev) => {
+      const updated = prev.map((u) => (u.id === userId ? { ...u, teamId } : u));
+      StorageService.saveUsers(updated);
+      return updated;
+    });
+
+    showToast('success', 'عضو با موفقیت به اکیپ انتساب یافت.');
+    return { success: true };
   };
 
   const handleRemoveTeamMember = async (userId: string) => {
-    const res = await SupabaseSyncService.adminRemoveTeamMember(userId);
-    if (res.success) {
-      try {
-        const [t, tm] = await Promise.all([
-          SupabaseSyncService.fetchInstallationTeams(),
-          SupabaseSyncService.fetchTeamMembers(),
-        ]);
-        setTeams(t);
-        setTeamMembers(tm);
-        showToast('success', 'عضو با موفقیت از اکیپ حذف شد.');
-      } catch (err) {
-        console.warn('Refresh teams failed:', err);
-      }
+    try {
+      await SupabaseSyncService.adminRemoveTeamMember(userId);
+    } catch (e) {
+      console.warn('Supabase adminRemoveTeamMember background sync:', e);
     }
-    return res;
+
+    setTeamMembers((prev) => {
+      const removedMember = prev.find((m) => m.userId === userId);
+      const updated = prev.filter((m) => m.userId !== userId);
+      StorageService.saveTeamMembers(updated);
+
+      if (removedMember && removedMember.roleInTeam === 'LEAD') {
+        setTeams((prevTeams) => {
+          const updatedTeams = prevTeams.map((t) =>
+            t.id === removedMember.teamId && t.supervisorId === userId
+              ? { ...t, supervisorId: undefined, name: `اکیپ نصب (${t.code})` }
+              : t
+          );
+          StorageService.saveTeams(updatedTeams);
+          return updatedTeams;
+        });
+      }
+
+      return updated;
+    });
+
+    setUsers((prev) => {
+      const updated = prev.map((u) => (u.id === userId ? { ...u, teamId: undefined } : u));
+      StorageService.saveUsers(updated);
+      return updated;
+    });
+
+    showToast('success', 'عضو با موفقیت از اکیپ حذف شد.');
+    return { success: true };
   };
 
   // Clear local device cache & reload from cloud with atomic coordinated outbox safety
@@ -1811,6 +1992,21 @@ export const App: React.FC = () => {
     showToast('info', 'با موفقیت از حساب کاربری خارج شدید.');
   };
 
+  const handleLoginSuccess = (u: User) => {
+    if (u?.id) {
+      if (tickets.length > 0) {
+        StorageService.saveTickets(tickets, u.id);
+      }
+      if (projectsRef.current.length > 0) {
+        StorageService.saveProjects(projectsRef.current, u.id);
+      }
+      if (materialRequestsRef.current.length > 0) {
+        StorageService.saveMaterialRequests(materialRequestsRef.current, u.id);
+      }
+    }
+    setCurrentUser(u);
+  };
+
   // Splash screen while checking persistent session
   if (authChecking) {
     return (
@@ -1839,18 +2035,20 @@ export const App: React.FC = () => {
         users={users}
         isOpen={true}
         isStandalone={true}
-        onSelectUser={(u) => {
-          setCurrentUser(u);
-        }}
+        onSelectUser={handleLoginSuccess}
       />
     );
   }
 
   // Counters for alerts with synchronized QC status logic
   const openTicketCount = tickets.filter((t) => t.status === 'OPEN').length;
-  const isStuckOpen = (p: Project) =>
-    p.status === 'STUCK' ||
-    (p.stuckIncident && p.stuckIncident.resolutionStatus !== 'RESOLVED');
+  const isStuckOpen = (p: Project) => {
+    if (p.status === 'STUCK') return true;
+    const latest = (p.stuckIncidents && p.stuckIncidents.length > 0)
+      ? p.stuckIncidents[p.stuckIncidents.length - 1]
+      : p.stuckIncident;
+    return Boolean(latest && latest.resolutionStatus !== 'RESOLVED');
+  };
   const openStuckCount = projects.filter(isStuckOpen).length;
   const isAwaitingQc = (p: Project) =>
     (p.status === 'COMPLETED' || p.qcStatus === 'PENDING') &&
@@ -1867,7 +2065,8 @@ export const App: React.FC = () => {
 
   const isQcManager = currentUser.role === 'QC_MANAGER';
   const isCoordinator = currentUser.role === 'SCHEDULING_COORDINATOR';
-  const isManagerOrCoordinator = isQcManager || isCoordinator;
+  const isCeo = currentUser.role === 'CEO';
+  const isManagerOrCoordinator = isQcManager || isCoordinator || isCeo;
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#0D1117] text-[#F0F4F8] flex flex-col font-sans selection:bg-[#C5A059] selection:text-[#0D1117] transition-colors duration-150">
@@ -1889,8 +2088,6 @@ export const App: React.FC = () => {
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         onLogout={handleLogout}
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
       />
 
       {/* Offline state or syncing banner */}
@@ -1908,7 +2105,7 @@ export const App: React.FC = () => {
 
       {/* Main Body */}
       <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
-        {currentUser.role === 'CEO' ? (
+        {currentUser.role === 'CEO' && activeTab === 'registry' ? (
           // ================= CEO / EXECUTIVE ARCHIVE VIEW =================
           <React.Suspense fallback={<DashboardSkeleton />}>
             <CeoMasterRegistry
@@ -1946,6 +2143,9 @@ export const App: React.FC = () => {
               tickets={tickets}
               onConfirmPacking={handleConfirmWarehousePacking}
               onResolveTicket={handleResolveWarehouseTicket}
+              onConfirmGoodsReceipt={handleConfirmWarehouseReceipt}
+              onViewProposal={(p) => setProposalModalProject(p)}
+              onOpenTicketModal={(p) => setTicketModalProject(p)}
             />
           </React.Suspense>
         ) : isManagerOrCoordinator ? (
@@ -1991,7 +2191,7 @@ export const App: React.FC = () => {
                   <MonthPlanner
                     projects={projects}
                     users={users}
-                    teams={teams}
+                    teams={teamsWithMembers}
                     currentUser={currentUser}
                     settings={settings}
                     scheduleChangeRequests={scheduleChangeRequests}
@@ -2033,6 +2233,7 @@ export const App: React.FC = () => {
                   <TicketCenter
                     tickets={tickets}
                     currentUser={currentUser || undefined}
+                    users={users}
                     onUpdateTicket={handleUpdateTicket}
                   />
                 )}
@@ -2116,6 +2317,7 @@ export const App: React.FC = () => {
             defaultDate={presetDateKey}
             users={users}
             teams={teams}
+            teamMembers={teamMembers}
             settings={settings}
             onClose={() => {
               setIsProjectFormOpen(false);
@@ -2168,7 +2370,7 @@ export const App: React.FC = () => {
           />
         )}
 
-        {(isQcManager || isCoordinator) && managedProjectId && currentUser && (() => {
+        {(isQcManager || isCoordinator || isCeo) && managedProjectId && currentUser && (() => {
           const managed = projects.find((p) => p.id === managedProjectId);
           if (!managed) return null;
           return (
@@ -2176,7 +2378,7 @@ export const App: React.FC = () => {
               project={managed}
               users={users}
               tickets={tickets}
-              teams={teams}
+              teams={teamsWithMembers}
               currentUser={currentUser}
               isOnline={typeof navigator === 'undefined' || navigator.onLine}
               onClose={() => setManagedProjectId(null)}

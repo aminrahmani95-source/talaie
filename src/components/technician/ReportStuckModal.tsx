@@ -209,7 +209,7 @@ export const ReportStuckModal: React.FC<Props> = ({
                 setDescription(e.target.value);
                 setError('');
               }}
-              placeholder="مثلاً: ابعاد ۲ عدد شید سالن مغایرت داشت و باید مجدداً اصلاح شود..."
+              placeholder="مثلاً: ابعاد 2 عدد شید سالن مغایرت داشت و باید مجدداً اصلاح شود..."
               className="w-full text-xs p-2.5 rounded-md border border-[#212835] focus:ring-1 focus:ring-rose-500 focus:border-rose-500 bg-[#0D1117] text-[#F0F4F8] resize-none"
             />
           </div>
@@ -222,39 +222,39 @@ export const ReportStuckModal: React.FC<Props> = ({
 
             <div>
               <label className="block text-[11px] font-semibold text-[#9BA7B6] mb-1">
-                ۱. اقدامات انجام‌شده تا این لحظه: *
+                1. اقدامات انجام‌شده تا این لحظه: *
               </label>
               <textarea
                 rows={2}
                 value={completedWork}
                 onChange={(e) => setCompletedWork(e.target.value)}
-                placeholder="مثال: تمام ریل‌ها و براکت‌های سقفی نصب شد. سیم‌کشی برق ۲۲۰ ولت انجام و تست شد."
+                placeholder="مثال: تمام ریل‌ها و براکت‌های سقفی نصب شد. سیم‌کشی برق 220 ولت انجام و تست شد."
                 className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] resize-none"
               />
             </div>
 
             <div>
               <label className="block text-[11px] font-semibold text-[#9BA7B6] mb-1">
-                ۲. کارهای باقیمانده برای اکیپ بعدی: *
+                2. کارهای باقیمانده برای اکیپ بعدی: *
               </label>
               <textarea
                 rows={2}
                 value={remainingWork}
                 onChange={(e) => setRemainingWork(e.target.value)}
-                placeholder="مثال: فقط آویزان کردن ۲ عدد شید اصلاح‌شده، کالیبره کردن لیمیت موتور و کد ریموت."
+                placeholder="مثال: فقط آویزان کردن 2 عدد شید اصلاح‌شده، کالیبره کردن لیمیت موتور و کد ریموت."
                 className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] resize-none"
               />
             </div>
 
             <div>
               <label className="block text-[11px] font-semibold text-[#9BA7B6] mb-1">
-                ۳. قطعات یا متریال مورد نیاز (جهت تامین انبار):
+                3. قطعات یا متریال مورد نیاز (جهت تامین انبار):
               </label>
               <input
                 type="text"
                 value={requiredParts}
                 onChange={(e) => setRequiredParts(e.target.value)}
-                placeholder="مثال: ۲ عدد شید اصلاحی با عرض ۲.۴۵ متر + ۲ عدد ریموت تک‌کانال"
+                placeholder="مثال: 2 عدد شید اصلاحی با عرض 2.45 متر + 2 عدد ریموت تک‌کانال"
                 className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8]"
               />
             </div>

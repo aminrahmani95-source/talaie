@@ -90,11 +90,11 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
         {/* Printable Official Certificate Body */}
         <div className="printable-certificate p-6 sm:p-10 space-y-6 text-[#212121] bg-[#FCFAF7]">
           {/* Certificate Header with Talaei Logo */}
-          <div className="flex items-center justify-between border-b-2 border-[#C1A056] pb-5">
+          <div className="flex items-center justify-between border-b-2 border-[#C5A059] pb-5">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-[#212121] border-2 border-[#C1A056] flex items-center justify-center p-2 shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-[#212121] border-2 border-[#C5A059] flex items-center justify-center p-2 shadow-sm">
                 <img
-                  src="./talaei-lion-gold.png"
+                  src="/talaei-lion-gold.png"
                   alt="نشان گالری طلایی"
                   className="w-full h-full object-contain"
                 />
@@ -165,7 +165,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
               </span>
             </div>
             <div className="col-span-2 sm:col-span-4 pt-2 border-t border-slate-100 flex items-start gap-1.5 text-slate-600">
-              <MapPin className="w-3.5 h-3.5 text-[#C1A056] shrink-0 mt-0.5" />
+              <MapPin className="w-3.5 h-3.5 text-[#C5A059] shrink-0 mt-0.5" />
               <span className="text-xs leading-relaxed">نشانی محل نصب: {project.address || '—'}</span>
             </div>
           </div>
@@ -174,9 +174,9 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
           <div className="overflow-hidden rounded-2xl border border-[#E8E4DC] bg-white">
             <div className="bg-[#212121] px-4 py-2.5 text-white flex items-center justify-between text-xs font-bold">
               <span>مشخصات فنی و مقادیر تحویل‌شده پروژه:</span>
-              <span className="text-[#C1A056] font-bold">{project.title}</span>
+              <span className="text-[#C5A059] font-bold">{project.title}</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y divide-slate-100 text-center text-xs p-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-x-reverse divide-y divide-slate-100 text-center text-xs p-2">
               <div className="p-2.5">
                 <span className="text-slate-400 block text-xs">شیدهای هوشمند:</span>
                 <span className="font-black text-base text-[#212121] mt-1 block">
@@ -185,7 +185,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
               </div>
               <div className="p-2.5">
                 <span className="text-slate-400 block text-xs">پرده و حریر دکوراتیو:</span>
-                <span className="font-black text-base text-[#C1A056] mt-1 block">
+                <span className="font-black text-base text-[#C5A059] mt-1 block">
                   {toPersianDigits(project.curtainPanels)} لت
                 </span>
               </div>
@@ -242,7 +242,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
           {(beforePhoto || afterPhoto) && (
             <div className="space-y-2">
               <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#C1A056]" />
+                <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
                 <span>مستندات تصویری مقایسه‌ای اجرای کار (Before & After):</span>
               </div>
 
@@ -281,7 +281,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             {/* Checklist */}
             <div className="bg-white p-3.5 rounded-2xl border border-[#E8E4DC] space-y-2 text-xs">
               <div className="font-bold text-slate-800 text-xs pb-1 border-b border-slate-100 flex items-center gap-1">
-                <ShieldCheck className="w-4 h-4 text-[#C1A056]" />
+                <ShieldCheck className="w-4 h-4 text-[#C5A059]" />
                 <span>بررسی استانداردهای تحویل لوکس طلایی:</span>
               </div>
               <div className="space-y-1.5 text-xs">
@@ -316,7 +316,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             <div className="bg-white p-3.5 rounded-2xl border border-[#E8E4DC] space-y-2 text-xs flex flex-col justify-between">
               <div>
                 <div className="font-bold text-slate-800 text-xs pb-1 border-b border-slate-100 flex items-center gap-1">
-                  <Clock className="w-4 h-4 text-[#C1A056]" />
+                  <Clock className="w-4 h-4 text-[#C5A059]" />
                   <span>زمان و راندمان اجرای کار در محل:</span>
                 </div>
                 <div className="mt-2 space-y-1 text-xs text-slate-700">
@@ -361,7 +361,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                   ? 'عدم حضور کارفرما سر کارگاه با ذکر مستندات ثبت گردیده است.'
                   : 'اینجانب سلامت کامل اقلام و عملکرد بی‌نقص سیستم‌های نصب‌شده را تایید می‌نمایم.'}
               </p>
-              <div className="h-20 bg-[#FCFAF7] rounded-xl border border-dashed border-[#C1A056]/40 flex items-center justify-center p-1">
+              <div className="h-20 bg-[#FCFAF7] rounded-xl border border-dashed border-[#C5A059]/40 flex items-center justify-center p-1">
                 {project.customerSignature ? (
                   <CloudImage src={project.customerSignature} alt="امضای کارفرما" className="max-h-full max-w-full object-contain" />
                 ) : project.customerAcceptance?.status === 'UNAVAILABLE' || project.handoverSigneeType === 'UNAVAILABLE_EXEMPT' ? (
@@ -383,7 +383,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                     key={s}
                     className={`w-3.5 h-3.5 ${
                       project.customerSatisfaction && s <= project.customerSatisfaction
-                        ? 'text-[#C1A056] fill-[#C1A056]'
+                        ? 'text-[#C5A059] fill-[#C5A059]'
                         : 'text-slate-200'
                     }`}
                   />

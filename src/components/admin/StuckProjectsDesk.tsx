@@ -214,7 +214,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
       {/* Page Header */}
       <PageHeader
         title="پروژه‌های متوقف"
-        subtitle="مدیریت رفع موانع فنی در حداکثر مهلت ۷۲ ساعت"
+        subtitle="مدیریت رفع موانع فنی در حداکثر مهلت 72 ساعت"
         actions={
           <SegmentedControl
             options={[
@@ -242,7 +242,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
         </div>
 
         <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
-          <div className="text-xs text-[#637184]">حل در مهلت ۷۲ ساعت</div>
+          <div className="text-xs text-[#637184]">حل در مهلت 72 ساعت</div>
           <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
             {toPersianDigits(complianceRate)}٪
           </div>
@@ -258,7 +258,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
         <div className="bg-[#111620] rounded-lg p-3.5 border border-[#C5A059]/30 ">
           <div className="text-xs text-[#C5A059] font-bold">مهلت رفع توقف</div>
           <div className="text-xs text-[#F0F4F8] mt-2 font-bold">
-            حداکثر ۷۲ ساعت
+            حداکثر 72 ساعت
           </div>
         </div>
       </div>
@@ -324,7 +324,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                         <Clock className="w-3 h-3" />
                         <span>
                           {timing.isOverdue
-                            ? 'بیش از ۷۲ ساعت گذشته!'
+                            ? 'بیش از 72 ساعت گذشته!'
                             : `${toPersianDigits(timing.hours)} ساعت باقی‌مانده`}
                         </span>
                       </span>

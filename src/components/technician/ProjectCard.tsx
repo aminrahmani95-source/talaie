@@ -777,9 +777,9 @@ export const ProjectCard: React.FC<Props> = ({
               <AlertOctagon className="w-4 h-4 text-rose-400" />
               <span>پروژه متوقف است — در حال پیگیری توسط مسئولین فنی</span>
             </div>
-            {project.stuckIncident?.description && (
+            {(project.stuckIncident?.description || (project.stuckIncidents && project.stuckIncidents[project.stuckIncidents.length - 1]?.description)) && (
               <p className="mt-1 text-xs text-[#9BA7B6]">
-                علت: {project.stuckIncident.description}
+                علت: {project.stuckIncident?.description || project.stuckIncidents?.[project.stuckIncidents.length - 1]?.description}
               </p>
             )}
           </div>
@@ -872,34 +872,34 @@ export const ProjectCard: React.FC<Props> = ({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm"
         >
-          <div className="bg-[#FAF7F2] dark:bg-[#1C1B18] w-full max-w-sm rounded-2xl shadow-2xl border border-purple-300 dark:border-purple-800/80 p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-2.5 text-purple-700 dark:text-purple-400">
+          <div className="bg-[#151B23] w-full max-w-sm rounded-2xl shadow-2xl border border-purple-500/40 p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-[#F0F4F8]">
+            <div className="flex items-center gap-2.5 text-purple-400">
               <Package className="w-6 h-6 shrink-0" />
-              <h4 className="font-black text-sm text-[#212121] dark:text-white">
+              <h4 className="font-black text-sm text-[#F0F4F8]">
                 تایید دریافت فیزیکی بسته سر کارگاه
               </h4>
             </div>
 
-            <p className="text-xs text-[#69655F] dark:text-[#A8A29E] leading-relaxed">
+            <p className="text-xs text-[#9BA7B6] leading-relaxed">
               آیا اقلام زیر را به طور کامل از پیک تحویل گرفته و تطابق فیزیکی آن‌ها با کارگاه را تایید می‌نمایید؟
             </p>
 
-            <div className="bg-white dark:bg-[#25231F] p-3 rounded-xl border border-[#E2DDD4] dark:border-[#2E2B26] text-xs space-y-1.5">
-              <div className="font-bold text-purple-950 dark:text-purple-300">
+            <div className="bg-[#0D1117] p-3 rounded-xl border border-[#212835] text-xs space-y-1.5">
+              <div className="font-bold text-purple-300">
                 پیک / راننده: {confirmingReceiptTarget.dispatch.courierInfo}
               </div>
               {confirmingReceiptTarget.dispatch.trackingCode && (
-                <div className="text-[11px] text-[#8E6F27] dark:text-[#E5CA8F] font-mono">
+                <div className="text-[11px] text-[#C5A059] font-mono">
                   کد رهگیری: {confirmingReceiptTarget.dispatch.trackingCode}
                 </div>
               )}
-              <div className="pt-1.5 border-t border-[#E2DDD4] dark:border-[#2E2B26] space-y-1">
+              <div className="pt-1.5 border-t border-[#212835] space-y-1">
                 {confirmingReceiptTarget.dispatch.items.map((i: any, idx: number) => (
-                  <div key={idx} className="flex justify-between text-[11px] text-[#4A4742] dark:text-[#D5D0C7]">
+                  <div key={idx} className="flex justify-between text-[11px] text-[#9BA7B6]">
                     <span>• {i.title}</span>
-                    <span className="font-bold">
+                    <span className="font-bold text-[#F0F4F8]">
                       {toPersianDigits(i.dispatchedQty)} {i.unit || ''}
                     </span>
                   </div>
@@ -911,7 +911,7 @@ export const ProjectCard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setConfirmingReceiptTarget(null)}
-                className="px-3.5 py-2 rounded-xl border border-[#E2DDD4] dark:border-[#2E2B26] text-xs font-bold hover:bg-[#F2EDE4] dark:hover:bg-[#25231F] text-[#4A4742] dark:text-[#D5D0C7] min-h-[44px] cursor-pointer"
+                className="px-3.5 py-2 rounded-xl border border-[#212835] bg-[#1C232D] text-xs font-bold hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] min-h-[44px] cursor-pointer transition"
               >
                 انصراف
               </button>
@@ -926,7 +926,7 @@ export const ProjectCard: React.FC<Props> = ({
                   }
                   setConfirmingReceiptTarget(null);
                 }}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition min-h-[44px] flex items-center gap-1.5 cursor-pointer shadow-md"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition min-h-[44px] flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>تایید نهایی و تحویل</span>

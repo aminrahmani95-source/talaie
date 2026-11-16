@@ -14,6 +14,7 @@ interface Props {
 }
 
 export const LoginModal: React.FC<Props> = ({
+  users = [],
   onSelectUser,
   onClose,
   isOpen,
@@ -46,6 +47,22 @@ export const LoginModal: React.FC<Props> = ({
       onSelectUser(user);
       if (onClose) onClose();
     } catch (err: any) {
+      // Safe offline/fallback: if network unavailable or Supabase offline, match registered users list
+      const localMatched = users.find(
+        (u) => toEnglishDigits((u.phone || '').replace(/\D/g, '')) === trimmedPhone
+      );
+      if (
+        localMatched &&
+        (!SupabaseSyncService.getClient() ||
+          err.message?.includes('اتصال') ||
+          err.message?.includes('شبکه') ||
+          err.message?.includes('Failed to fetch') ||
+          err.message?.includes('NetworkError'))
+      ) {
+        onSelectUser(localMatched);
+        if (onClose) onClose();
+        return;
+      }
       setError(err.message || 'خطا در ورود به سامانه.');
     } finally {
       setIsSubmitting(false);
@@ -63,7 +80,7 @@ export const LoginModal: React.FC<Props> = ({
       aria-labelledby="login-modal-title"
       className={containerClasses}
     >
-      <div className="bg-[#151B23] text-[#F0F4F8] rounded-lg max-w-md w-full shadow-2xl border border-[#2D3748] overflow-hidden my-6 relative transition-all animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-[#151B23] text-[#F0F4F8] rounded-xl max-w-md w-full shadow-2xl border border-[#2D3748] overflow-hidden my-6 relative transition-all animate-in fade-in zoom-in-95 duration-150">
         {/* Brand Banner Header */}
         <div className="bg-[#111620] px-6 pt-7 pb-5 text-center relative border-b border-[#212835]">
           {onClose && !isStandalone && (
@@ -78,7 +95,7 @@ export const LoginModal: React.FC<Props> = ({
           )}
 
           <div className="flex justify-center mb-3">
-            <div className="w-12 h-12 rounded-md bg-[#151B23] border border-[#C5A059]/40 flex items-center justify-center p-2 shadow-xs">
+            <div className="w-14 h-14 rounded-xl bg-[#151B23] border border-[#C5A059]/40 flex items-center justify-center p-2.5 shadow-md">
               <img
                 src="/talaei-lion-gold.png"
                 alt="نشان گالری طلایی"
@@ -87,7 +104,7 @@ export const LoginModal: React.FC<Props> = ({
             </div>
           </div>
           <h2 id="login-modal-title" className="text-base sm:text-lg font-black text-[#F0F4F8] tracking-tight">
-            سامانه عملیات و کنترل کیفیت گالری طلایی
+            سامانه جامع عملیات و کنترل کیفیت گالری طلایی
           </h2>
           <p className="text-[11px] text-[#C5A059] mt-1 font-semibold tracking-wide">
             TALAEI GALLERY | QC & FIELD OPERATIONS

@@ -161,7 +161,9 @@ describe('M1-B1 Outbox Engine Hardening Tests', () => {
     });
 
     // Give microtasks time to start processing and acquire lease
-    await new Promise((r) => setTimeout(r, 15));
+    for (let i = 0; i < 25 && !isKeyInFlight('project:p-lease-test'); i++) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
 
     // Verify lease is held
     expect(isKeyInFlight('project:p-lease-test')).toBe(true);
@@ -281,7 +283,9 @@ describe('M1-B1 Outbox Engine Hardening Tests', () => {
     });
 
     // Let the mutation start and enter in-flight
-    await new Promise((r) => setTimeout(r, 15));
+    for (let i = 0; i < 25 && !isKeyInFlight('project:p-session-test'); i++) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
     expect(isKeyInFlight('project:p-session-test')).toBe(true);
 
     // User logs out while request is traveling through PostgreSQL commit

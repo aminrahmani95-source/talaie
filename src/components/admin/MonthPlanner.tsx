@@ -27,6 +27,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits, localDateKey, formatJalali } from '../../utils/jalali';
+import { getDisplayName } from '../../utils/technicianName';
 import { PageHeader } from '../ui/PageHeader';
 import { Button } from '../ui/Button';
 import { SegmentedControl } from '../ui/SegmentedControl';
@@ -135,7 +136,7 @@ export const MonthPlanner: React.FC<Props> = ({
     e.preventDefault();
     if (!proposingProject || !onProposeScheduleChange) return;
     if (changeReason.trim().length < 5) {
-      setProposalError('ثبت علت تغییر تاریخ و برنامه (حداقل ۵ کاراکتر) الزامی است.');
+      setProposalError('ثبت علت تغییر تاریخ و برنامه (حداقل 5 کاراکتر) الزامی است.');
       return;
     }
     setIsSubmittingProposal(true);
@@ -172,16 +173,16 @@ export const MonthPlanner: React.FC<Props> = ({
     <div className="space-y-5 animate-in fade-in duration-200">
       {/* Page Header */}
       <PageHeader
-        title="برنامه‌ریزی و ظرفیت ۴ اکیپ"
+        title="برنامه‌ریزی و ظرفیت 4 اکیپ"
         subtitle="مدیریت بار کاری، خطوط زمانی و تخصیص ماموریت‌ها"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <SegmentedControl
               options={[
                 { id: 'TIMELINE', label: 'خط سیر اکیپ‌ها' },
-                { id: '4DAYS', label: '۴ روزه' },
+                { id: '4DAYS', label: '4 روزه' },
                 { id: '7DAYS', label: 'هفتگی' },
-                { id: 'FULL_MONTH', label: '۳۰ روزه' },
+                { id: 'FULL_MONTH', label: '30 روزه' },
               ]}
               value={viewMode}
               onChange={(val) => {
@@ -321,7 +322,7 @@ export const MonthPlanner: React.FC<Props> = ({
             {/* سرستون روزهای خط سیر */}
             <div className="grid grid-cols-6 border-b border-[#212835] bg-[#0D1117] text-xs font-semibold">
               <div className="p-3 text-[#9BA7B6] flex items-center justify-center border-l border-[#212835]">
-                اکیپ‌های ۴ گانه نصب
+                اکیپ‌های 4 گانه نصب
               </div>
               {displayedDays.map((d) => (
                 <div
@@ -340,6 +341,16 @@ export const MonthPlanner: React.FC<Props> = ({
             {/* سطرهای مربوط به هر اکیپ */}
             <div className="divide-y divide-[#212835]">
               {teams.map((team) => {
+                const supUser = users.find((u) => u.id === team.supervisorId);
+                const supDisplayName = team.supervisorName
+                  ? getDisplayName(team.supervisorName)
+                  : supUser
+                  ? getDisplayName(supUser.name)
+                  : undefined;
+                const dynamicTeamName = supDisplayName
+                  ? `اکیپ نصب ${supDisplayName}`
+                  : team.name;
+
                 return (
                   <div key={team.id} className="grid grid-cols-6 min-h-[140px] items-stretch">
                     {/* ستون عنوان اکیپ */}
@@ -347,7 +358,7 @@ export const MonthPlanner: React.FC<Props> = ({
                       <div>
                         <div className="font-bold text-sm text-[#F0F4F8] flex items-center gap-1.5">
                           <Users className="w-4 h-4 text-[#C5A059]" />
-                          <span>{team.name}</span>
+                          <span>{dynamicTeamName}</span>
                         </div>
                         <span className="text-[10px] font-mono text-[#9BA7B6] px-1.5 py-0.5 rounded bg-[#1C232D] inline-block mt-1">
                           {team.code}
@@ -365,9 +376,9 @@ export const MonthPlanner: React.FC<Props> = ({
                       })()}
                     </div>
 
-                    {/* ستون‌های ۵ روزه برای این اکیپ */}
+                    {/* ستون‌های 5 روزه برای این اکیپ */}
                     {displayedDays.map((day) => {
-                      const load = calculateTeamDayLoad(team.id, team.name, day.dateKey, projects, team, settings);
+                      const load = calculateTeamDayLoad(team.id, dynamicTeamName, day.dateKey, projects, team, settings);
 
                       return (
                         <div
@@ -708,11 +719,20 @@ export const MonthPlanner: React.FC<Props> = ({
                   className="w-full rounded-md border border-[#212835] bg-[#0D1117] px-3 py-2 text-xs text-[#F0F4F8] focus:border-[#C5A059]"
                 >
                   <option value="">بدون تغییر اکیپ</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.code})
-                    </option>
-                  ))}
+                  {teams.map((t) => {
+                    const supUser = users.find((u) => u.id === t.supervisorId);
+                    const supDisplayName = t.supervisorName
+                      ? getDisplayName(t.supervisorName)
+                      : supUser
+                      ? getDisplayName(supUser.name)
+                      : undefined;
+                    const displayName = supDisplayName ? `اکیپ نصب ${supDisplayName}` : t.name;
+                    return (
+                      <option key={t.id} value={t.id}>
+                        {displayName} ({t.code})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

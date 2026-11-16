@@ -60,7 +60,7 @@ export const BottomNav: React.FC<Props> = ({
     },
     {
       id: 'planner' as const,
-      label: 'تقویم ۴ روزه',
+      label: 'تقویم 4 روزه',
       icon: CalendarDays,
       badge: undefined,
     },
@@ -229,7 +229,7 @@ export const BottomNav: React.FC<Props> = ({
             </div>
             <div className="flex-1">
               <div className="text-xs font-bold flex items-center justify-between">
-                <span>تیکت‌ها و تعهد ۷۲ ساعته SLA</span>
+                <span>تیکت‌ها و تعهد 72 ساعته SLA</span>
                 {openTicketCount > 0 && (
                   <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded">
                     {openTicketCount}

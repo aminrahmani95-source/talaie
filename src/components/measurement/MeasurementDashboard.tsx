@@ -41,6 +41,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
   onSaveMeasurement,
   onViewProposal,
 }) => {
+  const [viewTab, setViewTab] = useState<'PENDING' | 'COMPLETED'>('PENDING');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [verifiedDimensions, setVerifiedDimensions] = useState('');
   const [siteReadinessNotes, setSiteReadinessNotes] = useState('');
@@ -108,7 +109,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
       const isApproved = isDrywallOk && isElectricalOk && isAccessOk;
       await onSaveMeasurement(projectId, {
         verifiedDimensions: verifiedDimensions.trim(),
-        siteReadinessNotes: `${siteReadinessNotes.trim()}\n[سقف و کناف: ${isDrywallOk ? 'تایید' : 'دارای نقص'} | برق ۲۲۰ ولت: ${isElectricalOk ? 'تایید' : 'دارای نقص'} | دسترسی فضا: ${isAccessOk ? 'تایید' : 'دارای نقص'}]`,
+        siteReadinessNotes: `${siteReadinessNotes.trim()}\n[سقف و کناف: ${isDrywallOk ? 'تایید' : 'دارای نقص'} | برق 220 ولت: ${isElectricalOk ? 'تایید' : 'دارای نقص'} | دسترسی فضا: ${isAccessOk ? 'تایید' : 'دارای نقص'}]`,
         photos,
         isReadinessApproved: isApproved,
       });
@@ -136,25 +137,61 @@ export const MeasurementDashboard: React.FC<Props> = ({
             برنامه روزانه بازدید درگاه‌ها، تطبیق دقیق ابعاد با برگه سفارش و تایید کناف و سیم‌کشی برق
           </p>
         </div>
-        <div className="text-left font-mono text-xs text-[#C5A059] font-bold">
-          {toPersianDigits(getTodayPersianString())}
+
+        {/* Tab Toggle */}
+        <div className="flex items-center gap-1.5 bg-[#0D1117] p-1.5 rounded-xl border border-[#212835] w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setViewTab('PENDING')}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition cursor-pointer ${
+              viewTab === 'PENDING'
+                ? 'bg-[#C5A059] text-[#0D1117] shadow-md shadow-[#C5A059]/20'
+                : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>در انتظار متراژ ({toPersianDigits(pendingVisits.length)})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewTab('COMPLETED')}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition cursor-pointer ${
+              viewTab === 'COMPLETED'
+                ? 'bg-[#C5A059] text-[#0D1117] shadow-md shadow-[#C5A059]/20'
+                : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>سوابق و تاییدشده ({toPersianDigits(completedVisits.length)})</span>
+          </button>
         </div>
       </div>
 
-      {/* Pending Visits */}
+      {/* Main List */}
       <div className="space-y-3">
         <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2 px-1">
-          <Clock className="w-4 h-4 text-[#C5A059]" />
-          <span>پروژه‌های نیازمند اندازه‌گیری و تایید بستر ({toPersianDigits(pendingVisits.length)})</span>
+          {viewTab === 'PENDING' ? (
+            <>
+              <Clock className="w-4 h-4 text-[#C5A059]" />
+              <span>پروژه‌های نیازمند اندازه‌گیری و تایید بستر ({toPersianDigits(pendingVisits.length)})</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>پروژه‌های اندازه‌گیری‌شده و دارای تاییدیه بستر ({toPersianDigits(completedVisits.length)})</span>
+            </>
+          )}
         </h3>
 
-        {pendingVisits.length === 0 ? (
+        {(viewTab === 'PENDING' ? pendingVisits : completedVisits).length === 0 ? (
           <div className="bg-[#151B23] rounded-2xl p-8 text-center border border-[#212835] text-xs text-[#9BA7B6]">
-            تمامی پروژه‌ها اندازه‌گیری و تایید شده‌اند. موردی در صف انتظار نیست.
+            {viewTab === 'PENDING'
+              ? 'تمامی پروژه‌ها اندازه‌گیری و تایید شده‌اند. موردی در صف انتظار نیست.'
+              : 'هنوز سابقه‌ای از متراژهای تاییدشده ثبت نشده است.'}
           </div>
         ) : (
           <div className="space-y-3">
-            {pendingVisits.map((proj) => {
+            {(viewTab === 'PENDING' ? pendingVisits : completedVisits).map((proj) => {
               const isSelected = selectedProjectId === proj.id;
 
               return (
@@ -208,7 +245,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                         <button
                           type="button"
                           onClick={() => onViewProposal(proj)}
-                          className="px-3 py-1.5 rounded-xl bg-[#1C232D] text-xs font-bold text-[#C5A059] hover:bg-[#252F3D] border border-[#212835] flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-xl bg-[#1C232D] text-xs font-bold text-[#C5A059] hover:bg-[#252F3D] border border-[#212835] flex items-center gap-1 cursor-pointer"
                         >
                           <FileText className="w-3.5 h-3.5" />
                           <span>پروپوزال فروش</span>
@@ -216,6 +253,26 @@ export const MeasurementDashboard: React.FC<Props> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Verified Details preview if already completed */}
+                  {!isSelected && proj.secondMeasurementDetails?.isReadinessApproved && (
+                    <div className="bg-[#0D1117] p-3 rounded-xl border border-emerald-500/30 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between text-emerald-400 font-bold">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>ابعاد و بستر کارگاه تایید شده است</span>
+                        </span>
+                      </div>
+                      <p className="text-[#F0F4F8] font-mono text-[11px] whitespace-pre-line leading-relaxed">
+                        {proj.secondMeasurementDetails.verifiedDimensions}
+                      </p>
+                      {proj.secondMeasurementDetails.siteReadinessNotes && (
+                        <p className="text-[#9BA7B6] text-[11px]">
+                          {proj.secondMeasurementDetails.siteReadinessNotes}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Toggle Form Button */}
                   {!isSelected ? (
@@ -225,7 +282,11 @@ export const MeasurementDashboard: React.FC<Props> = ({
                       className="w-full py-2.5 px-4 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer shadow-md"
                     >
                       <Ruler className="w-4 h-4" />
-                      <span>ثبت متراژ نهایی و تایید بستر فضا</span>
+                      <span>
+                        {proj.secondMeasurementDetails?.isReadinessApproved
+                          ? 'ویرایش یا بازنگری متراژ و تایید بستر'
+                          : 'ثبت متراژ نهایی و تایید بستر فضا'}
+                      </span>
                     </button>
                   ) : (
                     /* Active Inspection Form */
@@ -239,7 +300,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                           rows={3}
                           value={verifiedDimensions}
                           onChange={(e) => setVerifiedDimensions(e.target.value)}
-                          placeholder="مثال:&#10;پنجره سالن ۱: عرض ۲.۴۵ متر در ارتفاع ۲.۸۰ متر (شید برقی)&#10;پنجره خواب مستر: عرض ۱.۸۰ متر در ارتفاع ۲.۶۰ متر"
+                          placeholder="مثال:&#10;پنجره سالن 1: عرض 2.45 متر در ارتفاع 2.80 متر (شید برقی)&#10;پنجره خواب مستر: عرض 1.80 متر در ارتفاع 2.60 متر"
                           className="w-full text-xs p-3 rounded-xl border border-[#212835] bg-[#111620] text-[#F0F4F8] focus:border-[#C5A059] outline-none leading-relaxed"
                           required
                         />
@@ -272,7 +333,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                               onChange={(e) => setIsElectricalOk(e.target.checked)}
                               className="hidden"
                             />
-                            <span>{isElectricalOk ? '✓' : '✗'} سیم‌کشی برق ۲۲۰ ولت</span>
+                            <span>{isElectricalOk ? '✓' : '✗'} سیم‌کشی برق 220 ولت</span>
                           </label>
 
                           <label className={`p-2.5 rounded-xl border cursor-pointer flex items-center gap-2 ${
@@ -349,7 +410,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                         <button
                           type="button"
                           onClick={() => setSelectedProjectId(null)}
-                          className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1C232D] text-[#9BA7B6]"
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1C232D] text-[#9BA7B6] hover:bg-[#252F3D] cursor-pointer transition"
                         >
                           انصراف
                         </button>
@@ -357,7 +418,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                           type="button"
                           disabled={isSubmitting || isUploading}
                           onClick={() => handleSubmit(proj.id)}
-                          className="px-5 py-2 rounded-xl text-xs font-black bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] flex items-center gap-1.5 shadow-md"
+                          className="px-5 py-2 rounded-xl text-xs font-black bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] flex items-center gap-1.5 shadow-md cursor-pointer transition active:scale-95"
                         >
                           {isSubmitting ? (
                             <Loader2 className="w-4 h-4 animate-spin" />

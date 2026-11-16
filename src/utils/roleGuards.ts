@@ -30,6 +30,7 @@ export const ALLOWED_TECHNICIAN_PATCH_KEYS = new Set([
   'qcDefects',
   'customerAcceptance',
   'handoverSigneeType',
+  'representativeName',
   'representativeRole',
   'representativePhone',
   'unavailabilityReason',
@@ -57,10 +58,9 @@ export function isHandoverGatePassed(project: Partial<Project>, patch?: Record<s
     ...(patch?.technicalHandover || {}),
   };
 
-  const prodConfirmed = Boolean(mergedHandover.productionConfirmation?.confirmed);
   const whConfirmed = Boolean(mergedHandover.warehouseConfirmation?.confirmed);
 
-  return prodConfirmed && whConfirmed;
+  return whConfirmed;
 }
 
 export function canAccessProject(user: User, project: Project, userTeamId?: string): boolean {
@@ -264,7 +264,7 @@ export function validateProjectPatchRoleGuards(
     (patch.assignedTeamId !== undefined && patch.assignedTeamId !== null && patch.assignedTeamId !== '');
 
   if (isScheduling && !isHandoverGatePassed(project, patch)) {
-    throw new PermanentError('دسترسی غیرمجاز: پروژه تا زمان ثبت و تأیید هر دو پیش‌نیاز اتمام تولید و تحویل به انبار، قابل زمان‌بندی و اعزام اکیپ نیست.');
+    throw new PermanentError('دسترسی غیرمجاز: پروژه تا زمان ثبت و تأیید پیش‌نیاز تحویل و ورود کالا به انبار، قابل زمان‌بندی و اعزام اکیپ نیست.');
   }
 
   // ۰.۱. گیت اجرایی انتقال اکیپ: تا زمان تایید تحویل توسط سرپرست اکیپ جدید یا رفع انسداد مدیر QC، شروع یا ادامه کار ممنوع است
@@ -436,7 +436,7 @@ export function validateProjectPatchRoleGuards(
   }
 
   // مدیر QC هیچ محدودیتی در فیلدها یا مسیر انتقال وضعیت ندارد
-  if (user.role === 'QC_MANAGER') {
+  if (user.role === 'QC_MANAGER' || user.role === 'CEO') {
     return;
   }
 
@@ -449,11 +449,6 @@ export function validateProjectPatchRoleGuards(
       throw new PermanentError('دسترسی غیرمجاز: ثبت امتیاز کیفی فقط در صلاحیت مدیر QC است.');
     }
     return;
-  }
-
-  // نقش مدیر عامل (CEO) - صرفاً دسترسی مشاهده دارد
-  if (user.role === 'CEO') {
-    throw new PermanentError('دسترسی غیرمجاز: مدیر عامل صرفاً دسترسی مشاهده شناسنامه جامع پروژه‌ها را دارد.');
   }
 
   // نقش مسئول اندازه‌گیری دوم (MEASUREMENT_LEAD)
@@ -469,7 +464,7 @@ export function validateProjectPatchRoleGuards(
 
   // نقش انباردار و پیگیری تامین (WAREHOUSE)
   if (user.role === 'WAREHOUSE') {
-    const allowedWarehouseKeys = new Set(['warehousePrep', 'updatedAt']);
+    const allowedWarehouseKeys = new Set(['warehousePrep', 'technicalHandover', 'updatedAt']);
     for (const key of Object.keys(patch)) {
       if (!allowedWarehouseKeys.has(key)) {
         throw new PermanentError(`دسترسی غیرمجاز: مسئول انبار اجازه تغییر فیلد «${key}» را ندارد.`);
@@ -666,7 +661,7 @@ export function validateTicketRoleGuards(
   ticket: Partial<Ticket>,
   userTeamId?: string
 ): void {
-  if (user.role === 'QC_MANAGER') {
+  if (user.role === 'QC_MANAGER' || user.role === 'CEO') {
     return;
   }
 
