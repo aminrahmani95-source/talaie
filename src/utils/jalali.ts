@@ -99,10 +99,10 @@ export interface DayInfo {
   dayOffset: number; // 0 for today, 1 for tomorrow, etc.
 }
 
-export function getUpcomingDays(count = 30): DayInfo[] {
+export function getUpcomingDays(count = 365): DayInfo[] {
   const days: DayInfo[] = [];
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setHours(12, 0, 0, 0); // Noon prevents any midnight DST or timezone drift across 200+ days
 
   for (let i = 0; i < count; i++) {
     const d = new Date(today);
@@ -128,6 +128,34 @@ export function getUpcomingDays(count = 30): DayInfo[] {
   }
 
   return days;
+}
+
+/** Converts any YYYY-MM-DD dateKey into a complete DayInfo object without drift */
+export function getDayInfoFromDateKey(dateKey: string): DayInfo | null {
+  if (!dateKey || typeof dateKey !== 'string') return null;
+  const m = dateKey.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return null;
+  const gy = parseInt(m[1], 10);
+  const gm = parseInt(m[2], 10);
+  const gd = parseInt(m[3], 10);
+  const d = new Date(gy, gm - 1, gd, 12, 0, 0, 0);
+  const { jy, jm, jd } = gregorianToJalali(gy, gm, gd);
+
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const diffTime = d.getTime() - today.getTime();
+  const dayOffset = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  return {
+    date: d,
+    dateKey: `${gy}-${String(gm).padStart(2, '0')}-${String(gd).padStart(2, '0')}`,
+    persianDateStr: `${jy}/${String(jm).padStart(2, '0')}/${String(jd).padStart(2, '0')}`,
+    persianDayName: PERSIAN_WEEK_DAYS[d.getDay()],
+    persianDayNum: jd,
+    persianMonthName: PERSIAN_MONTH_NAMES[jm - 1],
+    isToday: dayOffset === 0,
+    dayOffset,
+  };
 }
 
 // Standard English numbers formatting throughout the project
@@ -188,11 +216,21 @@ export function formatJalaliDateTime(isoOrDate?: string | Date, fallback = '—'
 export function formatJalali(isoOrDateKey?: string | null, fallback = '—'): string {
   if (!isoOrDateKey || !isoOrDateKey.trim()) return fallback;
   const str = isoOrDateKey.trim();
+
   // If already Jalali (e.g. 1405/08/09 or 1405-08-09)
   if (/^1[34]\d{2}[\/\-]\d{1,2}[\/\-]\d{1,2}/.test(str)) {
     return str.replace(/-/g, '/');
   }
-  // If YYYY-MM-DD or ISO timestamp
+
+  // If ISO timestamp with time component (contains 'T')
+  if (str.includes('T')) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      return formatToPersianDateString(d);
+    }
+  }
+
+  // If YYYY-MM-DD dateKey (pure calendar date)
   const m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (m) {
     const gy = parseInt(m[1], 10);
@@ -201,6 +239,7 @@ export function formatJalali(isoOrDateKey?: string | null, fallback = '—'): st
     const { jy, jm, jd } = gregorianToJalali(gy, gm, gd);
     return `${jy}/${String(jm).padStart(2, '0')}/${String(jd).padStart(2, '0')}`;
   }
+
   const d = new Date(str);
   if (isNaN(d.getTime())) return str;
   return formatToPersianDateString(d);

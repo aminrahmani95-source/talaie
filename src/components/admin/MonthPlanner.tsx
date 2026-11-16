@@ -26,7 +26,7 @@ import {
   ArrowRightLeft,
   Wrench,
 } from 'lucide-react';
-import { getUpcomingDays, toPersianDigits, localDateKey } from '../../utils/jalali';
+import { getUpcomingDays, toPersianDigits, localDateKey, formatJalali } from '../../utils/jalali';
 import { PageHeader } from '../ui/PageHeader';
 import { Button } from '../ui/Button';
 import { SegmentedControl } from '../ui/SegmentedControl';
@@ -82,7 +82,7 @@ export const MonthPlanner: React.FC<Props> = ({
   onProposeScheduleChange,
   onReviewScheduleChange,
 }) => {
-  const days = getUpcomingDays(30);
+  const days = useMemo(() => getUpcomingDays(365), []);
   const isQcManager = currentUser?.role === 'QC_MANAGER';
 
   // View modes: '4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'
@@ -107,7 +107,7 @@ export const MonthPlanner: React.FC<Props> = ({
     if (viewMode === '4DAYS') return days.slice(startIndex, startIndex + 4);
     if (viewMode === '7DAYS') return days.slice(startIndex, startIndex + 7);
     if (viewMode === 'TIMELINE') return days.slice(startIndex, startIndex + 5);
-    return days;
+    return days.slice(startIndex, startIndex + 30);
   }, [viewMode, startIndex, days]);
 
   const todayKey = days.find((d) => d.isToday)?.dateKey || localDateKey();
@@ -184,50 +184,47 @@ export const MonthPlanner: React.FC<Props> = ({
                 { id: 'FULL_MONTH', label: '۳۰ روزه' },
               ]}
               value={viewMode}
-              onChange={(val) => setViewMode(val as any)}
+              onChange={(val) => {
+                setViewMode(val as any);
+                setStartIndex(0);
+              }}
               size="sm"
             />
 
-            {(viewMode === '4DAYS' || viewMode === '7DAYS' || viewMode === 'TIMELINE') && (
-              <div className="flex items-center gap-1 bg-[#111620] rounded-md p-1 border border-[#212835]">
-                <button
-                  type="button"
-                  disabled={startIndex === 0}
-                  onClick={() => setStartIndex((i) => Math.max(0, i - 1))}
-                  className="p-1.5 hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] rounded disabled:opacity-30 transition cursor-pointer"
-                  title="روزهای قبلی"
-                  aria-label="روزهای قبلی"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <span className="text-xs px-2 text-[#C5A059] font-bold tabular-nums">
-                  {toPersianDigits(startIndex + 1)} تا{' '}
-                  {toPersianDigits(
-                    Math.min(
-                      days.length,
-                      startIndex + (viewMode === '4DAYS' ? 4 : viewMode === '7DAYS' ? 7 : 5)
-                    )
-                  )}
-                </span>
-                <button
-                  type="button"
-                  disabled={startIndex + (viewMode === '4DAYS' ? 4 : viewMode === '7DAYS' ? 7 : 5) >= days.length}
-                  onClick={() =>
-                    setStartIndex((i) =>
-                      Math.min(
-                        days.length - (viewMode === '4DAYS' ? 4 : viewMode === '7DAYS' ? 7 : 5),
-                        i + 1
-                      )
-                    )
-                  }
-                  className="p-1.5 hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] rounded disabled:opacity-30 transition cursor-pointer"
-                  title="روزهای بعدی"
-                  aria-label="روزهای بعدی"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+            {(() => {
+              const pageSize = viewMode === '4DAYS' ? 4 : viewMode === '7DAYS' ? 7 : viewMode === 'TIMELINE' ? 5 : 30;
+              const step = viewMode === 'FULL_MONTH' ? 30 : 1;
+              return (
+                <div className="flex items-center gap-1 bg-[#111620] rounded-md p-1 border border-[#212835]">
+                  <button
+                    type="button"
+                    disabled={startIndex === 0}
+                    onClick={() => setStartIndex((i) => Math.max(0, i - step))}
+                    className="p-1.5 hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] rounded disabled:opacity-30 transition cursor-pointer"
+                    title="روزهای قبلی"
+                    aria-label="روزهای قبلی"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs px-2 text-[#C5A059] font-bold tabular-nums">
+                    {toPersianDigits(startIndex + 1)} تا{' '}
+                    {toPersianDigits(Math.min(days.length, startIndex + pageSize))}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={startIndex + pageSize >= days.length}
+                    onClick={() =>
+                      setStartIndex((i) => Math.min(days.length - pageSize, i + step))
+                    }
+                    className="p-1.5 hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] rounded disabled:opacity-30 transition cursor-pointer"
+                    title="روزهای بعدی"
+                    aria-label="روزهای بعدی"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })()}
 
             <Button
               variant="primary"
@@ -285,7 +282,7 @@ export const MonthPlanner: React.FC<Props> = ({
                     <span className="font-bold shrink-0">{c.projectTitle}:</span>
                     <span className="truncate">{c.message}</span>
                   </div>
-                  <span className="text-[10px] font-mono shrink-0 opacity-75">{c.dateKey}</span>
+                  <span className="text-[10px] font-mono shrink-0 opacity-75">{formatJalali(c.dateKey)}</span>
                 </div>
               ))}
 
@@ -299,7 +296,7 @@ export const MonthPlanner: React.FC<Props> = ({
                     <ArrowRightLeft className="w-4 h-4 text-blue-400 shrink-0" />
                     <span className="font-bold">{req.projectTitle}:</span>
                     <span className="truncate">
-                      درخواست انتقال از {req.previousScheduledDate} به {req.proposedScheduledDate} — علت: {req.reason}
+                      درخواست انتقال از {formatJalali(req.previousScheduledDate)} به {formatJalali(req.proposedScheduledDate)} — علت: {req.reason}
                     </span>
                   </div>
                   {isQcManager && (
@@ -335,7 +332,7 @@ export const MonthPlanner: React.FC<Props> = ({
                 >
                   <div className="text-[11px] text-[#637184]">{d.persianDayName}</div>
                   <div className="font-bold text-sm text-[#F0F4F8] tabular-nums">{d.persianDayNum}</div>
-                  <div className="text-[10px] text-[#637184] font-mono">{d.dateKey.slice(5)}</div>
+                  <div className="text-[10px] text-[#C5A059] font-medium">{d.persianMonthName}</div>
                 </div>
               ))}
             </div>
@@ -506,8 +503,8 @@ export const MonthPlanner: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  <div className="text-left font-mono tabular-nums">
-                    <span className="text-[11px] text-[#637184] block">{day.dateKey.slice(5)}</span>
+                  <div className="text-left tabular-nums">
+                    <span className="text-[11px] text-[#C5A059] font-medium block">{day.persianMonthName}</span>
                     {totalWorkload > 0 && (
                       <span className="text-[10px] text-amber-400 font-semibold">
                         {toPersianDigits(totalWorkload.toFixed(1))} س کار
@@ -673,7 +670,7 @@ export const MonthPlanner: React.FC<Props> = ({
                 >
                   {days.map((d) => (
                     <option key={d.dateKey} value={d.dateKey}>
-                      {d.persianDayName} {d.persianDayNum} ({d.dateKey})
+                      {d.persianDayName} {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
                     </option>
                   ))}
                 </select>
@@ -694,7 +691,7 @@ export const MonthPlanner: React.FC<Props> = ({
                       .filter((d) => d.dateKey >= proposedDate)
                       .map((d) => (
                         <option key={d.dateKey} value={d.dateKey}>
-                          {d.persianDayName} {d.persianDayNum} ({d.dateKey})
+                          {d.persianDayName} {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
                         </option>
                       ))}
                   </select>

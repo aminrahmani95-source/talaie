@@ -7,7 +7,7 @@ import {
   Star,
   FileCheck2,
 } from 'lucide-react';
-import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
+import { toPersianDigits, getTodayPersianString, formatJalali } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
 import { CloudImage } from './CloudImage';
 
@@ -200,7 +200,7 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
               <div className="text-xs space-y-0.5">
                 <p className="text-xs">تحویل‌گیرنده: <strong>{project.representativeName || project.customerName}</strong></p>
                 {project.representativeRole && <p className="text-stone-600 text-[10px]">سمت: {project.representativeRole}</p>}
-                <p className="text-stone-500 text-[9px]">تاریخ امضا: {toPersianDigits(project.completedAt?.slice(0, 10) || project.scheduledDate)}</p>
+                <p className="text-stone-500 text-[9px]">تاریخ امضا: {formatJalali(project.completedAt || project.scheduledDate)}</p>
               </div>
 
               <div className="text-center">

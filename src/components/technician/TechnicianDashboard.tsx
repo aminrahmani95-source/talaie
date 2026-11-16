@@ -56,7 +56,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
   };
 
   const [visibleDays, setVisibleDays] = useState(() =>
-    getUpcomingDays(30).slice(0, settings.visibilityWindowDays)
+    getUpcomingDays(Math.max(60, settings.visibilityWindowDays)).slice(0, settings.visibilityWindowDays)
   );
 
   // Find the first day with assigned jobs or fallback to first visible day
@@ -70,7 +70,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
 
   useEffect(() => {
     const updateDays = () => {
-      const freshVisible = getUpcomingDays(30).slice(0, settings.visibilityWindowDays);
+      const freshVisible = getUpcomingDays(Math.max(60, settings.visibilityWindowDays)).slice(0, settings.visibilityWindowDays);
       setVisibleDays(freshVisible);
       setSelectedDateKey((prev) => {
         if (freshVisible.some((d) => d.dateKey === prev)) {

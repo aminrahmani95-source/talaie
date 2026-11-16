@@ -28,7 +28,7 @@ export const QcRejectModal: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
-  const upcomingDays = getUpcomingDays(30);
+  const upcomingDays = getUpcomingDays(180);
 
   const DEFECT_TEMPLATES = [
     ...(project.isExceptionalCompletion

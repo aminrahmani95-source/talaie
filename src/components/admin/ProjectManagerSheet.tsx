@@ -32,7 +32,7 @@ import {
   ResetMode,
 } from '../../utils/managerActions';
 import { formatAuditDiff, getQcStatusPersianLabel, getStatusPersianLabel } from '../../utils/auditDiff';
-import { formatJalali, formatJalaliDateTime, toPersianDigits } from '../../utils/jalali';
+import { formatJalali, formatJalaliDateTime, toPersianDigits, getUpcomingDays } from '../../utils/jalali';
 import { calculateWorkSessionsSummary, getMultiDayTotalDays, isProjectMultiDay } from '../../utils/multiDay';
 import { getDisplayName } from '../../utils/technicianName';
 import {
@@ -681,12 +681,18 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
                 </label>
                 <label className="space-y-1">
                   <span className="font-bold">تاریخ جدید اعزام (اختیاری):</span>
-                  <input
-                    type="date"
+                  <select
                     className={inputCls}
                     value={transferNewDate}
                     onChange={(e) => setTransferNewDate(e.target.value)}
-                  />
+                  >
+                    <option value="">بدون تغییر ({formatJalali(project.scheduledDate, 'تعیین‌نشده')})</option>
+                    {getUpcomingDays(120).map((d) => (
+                      <option key={d.dateKey} value={d.dateKey}>
+                        {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} - {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
 

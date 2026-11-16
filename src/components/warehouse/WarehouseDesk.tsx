@@ -18,7 +18,7 @@ import {
   X,
   Truck,
 } from 'lucide-react';
-import { toPersianDigits, getUpcomingDays, getTodayPersianString } from '../../utils/jalali';
+import { toPersianDigits, getUpcomingDays, getTodayPersianString, formatJalali } from '../../utils/jalali';
 
 interface Props {
   currentUser: User;
@@ -211,7 +211,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                             {p.code}
                           </span>
                           <span className="text-xs text-[#9BA7B6] font-bold">
-                            تاریخ نصب: {toPersianDigits(p.scheduledDate)}
+                            تاریخ نصب: {formatJalali(p.scheduledDate)}
                           </span>
                           {p.isForceMajeure && (
                             <span className="text-[10px] bg-rose-500/20 text-rose-300 font-bold px-1.5 py-0.5 rounded">

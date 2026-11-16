@@ -87,7 +87,7 @@ export const DailyLogModal: React.FC<Props> = ({
 
   const [supervisorConfirmed, setSupervisorConfirmed] = useState(isSupervisor);
 
-  const upcomingDays = getUpcomingDays(14);
+  const upcomingDays = getUpcomingDays(60);
 
   // Compute live progress calculations based on today's inputs
   const liveCalculations = useMemo(() => {
@@ -462,7 +462,7 @@ export const DailyLogModal: React.FC<Props> = ({
                     <option value="">پیش‌فرض (روز کاری بعدی تقویم)</option>
                     {upcomingDays.map((d) => (
                       <option key={d.dateKey} value={d.dateKey}>
-                        {d.persianDayName} {d.persianDayNum} ({d.dateKey})
+                        {d.persianDayName} {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
                       </option>
                     ))}
                   </select>

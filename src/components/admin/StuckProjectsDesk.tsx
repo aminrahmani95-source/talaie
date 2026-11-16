@@ -34,7 +34,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
   const [resolutionError, setResolutionError] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(false);
 
-  const upcomingDays = getUpcomingDays(30);
+  const upcomingDays = getUpcomingDays(180);
 
   const getProjectIncidents = (p: Project): StuckIncident[] => {
     if (p.stuckIncidents && p.stuckIncidents.length > 0) {
@@ -460,7 +460,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                       <option value="">همان روز قبلی باقی بماند</option>
                       {upcomingDays.map((d) => (
                         <option key={d.dateKey} value={d.dateKey}>
-                          {d.persianDayName} {d.persianDayNum} {d.persianMonthName}
+                          {d.persianDayName} {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
                         </option>
                       ))}
                     </select>

@@ -13,7 +13,7 @@ import {
   MapPin,
   MinusCircle,
 } from 'lucide-react';
-import { getUpcomingDays } from '../../utils/jalali';
+import { getUpcomingDays, toPersianDigits } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { CloudImage } from '../common/CloudImage';
@@ -74,7 +74,7 @@ export const PreInstallationModal: React.FC<Props> = ({
   onCreateTicket,
 }) => {
   const existing = project.siteReadiness;
-  const days = getUpcomingDays(30);
+  const days = getUpcomingDays(180);
 
   const [inspectionType, setInspectionType] = useState<'IN_PERSON' | 'REMOTE'>(
     existing?.inspectionType || 'IN_PERSON'
@@ -446,7 +446,7 @@ export const PreInstallationModal: React.FC<Props> = ({
             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/40 p-3 rounded-lg space-y-1.5">
               <label className="block text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-amber-600" />
-                <span>تاریخ پیشنهادی جهت موکول شدن مأموریت (انتخاب از تقویم ۳۰ روزه):</span>
+                <span>تاریخ پیشنهادی جهت موکول شدن مأموریت (انتخاب از تقویم شمسی):</span>
               </label>
               <select
                 value={postponeDate}
@@ -457,7 +457,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                 {days.map((d) => (
                   <option key={d.dateKey} value={d.dateKey}>
                     {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
-                    {d.persianDayNum} {d.persianMonthName} ({d.persianDateStr})
+                    {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
                   </option>
                 ))}
               </select>

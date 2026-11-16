@@ -19,7 +19,7 @@ import {
   Filter,
   X,
 } from 'lucide-react';
-import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
+import { toPersianDigits, getTodayPersianString, formatJalali } from '../../utils/jalali';
 import { ProjectPassportPrint } from '../common/ProjectPassportPrint';
 
 interface Props {
@@ -242,7 +242,7 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
                         </span>
                       )}
                       <span className="text-xs text-[#9BA7B6] font-bold">
-                        تاریخ: {toPersianDigits(p.scheduledDate)}
+                        تاریخ: {formatJalali(p.scheduledDate)}
                       </span>
                       {p.assignedTeamName && (
                         <span className="text-xs text-[#C5A059] font-bold">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Project, User, SystemSettings, ProposalImage, InstallationTeam, ProjectTechnicalHandover } from '../../types';
 import {
   X,
@@ -20,7 +20,7 @@ import {
   Users,
   CheckSquare,
 } from 'lucide-react';
-import { getUpcomingDays, getTodayPersianString, toPersianDigits } from '../../utils/jalali';
+import { getUpcomingDays, getTodayPersianString, toPersianDigits, getDayInfoFromDateKey, DayInfo } from '../../utils/jalali';
 import { getMultiDayTotalDays } from '../../utils/multiDay';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { SupabaseSyncService } from '../../utils/supabase';
@@ -54,7 +54,19 @@ export const ProjectFormModal: React.FC<Props> = ({
   onSave,
 }) => {
   const isEditing = !!project;
-  const days = getUpcomingDays(30);
+  const days: DayInfo[] = useMemo(() => {
+    const list: DayInfo[] = getUpcomingDays(365);
+    const customDates = [project?.scheduledDate, project?.endDate, defaultDate].filter(Boolean) as string[];
+    for (const cd of customDates) {
+      if (!list.some((d) => d.dateKey === cd)) {
+        const info = getDayInfoFromDateKey(cd);
+        if (info) {
+          list.push(info);
+        }
+      }
+    }
+    return list.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  }, [project?.scheduledDate, project?.endDate, defaultDate]);
 
   const defaultTeams: InstallationTeam[] = [
     { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', createdAt: '', updatedAt: '' },
@@ -892,7 +904,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   {days.map((d) => (
                     <option key={d.dateKey} value={d.dateKey}>
                       {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
-                      {d.persianDayNum} {d.persianMonthName}
+                      {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
                     </option>
                   ))}
                 </select>
@@ -915,14 +927,14 @@ export const ProjectFormModal: React.FC<Props> = ({
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white font-bold"
                 >
-                  {days
-                    .filter((d) => d.dateKey >= scheduledDate)
-                    .map((d) => (
-                      <option key={d.dateKey} value={d.dateKey}>
-                        {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
-                        {d.persianDayNum} {d.persianMonthName}
-                      </option>
-                    ))}
+                    {days
+                      .filter((d) => d.dateKey >= scheduledDate)
+                      .map((d) => (
+                        <option key={d.dateKey} value={d.dateKey}>
+                          {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
+                          {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
+                        </option>
+                      ))}
                 </select>
               </div>
 

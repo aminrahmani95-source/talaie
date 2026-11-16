@@ -76,7 +76,7 @@ export const SalesPortal: React.FC<Props> = ({
   const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const upcomingDays = useMemo(() => getUpcomingDays(30), []);
+  const upcomingDays = useMemo(() => getUpcomingDays(365), []);
 
   const handleProposalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -348,7 +348,7 @@ export const SalesPortal: React.FC<Props> = ({
               >
                 {upcomingDays.map((d) => (
                   <option key={d.dateKey} value={d.dateKey}>
-                    {d.persianDayName} {toPersianDigits(d.persianDayNum)} {d.persianMonthName} ({d.dateKey})
+                    {d.persianDayName} {toPersianDigits(d.persianDayNum)} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
                   </option>
                 ))}
               </select>
