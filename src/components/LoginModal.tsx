@@ -3,6 +3,7 @@ import { User } from '../types';
 import { UserCheck, KeyRound, Phone, Eye, EyeOff, X, Loader2 } from 'lucide-react';
 import { toEnglishDigits } from '../utils/jalali';
 import { SupabaseSyncService } from '../utils/supabase';
+import { LOGO_GOLD } from '../assets/logo';
 
 interface Props {
   users?: User[];
@@ -97,7 +98,7 @@ export const LoginModal: React.FC<Props> = ({
           <div className="flex justify-center mb-3">
             <div className="w-14 h-14 rounded-xl bg-[#151B23] border border-[#C5A059]/40 flex items-center justify-center p-2.5 shadow-md">
               <img
-                src="/talaei-lion-gold.png"
+                src={LOGO_GOLD}
                 alt="نشان گالری طلایی"
                 className="w-full h-full object-contain"
               />

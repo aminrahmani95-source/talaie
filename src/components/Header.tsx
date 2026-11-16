@@ -4,6 +4,7 @@ import { Moon, Sun, LogOut, X, Cloud, CloudOff, AlertOctagon, Check } from 'luci
 import { Avatar } from './ui/Avatar';
 import { IconButton } from './ui/IconButton';
 import { getDisplayName } from '../utils/technicianName';
+import { LOGO_GOLD } from '../assets/logo';
 
 interface Props {
   currentUser: User;
@@ -53,7 +54,7 @@ export const Header: React.FC<Props> = ({
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#151B23] p-1.5 border border-[#C5A059]/40 flex items-center justify-center shrink-0 shadow-xs">
               <img
-                src="/talaei-lion-gold.png"
+                src={LOGO_GOLD}
                 alt="لوگوی گالری طلایی"
                 className="w-full h-full object-contain"
               />

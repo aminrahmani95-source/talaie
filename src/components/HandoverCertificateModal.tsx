@@ -18,6 +18,7 @@ import { toPersianDigits, formatDuration, formatTimeOnly, formatJalali } from '.
 import { CloudImage } from './common/CloudImage';
 import { getDisplayName } from '../utils/technicianName';
 import { calculateWorkSessionsSummary } from '../utils/multiDay';
+import { LOGO_GOLD } from '../assets/logo';
 
 interface Props {
   project: Project;
@@ -94,7 +95,7 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-[#212121] border-2 border-[#C5A059] flex items-center justify-center p-2 shadow-sm">
                 <img
-                  src="/talaei-lion-gold.png"
+                  src={LOGO_GOLD}
                   alt="نشان گالری طلایی"
                   className="w-full h-full object-contain"
                 />

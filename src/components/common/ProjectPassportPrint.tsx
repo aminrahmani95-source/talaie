@@ -10,6 +10,7 @@ import {
 import { toPersianDigits, getTodayPersianString, formatJalali } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
 import { CloudImage } from './CloudImage';
+import { LOGO_GOLD } from '../../assets/logo';
 
 interface Props {
   project: Project;
@@ -85,7 +86,7 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
           <div className="flex items-center justify-between border-b-2 border-stone-800 pb-3">
             <div className="flex items-center gap-3">
               <img
-                src="/talaei-lion-gold.png"
+                src={LOGO_GOLD}
                 alt="گالری طلایی"
                 className="w-12 h-12 object-contain"
               />

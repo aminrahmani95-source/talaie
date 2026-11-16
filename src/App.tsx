@@ -43,6 +43,7 @@ import {
 import { createDefectResolutionPayload } from './utils/qcWorkflow';
 import { getDisplayName } from './utils/technicianName';
 import { localDateKey, toPersianDigits } from './utils/jalali';
+import { LOGO_GOLD } from './assets/logo';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
 import { TechnicianDashboard } from './components/technician/TechnicianDashboard';
@@ -2031,7 +2032,7 @@ export const App: React.FC = () => {
         <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
           <div className="w-16 h-16 rounded-3xl bg-[#1A1A1A] border-2 border-[#C1A056] flex items-center justify-center p-3 shadow-2xl">
             <img
-              src="./talaei-lion-gold.png"
+              src={LOGO_GOLD}
               alt="نشان گالری طلایی"
               className="w-full h-full object-contain animate-pulse"
             />
