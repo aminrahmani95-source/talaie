@@ -498,8 +498,8 @@ export const App: React.FC = () => {
     };
   }, [currentUser?.id, authChecking]);
 
-  // Navigation tab for QC Manager / Coordinator
-  const [activeTab, setActiveTab] = useState<ManagerTab>('control');
+  // Navigation tab for QC Manager / Coordinator - default to General Manager Dashboard ('registry')
+  const [activeTab, setActiveTab] = useState<ManagerTab>('registry');
 
   // Dark Mode state with persistence and system detection - default to Dark Graphite foundation
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -1889,6 +1889,8 @@ export const App: React.FC = () => {
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         onLogout={handleLogout}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
       />
 
       {/* Offline state or syncing banner */}

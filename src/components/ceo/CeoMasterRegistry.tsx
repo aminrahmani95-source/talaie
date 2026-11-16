@@ -100,14 +100,14 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
         <div>
           <div className="flex items-center gap-2.5">
             <h2 className="text-xl sm:text-2xl font-black text-[#F0F4F8]">
-              کارتابل جامع شناسنامه پروژه‌ها
+              داشبورد اختصاصی مدیر کل (CEO Master Registry)
             </h2>
             <span className="text-xs font-bold bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/30 px-3 py-1 rounded-full">
               مدیریت عامل
             </span>
           </div>
           <p className="text-xs sm:text-sm text-[#9BA7B6] mt-1.5 leading-relaxed">
-            اشراف ۳۶۰ درجه بر کلیه مأموریت‌های گذشته، جاری و آتی گالری طلائیه به همراه شناسنامه رسمی چاپی
+            کارتابل اشراف ۳۶۰ درجه، آمار کلان اجرایی و صدور شناسنامه رسمی پروژه‌های گالری طلائیه
           </p>
         </div>
 

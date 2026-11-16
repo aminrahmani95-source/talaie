@@ -33,6 +33,12 @@ export const Sidebar: React.FC<Props> = ({
 
   const primaryItems = [
     {
+      id: 'registry' as const,
+      label: 'داشبورد مدیر کل (سوابق و شناسنامه)',
+      icon: FileCheck2,
+      badge: undefined,
+    },
+    {
       id: 'control' as const,
       label: 'میز کار عملیاتی',
       icon: Activity,
@@ -43,12 +49,6 @@ export const Sidebar: React.FC<Props> = ({
       id: 'planner' as const,
       label: 'تقویم اجرایی ۴ روزه',
       icon: CalendarDays,
-      badge: undefined,
-    },
-    {
-      id: 'registry' as const,
-      label: 'شناسنامه و سوابق پروژه‌ها',
-      icon: FileCheck2,
       badge: undefined,
     },
   ];

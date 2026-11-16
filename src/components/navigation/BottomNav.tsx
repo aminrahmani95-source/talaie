@@ -46,6 +46,12 @@ export const BottomNav: React.FC<Props> = ({
 
   const navItems = [
     {
+      id: 'registry' as const,
+      label: 'مدیر کل',
+      icon: FileCheck2,
+      badge: undefined,
+    },
+    {
       id: 'control' as const,
       label: 'میز کار',
       icon: Activity,
@@ -56,12 +62,6 @@ export const BottomNav: React.FC<Props> = ({
       id: 'planner' as const,
       label: 'تقویم ۴ روزه',
       icon: CalendarDays,
-      badge: undefined,
-    },
-    {
-      id: 'registry' as const,
-      label: 'شناسنامه',
-      icon: FileCheck2,
       badge: undefined,
     },
   ];
