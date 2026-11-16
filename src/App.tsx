@@ -1821,6 +1821,12 @@ export const App: React.FC = () => {
     }
     setUsers(updated);
     StorageService.saveUsers(updated);
+
+    if (currentUser && currentUser.id === user.id) {
+      setCurrentUser(user);
+      StorageService.saveCurrentUser(user);
+    }
+    showToast('success', `اطلاعات و نقش ${getDisplayName(user.name)} با موفقیت ثبت و ذخیره شد.`);
   };
 
   const handleDeleteUser = (userId: string) => {
