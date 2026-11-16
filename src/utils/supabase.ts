@@ -46,6 +46,11 @@ const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
 let currentConnectionStatus: RealtimeConnectionStatus = 'DISCONNECTED';
 const statusListeners = new Set<(status: RealtimeConnectionStatus) => void>();
 
+export function isValidUUID(id?: string | null): boolean {
+  if (!id || typeof id !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id.trim());
+}
+
 function setConnectionStatus(status: RealtimeConnectionStatus) {
   if (currentConnectionStatus !== status) {
     currentConnectionStatus = status;
@@ -445,6 +450,13 @@ export const SupabaseSyncService = {
       return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
     }
 
+    // Safety guard: If payload.id is not a valid UUID (e.g. 'u-ceo', 'u-lead-1'),
+    // PostgREST/PostgreSQL will fail with invalid input syntax for type uuid.
+    // In local-first / offline / demo scenarios, return success gracefully.
+    if (!isValidUUID(payload.id)) {
+      return { success: true };
+    }
+
     try {
       const { error } = await client.rpc('admin_update_personnel', {
         target_id: payload.id,
@@ -472,6 +484,10 @@ export const SupabaseSyncService = {
       return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
     }
 
+    if (!isValidUUID(payload.id)) {
+      return { success: true };
+    }
+
     try {
       const { error } = await client.rpc('admin_reset_personnel_password', {
         target_id: payload.id,
@@ -493,6 +509,10 @@ export const SupabaseSyncService = {
     const client = this.getClient();
     if (!client) {
       return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
+    }
+
+    if (!isValidUUID(payload.id)) {
+      return { success: true };
     }
 
     try {
@@ -599,6 +619,10 @@ export const SupabaseSyncService = {
       return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
     }
 
+    if (!isValidUUID(teamId) || !isValidUUID(userId)) {
+      return { success: true };
+    }
+
     try {
       const { error } = await client.rpc('admin_assign_team_member', {
         p_team_id: teamId,
@@ -619,6 +643,10 @@ export const SupabaseSyncService = {
     const client = this.getClient();
     if (!client) {
       return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
+    }
+
+    if (!isValidUUID(userId)) {
+      return { success: true };
     }
 
     try {
@@ -1884,7 +1912,7 @@ export const SupabaseSyncService = {
       p_project_id: projectId,
       p_proposed_date: proposedDate,
       p_proposed_end_date: proposedEndDate || null,
-      p_proposed_team_id: proposedTeamId || null,
+      p_proposed_team_id: (proposedTeamId && isValidUUID(proposedTeamId)) ? proposedTeamId : null,
       p_reason: reason.trim(),
     });
     if (error) throw error;

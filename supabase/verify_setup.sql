@@ -27,6 +27,7 @@ expected_functions as (
   select * from (values
     ('is_active_user', ''),
     ('is_qc_manager', ''),
+    ('is_qc_or_ceo', ''),
     ('is_scheduling_coordinator', ''),
     ('is_coordinator_or_manager', ''),
     ('next_project_code', ''),

@@ -1880,7 +1880,18 @@ export const App: React.FC = () => {
     }
 
     setUsers((prev) => {
-      const updated = prev.map((u) => (u.id === userId ? { ...u, teamId } : u));
+      const updated = prev.map((u) => {
+        if (u.id === userId) {
+          const newRole: UserRole =
+            roleInTeam === 'LEAD'
+              ? 'LEAD_TECHNICIAN'
+              : u.role === 'LEAD_TECHNICIAN'
+              ? 'TECHNICIAN'
+              : u.role;
+          return { ...u, teamId, role: newRole };
+        }
+        return u;
+      });
       StorageService.saveUsers(updated);
       return updated;
     });

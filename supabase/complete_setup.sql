@@ -32,7 +32,16 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   name text not null,
   phone text unique not null,
-  role text not null check (role in ('QC_MANAGER', 'SCHEDULING_COORDINATOR', 'LEAD_TECHNICIAN', 'TECHNICIAN')),
+  role text not null check (role in (
+    'CEO',
+    'QC_MANAGER',
+    'SCHEDULING_COORDINATOR',
+    'SALES',
+    'MEASUREMENT_LEAD',
+    'WAREHOUSE',
+    'LEAD_TECHNICIAN',
+    'TECHNICIAN'
+  )),
   avatar text,
   active boolean not null default true,
   created_at timestamptz default now(),
@@ -62,7 +71,19 @@ set search_path = public
 as $$
   select exists (
     select 1 from public.profiles
-    where id = auth.uid() and role = 'QC_MANAGER' and active = true
+    where id = auth.uid() and role in ('QC_MANAGER', 'CEO') and active = true
+  );
+$$;
+
+create or replace function public.is_qc_or_ceo()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role in ('QC_MANAGER', 'CEO') and active = true
   );
 $$;
 
@@ -1740,8 +1761,8 @@ declare
   email_addr text;
   user_uid uuid;
 begin
-  if not public.is_qc_manager() then
-    raise exception 'فقط مدیر QC مجاز به ثبت پرسنل جدید است.';
+  if not public.is_qc_or_ceo() then
+    raise exception 'فقط مدیریت ارشد مجاز به ثبت پرسنل جدید است.';
   end if;
 
   clean_phone := trim(new_phone);
@@ -1749,8 +1770,17 @@ begin
     raise exception 'شماره تلفن الزامی است.';
   end if;
 
-  if new_role not in ('QC_MANAGER', 'SCHEDULING_COORDINATOR', 'LEAD_TECHNICIAN', 'TECHNICIAN') then
-    raise exception 'نقش انتخاب‌شده معتبر نیست.';
+  if new_role not in (
+    'CEO',
+    'QC_MANAGER',
+    'SCHEDULING_COORDINATOR',
+    'SALES',
+    'MEASUREMENT_LEAD',
+    'WAREHOUSE',
+    'LEAD_TECHNICIAN',
+    'TECHNICIAN'
+  ) then
+    raise exception 'نقش انتخاب‌شده معتبر نیست: %', new_role;
   end if;
 
   if length(trim(new_password)) < 8 then
@@ -1868,8 +1898,8 @@ declare
   current_active boolean;
   active_qc_count int;
 begin
-  if not public.is_qc_manager() then
-    raise exception 'فقط مدیر QC مجاز به ویرایش پرسنل است.';
+  if not public.is_qc_or_ceo() then
+    raise exception 'فقط مدیریت ارشد مجاز به ویرایش مشخصات پرسنل است.';
   end if;
 
   select role, active into current_role, current_active
@@ -1881,28 +1911,37 @@ begin
   end if;
 
   if target_id = auth.uid() then
-    if new_role is not null and new_role != 'QC_MANAGER' then
-      raise exception 'امکان تغییر نقش حساب کاربری خودتان وجود ندارد.';
+    if new_role is not null and new_role not in ('QC_MANAGER', 'CEO') then
+      raise exception 'امکان تغییر نقش حساب کاربری خودتان به غیرمدیریتی وجود ندارد.';
     end if;
     if new_active is not null and new_active = false then
       raise exception 'امکان غیرفعال کردن حساب کاربری خودتان وجود ندارد.';
     end if;
   end if;
 
-  if current_role = 'QC_MANAGER' and current_active = true then
-    if (new_active is not null and new_active = false) or (new_role is not null and new_role != 'QC_MANAGER') then
+  if current_role in ('QC_MANAGER', 'CEO') and current_active = true then
+    if (new_active is not null and new_active = false) or (new_role is not null and new_role not in ('QC_MANAGER', 'CEO')) then
       select count(*) into active_qc_count
       from public.profiles
-      where role = 'QC_MANAGER' and active = true;
+      where role in ('QC_MANAGER', 'CEO') and active = true and id != target_id;
 
-      if active_qc_count <= 1 then
-        raise exception 'حداقل یک مدیر ارشد QC فعال باید در سیستم باقی بماند.';
+      if active_qc_count < 1 then
+        raise exception 'حداقل یک مدیر ارشد فعال باید در سیستم باقی بماند.';
       end if;
     end if;
   end if;
 
-  if new_role is not null and new_role not in ('QC_MANAGER', 'SCHEDULING_COORDINATOR', 'LEAD_TECHNICIAN', 'TECHNICIAN') then
-    raise exception 'نقش انتخاب‌شده معتبر نیست.';
+  if new_role is not null and new_role not in (
+    'CEO',
+    'QC_MANAGER',
+    'SCHEDULING_COORDINATOR',
+    'SALES',
+    'MEASUREMENT_LEAD',
+    'WAREHOUSE',
+    'LEAD_TECHNICIAN',
+    'TECHNICIAN'
+  ) then
+    raise exception 'نقش انتخاب‌شده معتبر نیست: %', new_role;
   end if;
 
   if new_phone is not null then
