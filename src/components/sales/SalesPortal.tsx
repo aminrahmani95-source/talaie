@@ -464,7 +464,7 @@ export const SalesPortal: React.FC<Props> = ({
               <div className="flex items-center gap-2.5 overflow-x-auto py-2">
                 {proposalImages.map((img, i) => (
                   <div key={img.id} className="relative w-20 h-20 rounded-lg overflow-hidden border border-[#212835] shrink-0">
-                    <img src={img.url} alt="پروپوزال" className="w-full h-full object-cover" />
+                    <CloudImage src={img.url} alt="پروپوزال" className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => setProposalImages((prev) => prev.filter((_, idx) => idx !== i))}

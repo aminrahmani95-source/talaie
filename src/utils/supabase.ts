@@ -1630,34 +1630,39 @@ export const SupabaseSyncService = {
 
   /**
    * Returns a viewable URL for a photo.
-   * If the path is already a base64 data URL or external URL, returns it directly.
-   * If it's a Supabase Storage path, returns a cached or freshly generated signed URL.
+   * If the path is already a base64 data URL, blob URL, or external URL, returns it directly.
+   * If it's a Supabase Storage path or Supabase Storage URL, returns a cached or freshly generated signed URL.
    */
   async getSignedPhotoUrl(path: string): Promise<string> {
     if (!path || typeof path !== 'string') return '';
     const trimmed = path.trim();
     if (!trimmed) return '';
 
-    if (
-      trimmed.startsWith('data:') ||
-      trimmed.startsWith('http://') ||
-      trimmed.startsWith('https://') ||
-      trimmed.startsWith('blob:')
-    ) {
-      return trimmed;
-    }
-
-    // Check memory cache
+    // Check memory cache first
     const cached = signedUrlCache.get(trimmed);
     if (cached && cached.expiresAt > Date.now() + 60000) {
       return cached.url;
+    }
+
+    let cleanPath = trimmed;
+    // Extract storage relative path if full Supabase storage URL was provided
+    const storageMatch = trimmed.match(/\/storage\/v1\/object\/(?:public|sign)\/talaie-photos\/([^?#]+)/);
+    if (storageMatch) {
+      cleanPath = decodeURIComponent(storageMatch[1]);
+    } else if (
+      trimmed.startsWith('data:') ||
+      trimmed.startsWith('blob:') ||
+      (trimmed.startsWith('http://') && !trimmed.includes('talaie-photos')) ||
+      (trimmed.startsWith('https://') && !trimmed.includes('talaie-photos'))
+    ) {
+      return trimmed;
     }
 
     const client = this.getClient();
     if (!client) return '';
 
     // Strip leading slashes and optional redundant bucket prefix
-    const cleanPath = trimmed.replace(/^(\/+)|(talaie-photos\/+)/g, '').replace(/^\/+/, '');
+    cleanPath = cleanPath.replace(/^(\/+)|^talaie-photos\/+/, '').replace(/^\/+/, '');
 
     try {
       const { data, error } = await client.storage

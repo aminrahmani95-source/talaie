@@ -18,9 +18,8 @@ export const CloudImage: React.FC<Props> = ({
     const trimmed = src.trim();
     if (
       trimmed.startsWith('data:') ||
-      trimmed.startsWith('http://') ||
-      trimmed.startsWith('https://') ||
-      trimmed.startsWith('blob:')
+      trimmed.startsWith('blob:') ||
+      ((trimmed.startsWith('http://') || trimmed.startsWith('https://')) && !trimmed.includes('talaie-photos'))
     ) {
       return trimmed;
     }
@@ -39,9 +38,8 @@ export const CloudImage: React.FC<Props> = ({
     const trimmed = src.trim();
     if (
       trimmed.startsWith('data:') ||
-      trimmed.startsWith('http://') ||
-      trimmed.startsWith('https://') ||
-      trimmed.startsWith('blob:')
+      trimmed.startsWith('blob:') ||
+      ((trimmed.startsWith('http://') || trimmed.startsWith('https://')) && !trimmed.includes('talaie-photos'))
     ) {
       setResolvedSrc(trimmed);
       return;
