@@ -275,7 +275,7 @@ export const TechniciansManager: React.FC<Props> = ({
   const crewLeads = users.filter((u) => u.role === 'LEAD_TECHNICIAN');
   const crewMembers = users.filter((u) => u.role === 'TECHNICIAN');
   const officePersonnel = users.filter((u) =>
-    ['CEO', 'SALES', 'MEASUREMENT_LEAD', 'WAREHOUSE'].includes(u.role)
+    ['CEO', 'MEASUREMENT_LEAD', 'WAREHOUSE'].includes(u.role)
   );
 
   const filteredByRole =
@@ -316,9 +316,9 @@ export const TechniciansManager: React.FC<Props> = ({
         classes: 'bg-blue-500/20 text-blue-300 border border-blue-500/40',
       };
     }
-    if (u.role === 'SALES') {
+    if ((u.role as string) === 'SALES') {
       return {
-        label: 'کارشناس فروش',
+        label: 'کارشناس فروش (فاز ۲)',
         classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
       };
     }
@@ -979,17 +979,6 @@ export const TechniciansManager: React.FC<Props> = ({
                 }`}
               >
                 مسئول هماهنگی
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('SALES')}
-                className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
-                  role === 'SALES'
-                    ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
-                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
-                }`}
-              >
-                کارشناس فروش
               </button>
               <button
                 type="button"

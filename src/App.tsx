@@ -97,9 +97,6 @@ const ProjectDossierModal = React.lazy(() =>
 const ProjectPassportPrint = React.lazy(() =>
   import('./components/common/ProjectPassportPrint').then((m) => ({ default: m.ProjectPassportPrint }))
 );
-const SalesPortal = React.lazy(() =>
-  import('./components/sales/SalesPortal').then((m) => ({ default: m.SalesPortal }))
-);
 const MeasurementDashboard = React.lazy(() =>
   import('./components/measurement/MeasurementDashboard').then((m) => ({ default: m.MeasurementDashboard }))
 );
@@ -668,8 +665,8 @@ export const App: React.FC = () => {
           }
         }
       } else if (mutation.type === 'CREATE_PROJECT') {
-        if (currentUser.role !== 'SALES' && currentUser.role !== 'SCHEDULING_COORDINATOR') {
-          showToast('error', 'تنها مدیر ارشد QC یا کارشناس فروش مجاز به ثبت پروژه است.');
+        if (currentUser.role !== 'SCHEDULING_COORDINATOR' && currentUser.role !== 'QC_MANAGER') {
+          showToast('error', 'تنها مدیر ارشد QC یا مسئول هماهنگی مجاز به ثبت پروژه است.');
           return false;
         }
       } else if (mutation.type === 'DELETE_PROJECT') {
@@ -1391,58 +1388,6 @@ export const App: React.FC = () => {
     showToast('success', 'عکس‌های قبل از نصب تایید و وضعیت پروژه به «در حال اجرا» تغییر یافت.');
   };
 
-  // Sales Portal: Intake new project for installation
-  const handleSaveNewProjectFromSales = async (projectData: Partial<Project>) => {
-    if (!currentUser) return;
-    const nowIso = new Date().toISOString();
-    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `proj-${Date.now()}`;
-    const code = `TAL-${Date.now().toString().slice(-4)}`;
-
-    const newProj: Project = {
-      id: newId,
-      code,
-      title: projectData.title || 'پروژه جدید فروش',
-      customerName: projectData.customerName || projectData.title || 'نامشخص',
-      customerPhone: projectData.customerPhone || '',
-      address: projectData.address || '',
-      status: 'MEASUREMENT_PENDING',
-      scheduledDate: projectData.scheduledDate || '',
-      priority: projectData.isForceMajeure ? 'HIGH' : 'NORMAL',
-      isForceMajeure: Boolean(projectData.isForceMajeure),
-      salesRepName: projectData.salesRepName || currentUser.name,
-      proposalImages: projectData.proposalImages || [],
-      specialNotes: projectData.specialNotes || '',
-      shadePanels: projectData.shadePanels ?? 0,
-      curtainPanels: projectData.curtainPanels ?? 0,
-      scheduledTime: projectData.scheduledTime || '09:30',
-      assignedTechnicianIds: projectData.assignedTechnicianIds || [],
-      isFullTools: true,
-      toolsRequired: [],
-      completionPhotos: [],
-      qcStatus: 'NOT_STARTED',
-      createdAt: nowIso,
-      updatedAt: nowIso,
-      technicalHandover: {
-        isHandoverComplete: false,
-        warehouseConfirmation: { confirmed: false },
-      },
-    };
-
-    await commit(
-      {
-        type: 'CREATE_PROJECT',
-        orderingKey: `project:${newProj.id}`,
-        payload: newProj,
-      },
-      () => {
-        const next = [newProj, ...projectsRef.current];
-        setProjects(next);
-        projectsRef.current = next;
-      }
-    );
-    showToast('success', `پروژه «${newProj.title}» با موفقیت توسط فروش ثبت گردید و در صف کار قرار گرفت.`);
-  };
-
   // 2nd Measurement Lead: Save verification and readiness checks
   const handleSaveMeasurement = async (projectId: string, details: any) => {
     if (!currentUser) return;
@@ -2157,17 +2102,7 @@ export const App: React.FC = () => {
 
       {/* Main Body */}
       <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
-        {currentUser.role === 'SALES' ? (
-          // ================= SALES TEAM PORTAL =================
-          <React.Suspense fallback={<DashboardSkeleton />}>
-            <SalesPortal
-              currentUser={currentUser}
-              projects={projects}
-              onSaveNewProject={handleSaveNewProjectFromSales}
-              onViewProposal={(p) => setProposalModalProject(p)}
-            />
-          </React.Suspense>
-        ) : currentUser.role === 'MEASUREMENT_LEAD' ? (
+        {currentUser.role === 'MEASUREMENT_LEAD' ? (
           // ================= 2ND MEASUREMENT & SITE READINESS DESK =================
           <React.Suspense fallback={<DashboardSkeleton />}>
             <MeasurementDashboard

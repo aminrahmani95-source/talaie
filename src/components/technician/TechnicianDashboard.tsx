@@ -52,7 +52,15 @@ export const TechnicianDashboard: React.FC<Props> = ({
   // Helper to check if a project belongs to current user
   const isProjectAssignedToMe = (p: Project) => {
     const techIds = p.assignedTechnicianIds || [];
-    return techIds.includes(currentUser.id) || p.leadTechnicianId === currentUser.id;
+    const isDirectTech = techIds.includes(currentUser.id);
+    const isLead = p.leadTechnicianId === currentUser.id;
+    const isTeamMatch = Boolean(
+      currentUser.teamId &&
+      p.assignedTeamId &&
+      (p.assignedTeamId === currentUser.teamId ||
+        p.assignedTeamId.toUpperCase() === currentUser.teamId.toUpperCase())
+    );
+    return isDirectTech || isLead || isTeamMatch;
   };
 
   const [visibleDays, setVisibleDays] = useState(() =>
@@ -95,7 +103,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [settings.visibilityWindowDays, projects, currentUser.id]);
+  }, [settings.visibilityWindowDays, projects, currentUser.id, currentUser.teamId]);
 
   // PRIORITY JOBS: In-Flight, Stuck, Paused, or QC Rejected that need immediate attention
   const openProjects = projects.filter((p) => {

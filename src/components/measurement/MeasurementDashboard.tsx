@@ -53,13 +53,17 @@ export const MeasurementDashboard: React.FC<Props> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Pending visits: either MEASUREMENT_PENDING or not yet verified
+  // Pending visits: either MEASUREMENT_PENDING or not yet verified (strictly active, excluding completed/cancelled)
   const pendingVisits = projects.filter(
-    (p) => p.status === 'MEASUREMENT_PENDING' || !p.secondMeasurementDetails?.isReadinessApproved
+    (p) =>
+      p.status !== 'COMPLETED' &&
+      p.status !== 'CANCELLED' &&
+      (p.status === 'MEASUREMENT_PENDING' ||
+        (p.status === 'DRAFT' && !p.secondMeasurementDetails?.isReadinessApproved))
   );
 
   const completedVisits = projects.filter(
-    (p) => p.secondMeasurementDetails?.isReadinessApproved
+    (p) => Boolean(p.secondMeasurementDetails?.isReadinessApproved)
   );
 
   const handleOpenForm = (proj: Project) => {

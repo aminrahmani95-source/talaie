@@ -69,7 +69,6 @@ export function canAccessProject(user: User, project: Project, userTeamId?: stri
     user.role === 'CEO' ||
     user.role === 'QC_MANAGER' ||
     user.role === 'SCHEDULING_COORDINATOR' ||
-    user.role === 'SALES' ||
     user.role === 'WAREHOUSE' ||
     user.role === 'MEASUREMENT_LEAD'
   ) {
@@ -468,17 +467,6 @@ export function validateProjectPatchRoleGuards(
     for (const key of Object.keys(patch)) {
       if (!allowedWarehouseKeys.has(key)) {
         throw new PermanentError(`دسترسی غیرمجاز: مسئول انبار اجازه تغییر فیلد «${key}» را ندارد.`);
-      }
-    }
-    return;
-  }
-
-  // نقش کارشناس فروش (SALES)
-  if (user.role === 'SALES') {
-    const allowedSalesKeys = new Set(['proposalImages', 'notes', 'updatedAt', 'isForceMajeure', 'clientName', 'address', 'phone']);
-    for (const key of Object.keys(patch)) {
-      if (!allowedSalesKeys.has(key)) {
-        throw new PermanentError(`دسترسی غیرمجاز: کارشناس فروش اجازه تغییر فیلد «${key}» را ندارد.`);
       }
     }
     return;

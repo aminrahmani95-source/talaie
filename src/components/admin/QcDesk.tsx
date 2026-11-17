@@ -1125,7 +1125,7 @@ export const QcDesk: React.FC<Props> = ({
               <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-md text-xs text-amber-300 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 shrink-0 text-amber-400" />
                 <span>
-                  شما با نقش کاربری فعلی به این برگه دسترسی دارید؛ تایید نهایی کنترل کیفی و صدور صورت‌جلسه رسمی در صلاحیت مدیر ارشد QC و مدیرعامل است.
+                  شما با نقش کاربری فعلی به این برگه دسترسی دارید؛ تایید نهایی کنترل کیفی و صدور صورت‌جلسه رسمی منحصراً در صلاحیت مدیر کنترل کیفی (QC) است.
                 </span>
               </div>
             )}

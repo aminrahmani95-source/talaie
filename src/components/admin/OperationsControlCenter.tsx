@@ -91,7 +91,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
     return tickets.filter((t) => t.status === 'OPEN' && t.isBlocking);
   }, [tickets]);
 
-  // 1. ب: ورودی‌های جدید فروش (در انتظار تخصیص اکیپ یا تاریخ زمان‌بندی)
+  // 1. ب: پروژه‌های نیازمند تعیین اکیپ یا تاریخ زمان‌بندی
   const incomingProjects = useMemo(() => {
     return projects.filter(
       (p) =>
@@ -493,7 +493,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                   </div>
                 ))}
 
-              {/* 1. ب: ورودی‌های جدید فروش (در انتظار تخصیص اکیپ یا تاریخ زمان‌بندی) */}
+              {/* 1. ب: پروژه‌های نیازمند تعیین اکیپ یا تاریخ زمان‌بندی */}
               {(activeUrgentCategory === 'ALL' || activeUrgentCategory === 'INCOMING') &&
                 incomingProjects.map((p) => (
                   <div
