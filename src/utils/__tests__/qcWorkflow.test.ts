@@ -586,7 +586,7 @@ describe('Phase P3: Final Quality Control & Project Sign-off', () => {
     expect(isAwaitingQc(undefined)).toBe(false);
   });
 
-  it('Requirement 16: CEO alongside QC_MANAGER has full authority to approve QC and pass role guards', () => {
+  it('Requirement 16: CEO does not have QC approval authority; final QC is strictly isolated to QC_MANAGER', () => {
     const ceoUser: User = {
       id: 'usr-ceo-1',
       name: 'امید طلایی',
@@ -594,19 +594,30 @@ describe('Phase P3: Final Quality Control & Project Sign-off', () => {
       role: 'CEO',
       active: true,
     };
+    const qcManagerUser: User = {
+      id: 'usr-qc-1',
+      name: 'مهندس رحمانی',
+      phone: '09124339038',
+      role: 'QC_MANAGER',
+      active: true,
+    };
     const project = createCompletedProject();
 
-    // CEO can approve final QC via role guard
+    // CEO cannot approve final QC via role guard
     expect(() =>
       validateProjectPatchRoleGuards(ceoUser, project, {
         qcStatus: 'APPROVED',
         qcScore: 5,
-        qcNotes: 'تایید عالی توسط مدیرعامل.',
+        qcNotes: 'تایید توسط مدیرعامل.',
       })
-    ).not.toThrow();
+    ).toThrow();
 
-    // canApproveFinalQC allows CEO
-    const check = canApproveFinalQC(ceoUser, project);
-    expect(check.allowed).toBe(true);
+    // canApproveFinalQC denies CEO
+    const ceoCheck = canApproveFinalQC(ceoUser, project);
+    expect(ceoCheck.allowed).toBe(false);
+
+    // canApproveFinalQC allows QC_MANAGER
+    const qcCheck = canApproveFinalQC(qcManagerUser, project);
+    expect(qcCheck.allowed).toBe(true);
   });
 });

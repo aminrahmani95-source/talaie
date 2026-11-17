@@ -91,6 +91,12 @@ const FailedOperationsModal = React.lazy(() =>
 const CeoMasterRegistry = React.lazy(() =>
   import('./components/ceo/CeoMasterRegistry').then((m) => ({ default: m.CeoMasterRegistry }))
 );
+const ProjectDossierModal = React.lazy(() =>
+  import('./components/ceo/ProjectDossierModal').then((m) => ({ default: m.ProjectDossierModal }))
+);
+const ProjectPassportPrint = React.lazy(() =>
+  import('./components/common/ProjectPassportPrint').then((m) => ({ default: m.ProjectPassportPrint }))
+);
 const SalesPortal = React.lazy(() =>
   import('./components/sales/SalesPortal').then((m) => ({ default: m.SalesPortal }))
 );
@@ -524,6 +530,13 @@ export const App: React.FC = () => {
   // Navigation tab for QC Manager / Coordinator - default to General Manager Dashboard ('registry')
   const [activeTab, setActiveTab] = useState<ManagerTab>('registry');
 
+  // CEO navigation restriction: CEO only accesses 'registry' (داشبورد مدیر کل) and 'planner' (دیدن برنامه)
+  useEffect(() => {
+    if (currentUser?.role === 'CEO' && activeTab !== 'registry' && activeTab !== 'planner') {
+      setActiveTab('registry');
+    }
+  }, [currentUser?.role, activeTab]);
+
   // Dark Mode state with persistence and system detection - default to Dark Graphite foundation
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('talaie_theme');
@@ -559,6 +572,7 @@ export const App: React.FC = () => {
   const [materialModalProject, setMaterialModalProject] = useState<Project | null>(null);
   const [completionModalProject, setCompletionModalProject] = useState<Project | null>(null);
   const [certificateModalProject, setCertificateModalProject] = useState<Project | null>(null);
+  const [printingPassportProject, setPrintingPassportProject] = useState<Project | null>(null);
   const [preInspectionProject, setPreInspectionProject] = useState<Project | null>(null);
   const [evaluationProject, setEvaluationProject] = useState<Project | null>(null);
   const [stuckModalProject, setStuckModalProject] = useState<Project | null>(null);
@@ -640,7 +654,7 @@ export const App: React.FC = () => {
     }
 
     // Client-side role guards: validate before pushing to outbox
-    if (currentUser.role !== 'QC_MANAGER' && currentUser.role !== 'CEO') {
+    if (currentUser.role !== 'QC_MANAGER') {
       if (mutation.type === 'PATCH_PROJECT') {
         const projectId = mutation.payload?.id || mutation.orderingKey.replace('project:', '');
         const currentProject = projectsRef.current.find((p) => p.id === projectId);
@@ -814,7 +828,7 @@ export const App: React.FC = () => {
     patch: Record<string, unknown>,
     successMessage: string
   ) => {
-    if (!currentUser || (currentUser.role !== 'QC_MANAGER' && currentUser.role !== 'SCHEDULING_COORDINATOR' && currentUser.role !== 'CEO')) return;
+    if (!currentUser || (currentUser.role !== 'QC_MANAGER' && currentUser.role !== 'SCHEDULING_COORDINATOR')) return;
     if (!projectsRef.current.some((p) => p.id === projectId)) {
       showToast('error', 'این پروژه دیگر وجود ندارد.');
       setManagedProjectId(null);
@@ -2143,16 +2157,7 @@ export const App: React.FC = () => {
 
       {/* Main Body */}
       <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
-        {currentUser.role === 'CEO' && activeTab === 'registry' ? (
-          // ================= CEO / EXECUTIVE ARCHIVE VIEW =================
-          <React.Suspense fallback={<DashboardSkeleton />}>
-            <CeoMasterRegistry
-              currentUser={currentUser}
-              projects={projects}
-              users={users}
-            />
-          </React.Suspense>
-        ) : currentUser.role === 'SALES' ? (
+        {currentUser.role === 'SALES' ? (
           // ================= SALES TEAM PORTAL =================
           <React.Suspense fallback={<DashboardSkeleton />}>
             <SalesPortal
@@ -2196,6 +2201,7 @@ export const App: React.FC = () => {
             <Sidebar
               activeTab={activeTab}
               onSelectTab={(tab) => setActiveTab(tab)}
+              userRole={currentUser.role}
               pendingQcCount={pendingQcCount}
               openStuckCount={openStuckCount}
               openTicketCount={openTicketCount}
@@ -2209,6 +2215,7 @@ export const App: React.FC = () => {
                     currentUser={currentUser}
                     projects={projects}
                     users={users}
+                    fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}
                   />
                 )}
 
@@ -2241,15 +2248,15 @@ export const App: React.FC = () => {
                     currentUser={currentUser}
                     settings={settings}
                     scheduleChangeRequests={scheduleChangeRequests}
-                    onUpdateSettings={handleUpdateSettings}
-                    onNewProject={handleOpenNewProject}
-                    onEditProject={handleOpenEditProject}
+                    onUpdateSettings={isCeo ? undefined : handleUpdateSettings}
+                    onNewProject={isCeo ? undefined : handleOpenNewProject}
+                    onEditProject={isCeo ? undefined : handleOpenEditProject}
                     onManageProject={(p) => setManagedProjectId(p.id)}
-                    onMoveProjectDate={handleMoveProjectDate}
+                    onMoveProjectDate={isCeo ? undefined : handleMoveProjectDate}
                     onViewProposal={(p) => setProposalModalProject(p)}
                     onOpenPreInspection={(p) => setPreInspectionProject(p)}
-                    onProposeScheduleChange={handleProposeScheduleChange}
-                    onReviewScheduleChange={handleReviewScheduleChange}
+                    onProposeScheduleChange={isCeo ? undefined : handleProposeScheduleChange}
+                    onReviewScheduleChange={isCeo ? undefined : handleReviewScheduleChange}
                   />
                 )}
 
@@ -2333,6 +2340,7 @@ export const App: React.FC = () => {
             <BottomNav
               activeTab={activeTab}
               onSelectTab={(tab) => setActiveTab(tab)}
+              userRole={currentUser.role}
               pendingQcCount={pendingQcCount}
               openStuckCount={openStuckCount}
               openTicketCount={openTicketCount}
@@ -2430,6 +2438,29 @@ export const App: React.FC = () => {
         {(isQcManager || isCoordinator || isCeo) && managedProjectId && currentUser && (() => {
           const managed = projects.find((p) => p.id === managedProjectId);
           if (!managed) return null;
+          if (currentUser.role === 'CEO') {
+            return (
+              <ProjectDossierModal
+                project={managed}
+                users={users}
+                onClose={() => setManagedProjectId(null)}
+                fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}
+                onPrintCertificate={() => {
+                  const targetProj = managed;
+                  setManagedProjectId(null);
+                  const isQcApproved = targetProj.status === 'COMPLETED' && targetProj.qcStatus === 'APPROVED';
+                  if (!isQcApproved) {
+                    showToast(
+                      'warning',
+                      'چاپ شناسنامه رسمی منحصراً پس از اتمام کامل پروژه و صدور تأییدیه نهایی کنترل کیفی (QC) مجاز می‌باشد.'
+                    );
+                    return;
+                  }
+                  setPrintingPassportProject(targetProj);
+                }}
+              />
+            );
+          }
           return (
             <ProjectManagerSheet
               project={managed}
@@ -2464,6 +2495,14 @@ export const App: React.FC = () => {
             project={certificateModalProject}
             users={users}
             onClose={() => setCertificateModalProject(null)}
+          />
+        )}
+
+        {printingPassportProject && (
+          <ProjectPassportPrint
+            project={printingPassportProject}
+            users={users}
+            onClose={() => setPrintingPassportProject(null)}
           />
         )}
 

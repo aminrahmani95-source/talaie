@@ -156,10 +156,10 @@ export function canApproveFinalQC(
   project: Project,
   patchDefects?: QCDefect[]
 ): { allowed: boolean; reason?: string } {
-  if (user.role !== 'QC_MANAGER' && user.role !== 'CEO') {
+  if (user.role !== 'QC_MANAGER') {
     return {
       allowed: false,
-      reason: 'تأیید نهایی کنترل کیفی (QC) منحصراً در صلاحیت مدیر ارشد QC و مدیرعامل است.',
+      reason: 'تأیید نهایی کنترل کیفی (QC) منحصراً در صلاحیت مدیر ارشد QC است.',
     };
   }
 

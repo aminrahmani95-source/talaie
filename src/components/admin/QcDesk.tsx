@@ -176,7 +176,7 @@ export const QcDesk: React.FC<Props> = ({
     }
   }, [selectedProject?.id]);
 
-  const isQcManager = currentUser?.role === 'QC_MANAGER' || currentUser?.role === 'CEO';
+  const isQcManager = currentUser?.role === 'QC_MANAGER';
   const canApproveRole = isQcManager;
 
   const unresolvedCriticalDefects = useMemo(() => {

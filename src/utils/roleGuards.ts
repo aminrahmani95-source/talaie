@@ -380,7 +380,7 @@ export function validateProjectPatchRoleGuards(
     if (user.role === 'TECHNICIAN' || user.role === 'LEAD_TECHNICIAN') {
       throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط می‌تواند وضعیت QC را روی PENDING تنظیم کند.');
     }
-    if (user.role !== 'QC_MANAGER' && user.role !== 'CEO') {
+    if (user.role !== 'QC_MANAGER') {
       throw new PermanentError('دسترسی غیرمجاز: تأیید نهایی کنترل کیفی (QC) فقط در صلاحیت مدیر QC است.');
     }
     if (hasUnresolvedCriticalDefects(project, patch.qcDefects)) {
@@ -392,8 +392,8 @@ export function validateProjectPatchRoleGuards(
 
   // ۳.۲. صیانت از سوابق بازرسی‌های کنترل کیفیت (qcInspections)
   if (patch.qcInspections !== undefined) {
-    if (user.role !== 'QC_MANAGER' && user.role !== 'CEO') {
-      throw new PermanentError('دسترسی غیرمجاز: ثبت رسمی برگه بازرسی کنترل کیفی منحصراً در صلاحیت مدیر ارشد QC و مدیرعامل است.');
+    if (user.role !== 'QC_MANAGER') {
+      throw new PermanentError('دسترسی غیرمجاز: ثبت رسمی برگه بازرسی کنترل کیفی منحصراً در صلاحیت مدیر ارشد QC است.');
     }
     if (!Array.isArray(patch.qcInspections)) {
       throw new PermanentError('دسترسی غیرمجاز: سوابق بازرسی‌های QC باید به صورت آرایه معتبر باشد.');
@@ -416,7 +416,7 @@ export function validateProjectPatchRoleGuards(
     }
     const existingDefects = project.qcDefects || [];
 
-    if (user.role !== 'QC_MANAGER' && user.role !== 'CEO') {
+    if (user.role !== 'QC_MANAGER') {
       // تکنسین‌ها و سایر نقش‌ها نمی‌توانند عیوب را حذف کنند
       if (patch.qcDefects.length < existingDefects.length) {
         throw new PermanentError('دسترسی غیرمجاز: حذف عیوب کیفی ثبت‌شده مجاز نیست.');
@@ -436,7 +436,7 @@ export function validateProjectPatchRoleGuards(
   }
 
   // مدیر QC هیچ محدودیتی در فیلدها یا مسیر انتقال وضعیت ندارد
-  if (user.role === 'QC_MANAGER' || user.role === 'CEO') {
+  if (user.role === 'QC_MANAGER') {
     return;
   }
 
@@ -650,7 +650,7 @@ export function validateProjectPatchRoleGuards(
 }
 
 export function validateEvaluationRoleGuards(user: User): void {
-  if (user.role !== 'QC_MANAGER' && user.role !== 'CEO') {
+  if (user.role !== 'QC_MANAGER') {
     throw new PermanentError('دسترسی غیرمجاز: تنها مدیر ارشد QC می‌تواند ارزیابی پرسنل را ثبت کند.');
   }
 }
@@ -661,7 +661,7 @@ export function validateTicketRoleGuards(
   ticket: Partial<Ticket>,
   userTeamId?: string
 ): void {
-  if (user.role === 'QC_MANAGER' || user.role === 'CEO') {
+  if (user.role === 'QC_MANAGER') {
     return;
   }
 

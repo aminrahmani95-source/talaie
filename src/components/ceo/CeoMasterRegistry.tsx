@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Project, User } from '../../types';
+import { Project, User, ProjectAuditRecord } from '../../types';
 import {
   FileCheck2,
   Search,
@@ -19,20 +19,38 @@ import {
   Filter,
   X,
   Check,
+  FileText,
+  Lock,
 } from 'lucide-react';
 import { toPersianDigits, getTodayPersianString, formatJalali } from '../../utils/jalali';
 import { ProjectPassportPrint } from '../common/ProjectPassportPrint';
+import { ProjectDossierModal } from './ProjectDossierModal';
+import { triggerToast } from '../Toast';
 
 interface Props {
   currentUser: User;
   projects: Project[];
   users?: User[];
+  fetchAudit?: (projectId: string) => Promise<ProjectAuditRecord[]>;
 }
 
-export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, users = [] }) => {
+export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, users = [], fetchAudit }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'APPROVED' | 'IN_PROGRESS' | 'SCHEDULED' | 'STUCK'>('ALL');
   const [printingProject, setPrintingProject] = useState<Project | null>(null);
+  const [dossierProject, setDossierProject] = useState<Project | null>(null);
+
+  const handlePrintCertificate = (project: Project) => {
+    const isQcApproved = project.status === 'COMPLETED' && project.qcStatus === 'APPROVED';
+    if (!isQcApproved) {
+      triggerToast(
+        'warning',
+        'چاپ شناسنامه رسمی منحصراً پس از اتمام کامل پروژه و صدور تأییدیه نهایی کنترل کیفی (QC) مجاز می‌باشد.'
+      );
+      return;
+    }
+    setPrintingProject(project);
+  };
 
   // High-level Executive Metrics
   const metrics = useMemo(() => {
@@ -340,7 +358,7 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
                   </div>
 
                   {/* Actions & QC Badge */}
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
                     <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
                       isApproved
                         ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
@@ -355,15 +373,39 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
                        isInProgress ? 'در حال نصب' : 'زمان‌بندی‌شده'}
                     </span>
 
-                    {/* Print Button */}
+                    {/* Dossier & Documents Button */}
                     <button
                       type="button"
-                      onClick={() => setPrintingProject(p)}
-                      aria-label={`چاپ شناسنامه رسمی پروژه ${p.title}`}
-                      className="px-3.5 py-1.5 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-sm active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
+                      onClick={() => setDossierProject(p)}
+                      aria-label={`مشاهده مدارک، گزارش‌ها و تاریخچه پروژه ${p.title}`}
+                      className="px-3.5 py-1.5 bg-[#1C232D] hover:bg-[#252F3D] text-[#F0F4F8] hover:text-[#C5A059] border border-[#2D3748] hover:border-[#C5A059]/40 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-xs"
                     >
-                      <Printer className="w-3.5 h-3.5" />
+                      <FileText className="w-3.5 h-3.5 text-[#C5A059]" />
+                      <span>مدارک و پرونده ۳۶۰°</span>
+                    </button>
+
+                    {/* Print Button (Gated strictly to QC approved + completed projects) */}
+                    <button
+                      type="button"
+                      onClick={() => handlePrintCertificate(p)}
+                      aria-label={`چاپ شناسنامه رسمی پروژه ${p.title}`}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-sm active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] ${
+                        isApproved
+                          ? 'bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117]'
+                          : 'bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#2D3748]'
+                      }`}
+                    >
+                      {isApproved ? (
+                        <Printer className="w-3.5 h-3.5" />
+                      ) : (
+                        <Lock className="w-3.5 h-3.5 text-amber-400" />
+                      )}
                       <span>چاپ شناسنامه A4</span>
+                      {!isApproved && (
+                        <span className="text-[10px] text-amber-400 font-bold bg-amber-400/10 px-1 py-0.5 rounded">
+                          نیازمند تایید QC
+                        </span>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -430,6 +472,21 @@ export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, user
             );
           })}
         </div>
+      )}
+
+      {/* Project Dossier Modal (Reports, Documents, History) */}
+      {dossierProject && (
+        <ProjectDossierModal
+          project={dossierProject}
+          users={users}
+          onClose={() => setDossierProject(null)}
+          fetchAudit={fetchAudit}
+          onPrintCertificate={() => {
+            const targetProj = dossierProject;
+            setDossierProject(null);
+            handlePrintCertificate(targetProj);
+          }}
+        />
       )}
 
       {/* Printable Modal Lightbox */}

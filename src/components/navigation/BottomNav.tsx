@@ -22,6 +22,7 @@ interface Props {
   openStuckCount?: number;
   openTicketCount?: number;
   pendingMaterialCount?: number;
+  userRole?: string;
 }
 
 export const BottomNav: React.FC<Props> = ({
@@ -31,7 +32,9 @@ export const BottomNav: React.FC<Props> = ({
   openStuckCount = 0,
   openTicketCount = 0,
   pendingMaterialCount = 0,
+  userRole,
 }) => {
+  const isCeo = userRole === 'CEO';
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const totalUrgentCount = openStuckCount + pendingQcCount + openTicketCount;
@@ -44,27 +47,42 @@ export const BottomNav: React.FC<Props> = ({
     activeTab === 'technicians' ||
     activeTab === 'settings';
 
-  const navItems = [
-    {
-      id: 'registry' as const,
-      label: 'مدیر کل',
-      icon: FileCheck2,
-      badge: undefined,
-    },
-    {
-      id: 'control' as const,
-      label: 'میز کار',
-      icon: Activity,
-      badge: totalUrgentCount > 0 ? totalUrgentCount : undefined,
-      badgeColor: 'bg-rose-600 text-white animate-pulse',
-    },
-    {
-      id: 'planner' as const,
-      label: 'تقویم 4 روزه',
-      icon: CalendarDays,
-      badge: undefined,
-    },
-  ];
+  const navItems = isCeo
+    ? [
+        {
+          id: 'registry' as const,
+          label: 'مدیر کل',
+          icon: FileCheck2,
+          badge: undefined,
+        },
+        {
+          id: 'planner' as const,
+          label: 'دیدن برنامه',
+          icon: CalendarDays,
+          badge: undefined,
+        },
+      ]
+    : [
+        {
+          id: 'registry' as const,
+          label: 'مدیر کل',
+          icon: FileCheck2,
+          badge: undefined,
+        },
+        {
+          id: 'control' as const,
+          label: 'میز کار',
+          icon: Activity,
+          badge: totalUrgentCount > 0 ? totalUrgentCount : undefined,
+          badgeColor: 'bg-rose-600 text-white animate-pulse',
+        },
+        {
+          id: 'planner' as const,
+          label: 'تقویم 4 روزه',
+          icon: CalendarDays,
+          badge: undefined,
+        },
+      ];
 
   return (
     <>
@@ -73,7 +91,7 @@ export const BottomNav: React.FC<Props> = ({
         aria-label="ناوبری اصلی"
         className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0D1117]/95 backdrop-blur-lg border-t border-[#212835] pb-[env(safe-area-inset-bottom)] shadow-lg transition-colors"
       >
-        <div className="grid grid-cols-4 h-14 max-w-lg mx-auto px-1">
+        <div className={`${isCeo ? 'grid grid-cols-2 h-14 max-w-xs mx-auto px-1' : 'grid grid-cols-4 h-14 max-w-lg mx-auto px-1'}`}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isSelected = activeTab === item.id;
@@ -113,36 +131,39 @@ export const BottomNav: React.FC<Props> = ({
             );
           })}
 
-          {/* More Menu Item */}
-          <button
-            type="button"
-            onClick={() => setIsMoreOpen(true)}
-            className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] transition-all select-none cursor-pointer ${
-              isMoreActive
-                ? 'text-[#C5A059] font-bold'
-                : 'text-[#637184] hover:text-[#F0F4F8]'
-            }`}
-          >
-            <div className="relative">
-              <MoreHorizontal
-                className={`w-4 h-4 transition-transform ${
-                  isMoreActive ? 'scale-110' : ''
-                }`}
-              />
-              {(pendingQcCount > 0 || openStuckCount > 0 || pendingMaterialCount > 0) && (
-                <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+          {/* More Menu Item (Hidden for CEO) */}
+          {!isCeo && (
+            <button
+              type="button"
+              onClick={() => setIsMoreOpen(true)}
+              className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] transition-all select-none cursor-pointer ${
+                isMoreActive
+                  ? 'text-[#C5A059] font-bold'
+                  : 'text-[#637184] hover:text-[#F0F4F8]'
+              }`}
+            >
+              <div className="relative">
+                <MoreHorizontal
+                  className={`w-4 h-4 transition-transform ${
+                    isMoreActive ? 'scale-110' : ''
+                  }`}
+                />
+                {(pendingQcCount > 0 || openStuckCount > 0 || pendingMaterialCount > 0) && (
+                  <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                )}
+              </div>
+              <span className="text-[11px] leading-none">سایر بخش‌ها</span>
+              {isMoreActive && (
+                <span className="absolute bottom-1 w-5 h-0.5 rounded-full bg-[#C5A059]" />
               )}
-            </div>
-            <span className="text-[11px] leading-none">سایر بخش‌ها</span>
-            {isMoreActive && (
-              <span className="absolute bottom-1 w-5 h-0.5 rounded-full bg-[#C5A059]" />
-            )}
-          </button>
+            </button>
+          )}
         </div>
       </nav>
 
-      {/* More Sheet for Specialized Modules */}
-      <Sheet
+      {/* More Sheet for Specialized Modules (Hidden for CEO) */}
+      {!isCeo && (
+        <Sheet
         isOpen={isMoreOpen}
         onClose={() => setIsMoreOpen(false)}
         title="بخش‌های تخصصی و کمکی مدیریت"
@@ -322,6 +343,7 @@ export const BottomNav: React.FC<Props> = ({
           </button>
         </div>
       </Sheet>
+      )}
     </>
   );
 };
