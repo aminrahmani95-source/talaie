@@ -47,7 +47,8 @@ import { LOGO_GOLD } from './assets/logo';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
 import { TechnicianDashboard } from './components/technician/TechnicianDashboard';
-import { Toast, ToastMessage } from './components/Toast';
+import { Toast, ToastMessage, TOAST_EVENT } from './components/Toast';
+import { isAwaitingQc } from './utils/qcWorkflow';
 import { Sidebar } from './components/navigation/Sidebar';
 import { BottomNav, ManagerTab } from './components/navigation/BottomNav';
 import { DashboardSkeleton } from './components/ui/DashboardSkeleton';
@@ -563,12 +564,24 @@ export const App: React.FC = () => {
   const [stuckModalProject, setStuckModalProject] = useState<Project | null>(null);
   const [dailyLogModalProject, setDailyLogModalProject] = useState<Project | null>(null);
   const [managedProjectId, setManagedProjectId] = useState<string | null>(null);
+  const [selectedQcProjectId, setSelectedQcProjectId] = useState<string | null>(null);
 
   // Modern Toast notification system
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const showToast = (type: ToastMessage['type'], message: string) => {
     setToast({ type, message });
   };
+
+  useEffect(() => {
+    const handleToastEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ type?: ToastMessage['type']; message?: string }>;
+      if (customEvent.detail?.message) {
+        showToast(customEvent.detail.type || 'info', customEvent.detail.message);
+      }
+    };
+    window.addEventListener(TOAST_EVENT, handleToastEvent);
+    return () => window.removeEventListener(TOAST_EVENT, handleToastEvent);
+  }, []);
 
   // Lightweight local storage caching (scoped to authenticated user session)
   useEffect(() => {
@@ -1422,9 +1435,15 @@ export const App: React.FC = () => {
     const current = projectsRef.current.find((p) => p.id === projectId);
     if (!current) return;
 
+    const shouldTransitionToScheduled =
+      current.status === 'MEASUREMENT_PENDING' &&
+      Boolean(details?.isReadinessApproved) &&
+      Boolean(current.scheduledDate);
+
     const patch: Partial<Project> = {
       secondMeasurementDetails: details,
       updatedAt: new Date().toISOString(),
+      ...(shouldTransitionToScheduled ? { status: 'SCHEDULED' } : {}),
     };
 
     await commit(
@@ -2068,18 +2087,19 @@ export const App: React.FC = () => {
     return Boolean(latest && latest.resolutionStatus !== 'RESOLVED');
   };
   const openStuckCount = projects.filter(isStuckOpen).length;
-  const isAwaitingQc = (p: Project) =>
-    (p.status === 'COMPLETED' || p.qcStatus === 'PENDING') &&
-    p.qcStatus !== 'APPROVED' &&
-    p.qcStatus !== 'REJECTED';
   const pendingQcCount = projects.filter(isAwaitingQc).length;
 
-  const pendingMaterialCount = materialRequests.filter(
-    (r) =>
-      r.status === 'SUBMITTED' ||
-      r.status === 'IN_PROCUREMENT' ||
-      (r.dispatches && r.dispatches.some((d) => !d.receivedAtSiteConfirmed))
+  const openWarehouseTicketCount = tickets.filter(
+    (t) => t.status === 'OPEN' && (t.assignedRole === 'WAREHOUSE' || Boolean(t.referralNote))
   ).length;
+
+  const pendingMaterialCount =
+    materialRequests.filter(
+      (r) =>
+        r.status === 'SUBMITTED' ||
+        r.status === 'IN_PROCUREMENT' ||
+        (r.dispatches && r.dispatches.some((d) => !d.receivedAtSiteConfirmed))
+    ).length + openWarehouseTicketCount;
 
   const isQcManager = currentUser.role === 'QC_MANAGER';
   const isCoordinator = currentUser.role === 'SCHEDULING_COORDINATOR';
@@ -2155,15 +2175,19 @@ export const App: React.FC = () => {
         ) : currentUser.role === 'WAREHOUSE' ? (
           // ================= WAREHOUSE PREPARATION & SITE DISPATCH DESK =================
           <React.Suspense fallback={<DashboardSkeleton />}>
-            <WarehouseDesk
+            <MaterialCenter
+              materialRequests={materialRequests}
               currentUser={currentUser}
-              projects={projects}
+              users={users}
               tickets={tickets}
-              onConfirmPacking={handleConfirmWarehousePacking}
+              projects={projects}
+              onUpdateMaterialRequest={handleUpdateMaterialRequest}
               onResolveTicket={handleResolveWarehouseTicket}
+              onConfirmPacking={handleConfirmWarehousePacking}
               onConfirmGoodsReceipt={handleConfirmWarehouseReceipt}
               onViewProposal={(p) => setProposalModalProject(p)}
               onOpenTicketModal={(p) => setTicketModalProject(p)}
+              onNavigateTab={(tab) => setActiveTab(tab)}
             />
           </React.Suspense>
         ) : isManagerOrCoordinator ? (
@@ -2200,6 +2224,10 @@ export const App: React.FC = () => {
                     settings={settings}
                     onNavigateTab={(tab) => setActiveTab(tab)}
                     onOpenProject={(p) => setManagedProjectId(p.id)}
+                    onOpenQcProject={(p) => {
+                      setSelectedQcProjectId(p.id);
+                      setActiveTab('qc');
+                    }}
                     onOpenScheduleRequests={() => setActiveTab('planner')}
                     onNewProject={handleOpenNewProject}
                   />
@@ -2230,6 +2258,8 @@ export const App: React.FC = () => {
                     projects={projects}
                     users={users}
                     currentUser={currentUser}
+                    selectedProjectId={selectedQcProjectId}
+                    onSelectProject={setSelectedQcProjectId}
                     onPatchProject={handlePatchProject}
                     onViewProposal={(p) => setProposalModalProject(p)}
                     onOpenCertificate={(p) => setCertificateModalProject(p)}
@@ -2253,6 +2283,7 @@ export const App: React.FC = () => {
                     currentUser={currentUser || undefined}
                     users={users}
                     onUpdateTicket={handleUpdateTicket}
+                    onNavigateTab={(tab) => setActiveTab(tab)}
                   />
                 )}
 
@@ -2261,7 +2292,15 @@ export const App: React.FC = () => {
                     materialRequests={materialRequests}
                     currentUser={currentUser}
                     users={users}
+                    tickets={tickets}
+                    projects={projects}
                     onUpdateMaterialRequest={handleUpdateMaterialRequest}
+                    onResolveTicket={handleResolveWarehouseTicket}
+                    onConfirmPacking={handleConfirmWarehousePacking}
+                    onConfirmGoodsReceipt={handleConfirmWarehouseReceipt}
+                    onViewProposal={(p) => setProposalModalProject(p)}
+                    onOpenTicketModal={(p) => setTicketModalProject(p)}
+                    onNavigateTab={(tab) => setActiveTab(tab)}
                   />
                 )}
 

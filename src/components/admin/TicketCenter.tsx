@@ -38,11 +38,12 @@ interface Props {
   onUpdateTicket: (ticket: Ticket) => void;
   currentUser?: User;
   users?: User[];
+  onNavigateTab?: (tab: any) => void;
 }
 
 type TicketStatusFilter = 'ALL' | 'OPEN' | 'CRITICAL' | 'RESOLVED';
 
-export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, currentUser, users }) => {
+export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, currentUser, users, onNavigateTab }) => {
   const [filter, setFilter] = useState<TicketStatusFilter>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -545,6 +546,18 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                       <span className="text-[10px] text-neutral-500 block">
                         ارسال‌شده توسط: {t.referredByUserName}
                       </span>
+                    )}
+                    {onNavigateTab && (
+                      <div className="pt-1.5 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => onNavigateTab('materials')}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                        >
+                          <Package className="w-3.5 h-3.5" />
+                          <span>مشاهده و اقدام در کارتابل لجستیک و انبار</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}

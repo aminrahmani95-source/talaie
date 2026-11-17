@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Project,
   User,
@@ -37,6 +37,7 @@ import {
   Info,
   Check,
   ShieldAlert,
+  AlertCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toPersianDigits, formatJalali } from '../../utils/jalali';
@@ -51,6 +52,7 @@ import { StatusPill } from '../ui/StatusPill';
 import { Sheet } from '../ui/Sheet';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
+import { triggerToast } from '../Toast';
 import {
   calculateQualityScore,
   hasUnresolvedCriticalDefects,
@@ -58,12 +60,15 @@ import {
   createQCInspectionPayload,
   createDefectVerificationPayload,
   PROVISIONAL_SCORING_WEIGHTS,
+  isAwaitingQc,
 } from '../../utils/qcWorkflow';
 
 interface Props {
   projects: Project[];
   users: User[];
   currentUser?: User;
+  selectedProjectId?: string | null;
+  onSelectProject?: (id: string) => void;
   onPatchProject: (id: string, patch: Partial<Project>) => void;
   onViewProposal: (project: Project) => void;
   onOpenCertificate?: (project: Project) => void;
@@ -77,6 +82,8 @@ export const QcDesk: React.FC<Props> = ({
   projects,
   users,
   currentUser,
+  selectedProjectId: externalSelectedProjectId,
+  onSelectProject: externalOnSelectProject,
   onPatchProject,
   onViewProposal,
   onOpenCertificate,
@@ -84,8 +91,17 @@ export const QcDesk: React.FC<Props> = ({
   onManageProject,
 }) => {
   const [filter, setFilter] = useState<FilterTab>('PENDING');
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [internalSelectedProjectId, setInternalSelectedProjectId] = useState<string | null>(null);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
+
+  // Sync external/internal selection
+  const selectedProjectId = externalSelectedProjectId ?? internalSelectedProjectId;
+  const setSelectedProjectId = (id: string | null) => {
+    setInternalSelectedProjectId(id);
+    if (id && externalOnSelectProject) {
+      externalOnSelectProject(id);
+    }
+  };
 
   // QC Form states
   const [qcScore, setQcScore] = useState<number | null>(null);
@@ -120,15 +136,6 @@ export const QcDesk: React.FC<Props> = ({
   const [newDefectCategory, setNewDefectCategory] = useState<QCDefectCategory>('LEVELING');
   const [newDefectLocation, setNewDefectLocation] = useState<string>('');
 
-  // Helper: check if project is strictly waiting for QC review
-  const isAwaitingQc = (p: Project) => {
-    return (
-      (p.status === 'COMPLETED' || p.qcStatus === 'PENDING') &&
-      p.qcStatus !== 'APPROVED' &&
-      p.qcStatus !== 'REJECTED'
-    );
-  };
-
   const pendingCount = projects.filter(isAwaitingQc).length;
   const approvedCount = projects.filter((p) => p.qcStatus === 'APPROVED').length;
   const rejectedCount = projects.filter((p) => p.qcStatus === 'REJECTED').length;
@@ -155,25 +162,85 @@ export const QcDesk: React.FC<Props> = ({
 
   useEffect(() => {
     if (selectedProject) {
-      setQcScore(selectedProject.qcScore || null);
+      const criteria = selectedProject.qualityScoreDetails?.criteria || {
+        levelingScore: 5,
+        fabricFinishScore: 5,
+        mechanicsScore: 5,
+        cleanlinessScore: 5,
+        complianceScore: 5,
+      };
+      setQualityCriteria(criteria);
+      const calculated = calculateQualityScore(criteria).overallScore;
+      setQcScore(selectedProject.qcScore || calculated || 5);
       setQcNotes(selectedProject.qcNotes || '');
     }
   }, [selectedProject?.id]);
 
-  const isQcManager = currentUser?.role === 'QC_MANAGER';
-  const hasCriticalDefects = selectedProject ? hasUnresolvedCriticalDefects(selectedProject) : false;
+  const isQcManager = currentUser?.role === 'QC_MANAGER' || currentUser?.role === 'CEO';
+  const canApproveRole = isQcManager;
 
-  const canApprove =
-    isQcManager &&
-    Boolean(selectedProject) &&
-    Boolean(qcScore) &&
-    !hasCriticalDefects &&
-    ((selectedProject.status === 'COMPLETED' && selectedProject.qcStatus === 'PENDING') ||
-      (isEditingApproved && selectedProject.qcStatus === 'APPROVED'));
+  const unresolvedCriticalDefects = useMemo(() => {
+    if (!selectedProject || !Array.isArray(selectedProject.qcDefects)) return [];
+    return selectedProject.qcDefects.filter(
+      (d) => d && d.severity === 'CRITICAL' && d.status !== 'RESOLVED' && d.status !== 'VERIFIED'
+    );
+  }, [selectedProject]);
+
+  const hasCriticalDefects = unresolvedCriticalDefects.length > 0;
+
+  // لیست شفاف و واضح پیش‌نیازهای تایید QC
+  const approvalPrerequisites = useMemo(() => {
+    return [
+      {
+        id: 'role',
+        title: 'صلاحیت نقش کاربری',
+        met: canApproveRole,
+        message: canApproveRole
+          ? 'نقش کاربری مجاز به تایید کنترل کیفی است.'
+          : 'تایید نهایی کیفی فقط در صلاحیت مدیر ارشد QC یا مدیرعامل است.',
+      },
+      {
+        id: 'status',
+        title: 'آمادگی وضعیت پروژه برای QC',
+        met: Boolean(
+          selectedProject &&
+            (isAwaitingQc(selectedProject) ||
+              (isEditingApproved && selectedProject.qcStatus === 'APPROVED'))
+        ),
+        message: 'پروژه باید در صف بررسی کنترل کیفیت (اتمام نصب یا PENDING) باشد.',
+      },
+      {
+        id: 'defects',
+        title: 'بررسی عدم‌انطباق و نقص بحرانی',
+        met: !hasCriticalDefects,
+        message: hasCriticalDefects
+          ? `پروژه دارای ${toPersianDigits(unresolvedCriticalDefects.length)} نقص بحرانی حل‌نشده است (${unresolvedCriticalDefects.map((d) => d.description).join('، ')}). ابتدا باید رفع و تایید شود.`
+          : 'هیچ نقص بحرانی حل‌نشده‌ای در کارگاه ثبت نشده است.',
+      },
+      {
+        id: 'score',
+        title: 'امتیاز ارزیابی کیفی',
+        met: Boolean(qcScore && qcScore >= 1),
+        message: 'امتیاز کیفی پنج‌گانه محاسبه شده است.',
+      },
+    ];
+  }, [canApproveRole, selectedProject, isEditingApproved, hasCriticalDefects, unresolvedCriticalDefects, qcScore]);
+
+  const unmetPrerequisites = approvalPrerequisites.filter((p) => !p.met);
+  const canApprove = unmetPrerequisites.length === 0;
 
   const handleSelectProject = (p: Project) => {
     setSelectedProjectId(p.id);
-    setQcScore(p.qcScore || null);
+    const criteria = p.qualityScoreDetails?.criteria || {
+      levelingScore: 5,
+      fabricFinishScore: 5,
+      mechanicsScore: 5,
+      cleanlinessScore: 5,
+      complianceScore: 5,
+    };
+    setQualityCriteria(criteria);
+    const calculated = calculateQualityScore(criteria).overallScore;
+    setQcScore(p.qcScore || calculated || 5);
     setQcNotes(p.qcNotes || '');
     setIsEditingApproved(false);
     setIsMobileDetailOpen(true);
@@ -184,7 +251,16 @@ export const QcDesk: React.FC<Props> = ({
 
   const handleApprove = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!selectedProject || !canApprove || !qcScore || !currentUser) return;
+    if (!selectedProject || !currentUser) {
+      triggerToast('error', 'پروژه یا کاربر جهت تایید مشخص نشده است.');
+      return;
+    }
+
+    if (!canApprove) {
+      const first = unmetPrerequisites[0];
+      triggerToast('warning', `پیش‌نیاز تایید QC: ${first.message}`);
+      return;
+    }
 
     const defaultNote = selectedProject.isExceptionalCompletion
       ? `تایید اتمام استثنایی با کسری اقلام توسط مدیر QC. اقلام باقیمانده: ${selectedProject.exceptionalCompletionDetails?.remainingActivities.map(a => `${a.title} (${toPersianDigits(a.remainingQuantity)} ${a.unit})`).join('، ')} (دلیل مستند تکنسین: ${selectedProject.exceptionalCompletionDetails?.documentedReason})`
@@ -212,6 +288,7 @@ export const QcDesk: React.FC<Props> = ({
     onPatchProject(selectedProject.id, patch);
     setIsEditingApproved(false);
     setIsMobileDetailOpen(false);
+    triggerToast('success', `تایید نهایی QC پروژه «${selectedProject.code || selectedProject.title}» با موفقیت ثبت شد.`);
 
     try {
       confetti({
@@ -1044,20 +1121,22 @@ export const QcDesk: React.FC<Props> = ({
               <span>ارزیابی و بازرسی کنترل کیفی نهایی:</span>
             </h4>
 
-            {!isQcManager && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md text-xs text-blue-800 dark:text-blue-300 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 shrink-0 text-blue-600" />
-                <span>شما به عنوان مسئول هماهنگی و زمان‌بندی به این برگه دسترسی دارید؛ تأیید نهایی و امتیازدهی کیفی منحصراً در صلاحیت مدیر ارشد QC است.</span>
+            {!canApproveRole && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-md text-xs text-amber-300 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>
+                  شما با نقش کاربری فعلی به این برگه دسترسی دارید؛ تایید نهایی کنترل کیفی و صدور صورت‌جلسه رسمی در صلاحیت مدیر ارشد QC و مدیرعامل است.
+                </span>
               </div>
             )}
 
             {/* Critical Defect Gate Warning */}
             {hasCriticalDefects && (
-              <div className="p-3 bg-rose-500/15 dark:bg-rose-950/40 border border-rose-500 rounded-md text-xs flex items-start gap-2 text-rose-800 dark:text-rose-200">
-                <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="p-3 bg-rose-500/15 border border-rose-500 rounded-md text-xs flex items-start gap-2 text-rose-200">
+                <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold block mb-0.5">تأیید نهایی QC مسدود است:</span>
-                  پروژه دارای عدم‌انطباق یا نقص بحرانی (CRITICAL) حل‌نشده است. تا پیش از ثبت رفع نقص توسط اکیپ و تایید راستی‌آزمایی اصلاح توسط مدیر QC، صدور تایید نهایی ممکن نیست.
+                  پروژه دارای عدم‌انطباق یا نقص بحرانی (CRITICAL) حل‌نشده است ({unresolvedCriticalDefects.map(d => d.description).join('، ')}). تا پیش از ثبت رفع نقص توسط اکیپ و تایید راستی‌آزمایی اصلاح توسط مدیر QC، صدور تایید نهایی ممکن نیست.
                 </div>
               </div>
             )}
@@ -1158,15 +1237,71 @@ export const QcDesk: React.FC<Props> = ({
               />
             </div>
 
+            {/* Prerequisites Checklist Box */}
+            <div
+              className={`p-3.5 rounded-lg border text-xs space-y-2.5 transition ${
+                canApprove
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold flex items-center gap-1.5 text-xs text-[#F0F4F8]">
+                  {canApprove ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  )}
+                  {canApprove
+                    ? 'وضعیت پیش‌نیازها: تمام استانداردهای کیفی آماده تایید نهایی هستند'
+                    : 'وضعیت پیش‌نیازها: بررسی و رفع موارد زیر جهت صدور تایید نهایی الزامی است'}
+                </span>
+                <span
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                    canApprove
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : 'bg-amber-500/20 text-amber-300'
+                  }`}
+                >
+                  {toPersianDigits(approvalPrerequisites.filter((p) => p.met).length)} از{' '}
+                  {toPersianDigits(approvalPrerequisites.length)} مورد آماده
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1 border-t border-white/5">
+                {approvalPrerequisites.map((req) => (
+                  <div
+                    key={req.id}
+                    className={`p-2 rounded-md flex items-start gap-2 ${
+                      req.met
+                        ? 'bg-emerald-500/5 text-emerald-300 border border-emerald-500/20'
+                        : 'bg-rose-500/10 text-rose-200 border border-rose-500/30 font-medium'
+                    }`}
+                  >
+                    {req.met ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                    )}
+                    <div className="min-w-0">
+                      <div className="font-bold">{req.title}</div>
+                      <div className="text-[10px] opacity-90 leading-tight mt-0.5">{req.message}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Sticky Actions */}
             <div className="flex items-center gap-3 pt-2">
               <Button
                 type="submit"
                 variant="primary"
                 size="md"
-                disabled={!canApprove}
                 className="flex-1"
                 icon={<CheckCircle2 className="w-4 h-4" />}
+                disabled={!canApprove}
+                disabledReason={unmetPrerequisites.length > 0 ? `پیش‌نیاز تکمیل‌نشده: ${unmetPrerequisites[0].message}` : undefined}
               >
                 {hasCriticalDefects
                   ? 'تأیید مسدود (نقص بحرانی حل‌نشده)'

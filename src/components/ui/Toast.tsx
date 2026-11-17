@@ -9,6 +9,18 @@ export interface ToastMessage {
   message: string;
 }
 
+export const TOAST_EVENT = 'talaie:toast';
+
+export function triggerToast(type: ToastType, message: string) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent(TOAST_EVENT, {
+        detail: { type, message },
+      })
+    );
+  }
+}
+
 export interface ToastProps {
   toasts: ToastMessage[];
   onDismiss: (id: string) => void;

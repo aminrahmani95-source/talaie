@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Project, Ticket, User } from '../../types';
 import {
   Package,
@@ -65,6 +65,7 @@ interface Props {
   ) => Promise<void>;
   onViewProposal?: (project: Project) => void;
   onOpenTicketModal?: (project: Project) => void;
+  initialTab?: 'GOODS_RECEIPT' | 'PACKING' | 'TICKETS';
 }
 
 export const WarehouseDesk: React.FC<Props> = ({
@@ -76,9 +77,18 @@ export const WarehouseDesk: React.FC<Props> = ({
   onConfirmGoodsReceipt,
   onViewProposal,
   onOpenTicketModal,
+  initialTab,
 }) => {
   // Main view tabs: GOODS_RECEIPT (Default), PACKING, TICKETS
-  const [activeTab, setActiveTab] = useState<'GOODS_RECEIPT' | 'PACKING' | 'TICKETS'>('GOODS_RECEIPT');
+  const [activeTab, setActiveTab] = useState<'GOODS_RECEIPT' | 'PACKING' | 'TICKETS'>(
+    initialTab || 'GOODS_RECEIPT'
+  );
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Search & Filters for Incoming Goods Pipeline
   const [receiptSearchQuery, setReceiptSearchQuery] = useState('');

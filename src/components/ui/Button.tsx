@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
+import { triggerToast } from '../Toast';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -8,6 +9,10 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   loading?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'start' | 'end';
+  /** توضیح پیش‌نیازهایی که در صورت برآورده‌نشدن، هنگام کلیک کاربر به صورت پیام واضح نمایش داده می‌شوند */
+  disabledReason?: string;
+  /** در صورتی که نیاز قطعی به غیرفعال‌سازی native مرورگر باشد (پیش‌فرض false است تا دکمه هرگز خاموش و بی‌واکنش نماند) */
+  nativeDisabled?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -22,7 +27,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       children,
       className = '',
       disabled,
+      disabledReason,
+      nativeDisabled = false,
       type = 'button',
+      onClick,
       ...props
     },
     ref
@@ -30,7 +38,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const isCurrentlyLoading = loading ?? isLoading;
     // Base styles: minimum 44px touch target, flex layout, focus ring
     const baseClasses =
-      'relative inline-flex items-center justify-center font-bold select-none transition-all duration-150 rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0D1117] active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none cursor-pointer tracking-tight';
+      'relative inline-flex items-center justify-center font-bold select-none transition-all duration-150 rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0D1117] active:scale-[0.99] cursor-pointer tracking-tight';
 
     // Touch-friendly sizes with min-h-[44px] accessibility standard
     const sizeClasses = {
@@ -51,12 +59,37 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 hover:border-rose-500/50 shadow-xs',
     }[variant];
 
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (isCurrentlyLoading) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerToast('info', 'در حال پردازش عملیات، لطفاً شکیبا باشید...');
+        return;
+      }
+
+      if (disabled) {
+        e.preventDefault();
+        e.stopPropagation();
+        const reason =
+          disabledReason ||
+          'این اقدام نیازمند تکمیل پیش‌نیازهاست. لطفاً بخش‌ها یا فیلدهای مشخص‌شده را کامل فرمایید.';
+        triggerToast('warning', reason);
+        return;
+      }
+
+      onClick?.(e);
+    };
+
     return (
       <button
         ref={ref}
         type={type}
-        disabled={disabled || isCurrentlyLoading}
-        className={`${baseClasses} ${sizeClasses} ${variantClasses} ${className}`}
+        disabled={nativeDisabled ? Boolean(disabled || isCurrentlyLoading) : isCurrentlyLoading}
+        aria-disabled={disabled ? true : undefined}
+        onClick={handleClick}
+        className={`${baseClasses} ${sizeClasses} ${variantClasses} ${
+          disabled ? 'opacity-90 ring-1 ring-amber-500/30 hover:border-amber-500/50' : ''
+        } ${className}`}
         {...props}
       >
         {isCurrentlyLoading && <Loader2 className="w-4 h-4 animate-spin shrink-0 text-current" />}

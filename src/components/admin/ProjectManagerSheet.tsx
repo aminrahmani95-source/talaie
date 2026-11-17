@@ -812,6 +812,11 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
             <Button
               icon={<ShieldCheck className="w-4 h-4" />}
               disabled={busy || project.status !== 'COMPLETED'}
+              disabledReason={
+                project.status !== 'COMPLETED'
+                  ? 'تایید QC فقط پس از ثبت «اتمام کار» توسط تکنسین امکان‌پذیر است.'
+                  : undefined
+              }
               onClick={() =>
                 run(
                   {
@@ -872,6 +877,11 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         <Button
           variant="secondary"
           disabled={busy || (manualStatus === project.status && manualQc === project.qcStatus)}
+          disabledReason={
+            manualStatus === project.status && manualQc === project.qcStatus
+              ? 'هیچ تغییری در وضعیت یا کنترل کیفی اعمال نشده است.'
+              : undefined
+          }
           onClick={() =>
             run(
               { status: manualStatus, qcStatus: manualQc },

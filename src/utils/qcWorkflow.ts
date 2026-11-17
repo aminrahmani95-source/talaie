@@ -136,6 +136,19 @@ export function hasUnresolvedCriticalDefects(
 }
 
 /**
+ * بررسی انطباق پروژه با وضعیت «در انتظار بررسی کنترل کیفیت (QC)»
+ * شرط یکپارچه و واحد در سراسر سامانه (میز کار، اعلان‌ها، میز کیفی و شناسنامه):
+ * ۱. پروژه نباید لغو شده باشد (status !== 'CANCELLED')
+ * ۲. نباید قبلاً تایید یا رد قطعی شده باشد (qcStatus !== 'APPROVED' && qcStatus !== 'REJECTED')
+ * ۳. وضعیت عملیاتی آن اتمام‌یافته باشد یا پرچم کیفی آن در انتظار بررسی باشد (status === 'COMPLETED' || qcStatus === 'PENDING')
+ */
+export function isAwaitingQc(p: Partial<Project> | null | undefined): boolean {
+  if (!p || p.status === 'CANCELLED') return false;
+  if (p.qcStatus === 'APPROVED' || p.qcStatus === 'REJECTED') return false;
+  return p.status === 'COMPLETED' || p.qcStatus === 'PENDING';
+}
+
+/**
  * ارزیابی صلاحیت مدیر و امکان‌پذیری تایید نهایی QC پروژه
  */
 export function canApproveFinalQC(
@@ -143,10 +156,10 @@ export function canApproveFinalQC(
   project: Project,
   patchDefects?: QCDefect[]
 ): { allowed: boolean; reason?: string } {
-  if (user.role !== 'QC_MANAGER') {
+  if (user.role !== 'QC_MANAGER' && user.role !== 'CEO') {
     return {
       allowed: false,
-      reason: 'تأیید نهایی کنترل کیفی (QC) منحصراً در صلاحیت مدیر ارشد QC است.',
+      reason: 'تأیید نهایی کنترل کیفی (QC) منحصراً در صلاحیت مدیر ارشد QC و مدیرعامل است.',
     };
   }
 

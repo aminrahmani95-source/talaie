@@ -4,6 +4,7 @@ import {
   calculateQualityScore,
   hasUnresolvedCriticalDefects,
   canApproveFinalQC,
+  isAwaitingQc,
   createQCInspectionPayload,
   createDefectResolutionPayload,
   createDefectVerificationPayload,
@@ -556,5 +557,56 @@ describe('Phase P3: Final Quality Control & Project Sign-off', () => {
         resolutionNotes: '   ',
       })
     ).toThrow('ثبت گزارش مستند از نحوه رفع نقص الزامی است.');
+  });
+
+  it('Requirement 15: isAwaitingQc correctly identifies projects awaiting QC review across all scenarios', () => {
+    // 1. Completed with NOT_STARTED qcStatus
+    expect(isAwaitingQc({ status: 'COMPLETED', qcStatus: 'NOT_STARTED' })).toBe(true);
+
+    // 2. Completed with PENDING qcStatus
+    expect(isAwaitingQc({ status: 'COMPLETED', qcStatus: 'PENDING' })).toBe(true);
+
+    // 3. Completed without qcStatus field
+    expect(isAwaitingQc({ status: 'COMPLETED' })).toBe(true);
+
+    // 4. Any status with PENDING qcStatus
+    expect(isAwaitingQc({ status: 'IN_PROGRESS', qcStatus: 'PENDING' })).toBe(true);
+
+    // 5. Approved projects are NOT awaiting QC
+    expect(isAwaitingQc({ status: 'COMPLETED', qcStatus: 'APPROVED' })).toBe(false);
+
+    // 6. Rejected projects are NOT awaiting QC (they need technician rework)
+    expect(isAwaitingQc({ status: 'COMPLETED', qcStatus: 'REJECTED' })).toBe(false);
+
+    // 7. Cancelled projects are NOT awaiting QC
+    expect(isAwaitingQc({ status: 'CANCELLED', qcStatus: 'PENDING' })).toBe(false);
+
+    // 8. Null / undefined handling
+    expect(isAwaitingQc(null)).toBe(false);
+    expect(isAwaitingQc(undefined)).toBe(false);
+  });
+
+  it('Requirement 16: CEO alongside QC_MANAGER has full authority to approve QC and pass role guards', () => {
+    const ceoUser: User = {
+      id: 'usr-ceo-1',
+      name: 'امید طلایی',
+      phone: '09121111110',
+      role: 'CEO',
+      active: true,
+    };
+    const project = createCompletedProject();
+
+    // CEO can approve final QC via role guard
+    expect(() =>
+      validateProjectPatchRoleGuards(ceoUser, project, {
+        qcStatus: 'APPROVED',
+        qcScore: 5,
+        qcNotes: 'تایید عالی توسط مدیرعامل.',
+      })
+    ).not.toThrow();
+
+    // canApproveFinalQC allows CEO
+    const check = canApproveFinalQC(ceoUser, project);
+    expect(check.allowed).toBe(true);
   });
 });

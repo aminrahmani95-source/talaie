@@ -1,10 +1,13 @@
 import React from 'react';
+import { triggerToast } from '../Toast';
 
 export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   'aria-label': string; // Enforce accessible label
   variant?: 'default' | 'primary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   icon: React.ReactNode;
+  disabledReason?: string;
+  nativeDisabled?: boolean;
 }
 
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
@@ -17,6 +20,9 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       className = '',
       type = 'button',
       disabled,
+      disabledReason,
+      nativeDisabled = false,
+      onClick,
       ...props
     },
     ref
@@ -38,13 +44,27 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 shadow-xs',
     }[variant];
 
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (disabled) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerToast('warning', disabledReason || 'این دکمه در حال حاضر نیازمند پیش‌نیاز است.');
+        return;
+      }
+      onClick?.(e);
+    };
+
     return (
       <button
         ref={ref}
         type={type}
         aria-label={ariaLabel}
-        disabled={disabled}
-        className={`inline-flex items-center justify-center transition-all duration-150 select-none cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0D1117] active:scale-95 disabled:opacity-40 disabled:pointer-events-none ${sizeClasses} ${variantClasses} ${className}`}
+        disabled={nativeDisabled ? disabled : false}
+        aria-disabled={disabled ? true : undefined}
+        onClick={handleClick}
+        className={`inline-flex items-center justify-center transition-all duration-150 select-none cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0D1117] active:scale-95 ${
+          disabled ? 'opacity-80 ring-1 ring-amber-500/30' : ''
+        } ${sizeClasses} ${variantClasses} ${className}`}
         {...props}
       >
         {icon}

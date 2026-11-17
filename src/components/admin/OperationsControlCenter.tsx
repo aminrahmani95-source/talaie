@@ -37,6 +37,7 @@ import { toPersianDigits, getTodayPersianString, localDateKey } from '../../util
 import { getDisplayName } from '../../utils/technicianName';
 import { isProjectMultiDay, isProjectScheduledOnDate } from '../../utils/multiDay';
 import { computeSlaMetrics } from '../../utils/sla';
+import { isAwaitingQc } from '../../utils/qcWorkflow';
 
 export interface OperationsControlCenterProps {
   currentUser: User;
@@ -49,6 +50,7 @@ export interface OperationsControlCenterProps {
   settings?: SystemSettings | null;
   onNavigateTab: (tab: ManagerTab) => void;
   onOpenProject: (project: Project) => void;
+  onOpenQcProject?: (project: Project) => void;
   onOpenScheduleRequests?: () => void;
   onReviewScheduleRequest?: (request: ScheduleChangeRequest) => void;
   onNewProject?: () => void;
@@ -65,6 +67,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   settings: _settings,
   onNavigateTab,
   onOpenProject,
+  onOpenQcProject,
   onOpenScheduleRequests: _onOpenScheduleRequests,
   onReviewScheduleRequest: _onReviewScheduleRequest,
   onNewProject,
@@ -92,17 +95,16 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   const incomingProjects = useMemo(() => {
     return projects.filter(
       (p) =>
-        p.status === 'MEASUREMENT_PENDING' ||
-        (!p.assignedTeamId && p.status !== 'COMPLETED' && p.status !== 'CANCELLED') ||
-        (!p.scheduledDate && p.status !== 'COMPLETED' && p.status !== 'CANCELLED')
+        !isAwaitingQc(p) &&
+        (p.status === 'MEASUREMENT_PENDING' ||
+          (!p.assignedTeamId && p.status !== 'COMPLETED' && p.status !== 'CANCELLED') ||
+          (!p.scheduledDate && p.status !== 'COMPLETED' && p.status !== 'CANCELLED'))
     );
   }, [projects]);
 
-  // 1. ج: پروژه‌های اتمام‌یافته در انتظار تایید QC و صدور شناسنامه
+  // 1. ج: پروژه‌های در انتظار بررسی و تایید کیفی QC (هماهنگ با شمارنده اعلان‌ها و میز QC)
   const pendingQcProjects = useMemo(() => {
-    return projects.filter(
-      (p) => p.status === 'COMPLETED' && (p.qcStatus === 'PENDING' || !p.qcStatus)
-    );
+    return projects.filter(isAwaitingQc);
   }, [projects]);
 
   // مجموع فوریت‌ها
@@ -444,26 +446,49 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="grow min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white">
                             تیکت مسدودکننده
                           </span>
+                          {(t.assignedRole === 'WAREHOUSE' || Boolean(t.referralNote)) && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-black bg-purple-600 text-white flex items-center gap-1">
+                              <Package className="w-3 h-3" />
+                              ارجاع به انبار ({t.assignedUserName || 'انبار'})
+                            </span>
+                          )}
                           <span className="font-mono text-[11px] text-rose-400 font-bold">{t.projectCode}</span>
                           <span className="text-xs font-bold text-[#F0F4F8]">{t.projectTitle}</span>
                         </div>
                         <p className="text-rose-200/90 text-xs mt-2">
                           {t.blockingReason || t.description}
                         </p>
+                        {t.referralNote && (
+                          <p className="text-purple-300 text-[11px] mt-1 bg-purple-950/40 p-2 rounded border border-purple-500/30">
+                            دستور اقدام به انبار: {t.referralNote}
+                          </p>
+                        )}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => onNavigateTab('tickets')}
-                        className="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
-                      >
-                        رسیدگی در مرکز تیکت
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {(t.assignedRole === 'WAREHOUSE' || Boolean(t.referralNote)) && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateTab('materials')}
+                            className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 active:scale-95 shadow-xs"
+                          >
+                            <Package className="w-3.5 h-3.5" />
+                            اقدام در لجستیک
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onNavigateTab('tickets')}
+                          className="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                        >
+                          رسیدگی در مرکز تیکت
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -573,14 +598,28 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                       </div>
 
                       {/* دکمه اقدام روی کارت */}
-                      <div className="flex shrink-0 justify-end items-center">
+                      <div className="flex shrink-0 justify-end items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onOpenQcProject) {
+                              onOpenQcProject(p);
+                            } else {
+                              onNavigateTab('qc');
+                            }
+                          }}
+                          className="px-3.5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          بررسی در میز QC
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => onOpenProject(p)}
-                          className="px-3.5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+                          className="px-3 py-2 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] font-bold text-xs transition border border-[#2D3748] cursor-pointer active:scale-95"
                         >
-                          تایید کیفی و صدور شناسنامه
-                          <ShieldCheck className="w-3.5 h-3.5" />
+                          پرونده کامل
                         </button>
                       </div>
                     </div>
