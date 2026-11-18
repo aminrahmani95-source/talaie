@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { Moon, Sun, LogOut, X, Cloud, CloudOff, AlertOctagon, Check } from 'lucide-react';
+import { Moon, Sun, LogOut, X, Cloud, CloudOff, AlertOctagon, Check, Eye } from 'lucide-react';
 import { Avatar } from './ui/Avatar';
 import { IconButton } from './ui/IconButton';
 import { getDisplayName } from '../utils/technicianName';
@@ -15,6 +15,8 @@ interface Props {
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
   onLogout: () => void;
+  impersonatorCeo?: User | null;
+  onExitImpersonation?: () => void;
 }
 
 export const Header: React.FC<Props> = ({
@@ -26,6 +28,8 @@ export const Header: React.FC<Props> = ({
   isDarkMode = false,
   onToggleDarkMode,
   onLogout,
+  impersonatorCeo,
+  onExitImpersonation,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -184,6 +188,22 @@ export const Header: React.FC<Props> = ({
                         <X className="w-4 h-4" />
                       </button>
                     </div>
+
+                    {impersonatorCeo && onExitImpersonation && (
+                      <div className="pt-3 pb-1 border-b border-[#E2E8F0] dark:border-[#212835]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            onExitImpersonation();
+                          }}
+                          className="w-full min-h-[38px] py-1.5 px-3 rounded-lg text-xs font-bold bg-[#C5A059] text-[#0D1117] hover:bg-[#D4AF37] flex items-center justify-center gap-2 transition cursor-pointer shadow-xs active:scale-95"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>بازگشت به حساب مدیرعامل</span>
+                        </button>
+                      </div>
+                    )}
 
                     <div className="pt-3">
                       <button

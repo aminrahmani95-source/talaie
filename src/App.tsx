@@ -49,6 +49,7 @@ import { LoginModal } from './components/LoginModal';
 import { TechnicianDashboard } from './components/technician/TechnicianDashboard';
 import { Toast, ToastMessage, TOAST_EVENT } from './components/Toast';
 import { isAwaitingQc } from './utils/qcWorkflow';
+import { Eye, LogOut } from 'lucide-react';
 import { Sidebar } from './components/navigation/Sidebar';
 import { BottomNav, ManagerTab } from './components/navigation/BottomNav';
 import { DashboardSkeleton } from './components/ui/DashboardSkeleton';
@@ -171,6 +172,27 @@ function mergeUsersList(localUsers: User[], cloudUsers: User[]): User[] {
   return Array.from(map.values());
 }
 
+export function getUserRoleLabel(role?: string): string {
+  switch (role) {
+    case 'CEO':
+      return 'مدیرعامل';
+    case 'QC_MANAGER':
+      return 'مدیر کنترل کیفیت و فنی';
+    case 'MEASUREMENT_LEAD':
+      return 'مسئول متراژ و تایید بستر';
+    case 'WAREHOUSE':
+      return 'مسئول انبار و تدارکات';
+    case 'SCHEDULING_COORDINATOR':
+      return 'مسئول هماهنگی و زمان‌بندی';
+    case 'LEAD_TECHNICIAN':
+      return 'سرپرست اکیپ نصب';
+    case 'TECHNICIAN':
+      return 'تکنسین نصب';
+    default:
+      return role || 'کاربر';
+  }
+}
+
 export const App: React.FC = () => {
   // Session & Authentication via Supabase Auth
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -180,6 +202,16 @@ export const App: React.FC = () => {
   const [pendingQueueCount, setPendingQueueCount] = useState<number>(0);
   const [failedQueueCount, setFailedQueueCount] = useState<number>(0);
   const [isFailedOpsModalOpen, setIsFailedOpsModalOpen] = useState<boolean>(false);
+
+  // CEO Impersonation Mode (ورود و بازرسی پنل پرسنل توسط مدیرعامل)
+  const [impersonatorCeo, setImpersonatorCeo] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem('talaie_impersonator_ceo');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
   const [users, setUsers] = useState<User[]>(() => {
     const stored = StorageService.getUsers();
@@ -2080,7 +2112,57 @@ export const App: React.FC = () => {
     setIsProjectFormOpen(true);
   };
 
+  // CEO Impersonation Handlers (ورود و بازرسی مستقیم پنل پرسنل)
+  const handleImpersonateUser = (targetUser: User) => {
+    if (!currentUser) return;
+    const ceoToSave = impersonatorCeo || currentUser;
+    setImpersonatorCeo(ceoToSave);
+    try {
+      localStorage.setItem('talaie_impersonator_ceo', JSON.stringify(ceoToSave));
+    } catch (e) {
+      console.warn('Could not persist impersonator CEO:', e);
+    }
+
+    sessionEpochRef.current++;
+    setCurrentUser(targetUser);
+
+    if (targetUser.role === 'WAREHOUSE') {
+      setActiveTab('materials');
+    } else if (targetUser.role === 'QC_MANAGER') {
+      setActiveTab('qc');
+    } else if (targetUser.role === 'SCHEDULING_COORDINATOR') {
+      setActiveTab('planner');
+    } else if (targetUser.role === 'MEASUREMENT_LEAD') {
+      setActiveTab('control');
+    }
+
+    showToast(
+      'info',
+      `ورود به پنل «${getDisplayName(targetUser.name)}» (${getUserRoleLabel(targetUser.role)}) انجام شد.`
+    );
+  };
+
+  const handleExitImpersonation = () => {
+    if (!impersonatorCeo) return;
+    sessionEpochRef.current++;
+    const restoredCeo = { ...impersonatorCeo };
+    setCurrentUser(restoredCeo);
+    setImpersonatorCeo(null);
+    try {
+      localStorage.removeItem('talaie_impersonator_ceo');
+    } catch (e) {
+      console.warn('Could not clear impersonator CEO:', e);
+    }
+    setActiveTab(restoredCeo.role === 'CEO' ? 'registry' : 'technicians');
+    showToast('success', `به حساب ${getUserRoleLabel(restoredCeo.role)} بازگشتید.`);
+  };
+
   const handleLogout = async () => {
+    setImpersonatorCeo(null);
+    try {
+      localStorage.removeItem('talaie_impersonator_ceo');
+    } catch {}
+
     if (pendingQueueCount > 0) {
       const confirmed = window.confirm(
         'تغییرات ذخیره‌نشده روی این دستگاه دارید که در صورت خروج ممکن است بعداً با اکانت دیگر ارسال نشود. آیا مطمئن هستید که می‌خواهید خارج شوید؟'
@@ -2187,6 +2269,31 @@ export const App: React.FC = () => {
         پرش به محتوای اصلی صفحه
       </a>
 
+      {/* CEO Impersonation Alert Banner */}
+      {impersonatorCeo && (
+        <aside
+          aria-label="حالت بازرسی هویت فعال است"
+          className="sticky top-0 z-50 bg-[#C5A059] text-[#0D1117] px-3 sm:px-6 py-2.5 shadow-md border-b border-[#0D1117]/20 flex items-center justify-between gap-3 text-xs font-bold transition-all"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="p-1 rounded-full bg-[#0D1117] text-[#C5A059] shrink-0">
+              <Eye className="w-3.5 h-3.5" />
+            </span>
+            <span className="truncate">
+              حالت بازرسی فعال: در حال مشاهده سامانه به عنوان <strong className="underline underline-offset-2">{getDisplayName(currentUser.name)}</strong> ({getUserRoleLabel(currentUser.role)})
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleExitImpersonation}
+            className="px-3 py-1.5 bg-[#0D1117] hover:bg-[#1C232D] text-[#C5A059] rounded-lg text-xs font-black transition flex items-center gap-1.5 shrink-0 shadow-xs active:scale-95 cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>بازگشت به حساب {getUserRoleLabel(impersonatorCeo.role)}</span>
+          </button>
+        </aside>
+      )}
+
       {/* App Header */}
       <Header
         currentUser={currentUser}
@@ -2197,6 +2304,8 @@ export const App: React.FC = () => {
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         onLogout={handleLogout}
+        impersonatorCeo={impersonatorCeo}
+        onExitImpersonation={handleExitImpersonation}
       />
 
       {/* Offline state or syncing banner */}
@@ -2363,10 +2472,12 @@ export const App: React.FC = () => {
                     users={users}
                     teams={teams}
                     teamMembers={teamMembers}
+                    currentUserId={currentUser.id}
                     onSaveUser={handleSaveUser}
                     onDeleteUser={handleDeleteUser}
                     onAssignTeamMember={handleAssignTeamMember}
                     onRemoveTeamMember={handleRemoveTeamMember}
+                    onImpersonateUser={currentUser.role === 'CEO' || currentUser.role === 'QC_MANAGER' || Boolean(impersonatorCeo) ? handleImpersonateUser : undefined}
                   />
                 )}
 

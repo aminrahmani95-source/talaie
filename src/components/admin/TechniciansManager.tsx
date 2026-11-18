@@ -22,6 +22,7 @@ import {
   UserMinus,
   Sparkles,
   ClipboardList,
+  Eye,
 } from 'lucide-react';
 import { toPersianDigits, toEnglishDigits } from '../../utils/jalali';
 import { SupabaseSyncService } from '../../utils/supabase';
@@ -38,10 +39,12 @@ interface Props {
   users: User[];
   teams?: InstallationTeam[];
   teamMembers?: TeamMember[];
+  currentUserId?: string;
   onSaveUser: (user: User) => void;
   onDeleteUser: (userId: string) => void;
   onAssignTeamMember?: (teamId: string, userId: string, roleInTeam: 'LEAD' | 'TECHNICIAN') => Promise<{ success: boolean; error?: string }>;
   onRemoveTeamMember?: (userId: string) => Promise<{ success: boolean; error?: string }>;
+  onImpersonateUser?: (user: User) => void;
 }
 
 type TabFilter = 'ALL' | 'QC_LEADS' | 'COORDINATORS' | 'CREW_LEADS' | 'CREW' | 'OFFICE';
@@ -51,10 +54,12 @@ export const TechniciansManager: React.FC<Props> = ({
   users,
   teams,
   teamMembers,
+  currentUserId,
   onSaveUser,
   onDeleteUser,
   onAssignTeamMember,
   onRemoveTeamMember,
+  onImpersonateUser,
 }) => {
   const [mainSection, setMainSection] = useState<MainSection>('PERSONNEL');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -580,16 +585,29 @@ export const TechniciansManager: React.FC<Props> = ({
                           </div>
                         </div>
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={teamActionLoading}
-                          onClick={() => handleRemoveMember(supervisorUser.id)}
-                          className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold"
-                          icon={<UserMinus className="w-3.5 h-3.5" />}
-                        >
-                          تغییر / حذف
-                        </Button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {onImpersonateUser && supervisorUser.id !== currentUserId && (
+                            <button
+                              type="button"
+                              onClick={() => onImpersonateUser(supervisorUser)}
+                              className="px-2.5 py-1.5 text-[#C5A059] hover:bg-[#C5A059]/15 rounded-md transition cursor-pointer flex items-center gap-1 text-xs font-bold border border-[#C5A059]/40 active:scale-95"
+                              title={`ورود و بازرسی پنل سرپرست ${supervisorUser.name}`}
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">بازرسی پنل</span>
+                            </button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={teamActionLoading}
+                            onClick={() => handleRemoveMember(supervisorUser.id)}
+                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold"
+                            icon={<UserMinus className="w-3.5 h-3.5" />}
+                          >
+                            تغییر / حذف
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
@@ -659,16 +677,29 @@ export const TechniciansManager: React.FC<Props> = ({
                               </div>
                             </div>
 
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={teamActionLoading}
-                              onClick={() => handleRemoveMember(tech.id)}
-                              className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold"
-                              icon={<UserMinus className="w-3.5 h-3.5" />}
-                            >
-                              حذف
-                            </Button>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {onImpersonateUser && tech.id !== currentUserId && (
+                                <button
+                                  type="button"
+                                  onClick={() => onImpersonateUser(tech)}
+                                  className="px-2 py-1 text-[#C5A059] hover:bg-[#C5A059]/15 rounded-md transition cursor-pointer flex items-center gap-1 text-xs font-bold border border-[#C5A059]/40 active:scale-95"
+                                  title={`ورود و بازرسی پنل تکنسین ${tech.name}`}
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline">بازرسی پنل</span>
+                                </button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={teamActionLoading}
+                                onClick={() => handleRemoveMember(tech.id)}
+                                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold"
+                                icon={<UserMinus className="w-3.5 h-3.5" />}
+                              >
+                                حذف
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -879,6 +910,18 @@ export const TechniciansManager: React.FC<Props> = ({
                       </span>
                     </div>
                   </div>
+
+                  {onImpersonateUser && u.id !== currentUserId && (
+                    <button
+                      type="button"
+                      onClick={() => onImpersonateUser(u)}
+                      className="w-full py-2 px-3 rounded-lg text-xs font-bold bg-[#C5A059]/10 hover:bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/40 hover:border-[#C5A059] flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
+                      title={`ورود به پنل و مشاهده سامانه از دیدگاه ${getDisplayName(u.name)}`}
+                    >
+                      <Eye className="w-3.5 h-3.5 text-[#C5A059]" />
+                      <span>ورود و بازرسی پنل این کاربر</span>
+                    </button>
+                  )}
                 </div>
               );
             })}
