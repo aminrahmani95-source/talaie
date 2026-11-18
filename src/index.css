@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-body: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -43,6 +45,10 @@
     border-color: #212835;
   }
 
+  html:not(.dark) * {
+    border-color: #E2DDD4;
+  }
+
   *, ::before, ::after {
     font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   }
@@ -54,15 +60,25 @@
 }
 
 :root {
+  color-scheme: light dark;
+}
+
+html.dark {
   color-scheme: dark;
+  background-color: #0D1117;
+  color: #F0F4F8;
+}
+
+html:not(.dark) {
+  color-scheme: light;
+  background-color: #F8F9FA;
+  color: #1A1F26;
 }
 
 html {
   font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
   font-feature-settings: normal !important;
   direction: rtl;
-  background-color: #0D1117;
-  color: #F0F4F8;
   height: 100%;
 }
 
@@ -73,28 +89,65 @@ body {
   padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0D1117;
-  color: #F0F4F8;
+  background-color: inherit;
+  color: inherit;
   min-height: 100%;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Responsive to Dark/Light mode */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-::-webkit-scrollbar-track {
+html.dark ::-webkit-scrollbar-track {
   background: #0D1117;
 }
 
-::-webkit-scrollbar-thumb {
+html.dark ::-webkit-scrollbar-thumb {
   background: #212835;
   border-radius: 3px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+html.dark ::-webkit-scrollbar-thumb:hover {
   background: #2D3748;
+}
+
+html:not(.dark) ::-webkit-scrollbar-track {
+  background: #F1F3F5;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: #D0D7DE;
+  border-radius: 3px;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #AFB8C1;
+}
+
+/* Windows Form Control Legibility Safeguards */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  color-scheme: dark;
+}
+
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
+  color-scheme: light;
+}
+
+/* Native Option styling on Windows */
+html.dark select option {
+  background-color: #151B23;
+  color: #F0F4F8;
+}
+
+html:not(.dark) select option {
+  background-color: #FFFFFF;
+  color: #1A1F26;
 }
 
 /* Chrome, Safari, Edge, Opera - Remove number spinner */

@@ -45,12 +45,12 @@ export const Header: React.FC<Props> = ({
       : 'تکنسین نصب';
 
   return (
-    <header className="sticky top-0 z-40 bg-[#0D1117]/95 backdrop-blur-md border-b border-[#212835] transition-colors duration-150">
+    <header className="sticky top-0 z-40 bg-[#FFFFFF]/95 dark:bg-[#0D1117]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-[#212835] transition-colors duration-150">
       <div className="max-w-7xl mx-auto px-3 sm:px-6">
         <div className="flex items-center justify-between h-14 gap-3">
           {/* Logo & Brand Name on ONE single line */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#151B23] p-1.5 border border-[#C5A059]/40 flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#F8FAFC] dark:bg-[#151B23] p-1.5 border border-[#C5A059]/40 flex items-center justify-center shrink-0 shadow-xs">
               <img
                 src={LOGO_GOLD}
                 alt="لوگوی گالری طلایی"
@@ -58,7 +58,7 @@ export const Header: React.FC<Props> = ({
               />
             </div>
             <div className="flex items-baseline gap-2 min-w-0">
-              <span className="font-black text-sm sm:text-base text-[#F0F4F8] truncate tracking-tight">
+              <span className="font-black text-sm sm:text-base text-[#0F172A] dark:text-[#F0F4F8] truncate tracking-tight">
                 گالری طلایی
               </span>
               <span className="hidden md:inline-block text-[11px] text-[#C5A059] font-bold">
@@ -129,7 +129,7 @@ export const Header: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setIsMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 p-1 rounded-lg hover:bg-[#1C232D] transition active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
+                className="flex items-center gap-2 p-1 rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1C232D] transition active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
                 aria-label={`پروفایل کاربری ${getDisplayName(currentUser.name)}`}
                 aria-expanded={isMenuOpen}
               >
@@ -139,7 +139,7 @@ export const Header: React.FC<Props> = ({
                   role={currentUser.role}
                   size="sm"
                 />
-                <span className="hidden sm:inline-block text-xs font-bold text-[#F0F4F8] max-w-[120px] truncate">
+                <span className="hidden sm:inline-block text-xs font-bold text-[#0F172A] dark:text-[#F0F4F8] max-w-[120px] truncate">
                   {getDisplayName(currentUser.name)}
                 </span>
               </button>
@@ -152,8 +152,8 @@ export const Header: React.FC<Props> = ({
                     onClick={() => setIsMenuOpen(false)}
                     aria-hidden="true"
                   />
-                  <div className="absolute left-0 top-11 mt-2 w-64 bg-[#151B23] rounded-xl shadow-2xl border border-[#2D3748] p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="flex items-start justify-between pb-3 border-b border-[#212835]">
+                  <div className="absolute left-0 top-11 mt-2 w-64 bg-[#FFFFFF] dark:bg-[#151B23] rounded-xl shadow-2xl border border-[#CBD5E1] dark:border-[#2D3748] p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="flex items-start justify-between pb-3 border-b border-[#E2E8F0] dark:border-[#212835]">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Avatar
                           name={getDisplayName(currentUser.name)}
@@ -162,7 +162,7 @@ export const Header: React.FC<Props> = ({
                           size="md"
                         />
                         <div className="min-w-0">
-                          <div className="font-bold text-sm text-[#F0F4F8] truncate">
+                          <div className="font-bold text-sm text-[#0F172A] dark:text-[#F0F4F8] truncate">
                             {getDisplayName(currentUser.name)}
                           </div>
                           <div className="text-xs text-[#C5A059] font-bold mt-0.5">

@@ -87,9 +87,13 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
     return projects.filter((p) => p.status === 'STUCK');
   }, [projects]);
 
-  const blockingTickets = useMemo(() => {
-    return tickets.filter((t) => t.status === 'OPEN' && t.isBlocking);
+  const urgentTickets = useMemo(() => {
+    return tickets.filter((t) => t.status === 'OPEN');
   }, [tickets]);
+
+  const blockingTickets = useMemo(() => {
+    return urgentTickets.filter((t) => t.isBlocking);
+  }, [urgentTickets]);
 
   // 1. ب: پروژه‌های نیازمند تعیین اکیپ یا تاریخ زمان‌بندی
   const incomingProjects = useMemo(() => {
@@ -109,7 +113,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
 
   // مجموع فوریت‌ها
   const totalUrgentCount =
-    stuckProjects.length + blockingTickets.length + incomingProjects.length + pendingQcProjects.length;
+    stuckProjects.length + urgentTickets.length + incomingProjects.length + pendingQcProjects.length;
 
   // ================= 2. وضعیت زنده 4 اکیپ نصب در امروز =================
   const liveTeams = useMemo(() => {
@@ -306,14 +310,14 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           <section className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h2 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2 text-balance">
+                <h2 className="text-sm font-black text-slate-900 dark:text-[#F0F4F8] flex items-center gap-2 text-balance">
                   <span className="flex h-2.5 w-2.5 relative">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
                   </span>
                   نیازمند اقدام فوری من
                 </h2>
-                <p className="text-xs text-[#9BA7B6] mt-0.5 text-pretty">
+                <p className="text-xs text-slate-600 dark:text-[#9BA7B6] mt-0.5 text-pretty">
                   پروژه‌های متوقف، ورودی‌های بلاتکلیف فروش و پروژه‌های آماده تایید نهایی QC
                 </p>
               </div>
@@ -340,7 +344,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                       : 'text-rose-400 hover:text-rose-300'
                   }`}
                 >
-                  🔴 متوقف ({toPersianDigits(stuckProjects.length + blockingTickets.length)})
+                  🔴 متوقف و تیکت ({toPersianDigits(stuckProjects.length + urgentTickets.length)})
                 </button>
                 <button
                   type="button"
@@ -437,9 +441,9 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                   </div>
                 ))}
 
-              {/* تیکت‌های مسدودکننده (Blocking Tickets) */}
+              {/* تیکت‌های نیازمند اقدام و رسیدگی (Urgent Open Tickets) */}
               {(activeUrgentCategory === 'ALL' || activeUrgentCategory === 'STUCK') &&
-                blockingTickets.map((t) => (
+                urgentTickets.map((t) => (
                   <div
                     key={t.id}
                     className="p-4 rounded-xl bg-[#161214] border border-rose-500/40 text-xs shadow-sm hover:border-rose-500/70 transition"
@@ -447,8 +451,8 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="grow min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white">
-                            تیکت مسدودکننده
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-black text-white ${t.isBlocking ? 'bg-rose-600' : 'bg-amber-600'}`}>
+                            {t.isBlocking ? 'تیکت مسدودکننده' : 'تیکت نیازمند اقدام'}
                           </span>
                           {(t.assignedRole === 'WAREHOUSE' || Boolean(t.referralNote)) && (
                             <span className="px-2 py-0.5 rounded text-[10px] font-black bg-purple-600 text-white flex items-center gap-1">
@@ -645,11 +649,11 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           <section className="space-y-4 pt-4 border-t border-[#212835]">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
+                <h2 className="text-sm font-black text-slate-900 dark:text-[#F0F4F8] flex items-center gap-2">
                   <Users className="w-4 h-4 text-[#C5A059]" />
                   وضعیت زنده 4 اکیپ نصب در امروز
                 </h2>
-                <p className="text-xs text-[#9BA7B6] mt-0.5">
+                <p className="text-xs text-slate-600 dark:text-[#9BA7B6] mt-0.5">
                   پروژه جاری هر اکیپ، سرپرست، و وضعیت تحویل متریال از انبار
                 </p>
               </div>

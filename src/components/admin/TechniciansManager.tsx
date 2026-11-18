@@ -196,6 +196,8 @@ export const TechniciansManager: React.FC<Props> = ({
         onSaveUser(newUser);
       }
 
+      setTabFilter('ALL');
+      setSearchQuery('');
       setIsModalOpen(false);
     } catch (err: any) {
       setModalError(err.message || 'خطا در ثبت اطلاعات.');
@@ -504,14 +506,21 @@ export const TechniciansManager: React.FC<Props> = ({
               const totalCount = (supervisorUser ? 1 : 0) + techUsers.length;
               const isFull = totalCount >= 3;
 
-              // Users available to be assigned (active, not already assigned to any team)
-              const availableUsers = users
-                .filter((u) => u.active !== false && !assignedUserIds.has(u.id))
-                .sort((a, b) => {
-                  const aTech = a.role === 'LEAD_TECHNICIAN' || a.role === 'TECHNICIAN' ? 1 : 0;
-                  const bTech = b.role === 'LEAD_TECHNICIAN' || b.role === 'TECHNICIAN' ? 1 : 0;
-                  return bTech - aTech;
-                });
+              // Candidates for team lead (strictly technical personnel, unassigned)
+              const availableLeads = users.filter(
+                (u) =>
+                  u.active !== false &&
+                  !assignedUserIds.has(u.id) &&
+                  (u.role === 'LEAD_TECHNICIAN' || u.role === 'TECHNICIAN')
+              );
+
+              // Candidates for team technicians (strictly technical personnel, unassigned)
+              const availableTechs = users.filter(
+                (u) =>
+                  u.active !== false &&
+                  !assignedUserIds.has(u.id) &&
+                  (u.role === 'TECHNICIAN' || u.role === 'LEAD_TECHNICIAN')
+              );
 
               return (
                 <div
@@ -592,13 +601,13 @@ export const TechniciansManager: React.FC<Props> = ({
                           className="flex-1 text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                         >
                           <option value="">
-                            {availableUsers.length > 0
-                              ? `انتخاب سرپرست از پرسنل آزاد (${toPersianDigits(availableUsers.length)} نفر)...`
-                              : 'هیچ پرسنل آزادی موجود نیست'}
+                            {availableLeads.length > 0
+                              ? `انتخاب سرپرست از کادر فنی آزاد (${toPersianDigits(availableLeads.length)} نفر)...`
+                              : 'هیچ نیروی فنی آزادی موجود نیست'}
                           </option>
-                          {availableUsers.map((u) => (
+                          {availableLeads.map((u) => (
                             <option key={u.id} value={u.id}>
-                              {u.name} ({u.phone}) — {u.role === 'LEAD_TECHNICIAN' ? 'سرپرست' : u.role === 'TECHNICIAN' ? 'تکنسین' : u.role}
+                              {u.name} ({u.phone}) — {u.role === 'LEAD_TECHNICIAN' ? 'سرپرست' : 'تکنسین'}
                             </option>
                           ))}
                         </select>
@@ -676,13 +685,13 @@ export const TechniciansManager: React.FC<Props> = ({
                           className="flex-1 text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
                         >
                           <option value="">
-                            {availableUsers.length > 0
-                              ? `افزودن تکنسین از پرسنل آزاد (${toPersianDigits(availableUsers.length)} نفر)...`
-                              : 'هیچ تکنسین آزادی موجود نیست'}
+                            {availableTechs.length > 0
+                              ? `افزودن تکنسین از کادر فنی آزاد (${toPersianDigits(availableTechs.length)} نفر)...`
+                              : 'هیچ نیروی فنی آزادی موجود نیست'}
                           </option>
-                          {availableUsers.map((u) => (
+                          {availableTechs.map((u) => (
                             <option key={u.id} value={u.id}>
-                              {u.name} ({u.phone}) — {u.role === 'TECHNICIAN' ? 'تکنسین' : u.role === 'LEAD_TECHNICIAN' ? 'سرپرست' : u.role}
+                              {u.name} ({u.phone}) — {u.role === 'TECHNICIAN' ? 'تکنسین' : 'سرپرست'}
                             </option>
                           ))}
                         </select>

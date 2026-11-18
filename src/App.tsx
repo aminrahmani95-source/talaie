@@ -136,6 +136,41 @@ const ProjectManagerSheet = React.lazy(() =>
   import('./components/admin/ProjectManagerSheet').then((m) => ({ default: m.ProjectManagerSheet }))
 );
 
+function mergeUsersList(localUsers: User[], cloudUsers: User[]): User[] {
+  const map = new Map<string, User>();
+  for (const u of localUsers) {
+    if (u && u.id) {
+      map.set(u.id, { ...u });
+    }
+  }
+
+  for (const cu of cloudUsers) {
+    if (!cu || !cu.id) continue;
+    const existingById = map.get(cu.id);
+    const existingByPhone = Array.from(map.values()).find(
+      (u) =>
+        u.phone &&
+        cu.phone &&
+        u.phone.replace(/\D/g, '') === cu.phone.replace(/\D/g, '')
+    );
+    const target = existingById || existingByPhone;
+
+    if (target) {
+      map.set(target.id, {
+        ...cu,
+        ...target,
+        phone: cu.phone || target.phone,
+        avatar: cu.avatar || target.avatar,
+        active: cu.active !== undefined ? cu.active : target.active,
+      });
+    } else {
+      map.set(cu.id, { ...cu });
+    }
+  }
+
+  return Array.from(map.values());
+}
+
 export const App: React.FC = () => {
   // Session & Authentication via Supabase Auth
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -307,8 +342,8 @@ export const App: React.FC = () => {
         const [cloudProjects, cloudTickets, cloudUsers, cloudSettings, cloudTeams, cloudTeamMembers, cloudScheduleChanges, cloudMaterials] = await Promise.all([
           SupabaseSyncService.fetchProjects(),
           SupabaseSyncService.fetchTickets(),
-          SupabaseSyncService.fetchProfiles(),
-          SupabaseSyncService.fetchSettings(),
+          SupabaseSyncService.fetchProfiles().catch(() => []),
+          SupabaseSyncService.fetchSettings().catch(() => null),
           SupabaseSyncService.fetchInstallationTeams().catch(() => []),
           SupabaseSyncService.fetchTeamMembers().catch(() => []),
           SupabaseSyncService.fetchScheduleChangeRequests().catch(() => []),
@@ -344,14 +379,21 @@ export const App: React.FC = () => {
         projectsRef.current = mergedProjects;
         setTickets(mergedTickets);
         setMaterialRequests(mergedMaterialRequests);
-        if (cloudUsers.length > 0) {
-          setUsers(cloudUsers);
+        if (cloudUsers && cloudUsers.length > 0) {
+          setUsers((prevUsers) => {
+            const current = prevUsers.length > 0 ? prevUsers : StorageService.getUsers();
+            const merged = mergeUsersList(current.length > 0 ? current : TEST_USERS, cloudUsers);
+            StorageService.saveUsers(merged);
+            return merged;
+          });
         }
-        if (cloudTeams.length > 0) {
+        if (cloudTeams && cloudTeams.length > 0) {
           setTeams(cloudTeams);
+          StorageService.saveTeams(cloudTeams);
         }
-        if (cloudTeamMembers.length > 0) {
+        if (cloudTeamMembers && cloudTeamMembers.length > 0) {
           setTeamMembers(cloudTeamMembers);
+          StorageService.saveTeamMembers(cloudTeamMembers);
         }
         if (cloudScheduleChanges && cloudScheduleChanges.length >= 0) {
           setScheduleChangeRequests(cloudScheduleChanges);
@@ -470,8 +512,12 @@ export const App: React.FC = () => {
 
     const unsubProfiles = SupabaseSyncService.subscribeProfiles((updatedProfiles) => {
       if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
-      if (updatedProfiles.length > 0) {
-        setUsers(updatedProfiles);
+      if (updatedProfiles && updatedProfiles.length > 0) {
+        setUsers((prevUsers) => {
+          const merged = mergeUsersList(prevUsers, updatedProfiles);
+          StorageService.saveUsers(merged);
+          return merged;
+        });
         setCurrentUser((prevUser) => {
           if (!prevUser) return null;
           const currentProfile = updatedProfiles.find((p) => p.id === prevUser.id);
@@ -479,7 +525,7 @@ export const App: React.FC = () => {
             SupabaseSyncService.signOut();
             return null;
           }
-          return currentProfile;
+          return { ...prevUser, ...currentProfile };
         });
       }
     });
@@ -1791,21 +1837,87 @@ export const App: React.FC = () => {
 
   // User handlers
   const handleSaveUser = (user: User) => {
-    const exists = users.some((u) => u.id === user.id);
-    let updated: User[];
-    if (exists) {
-      updated = users.map((u) => (u.id === user.id ? user : u));
-    } else {
-      updated = [...users, user];
-    }
-    setUsers(updated);
-    StorageService.saveUsers(updated);
+    const isFieldRole = user.role === 'LEAD_TECHNICIAN' || user.role === 'TECHNICIAN';
+    const effectiveUser: User = {
+      ...user,
+      teamId: isFieldRole ? user.teamId : undefined,
+    };
 
-    if (currentUser && currentUser.id === user.id) {
-      setCurrentUser(user);
-      StorageService.saveCurrentUser(user);
+    if (!isFieldRole) {
+      // Office / Management roles cannot be attached to installation field teams
+      setTeamMembers((prev) => {
+        const filtered = prev.filter((m) => m.userId !== user.id);
+        StorageService.saveTeamMembers(filtered);
+        return filtered;
+      });
+      setTeams((prev) => {
+        const updated = prev.map((t) =>
+          t.supervisorId === user.id
+            ? {
+                ...t,
+                supervisorId: undefined,
+                name:
+                  t.code === 'TEAM_1'
+                    ? 'اکیپ نصب 1'
+                    : t.code === 'TEAM_2'
+                    ? 'اکیپ نصب 2'
+                    : t.code === 'TEAM_3'
+                    ? 'اکیپ نصب 3'
+                    : 'اکیپ نصب 4',
+              }
+            : t
+        );
+        StorageService.saveTeams(updated);
+        return updated;
+      });
+    } else if (user.role === 'TECHNICIAN') {
+      // Regular technician cannot be the supervisor of any team
+      setTeams((prev) => {
+        const updated = prev.map((t) =>
+          t.supervisorId === user.id
+            ? {
+                ...t,
+                supervisorId: undefined,
+                name:
+                  t.code === 'TEAM_1'
+                    ? 'اکیپ نصب 1'
+                    : t.code === 'TEAM_2'
+                    ? 'اکیپ نصب 2'
+                    : t.code === 'TEAM_3'
+                    ? 'اکیپ نصب 3'
+                    : 'اکیپ نصب 4',
+              }
+            : t
+        );
+        StorageService.saveTeams(updated);
+        return updated;
+      });
+      setTeamMembers((prev) => {
+        const updated = prev.map((m) =>
+          m.userId === user.id ? { ...m, roleInTeam: 'TECHNICIAN' as const } : m
+        );
+        StorageService.saveTeamMembers(updated);
+        return updated;
+      });
     }
-    showToast('success', `اطلاعات و نقش ${getDisplayName(user.name)} با موفقیت ثبت و ذخیره شد.`);
+
+    setUsers((prev) => {
+      const exists = prev.some((u) => u.id === effectiveUser.id);
+      let updated: User[];
+      if (exists) {
+        updated = prev.map((u) => (u.id === effectiveUser.id ? effectiveUser : u));
+      } else {
+        updated = [...prev, effectiveUser];
+      }
+      StorageService.saveUsers(updated);
+      return updated;
+    });
+
+    if (currentUser && currentUser.id === effectiveUser.id) {
+      setCurrentUser(effectiveUser);
+      StorageService.saveCurrentUser(effectiveUser);
+    }
+    showToast('success', `اطلاعات و نقش ${getDisplayName(effectiveUser.name)} با موفقیت ثبت و ذخیره شد.`);
   };
 
   const handleDeleteUser = (userId: string) => {
@@ -2066,7 +2178,7 @@ export const App: React.FC = () => {
   const isManagerOrCoordinator = isQcManager || isCoordinator || isCeo;
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#0D1117] text-[#F0F4F8] flex flex-col font-sans selection:bg-[#C5A059] selection:text-[#0D1117] transition-colors duration-150">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#F8F9FA] dark:bg-[#0D1117] text-[#1A1F26] dark:text-[#F0F4F8] flex flex-col font-sans selection:bg-[#C5A059] selection:text-[#0D1117] transition-colors duration-150">
       {/* Skip to Content for Accessibility */}
       <a
         href="#main-content"

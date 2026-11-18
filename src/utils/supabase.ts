@@ -467,7 +467,22 @@ export const SupabaseSyncService = {
       });
 
       if (error) {
-        return { success: false, error: error.message || 'خطا در ویرایش اطلاعات پرسنل در دیتابیس.' };
+        // Fallback: try direct update on profiles table if RPC fails
+        const updateData: Record<string, unknown> = {};
+        if (payload.name) updateData.name = payload.name;
+        if (payload.phone) updateData.phone = payload.phone;
+        if (payload.role) updateData.role = payload.role;
+        if (payload.active !== undefined) updateData.active = payload.active;
+        updateData.updated_at = new Date().toISOString();
+
+        const { error: directErr } = await client
+          .from('profiles')
+          .update(updateData)
+          .eq('id', payload.id);
+
+        if (directErr) {
+          return { success: false, error: error.message || directErr.message || 'خطا در ویرایش اطلاعات پرسنل در دیتابیس.' };
+        }
       }
       return { success: true };
     } catch (err: any) {

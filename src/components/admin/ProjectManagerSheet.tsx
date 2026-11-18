@@ -811,23 +811,25 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
           ) : (
             <Button
               icon={<ShieldCheck className="w-4 h-4" />}
-              disabled={busy || project.status !== 'COMPLETED'}
-              disabledReason={
-                project.status !== 'COMPLETED'
-                  ? 'تایید QC فقط پس از ثبت «اتمام کار» توسط تکنسین امکان‌پذیر است.'
-                  : undefined
-              }
-              onClick={() =>
+              disabled={busy}
+              onClick={() => {
+                const updates: Partial<Project> = {
+                  qcStatus: 'APPROVED',
+                  qcReviewedAt: new Date().toISOString(),
+                  qcReviewedBy: getDisplayName(currentUser.name) || 'مسئول QC',
+                };
+                if (project.status !== 'COMPLETED') {
+                  updates.status = 'COMPLETED';
+                  updates.completedAt = project.completedAt || new Date().toISOString();
+                }
                 run(
-                  {
-                    qcStatus: 'APPROVED',
-                    qcReviewedAt: new Date().toISOString(),
-                    qcReviewedBy: getDisplayName(currentUser.name) || 'مسئول QC',
-                  },
-                  'پروژه تایید QC شد.',
+                  updates,
+                  project.status === 'COMPLETED'
+                    ? 'پروژه با موفقیت تایید QC شد.'
+                    : 'عملیات پروژه تکمیل و تایید نهایی QC ثبت گردید.',
                   'تایید QC توسط مدیر'
-                )
-              }
+                );
+              }}
             >
               تایید QC
             </Button>
