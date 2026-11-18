@@ -33,6 +33,17 @@
     <meta http-equiv="Expires" content="0" />
 
     <script>
+      try {
+        var savedTheme = localStorage.getItem('talaie_theme');
+        if (savedTheme === 'light') {
+          document.documentElement.classList.remove('dark');
+        } else if (savedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {}
+
       // Clear any cached assets or registered service workers from previous builds
       if ('caches' in window) {
         caches.keys().then(function(names) {
@@ -49,13 +60,13 @@
         });
       }
     </script>
-    <script type="module" crossorigin src="./assets/index-DuIYdAhQ.js"></script>
+    <script type="module" crossorigin src="./assets/index-DZk7GllI.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/jsx-runtime-DGOtbecx.js">
     <link rel="modulepreload" crossorigin href="./assets/offlineQueue-BRM6DG6i.js">
     <link rel="modulepreload" crossorigin href="./assets/circle-check-DeM1E8ai.js">
-    <link rel="stylesheet" crossorigin href="./assets/index-Bw1YF5nV.css">
+    <link rel="stylesheet" crossorigin href="./assets/index-CYU8SZvV.css">
   </head>
-  <body class="bg-[#0D1117] text-[#F0F4F8] antialiased selection:bg-[#C5A059] selection:text-[#0D1117]">
+  <body class="bg-[#F8F9FA] dark:bg-[#0D1117] text-[#1A1F26] dark:text-[#F0F4F8] antialiased selection:bg-[#C5A059] selection:text-[#0D1117]">
     <div id="root"></div>
   </body>
 </html>
