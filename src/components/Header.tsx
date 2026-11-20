@@ -44,6 +44,8 @@ export const Header: React.FC<Props> = ({
       ? 'مسئول انبار و پیگیری تامین'
       : currentUser.role === 'SCHEDULING_COORDINATOR'
       ? 'مسئول هماهنگی و زمان‌بندی'
+      : currentUser.role === 'SALES_REP'
+      ? 'کارشناس فروش و رزرو لت'
       : currentUser.role === 'LEAD_TECHNICIAN'
       ? 'سرپرست اکیپ نصب'
       : 'تکنسین نصب';

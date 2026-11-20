@@ -9,6 +9,7 @@ import {
   Users,
   Settings,
   FileCheck2,
+  Trophy,
 } from 'lucide-react';
 import { ManagerTab } from './BottomNav';
 
@@ -48,6 +49,12 @@ export const Sidebar: React.FC<Props> = ({
           icon: CalendarDays,
           badge: undefined,
         },
+        {
+          id: 'sales' as const,
+          label: 'میز فروش و رزرو لت',
+          icon: Trophy,
+          badge: undefined,
+        },
       ]
     : [
         {
@@ -67,6 +74,12 @@ export const Sidebar: React.FC<Props> = ({
           id: 'planner' as const,
           label: 'تقویم اجرایی 4 روزه',
           icon: CalendarDays,
+          badge: undefined,
+        },
+        {
+          id: 'sales' as const,
+          label: 'میز فروش و رزرو لت',
+          icon: Trophy,
           badge: undefined,
         },
       ];

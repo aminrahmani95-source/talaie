@@ -104,6 +104,9 @@ const MeasurementDashboard = React.lazy(() =>
 const WarehouseDesk = React.lazy(() =>
   import('./components/warehouse/WarehouseDesk').then((m) => ({ default: m.WarehouseDesk }))
 );
+const SalesPortal = React.lazy(() =>
+  import('./components/sales/SalesPortal').then((m) => ({ default: m.SalesPortal }))
+);
 
 // Code-split Modals loaded on demand
 const ProjectFormModal = React.lazy(() =>
@@ -2351,6 +2354,11 @@ export const App: React.FC = () => {
               onNavigateTab={(tab) => setActiveTab(tab)}
             />
           </React.Suspense>
+        ) : currentUser.role === 'SALES_REP' ? (
+          // ================= SALES REPRESENTATIVE DESK =================
+          <React.Suspense fallback={<DashboardSkeleton />}>
+            <SalesPortal currentUser={currentUser} />
+          </React.Suspense>
         ) : isManagerOrCoordinator ? (
           // ================= MANAGER / COORDINATOR VIEW =================
           <div className="flex gap-6 pb-20 lg:pb-6">
@@ -2491,6 +2499,10 @@ export const App: React.FC = () => {
                     onUpdateSettings={handleUpdateSettings}
                     onResetData={handleResetData}
                   />
+                )}
+
+                {activeTab === 'sales' && (
+                  <SalesPortal currentUser={currentUser} />
                 )}
               </React.Suspense>
             </div>

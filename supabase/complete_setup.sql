@@ -2934,3 +2934,95 @@ begin
 end $$;
 
 
+-- ==============================================================================
+-- ع¯ط§ظ„ط±غŒ ط·ظ„ط§غŒغŒ | ظ…ط§غŒع¯ط±غŒط´ظ† غ°غ±غ¸: ظ¾ط´طھغŒط¨ط§ظ†غŒ ط§ط² ظ†ظ‚ط´ ع©ط§ط±ط´ظ†ط§ط³ ظپط±ظˆط´ (SALES_REP) ظˆ ط¬ط¯ظˆظ„ ط±ط²ط±ظˆ ط¸ط±ظپغŒطھ ظ„طھâ€Œظ‡ط§
+-- غ±. ط§طµظ„ط§ط­ ظ…ط­ط¯ظˆط¯غŒطھ ظ†ظ‚ط´â€Œظ‡ط§غŒ profiles ط¨ط±ط§غŒ ظ¾ط°غŒط±ط´ 'SALES_REP' ظˆ 'SALES'
+-- غ². ط§غŒط¬ط§ط¯ ط¬ط¯ظˆظ„ sales_bookings ط¨ط±ط§غŒ ط«ط¨طھ ظ¾ط±ظˆعکظ‡â€Œظ‡ط§غŒ ظپط±ظˆط´ ظˆ طھط®طµغŒطµ ط´ظ†ط§ظˆط± ظ„طھâ€Œظ‡ط§
+-- غ³. ط§ط¹ظ…ط§ظ„ ط³غŒط§ط³طھâ€Œظ‡ط§غŒ ط§ظ…ظ†غŒطھغŒ RLS (ط³ط·ط­ ط±ط¯غŒظپ)
+-- ==============================================================================
+
+-- غ±. ط§طµظ„ط§ط­ ع†ع© ط±ظˆظ„ ط¬ط¯ظˆظ„ profiles
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role in (
+    'CEO',
+    'QC_MANAGER',
+    'SCHEDULING_COORDINATOR',
+    'SALES',
+    'SALES_REP',
+    'MEASUREMENT_LEAD',
+    'WAREHOUSE',
+    'LEAD_TECHNICIAN',
+    'TECHNICIAN'
+  ));
+
+-- غ². ط³ط§ط®طھ ط¬ط¯ظˆظ„ ط±ط²ط±ظˆظ‡ط§غŒ ظپط±ظˆط´ ظˆ طھط®طµغŒطµ ظ„طھ
+create table if not exists public.sales_bookings (
+  id text primary key,
+  customer_name text not null,
+  customer_phone text not null,
+  address text not null,
+  laths_count integer not null check (laths_count > 0 and laths_count <= 60),
+  is_smart boolean not null default true,
+  notes text default '',
+  requested_date text not null, -- YYYY-MM-DD
+  jalali_date text not null,
+  allocation_mode text not null check (allocation_mode in ('SPREAD_DAILY', 'CONSECUTIVE_DAYS')),
+  allocated_teams jsonb not null default '[]'::jsonb,
+  allocated_days_count integer not null default 1,
+  sales_rep_id text not null,
+  sales_rep_name text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ط§غŒظ†ط¯ع©ط³â€Œع¯ط°ط§ط±غŒ ط¨ط±ط§غŒ ط¬ط³طھط¬ظˆغŒ ط³ط±غŒط¹ ط±ظˆط²ط§ظ†ظ‡ ظˆ ط¨ط± ط§ط³ط§ط³ ع©ط§ط±ط´ظ†ط§ط³
+create index if not exists idx_sales_bookings_date on public.sales_bookings (requested_date);
+create index if not exists idx_sales_bookings_rep on public.sales_bookings (sales_rep_id);
+
+-- غ³. ظپط¹ط§ظ„â€Œط³ط§ط²غŒ ط§ظ…ظ†غŒطھ ط³ط·ط­ ط±ط¯غŒظپ (RLS)
+alter table public.sales_bookings enable row level security;
+
+-- ط³غŒط§ط³طھ ظ…ط´ط§ظ‡ط¯ظ‡: ظ‡ظ…ظ‡ ع©ط§ط±ط¨ط±ط§ظ† ط§ط­ط±ط§ط²ظ‡ظˆغŒطھâ€Œط´ط¯ظ‡ ظ…غŒâ€Œطھظˆط§ظ†ظ†ط¯ ط±ط²ط±ظˆظ‡ط§ ط±ط§ ط¨ط¨غŒظ†ظ†ط¯
+drop policy if exists "sales_bookings_select_policy" on public.sales_bookings;
+create policy "sales_bookings_select_policy"
+  on public.sales_bookings
+  for select
+  to authenticated
+  using (true);
+
+-- ط³غŒط§ط³طھ ط«ط¨طھ ظˆ ط§غŒط¬ط§ط¯: ع©ط§ط±ط´ظ†ط§ط³ط§ظ† ظپط±ظˆط´طŒ ظ…ط¯غŒط±ط§ظ† ظˆ ظ‡ظ…ط§ظ‡ظ†ع¯â€Œع©ظ†ظ†ط¯ظ‡ ظ…ط¬ط§ط² ط¨ظ‡ ط«ط¨طھ ظ‡ط³طھظ†ط¯
+drop policy if exists "sales_bookings_insert_policy" on public.sales_bookings;
+create policy "sales_bookings_insert_policy"
+  on public.sales_bookings
+  for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid()
+        and role in ('SALES_REP', 'SALES', 'QC_MANAGER', 'CEO', 'SCHEDULING_COORDINATOR')
+        and active = true
+    )
+  );
+
+-- ط³غŒط§ط³طھ ط¨ظ‡â€Œط±ظˆط²ط±ط³ط§ظ†غŒ: ظ…ط¯غŒط±ط§ظ† ط§ط±ط´ط¯ ظˆ ط«ط¨طھâ€Œع©ظ†ظ†ط¯ظ‡
+drop policy if exists "sales_bookings_update_policy" on public.sales_bookings;
+create policy "sales_bookings_update_policy"
+  on public.sales_bookings
+  for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid()
+        and (
+          role in ('QC_MANAGER', 'CEO', 'SCHEDULING_COORDINATOR')
+          or (role in ('SALES_REP', 'SALES') and id = sales_bookings.sales_rep_id)
+        )
+        and active = true
+    )
+  );
+
+-- ط§ط¹ط·ط§غŒ ط¯ط³طھط±ط³غŒ ط¨ظ‡ ظ†ظ‚ط´ authenticated
+grant select, insert, update on public.sales_bookings to authenticated;

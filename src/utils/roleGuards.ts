@@ -70,7 +70,8 @@ export function canAccessProject(user: User, project: Project, userTeamId?: stri
     user.role === 'QC_MANAGER' ||
     user.role === 'SCHEDULING_COORDINATOR' ||
     user.role === 'WAREHOUSE' ||
-    user.role === 'MEASUREMENT_LEAD'
+    user.role === 'MEASUREMENT_LEAD' ||
+    user.role === 'SALES_REP'
   ) {
     return true;
   }

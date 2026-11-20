@@ -5,7 +5,8 @@ export type UserRole =
   | 'LEAD_TECHNICIAN'         // سرپرست اکیپ نصب
   | 'TECHNICIAN'              // تکنسین نصب
   | 'WAREHOUSE'               // مسئول انبار و پیگیری تامین (2 نفر)
-  | 'SCHEDULING_COORDINATOR'; // هماهنگ‌کننده زمان‌بندی (سازگار با گذشته)
+  | 'SCHEDULING_COORDINATOR'  // هماهنگ‌کننده زمان‌بندی (سازگار با گذشته)
+  | 'SALES_REP';              // کارشناس فروش (ثبت پروژه، رزرو ظرفیت لت و لیدربورد)
 
 export interface User {
   id: string;
@@ -839,4 +840,71 @@ export interface MaterialRequest {
   history: MaterialActionLog[];
   createdAt: string;
   updatedAt: string;
+}
+
+// ================= SALES & CAPACITY TYPES =================
+
+export type SalesAllocationMode = 'SPREAD_DAILY' | 'CONSECUTIVE_DAYS';
+
+export interface SalesProjectBooking {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  lathsCount: number; // تعداد لت‌ها
+  isSmart: boolean; // هوشمند/موتوردار یا مکانیکی/دستی
+  notes: string;
+  requestedDate: string; // YYYY-MM-DD
+  jalaliDate: string; // تاریخ شمسی مانند ۱۴۰۵/۰۹/۱۵
+  allocationMode: SalesAllocationMode;
+  allocatedTeams: string[]; // شناسه اکیپ‌ها مثلاً ['TEAM_1', 'TEAM_2']
+  allocatedDaysCount: number; // تعداد روزهای تخصیص
+  salesRepId: string;
+  salesRepName: string;
+  createdAt: string;
+}
+
+export interface TeamDayAllocation {
+  teamId: string;
+  teamName: string;
+  bookedLaths: number;
+  maxLaths: number; // معمولاً ۱۵ لت برای هر اکیپ در روز
+}
+
+export interface DailyLathCapacity {
+  date: string; // YYYY-MM-DD
+  jalaliDate: string;
+  dayName: string; // شنبه، یکشنبه، ...
+  maxLaths: number; // ۶۰ لت (۴ اکیپ × ۱۵)
+  bookedLaths: number;
+  remainingLaths: number;
+  teams: TeamDayAllocation[];
+  bookingsCount: number;
+}
+
+export interface BookingOption {
+  mode: SalesAllocationMode;
+  title: string;
+  description: string;
+  isAvailable: boolean;
+  requiredDays: number;
+  allocatedTeams: string[];
+  daysDetails: {
+    date: string;
+    jalaliDate: string;
+    teams: { teamId: string; teamName: string; laths: number }[];
+  }[];
+}
+
+export interface SalesRepProfile {
+  id: string;
+  name: string;
+  phone: string;
+  avatarIcon: string; // کاریکاتور یا آواتار وکتوری
+  caricatureTag: string; // لقب فان مثل «شکارچی لت»، «فرمانده شید»
+  rankBadge: 'GOLD' | 'SILVER' | 'BRONZE' | 'STANDARD';
+  monthlyProjectsCount: number; // رتبه‌بندی بر اساس تعداد پروژه‌ها
+  monthlyLathsCount: number;
+  activeBookingDays: number;
+  winStreak: number;
 }

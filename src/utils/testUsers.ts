@@ -41,6 +41,31 @@ export const TEST_USERS: User[] = [
     avatar: '📦',
     active: true,
   },
+  // کارشناسان فروش و برنامه‌ریزی رزرو لت
+  {
+    id: 'u-sales-1',
+    name: 'سپهر رادمنش (کارشناس فروش ۱)',
+    phone: '09127777771',
+    role: 'SALES_REP',
+    avatar: '🎯',
+    active: true,
+  },
+  {
+    id: 'u-sales-2',
+    name: 'نیلوفر صبوری (کارشناس فروش ۲)',
+    phone: '09127777772',
+    role: 'SALES_REP',
+    avatar: '🌟',
+    active: true,
+  },
+  {
+    id: 'u-sales-3',
+    name: 'آرمان شایگان (کارشناس فروش ۳)',
+    phone: '09127777773',
+    role: 'SALES_REP',
+    avatar: '⚡',
+    active: true,
+  },
   // کادر فنی اکیپ‌های نصب ۴ گانه
   {
     id: 'u-lead-1',

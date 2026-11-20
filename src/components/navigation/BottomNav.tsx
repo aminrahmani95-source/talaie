@@ -10,10 +10,11 @@ import {
   Settings,
   Package,
   FileCheck2,
+  Trophy,
 } from 'lucide-react';
 import { Sheet } from '../ui/Sheet';
 
-export type ManagerTab = 'control' | 'planner' | 'qc' | 'stuck' | 'tickets' | 'materials' | 'technicians' | 'settings' | 'registry';
+export type ManagerTab = 'control' | 'planner' | 'qc' | 'stuck' | 'tickets' | 'materials' | 'technicians' | 'settings' | 'registry' | 'sales';
 
 interface Props {
   activeTab: ManagerTab;
@@ -45,7 +46,8 @@ export const BottomNav: React.FC<Props> = ({
     activeTab === 'tickets' ||
     activeTab === 'materials' ||
     activeTab === 'technicians' ||
-    activeTab === 'settings';
+    activeTab === 'settings' ||
+    activeTab === 'sales';
 
   const navItems = isCeo
     ? [
@@ -338,6 +340,35 @@ export const BottomNav: React.FC<Props> = ({
               <div className="text-xs font-bold">تنظیمات سیستم</div>
               <div className="text-[11px] text-[#9BA7B6] mt-0.5">
                 پنجره دید تکنسین‌ها، چک‌لیست پیش‌فرض و همگام‌سازی
+              </div>
+            </div>
+          </button>
+
+          {/* میز فروش و رزرو لت */}
+          <button
+            type="button"
+            onClick={() => {
+              onSelectTab('sales');
+              setIsMoreOpen(false);
+            }}
+            className={`flex items-center gap-3 p-3 rounded-md border transition text-right cursor-pointer min-h-[52px] ${
+              activeTab === 'sales'
+                ? 'border-[#C5A059]/60 bg-[#C5A059]/10 text-[#C5A059] font-bold'
+                : 'border-[#212835] bg-[#151B23] text-[#F0F4F8] hover:border-[#C5A059]/40'
+            }`}
+          >
+            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#2D3748] flex items-center justify-center text-[#C5A059]">
+              <Trophy className="w-4 h-4" />
+            </div>
+            <div className="flex-1">
+              <div className="text-xs font-bold flex items-center justify-between">
+                <span>میز فروش و رزرو لت‌ها</span>
+                <span className="bg-[#C5A059]/20 text-[#E5CA8F] text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  ظرفیت ۶۰ لت
+                </span>
+              </div>
+              <div className="text-[11px] text-[#9BA7B6] mt-0.5">
+                ثبت پروژه، تقویم ۳ ماهه و لیدربورد رقابتی کارشناسان
               </div>
             </div>
           </button>
