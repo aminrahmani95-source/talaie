@@ -52,10 +52,17 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
   const [isSmart, setIsSmart] = useState<boolean>(true);
   const [notes, setNotes] = useState('');
 
-  // تاریخ درخواستی
-  const upcomingDays = useMemo(() => getUpcomingDays(90), []);
+  // تاریخ درخواستی (شروع مستقیم از آذر ماه)
+  const upcomingDays = useMemo(() => {
+    const all = getUpcomingDays(105);
+    return all.filter((day) => {
+      const parts = day.persianDateStr.split('/');
+      const month = parseInt(parts[1], 10);
+      return month >= 9 || parseInt(parts[0], 10) > 1405;
+    });
+  }, []);
   const [selectedDateKey, setSelectedDateKey] = useState<string>(
-    upcomingDays[1]?.dateKey || ''
+    upcomingDays[0]?.dateKey || ''
   );
   const [selectedMode, setSelectedMode] = useState<SalesAllocationMode>('SPREAD_DAILY');
 
@@ -161,12 +168,15 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
     setNotes('');
   };
 
-  // تفکیک ماه‌ها در تقویم (۳ ماه)
+  // تفکیک ماه‌ها در تقویم (۳ ماه آینده با شروع قطعی از آذر)
   const monthGroups = useMemo(() => {
     const groups: { monthName: string; days: typeof threeMonthCapacities }[] = [];
     threeMonthCapacities.forEach((dayCap) => {
       const parts = dayCap.jalaliDate.split('/');
       const monthNum = parseInt(parts[1], 10);
+      // حذف قطعی آبان؛ شروع مستمر از آذر
+      if (monthNum === 8 && parts[0] === '۱۴۰۵') return;
+
       const monthNames = [
         '',
         'فروردین',

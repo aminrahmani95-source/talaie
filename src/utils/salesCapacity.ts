@@ -210,13 +210,20 @@ export function getDailyCapacity(dateKey: string, customBookings?: SalesProjectB
 }
 
 /**
- * دریافت وضعیت ظرفیت برای یک بازه ۳ ماهه (۹۰ روز)
+ * دریافت وضعیت ظرفیت برای یک بازه ۳ ماهه (۹۰ روز) با شروع از ماه جاری (آذر)
  */
 export function getThreeMonthCapacities(daysCount = 90): DailyLathCapacity[] {
-  const upcomingDays = getUpcomingDays(daysCount);
+  const upcomingDays = getUpcomingDays(daysCount + 15);
   const bookings = getStoredBookings();
 
-  return upcomingDays.map((day) => {
+  // عدم نمایش روزهای ماه قبل (آبان) و شروع مستقیم از آذر
+  const activeDays = upcomingDays.filter((day) => {
+    const parts = day.persianDateStr.split('/');
+    const month = parseInt(parts[1], 10);
+    return month >= 9 || parseInt(parts[0], 10) > 1405;
+  });
+
+  return activeDays.slice(0, daysCount).map((day) => {
     return getDailyCapacity(day.dateKey, bookings);
   });
 }
