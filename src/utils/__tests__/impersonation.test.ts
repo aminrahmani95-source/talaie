@@ -71,6 +71,7 @@ describe('CEO / Management Impersonation & Panel Inspection', () => {
     expect(getUserRoleLabel('MEASUREMENT_LEAD')).toBe('مسئول متراژ و تایید بستر');
     expect(getUserRoleLabel('WAREHOUSE')).toBe('مسئول انبار و تدارکات');
     expect(getUserRoleLabel('SCHEDULING_COORDINATOR')).toBe('مسئول هماهنگی و زمان‌بندی');
+    expect(getUserRoleLabel('SALES_REP')).toBe('کارشناس فروش و رزرو لت');
     expect(getUserRoleLabel('LEAD_TECHNICIAN')).toBe('سرپرست اکیپ نصب');
     expect(getUserRoleLabel('TECHNICIAN')).toBe('تکنسین نصب');
     expect(getUserRoleLabel('UNKNOWN_ROLE')).toBe('UNKNOWN_ROLE');

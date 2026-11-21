@@ -187,6 +187,8 @@ export function getUserRoleLabel(role?: string): string {
       return 'مسئول انبار و تدارکات';
     case 'SCHEDULING_COORDINATOR':
       return 'مسئول هماهنگی و زمان‌بندی';
+    case 'SALES_REP':
+      return 'کارشناس فروش و رزرو لت';
     case 'LEAD_TECHNICIAN':
       return 'سرپرست اکیپ نصب';
     case 'TECHNICIAN':
