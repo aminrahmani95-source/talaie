@@ -179,10 +179,10 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
     const targetTeams: InstallationTeamWithMembers[] = teamsWithMembers && teamsWithMembers.length > 0
       ? teamsWithMembers
       : [
-          { id: 'TEAM_1', name: 'اکیپ نصب 1 (نقدعلیان)', code: 'TEAM_1', supervisorId: 'u-lead-1', supervisor: { id: 'u-lead-1', name: 'فرخ نقدعلیان', role: 'LEAD_TECHNICIAN', phone: '09121111111', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
-          { id: 'TEAM_2', name: 'اکیپ نصب 2 (مرادی)', code: 'TEAM_2', supervisor: { id: 'u-lead-2', name: 'علیرضا مرادی', role: 'LEAD_TECHNICIAN', phone: '09122222222', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
-          { id: 'TEAM_3', name: 'اکیپ نصب 3 (سهرابی)', code: 'TEAM_3', supervisor: { id: 'u-lead-3', name: 'مهدی سهرابی', role: 'LEAD_TECHNICIAN', phone: '09123333333', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
-          { id: 'TEAM_4', name: 'اکیپ نصب 4 (رحمانی)', code: 'TEAM_4', supervisor: { id: 'u-lead-4', name: 'حسین رحمانی', role: 'LEAD_TECHNICIAN', phone: '09124444444', active: true }, technicians: [], totalMembers: 1, createdAt: '', updatedAt: '' },
+          { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
+          { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
+          { id: 'TEAM_3', name: 'اکیپ نصب ۳', code: 'TEAM_3', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
+          { id: 'TEAM_4', name: 'اکیپ نصب ۴', code: 'TEAM_4', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
         ];
 
     return targetTeams.map((team) => {

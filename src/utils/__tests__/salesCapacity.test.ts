@@ -142,7 +142,12 @@ describe('Sales & 60-Lath Capacity Engine Tests', () => {
   });
 
   it('6. calculates leaderboard ranking based on projects count and assigns badges', () => {
-    const leaderboard = getSalesRepLeaderboard();
+    const testReps = [
+      { id: 'r1', name: 'کارشناس ۱', phone: '09120000001', avatarIcon: '🎯', caricatureTag: '', rankBadge: 'GOLD' as const, monthlyProjectsCount: 15, monthlyLathsCount: 200, activeBookingDays: 10, winStreak: 3 },
+      { id: 'r2', name: 'کارشناس ۲', phone: '09120000002', avatarIcon: '🌟', caricatureTag: '', rankBadge: 'SILVER' as const, monthlyProjectsCount: 10, monthlyLathsCount: 150, activeBookingDays: 8, winStreak: 2 },
+      { id: 'r3', name: 'کارشناس ۳', phone: '09120000003', avatarIcon: '⚡', caricatureTag: '', rankBadge: 'BRONZE' as const, monthlyProjectsCount: 5, monthlyLathsCount: 80, activeBookingDays: 5, winStreak: 1 },
+    ];
+    const leaderboard = getSalesRepLeaderboard(testReps);
     expect(leaderboard).toHaveLength(3);
     expect(leaderboard[0].rankBadge).toBe('GOLD');
     expect(leaderboard[1].rankBadge).toBe('SILVER');

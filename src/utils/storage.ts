@@ -44,7 +44,56 @@ const STORAGE_KEYS = {
   IS_INITIALIZED: 'talaie_storage_initialized_v6',
 };
 
-// Clean up legacy v5 mock caches & seed sales bookings on module evaluation
+export const TEST_PERSONNEL_IDS = new Set([
+  'u-coordinator',
+  'u-measurement',
+  'u-warehouse',
+  'u-sales-1',
+  'u-sales-2',
+  'u-sales-3',
+  'u-lead-1',
+  'u-tech-1',
+  'u-tech-2',
+  'u-lead-2',
+  'u-tech-3',
+  'u-tech-4',
+  'u-lead-3',
+  'u-tech-5',
+  'u-lead-4',
+  'u-tech-6',
+]);
+
+const TEST_PERSONNEL_PHONES = new Set([
+  '09121111115',
+  '09124444441',
+  '09125555551',
+  '09127777771',
+  '09127777772',
+  '09127777773',
+  '09122222221',
+  '09123333331',
+  '09123333332',
+  '09122222222',
+  '09123333333',
+  '09123333334',
+  '09122222223',
+  '09123333335',
+  '09122222224',
+  '09123333336',
+]);
+
+export const isMockUserId = (id: string) =>
+  !id ||
+  id.startsWith('u-demo-') ||
+  id.startsWith('u-test-') ||
+  TEST_PERSONNEL_IDS.has(id);
+
+export const isMockUser = (u: User) => {
+  if (!u || !u.id) return true;
+  return isMockUserId(u.id);
+};
+
+// Clean up legacy v5 mock caches, test bookings, and test personnel on module evaluation
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
     localStorage.removeItem('talaie_projects_v5');
@@ -63,6 +112,44 @@ if (typeof window !== 'undefined' && window.localStorage) {
             !b.id.startsWith('test-')
         );
         localStorage.setItem('talaei_sales_bookings_v1', JSON.stringify(cleaned));
+      }
+    }
+
+    const rawUsers = localStorage.getItem(STORAGE_KEYS.USERS);
+    if (rawUsers) {
+      const parsedUsers = JSON.parse(rawUsers);
+      if (Array.isArray(parsedUsers)) {
+        const cleanedUsers = parsedUsers.filter((u: any) => !isMockUser(u));
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(cleanedUsers));
+      }
+    }
+
+    const rawTeams = localStorage.getItem(STORAGE_KEYS.TEAMS);
+    if (rawTeams) {
+      const parsedTeams = JSON.parse(rawTeams);
+      if (Array.isArray(parsedTeams)) {
+        const cleanedTeams = parsedTeams.map((t: any) => {
+          if (t && t.supervisorId && TEST_PERSONNEL_IDS.has(t.supervisorId)) {
+            const { supervisorId, supervisorName, ...rest } = t;
+            return {
+              ...rest,
+              name: t.id ? `اکیپ نصب ${t.id.replace('TEAM_', '')}` : t.name,
+            };
+          }
+          return t;
+        });
+        localStorage.setItem(STORAGE_KEYS.TEAMS, JSON.stringify(cleanedTeams));
+      }
+    }
+
+    const rawMembers = localStorage.getItem(STORAGE_KEYS.TEAM_MEMBERS);
+    if (rawMembers) {
+      const parsedMembers = JSON.parse(rawMembers);
+      if (Array.isArray(parsedMembers)) {
+        const cleanedMembers = parsedMembers.filter(
+          (m: any) => m && m.userId && !isMockUserId(m.userId)
+        );
+        localStorage.setItem(STORAGE_KEYS.TEAM_MEMBERS, JSON.stringify(cleanedMembers));
       }
     }
   } catch {}
@@ -107,8 +194,6 @@ const isMockTicketId = (id: string) =>
   id.startsWith('t-demo-') ||
   id.startsWith('t-test-') ||
   id.includes('seed-');
-
-const isMockUserId = (id: string) => !id || id.startsWith('u-demo-');
 
 export const StorageService = {
   getProjects(userId?: string): Project[] {
@@ -286,7 +371,13 @@ export const StorageService = {
       const parsed: User[] = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
       const deletedIds = this.getDeletedUserIds();
-      return parsed.filter((u) => u && u.id && !isMockUserId(u.id) && !deletedIds.has(u.id));
+      const filtered = parsed.filter((u) => !isMockUser(u) && !deletedIds.has(u.id));
+      if (filtered.length !== parsed.length) {
+        try {
+          localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(filtered));
+        } catch {}
+      }
+      return filtered;
     } catch {
       return [];
     }
@@ -295,7 +386,7 @@ export const StorageService = {
   saveUsers(users: User[]) {
     try {
       const deletedIds = this.getDeletedUserIds();
-      const filtered = users.filter((u) => u && u.id && !isMockUserId(u.id) && !deletedIds.has(u.id));
+      const filtered = users.filter((u) => !isMockUser(u) && !deletedIds.has(u.id));
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(filtered));
     } catch (e) {
       console.warn('LocalStorage saveUsers failed:', e);
@@ -383,7 +474,20 @@ export const StorageService = {
     if (!raw) return [];
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      const cleaned = parsed.map((t: any) => {
+        if (t && t.supervisorId && TEST_PERSONNEL_IDS.has(t.supervisorId)) {
+          const { supervisorId, supervisorName, ...rest } = t;
+          return {
+            ...rest,
+            name: t.name && (t.name.includes('نقدعلیان') || t.name.includes('فرهادی') || t.name.includes('رضایی') || t.name.includes('کاظمی'))
+              ? `اکیپ نصب ${t.id.replace('TEAM_', '')}`
+              : t.name,
+          };
+        }
+        return t;
+      });
+      return cleaned;
     } catch {
       return [];
     }
@@ -406,7 +510,12 @@ export const StorageService = {
       const deletedMemberIds = this.getDeletedTeamMemberIds();
       const deletedUserIds = this.getDeletedUserIds();
       return parsed.filter(
-        (m) => m && m.id && !deletedMemberIds.has(m.id) && (!m.userId || !deletedUserIds.has(m.userId))
+        (m) =>
+          m &&
+          m.id &&
+          !isMockUserId(m.userId) &&
+          !deletedMemberIds.has(m.id) &&
+          (!m.userId || !deletedUserIds.has(m.userId))
       );
     } catch {
       return [];
@@ -418,7 +527,12 @@ export const StorageService = {
       const deletedMemberIds = this.getDeletedTeamMemberIds();
       const deletedUserIds = this.getDeletedUserIds();
       const filtered = teamMembers.filter(
-        (m) => m && m.id && !deletedMemberIds.has(m.id) && (!m.userId || !deletedUserIds.has(m.userId))
+        (m) =>
+          m &&
+          m.id &&
+          !isMockUserId(m.userId) &&
+          !deletedMemberIds.has(m.id) &&
+          (!m.userId || !deletedUserIds.has(m.userId))
       );
       localStorage.setItem(STORAGE_KEYS.TEAM_MEMBERS, JSON.stringify(filtered));
     } catch (e) {

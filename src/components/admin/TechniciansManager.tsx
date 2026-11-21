@@ -354,10 +354,10 @@ export const TechniciansManager: React.FC<Props> = ({
   };
 
   const defaultTeams: InstallationTeam[] = [
-    { id: 'TEAM_1', name: 'اکیپ نصب فرخ نقدعلیان', code: 'TEAM_1', createdAt: '', updatedAt: '' },
-    { id: 'TEAM_2', name: 'اکیپ نصب اصغر فرهادی', code: 'TEAM_2', createdAt: '', updatedAt: '' },
-    { id: 'TEAM_3', name: 'اکیپ نصب محسن رضایی', code: 'TEAM_3', createdAt: '', updatedAt: '' },
-    { id: 'TEAM_4', name: 'اکیپ نصب حمید کاظمی', code: 'TEAM_4', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_3', name: 'اکیپ نصب ۳', code: 'TEAM_3', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_4', name: 'اکیپ نصب ۴', code: 'TEAM_4', createdAt: '', updatedAt: '' },
   ];
   const effectiveTeams = teams && teams.length > 0 ? teams : defaultTeams;
 
@@ -951,7 +951,7 @@ export const TechniciansManager: React.FC<Props> = ({
               id="tech-name"
               type="text"
               required
-              placeholder="مثال: فرخ نقدعلیان"
+              placeholder="مثال: علی رضایی"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"

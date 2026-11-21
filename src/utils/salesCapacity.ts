@@ -14,50 +14,13 @@ export const TOTAL_INSTALLATION_TEAMS = 4;
 export const MAX_DAILY_COMPANY_LATHS = 60; // ۴ اکیپ × ۱۵ لت
 
 export const INSTALLATION_TEAMS = [
-  { id: 'TEAM_1', name: 'اکیپ ۱ (نقدعلیان)', lead: 'فرخ نقدعلیان' },
-  { id: 'TEAM_2', name: 'اکیپ ۲ (کریمی)', lead: 'بهزاد کریمی' },
-  { id: 'TEAM_3', name: 'اکیپ ۳ (میرزایی)', lead: 'مجتبی میرزایی' },
-  { id: 'TEAM_4', name: 'اکیپ ۴ (سلیمانی)', lead: 'رضا سلیمانی' },
+  { id: 'TEAM_1', name: 'اکیپ نصب ۱', lead: '' },
+  { id: 'TEAM_2', name: 'اکیپ نصب ۲', lead: '' },
+  { id: 'TEAM_3', name: 'اکیپ نصب ۳', lead: '' },
+  { id: 'TEAM_4', name: 'اکیپ نصب ۴', lead: '' },
 ];
 
-export const SALES_REPS_SEED: SalesRepProfile[] = [
-  {
-    id: 'u-sales-1',
-    name: 'سپهر رادمنش',
-    phone: '09127777771',
-    avatarIcon: '🎯',
-    caricatureTag: 'شکارچی لت و شید 🥇',
-    rankBadge: 'GOLD',
-    monthlyProjectsCount: 0,
-    monthlyLathsCount: 0,
-    activeBookingDays: 0,
-    winStreak: 0,
-  },
-  {
-    id: 'u-sales-2',
-    name: 'نیلوفر صبوری',
-    phone: '09127777772',
-    avatarIcon: '🌟',
-    caricatureTag: 'تیرانداز سرعت رزرو 🥈',
-    rankBadge: 'SILVER',
-    monthlyProjectsCount: 0,
-    monthlyLathsCount: 0,
-    activeBookingDays: 0,
-    winStreak: 0,
-  },
-  {
-    id: 'u-sales-3',
-    name: 'آرمان شایگان',
-    phone: '09127777773',
-    avatarIcon: '⚡',
-    caricatureTag: 'فرمانده روزهای طلایی 🥉',
-    rankBadge: 'BRONZE',
-    monthlyProjectsCount: 0,
-    monthlyLathsCount: 0,
-    activeBookingDays: 0,
-    winStreak: 0,
-  },
-];
+export const SALES_REPS_SEED: SalesRepProfile[] = [];
 
 const STORAGE_KEY = 'talaei_sales_bookings_v1';
 
@@ -510,22 +473,51 @@ export function deleteSalesBooking(bookingId: string, user?: User): boolean {
 /**
  * محاسبه جدول رده‌بندی زنده کارشناسان فروش با منطق گیمیفیکیشن
  */
-export function getSalesRepLeaderboard(): SalesRepProfile[] {
+export function getSalesRepLeaderboard(customReps?: SalesRepProfile[]): SalesRepProfile[] {
   const bookings = getStoredBookings();
+  const baseReps = customReps || SALES_REPS_SEED;
 
-  return SALES_REPS_SEED.map((rep) => {
-    const repBookings = bookings.filter((b) => b.salesRepId === rep.id);
-    const projectsCount = rep.monthlyProjectsCount + repBookings.length;
-    const lathsCount = rep.monthlyLathsCount + repBookings.reduce((sum, b) => sum + b.lathsCount, 0);
-    const uniqueDays = new Set(repBookings.map((b) => b.requestedDate)).size;
+  let candidateReps: SalesRepProfile[] = [];
 
-    return {
-      ...rep,
-      monthlyProjectsCount: projectsCount,
-      monthlyLathsCount: lathsCount,
-      activeBookingDays: Math.min(30, rep.activeBookingDays + uniqueDays),
-    };
-  })
+  if (baseReps.length > 0) {
+    candidateReps = baseReps;
+  } else {
+    // If no seeded reps, compute dynamically from existing bookings
+    const repsMap = new Map<string, SalesRepProfile>();
+    bookings.forEach((b) => {
+      if (b.salesRepId) {
+        const existing = repsMap.get(b.salesRepId) || {
+          id: b.salesRepId,
+          name: b.salesRepName || 'کارشناس فروش',
+          phone: '',
+          avatarIcon: '🎯',
+          caricatureTag: '',
+          rankBadge: 'STANDARD' as const,
+          monthlyProjectsCount: 0,
+          monthlyLathsCount: 0,
+          activeBookingDays: 0,
+          winStreak: 0,
+        };
+        repsMap.set(b.salesRepId, existing);
+      }
+    });
+    candidateReps = Array.from(repsMap.values());
+  }
+
+  return candidateReps
+    .map((rep) => {
+      const repBookings = bookings.filter((b) => b.salesRepId === rep.id);
+      const projectsCount = rep.monthlyProjectsCount + repBookings.length;
+      const lathsCount = rep.monthlyLathsCount + repBookings.reduce((sum, b) => sum + b.lathsCount, 0);
+      const uniqueDays = new Set(repBookings.map((b) => b.requestedDate)).size;
+
+      return {
+        ...rep,
+        monthlyProjectsCount: projectsCount,
+        monthlyLathsCount: lathsCount,
+        activeBookingDays: Math.min(30, rep.activeBookingDays + uniqueDays),
+      };
+    })
     .sort((a, b) => b.monthlyProjectsCount - a.monthlyProjectsCount)
     .map((rep, idx) => {
       let rankBadge: SalesRepProfile['rankBadge'] = 'STANDARD';

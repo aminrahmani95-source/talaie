@@ -368,14 +368,45 @@ export const SupabaseSyncService = {
       throw error;
     }
 
-    return (data || []).map((d: any) => ({
-      id: d.id,
-      name: d.name,
-      phone: d.phone,
-      role: d.role,
-      avatar: d.avatar || undefined,
-      active: Boolean(d.active),
-    }));
+    const TEST_PERSONNEL_IDS = new Set([
+      'u-coordinator',
+      'u-measurement',
+      'u-warehouse',
+      'u-sales-1',
+      'u-sales-2',
+      'u-sales-3',
+      'u-lead-1',
+      'u-tech-1',
+      'u-tech-2',
+      'u-lead-2',
+      'u-tech-3',
+      'u-tech-4',
+      'u-lead-3',
+      'u-tech-5',
+      'u-lead-4',
+      'u-tech-6',
+    ]);
+
+    return (data || [])
+      .filter((d: any) => {
+        if (!d || !d.id) return false;
+        if (
+          d.id.startsWith('u-demo-') ||
+          d.id.startsWith('u-test-') ||
+          TEST_PERSONNEL_IDS.has(d.id)
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .map((d: any) => ({
+        id: d.id,
+        name: d.name,
+        phone: d.phone,
+        role: d.role,
+        avatar: d.avatar || undefined,
+        active: Boolean(d.active),
+      }));
   },
 
   subscribeProfiles(onUpdate: (profiles: User[]) => void): (() => void) {

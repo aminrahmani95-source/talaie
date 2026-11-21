@@ -59,43 +59,20 @@ function simulateMergeUsersList(localUsers: User[], cloudUsers: User[]): User[] 
   }
 
   for (const cu of cloudUsers) {
-    if (!cu || !cu.id) continue;
-    if (deletedIds.has(cu.id)) continue;
-
-    const existingById = map.get(cu.id);
-    const existingByPhone = Array.from(map.values()).find(
-      (u) =>
-        u.phone &&
-        cu.phone &&
-        u.phone.replace(/\D/g, '') === cu.phone.replace(/\D/g, '')
-    );
-    const target = existingById || existingByPhone;
-
-    if (target) {
-      const targetHasNewerEdit = target.updatedAt && (!cu.updatedAt || target.updatedAt >= cu.updatedAt);
-
-      if (targetHasNewerEdit) {
-        map.set(target.id, {
-          ...cu,
-          ...target,
-        });
-      } else {
-        map.set(target.id, {
-          ...cu,
-          ...target,
-          name: target.name || cu.name,
-          phone: target.phone || cu.phone,
-          role: target.role || cu.role,
-          avatar: target.avatar || cu.avatar,
-          active: target.active !== undefined ? target.active : (cu.active !== undefined ? cu.active : true),
-        });
-      }
-    } else {
+    if (!cu || !cu.id || deletedIds.has(cu.id)) continue;
+    const local = map.get(cu.id);
+    if (!local) {
       map.set(cu.id, { ...cu });
+    } else {
+      const localTime = new Date(local.updatedAt || 0).getTime();
+      const cloudTime = new Date(cu.updatedAt || 0).getTime();
+      if (cloudTime > localTime) {
+        map.set(cu.id, { ...cu });
+      }
     }
   }
 
-  return Array.from(map.values()).filter((u) => !deletedIds.has(u.id));
+  return Array.from(map.values());
 }
 
 describe('Storage & Tombstone Persistence (Preventing Test Data Re-seeding)', () => {
@@ -116,13 +93,13 @@ describe('Storage & Tombstone Persistence (Preventing Test Data Re-seeding)', ()
       expect(savedUsers.length).toBe(TEST_USERS.length);
     });
 
-    it('Scenario: Deleting a test user persists after browser refresh and DOES NOT re-seed', () => {
+    it('Scenario: Deleting a user persists after browser refresh and DOES NOT re-seed', () => {
       // 1. Initial boot: app seeds default users
       const initialUsers = simulateAppInitUsers();
-      expect(initialUsers.some((u) => u.id === 'u-sales-3')).toBe(true);
+      expect(initialUsers.some((u) => u.id === 'u-qc-manager')).toBe(true);
 
-      // 2. Admin deletes 'u-sales-3' (آرمان شایگان)
-      const targetUserId = 'u-sales-3';
+      // 2. Admin deletes 'u-qc-manager'
+      const targetUserId = 'u-qc-manager';
       StorageService.addDeletedUserId(targetUserId);
       const filtered = initialUsers.filter((u) => u.id !== targetUserId);
       StorageService.saveUsers(filtered);
@@ -138,10 +115,15 @@ describe('Storage & Tombstone Persistence (Preventing Test Data Re-seeding)', ()
       expect(usersAfterRefresh.length).toBe(TEST_USERS.length - 1);
     });
 
-    it('Scenario: Deleting multiple personnel (lead, tech, coordinator) stays persistent across refresh', () => {
+    it('Scenario: Deleting multiple personnel stays persistent across refresh', () => {
       simulateAppInitUsers();
 
-      const toDelete = ['u-coordinator', 'u-lead-2', 'u-tech-3'];
+      // Add a couple of dynamic users to test multiple deletions
+      const extraUser1: User = { id: 'u-emp-101', name: 'کارمند ۱', phone: '09350000001', role: 'TECHNICIAN', active: true };
+      const extraUser2: User = { id: 'u-emp-102', name: 'کارمند ۲', phone: '09350000002', role: 'TECHNICIAN', active: true };
+      StorageService.saveUsers([...StorageService.getUsers(), extraUser1, extraUser2]);
+
+      const toDelete = ['u-emp-101', 'u-emp-102'];
       for (const id of toDelete) {
         StorageService.addDeletedUserId(id);
       }
@@ -154,7 +136,7 @@ describe('Storage & Tombstone Persistence (Preventing Test Data Re-seeding)', ()
       for (const id of toDelete) {
         expect(reloaded.some((u) => u.id === id)).toBe(false);
       }
-      expect(reloaded.length).toBe(TEST_USERS.length - 3);
+      expect(reloaded.length).toBe(TEST_USERS.length);
     });
 
     it('Scenario: Deleting ALL users leaves the list empty and DOES NOT resurrect TEST_USERS', () => {
@@ -179,12 +161,12 @@ describe('Storage & Tombstone Persistence (Preventing Test Data Re-seeding)', ()
     it('Scenario: Editing a user phone number persists and is NOT overwritten on refresh or cloud fetch', () => {
       simulateAppInitUsers();
 
-      // Edit 'u-sales-1' phone number
+      // Edit 'u-qc-manager' phone number
       const editedUser: User = {
-        id: 'u-sales-1',
-        name: 'سپهر رادمنش (کارشناس ارشد فروش)',
+        id: 'u-qc-manager',
+        name: 'مهندس رحمانی (مدیر اپ)',
         phone: '09191234567', // edited phone
-        role: 'SALES_REP',
+        role: 'QC_MANAGER',
         active: true,
         updatedAt: new Date('2026-11-21T10:00:00Z').toISOString(),
       };
@@ -194,77 +176,81 @@ describe('Storage & Tombstone Persistence (Preventing Test Data Re-seeding)', ()
 
       // Refresh browser
       const afterRefresh = simulateAppInitUsers();
-      const loadedUser = afterRefresh.find((u) => u.id === 'u-sales-1');
+      const loadedUser = afterRefresh.find((u) => u.id === 'u-qc-manager');
       expect(loadedUser).toBeDefined();
       expect(loadedUser?.phone).toBe('09191234567');
-      expect(loadedUser?.name).toBe('سپهر رادمنش (کارشناس ارشد فروش)');
+      expect(loadedUser?.name).toBe('مهندس رحمانی (مدیر اپ)');
 
       // Simulate cloud sync receiving old profile from Supabase
       const staleCloudUsers: User[] = [
         {
-          id: 'u-sales-1',
-          name: 'سپهر رادمنش (کارشناس فروش ۱)',
-          phone: '09127777771', // old stale cloud phone
-          role: 'SALES_REP',
+          id: 'u-qc-manager',
+          name: 'مهندس رحمانی (مدیر اپ و QC)',
+          phone: '09124339038', // old stale cloud phone
+          role: 'QC_MANAGER',
           active: true,
           updatedAt: new Date('2026-01-01T00:00:00Z').toISOString(),
         },
       ];
 
       const merged = simulateMergeUsersList(afterRefresh, staleCloudUsers);
-      const mergedUser = merged.find((u) => u.id === 'u-sales-1');
+      const mergedUser = merged.find((u) => u.id === 'u-qc-manager');
       expect(mergedUser?.phone).toBe('09191234567'); // Local edit is preserved!
     });
 
     it('Scenario: Deactivating a user (active: false) is NOT overwritten by cloud active: true', () => {
       simulateAppInitUsers();
 
-      // Deactivate 'u-tech-1'
-      const user = StorageService.getUsers().find((u) => u.id === 'u-tech-1')!;
+      // Deactivate 'u-qc-manager'
+      const user = StorageService.getUsers().find((u) => u.id === 'u-qc-manager')!;
       const deactivated: User = { ...user, active: false, updatedAt: new Date().toISOString() };
-      StorageService.saveUsers(StorageService.getUsers().map((u) => (u.id === 'u-tech-1' ? deactivated : u)));
+      StorageService.saveUsers(StorageService.getUsers().map((u) => (u.id === 'u-qc-manager' ? deactivated : u)));
 
       const localUsers = StorageService.getUsers();
-      expect(localUsers.find((u) => u.id === 'u-tech-1')?.active).toBe(false);
+      expect(localUsers.find((u) => u.id === 'u-qc-manager')?.active).toBe(false);
 
       // Stale cloud response
       const cloudUsers: User[] = [{ ...user, active: true, updatedAt: '2026-01-01T00:00:00Z' }];
       const merged = simulateMergeUsersList(localUsers, cloudUsers);
 
-      expect(merged.find((u) => u.id === 'u-tech-1')?.active).toBe(false);
+      expect(merged.find((u) => u.id === 'u-qc-manager')?.active).toBe(false);
     });
 
     it('Scenario: Cloud user matching a tombstone blacklist is NEVER resurrected', () => {
       simulateAppInitUsers();
 
-      // Delete 'u-warehouse'
-      StorageService.addDeletedUserId('u-warehouse');
-      const filtered = StorageService.getUsers().filter((u) => u.id !== 'u-warehouse');
+      // Delete 'u-emp-custom'
+      StorageService.addDeletedUserId('u-emp-custom');
+      const filtered = StorageService.getUsers().filter((u) => u.id !== 'u-emp-custom');
       StorageService.saveUsers(filtered);
 
-      // Cloud returns u-warehouse profile from Supabase
+      // Cloud returns u-emp-custom profile from Supabase
       const cloudUsers: User[] = [
         {
-          id: 'u-warehouse',
-          name: 'داوود حسینی (مسئول انبار)',
-          phone: '09125555551',
-          role: 'WAREHOUSE',
+          id: 'u-emp-custom',
+          name: 'کارمند تستی سرور',
+          phone: '09359999999',
+          role: 'TECHNICIAN',
           active: true,
         },
       ];
 
       const merged = simulateMergeUsersList(filtered, cloudUsers);
-      expect(merged.some((u) => u.id === 'u-warehouse')).toBe(false);
+      expect(merged.some((u) => u.id === 'u-emp-custom')).toBe(false);
     });
   });
 
   describe('3. Team Members Tombstones', () => {
     it('Scenario: Removing a team member adds tombstone and prevents resurrection', () => {
-      StorageService.saveTeamMembers(DEFAULT_TEAM_MEMBERS);
-      expect(StorageService.getTeamMembers().length).toBe(DEFAULT_TEAM_MEMBERS.length);
+      const sampleTeamMembers: TeamMember[] = [
+        { id: 'tm-sample-1', teamId: 'TEAM_1', userId: 'u-qc-manager', roleInTeam: 'LEAD', joinedAt: '2026-01-01' },
+        { id: 'tm-sample-2', teamId: 'TEAM_1', userId: 'u-ceo', roleInTeam: 'TECHNICIAN', joinedAt: '2026-01-01' },
+      ];
+      StorageService.saveTeamMembers(sampleTeamMembers);
+      expect(StorageService.getTeamMembers().length).toBe(sampleTeamMembers.length);
 
-      // Remove team member 'tm-1-2'
-      const targetMemberId = 'tm-1-2';
+      // Remove team member 'tm-sample-2'
+      const targetMemberId = 'tm-sample-2';
       StorageService.addDeletedTeamMemberId(targetMemberId);
       const remaining = StorageService.getTeamMembers().filter((m) => m.id !== targetMemberId);
       StorageService.saveTeamMembers(remaining);
@@ -273,68 +259,70 @@ describe('Storage & Tombstone Persistence (Preventing Test Data Re-seeding)', ()
       expect(StorageService.getTeamMembers().some((m) => m.id === targetMemberId)).toBe(false);
 
       // If someone attempts to save team members containing targetMemberId, it gets filtered
-      StorageService.saveTeamMembers(DEFAULT_TEAM_MEMBERS);
+      StorageService.saveTeamMembers(sampleTeamMembers);
       expect(StorageService.getTeamMembers().some((m) => m.id === targetMemberId)).toBe(false);
     });
 
     it('Scenario: Deleting a user automatically excludes their team membership', () => {
-      StorageService.saveTeamMembers(DEFAULT_TEAM_MEMBERS);
-      // 'tm-1-1' is lead 'u-lead-1'
-      expect(StorageService.getTeamMembers().some((m) => m.userId === 'u-lead-1')).toBe(true);
+      const sampleTeamMembers: TeamMember[] = [
+        { id: 'tm-sample-1', teamId: 'TEAM_1', userId: 'u-qc-manager', roleInTeam: 'LEAD', joinedAt: '2026-01-01' },
+      ];
+      StorageService.saveTeamMembers(sampleTeamMembers);
+      expect(StorageService.getTeamMembers().some((m) => m.userId === 'u-qc-manager')).toBe(true);
 
-      // Delete user 'u-lead-1'
-      StorageService.addDeletedUserId('u-lead-1');
+      // Delete user 'u-qc-manager'
+      StorageService.addDeletedUserId('u-qc-manager');
 
       // getTeamMembers should filter out any member with deleted userId
-      expect(StorageService.getTeamMembers().some((m) => m.userId === 'u-lead-1')).toBe(false);
+      expect(StorageService.getTeamMembers().some((m) => m.userId === 'u-qc-manager')).toBe(false);
     });
   });
 
   describe('4. Factory Reset & Backup Portability', () => {
     it('Scenario: Full reset (resetAll) cleans up tombstones and seed markers for clean restart', () => {
       simulateAppInitUsers();
-      StorageService.addDeletedUserId('u-sales-3');
-      StorageService.addDeletedTeamMemberId('tm-1-1');
+      StorageService.addDeletedUserId('u-qc-manager');
+      StorageService.addDeletedTeamMemberId('tm-sample-1');
 
       expect(StorageService.isInitialized()).toBe(true);
-      expect(StorageService.isUserDeleted('u-sales-3')).toBe(true);
+      expect(StorageService.isUserDeleted('u-qc-manager')).toBe(true);
 
       // Factory reset
       StorageService.resetAll();
 
       expect(StorageService.isInitialized()).toBe(false);
-      expect(StorageService.isUserDeleted('u-sales-3')).toBe(false);
-      expect(StorageService.isTeamMemberDeleted('tm-1-1')).toBe(false);
+      expect(StorageService.isUserDeleted('u-qc-manager')).toBe(false);
+      expect(StorageService.isTeamMemberDeleted('tm-sample-1')).toBe(false);
       expect(StorageService.getUsers()).toHaveLength(0);
 
       // Next app boot correctly re-seeds cleanly
       const freshBootUsers = simulateAppInitUsers();
       expect(freshBootUsers.length).toBe(TEST_USERS.length);
-      expect(freshBootUsers.some((u) => u.id === 'u-sales-3')).toBe(true);
+      expect(freshBootUsers.some((u) => u.id === 'u-qc-manager')).toBe(true);
     });
 
     it('Scenario: Backup export and import preserves deleted user and team member tombstones', () => {
       simulateAppInitUsers();
-      StorageService.addDeletedUserId('u-sales-2');
-      StorageService.addDeletedTeamMemberId('tm-2-2');
+      StorageService.addDeletedUserId('u-qc-manager');
+      StorageService.addDeletedTeamMemberId('tm-backup-1');
 
       const backupStr = StorageService.exportBackup();
       const backupObj = JSON.parse(backupStr);
 
-      expect(backupObj.deletedUserIds).toContain('u-sales-2');
-      expect(backupObj.deletedTeamMemberIds).toContain('tm-2-2');
+      expect(backupObj.deletedUserIds).toContain('u-qc-manager');
+      expect(backupObj.deletedTeamMemberIds).toContain('tm-backup-1');
 
       // Clear storage
       localStorage.clear();
-      expect(StorageService.isUserDeleted('u-sales-2')).toBe(false);
+      expect(StorageService.isUserDeleted('u-qc-manager')).toBe(false);
 
       // Import backup
       const success = StorageService.importBackup(backupStr);
       expect(success).toBe(true);
 
-      expect(StorageService.isUserDeleted('u-sales-2')).toBe(true);
-      expect(StorageService.isTeamMemberDeleted('tm-2-2')).toBe(true);
-      expect(StorageService.getUsers().some((u) => u.id === 'u-sales-2')).toBe(false);
+      expect(StorageService.isUserDeleted('u-qc-manager')).toBe(true);
+      expect(StorageService.isTeamMemberDeleted('tm-backup-1')).toBe(true);
+      expect(StorageService.getUsers().some((u) => u.id === 'u-qc-manager')).toBe(false);
     });
   });
 });

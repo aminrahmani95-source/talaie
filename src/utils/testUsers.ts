@@ -17,159 +17,16 @@ export const TEST_USERS: User[] = [
     avatar: '👔',
     active: true,
   },
-  {
-    id: 'u-coordinator',
-    name: 'سارا شایسته (مسئول هماهنگی)',
-    phone: '09121111115',
-    role: 'SCHEDULING_COORDINATOR',
-    avatar: '📅',
-    active: true,
-  },
-  {
-    id: 'u-measurement',
-    name: 'محمدرضا عابدی (مسئول متراژ)',
-    phone: '09124444441',
-    role: 'MEASUREMENT_LEAD',
-    avatar: '📐',
-    active: true,
-  },
-  {
-    id: 'u-warehouse',
-    name: 'داوود حسینی (مسئول انبار)',
-    phone: '09125555551',
-    role: 'WAREHOUSE',
-    avatar: '📦',
-    active: true,
-  },
-  // کارشناسان فروش و برنامه‌ریزی رزرو لت
-  {
-    id: 'u-sales-1',
-    name: 'سپهر رادمنش (کارشناس فروش ۱)',
-    phone: '09127777771',
-    role: 'SALES_REP',
-    avatar: '🎯',
-    active: true,
-  },
-  {
-    id: 'u-sales-2',
-    name: 'نیلوفر صبوری (کارشناس فروش ۲)',
-    phone: '09127777772',
-    role: 'SALES_REP',
-    avatar: '🌟',
-    active: true,
-  },
-  {
-    id: 'u-sales-3',
-    name: 'آرمان شایگان (کارشناس فروش ۳)',
-    phone: '09127777773',
-    role: 'SALES_REP',
-    avatar: '⚡',
-    active: true,
-  },
-  // کادر فنی اکیپ‌های نصب ۴ گانه
-  {
-    id: 'u-lead-1',
-    name: 'فرخ نقدعلیان (سرپرست اکیپ 1)',
-    phone: '09122222221',
-    role: 'LEAD_TECHNICIAN',
-    teamId: 'TEAM_1',
-    avatar: '⭐',
-    active: true,
-  },
-  {
-    id: 'u-tech-1',
-    name: 'سجاد رحمتی (تکنسین نصب)',
-    phone: '09123333331',
-    role: 'TECHNICIAN',
-    teamId: 'TEAM_1',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-tech-2',
-    name: 'امیر حسینی (تکنسین نصب)',
-    phone: '09123333332',
-    role: 'TECHNICIAN',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-lead-2',
-    name: 'اصغر فرهادی (سرپرست اکیپ 2)',
-    phone: '09122222222',
-    role: 'LEAD_TECHNICIAN',
-    teamId: 'TEAM_2',
-    avatar: '⭐',
-    active: true,
-  },
-  {
-    id: 'u-tech-3',
-    name: 'رضا قاسمی (تکنسین نصب)',
-    phone: '09123333333',
-    role: 'TECHNICIAN',
-    teamId: 'TEAM_2',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-tech-4',
-    name: 'سعید احمدی (تکنسین نصب)',
-    phone: '09123333334',
-    role: 'TECHNICIAN',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-lead-3',
-    name: 'محسن رضایی (سرپرست اکیپ 3)',
-    phone: '09122222223',
-    role: 'LEAD_TECHNICIAN',
-    teamId: 'TEAM_3',
-    avatar: '⭐',
-    active: true,
-  },
-  {
-    id: 'u-tech-5',
-    name: 'علی مرادی (تکنسین نصب)',
-    phone: '09123333335',
-    role: 'TECHNICIAN',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'u-lead-4',
-    name: 'حمید کاظمی (سرپرست اکیپ 4)',
-    phone: '09122222224',
-    role: 'LEAD_TECHNICIAN',
-    teamId: 'TEAM_4',
-    avatar: '⭐',
-    active: true,
-  },
-  {
-    id: 'u-tech-6',
-    name: 'پوریا کریمی (تکنسین نصب)',
-    phone: '09123333336',
-    role: 'TECHNICIAN',
-    avatar: '🔧',
-    active: true,
-  },
 ];
 
 export const DEFAULT_TEAMS: InstallationTeam[] = [
-  { id: 'TEAM_1', name: 'اکیپ نصب فرخ نقدعلیان', code: 'TEAM_1', supervisorId: 'u-lead-1', supervisorName: 'فرخ نقدعلیان', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
-  { id: 'TEAM_2', name: 'اکیپ نصب اصغر فرهادی', code: 'TEAM_2', supervisorId: 'u-lead-2', supervisorName: 'اصغر فرهادی', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
-  { id: 'TEAM_3', name: 'اکیپ نصب محسن رضایی', code: 'TEAM_3', supervisorId: 'u-lead-3', supervisorName: 'محسن رضایی', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
-  { id: 'TEAM_4', name: 'اکیپ نصب حمید کاظمی', code: 'TEAM_4', supervisorId: 'u-lead-4', supervisorName: 'حمید کاظمی', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+  { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+  { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+  { id: 'TEAM_3', name: 'اکیپ نصب ۳', code: 'TEAM_3', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+  { id: 'TEAM_4', name: 'اکیپ نصب ۴', code: 'TEAM_4', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
 ];
 
-export const DEFAULT_TEAM_MEMBERS: TeamMember[] = [
-  { id: 'tm-1-1', teamId: 'TEAM_1', userId: 'u-lead-1', roleInTeam: 'LEAD', joinedAt: '2026-01-01' },
-  { id: 'tm-1-2', teamId: 'TEAM_1', userId: 'u-tech-1', roleInTeam: 'TECHNICIAN', joinedAt: '2026-01-01' },
-  { id: 'tm-2-1', teamId: 'TEAM_2', userId: 'u-lead-2', roleInTeam: 'LEAD', joinedAt: '2026-01-01' },
-  { id: 'tm-2-2', teamId: 'TEAM_2', userId: 'u-tech-3', roleInTeam: 'TECHNICIAN', joinedAt: '2026-01-01' },
-  { id: 'tm-3-1', teamId: 'TEAM_3', userId: 'u-lead-3', roleInTeam: 'LEAD', joinedAt: '2026-01-01' },
-  { id: 'tm-4-1', teamId: 'TEAM_4', userId: 'u-lead-4', roleInTeam: 'LEAD', joinedAt: '2026-01-01' },
-];
+export const DEFAULT_TEAM_MEMBERS: TeamMember[] = [];
 
 export const ROLE_BADGES: Record<string, { title: string; color: string }> = {
   CEO: { title: 'مدیر عامل', color: 'bg-purple-500/10 text-purple-300 border-purple-500/30' },
@@ -179,8 +36,8 @@ export const ROLE_BADGES: Record<string, { title: string; color: string }> = {
   WAREHOUSE: { title: 'انبار', color: 'bg-orange-500/10 text-orange-300 border-orange-500/30' },
   LEAD_TECHNICIAN: { title: 'سرپرست', color: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30' },
   TECHNICIAN: { title: 'تکنسین', color: 'bg-zinc-500/10 text-zinc-300 border-zinc-500/30' },
+  SALES_REP: { title: 'کارشناس فروش', color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' },
 };
 
 export const INITIAL_TEST_USER_IDS = new Set(TEST_USERS.map((u) => u.id));
 export const isTestUserId = (id: string): boolean => INITIAL_TEST_USER_IDS.has(id);
-
