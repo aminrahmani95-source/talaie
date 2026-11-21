@@ -162,9 +162,19 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
     });
   }, [bookings, searchQuery, repFilter, systemFilter, currentUser.id]);
 
-  // کنترل سطح دسترسی ویرایش: کارشناس صرفاً مجاز به ویرایش پروژه‌های ثبت‌شده توسط خودش است
+  // کنترل سطح دسترسی ویرایش:
+  // ۱. مدیرعامل دسترسی مدیریتی کامل دارد (isCeo).
+  // ۲. هر کارشناس فروش (یا هر نقش دیگری) صرفاً و منحصراً پروژه‌های ثبت‌شده توسط خودش را می‌تواند ویرایش کند.
   const canEditBooking = (b: SalesProjectBooking) => {
-    return isCeo || currentUser.role === 'QC_MANAGER' || b.salesRepId === currentUser.id;
+    if (isCeo) return true;
+    const matchId = Boolean(b.salesRepId && b.salesRepId === currentUser.id);
+    const matchName = Boolean(
+      b.salesRepName &&
+      (b.salesRepName.trim() === currentUser.name.trim() ||
+        currentUser.name.includes(b.salesRepName) ||
+        b.salesRepName.includes(currentUser.name))
+    );
+    return matchId || matchName;
   };
 
   // عملیات ویرایش و حذف
@@ -603,9 +613,9 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                   <span>مدیریت و اصلاح اطلاعات پروژه‌های رزرو شده</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  امکان ویرایش سریع مشخصات، تغییر تعداد لت یا جابجایی تاریخ برای کارشناسان |{' '}
+                  هر کارشناس فقط مجاز به ویرایش پروژه‌های ثبت‌شده توسط خودش است |{' '}
                   <span className="text-amber-300 font-semibold">
-                    حذف رزرو و آزادسازی لت‌ها منحصراً در پنل مدیرعامل
+                    حذف رزرو و آزادسازی ظرفیت منحصراً در پنل مدیرعامل
                   </span>
                 </p>
               </div>
@@ -1194,139 +1204,9 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
             )}
           </div>
 
-          {/* پنل نمایش جزئیات روز انتخابی */}
-          {inspectedDay && (
-            <div className="bg-[#14171F] border border-[#C5A059] rounded-2xl p-5 shadow-xl space-y-4 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <Info className="w-5 h-5 text-[#C5A059]" />
-                  <span className="font-bold text-white text-base">
-                    وضعیت تفکیکی اکیپ‌ها برای {inspectedDay.dayName} {inspectedDay.jalaliDate}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400">ظرفیت کل باقی‌مانده:</span>
-                  <span className="text-sm font-black text-[#E5CA8F] bg-[#C5A059]/10 border border-[#C5A059]/30 px-3 py-1 rounded-lg">
-                    {inspectedDay.remainingLaths} لت از ۶۰ لت
-                  </span>
-                </div>
-              </div>
-
-              {/* ۴ اکیپ روز */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                {inspectedDay.teams.map((team) => {
-                  const free = team.maxLaths - team.bookedLaths;
-                  return (
-                    <div
-                      key={team.teamId}
-                      className="bg-[#0D1117] border border-slate-800 rounded-xl p-3.5 space-y-2"
-                    >
-                      <div className="flex justify-between items-center text-xs font-bold text-slate-200">
-                        <span>{team.teamName}</span>
-                        <span className={free > 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                          {free} لت آزاد
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[#C5A059] rounded-full"
-                          style={{
-                            width: `${(team.bookedLaths / team.maxLaths) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-[10px] text-slate-500">
-                        <span>رزرو شده: {team.bookedLaths} لت</span>
-                        <span>سقف: ۱۵ لت</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* پروژه‌های ثبت‌شده در این روز */}
-              <div className="pt-4 border-t border-slate-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-[#C5A059]" />
-                    <span>
-                      پروژه‌های رزرو شده در این روز (
-                      {bookings.filter((b) => b.requestedDate === inspectedDay.date).length} پروژه)
-                    </span>
-                  </span>
-                  <span className="text-[11px] text-slate-400">
-                    مجموع رزرو این روز: {inspectedDay.bookedLaths} لت از ۶۰ لت
-                  </span>
-                </div>
-
-                {bookings.filter((b) => b.requestedDate === inspectedDay.date).length === 0 ? (
-                  <div className="text-xs text-slate-500 py-3 text-center bg-[#0D1117] rounded-xl border border-slate-800/80">
-                    هیچ پروژه‌ای برای این روز ثبت نشده و تمام ظرفیت ۶۰ لت آزاد است.
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    {bookings
-                      .filter((b) => b.requestedDate === inspectedDay.date)
-                      .map((item) => (
-                        <div
-                          key={item.id}
-                          className="bg-[#0D1117] border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-700 transition"
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-white text-xs">{item.customerName}</span>
-                              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded">
-                                {item.lathsCount} لت
-                              </span>
-                              <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
-                                {item.isSmart ? '⚡ هوشمند' : '🎛️ دستی'}
-                              </span>
-                            </div>
-                            <div className="text-[11px] text-slate-400 flex items-center gap-3">
-                              <span className="flex items-center gap-1">
-                                <Phone className="w-3 h-3 text-[#C5A059]" />
-                                {item.customerPhone}
-                              </span>
-                              <span>ثبت توسط: {item.salesRepName}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleStartEdit(item)}
-                              className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                              <span>ویرایش</span>
-                            </button>
-                            {isCeo ? (
-                              <button
-                                type="button"
-                                onClick={() => handleStartDelete(item)}
-                                className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>حذف</span>
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-slate-500 flex items-center gap-1 px-1">
-                                <Lock className="w-3 h-3 text-slate-600" />
-                                <span>حذف: فقط مدیرعامل</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
       )}
 
-      
       {/* ================= مودال برنامه‌ریزی و ثبت پروژه برای روز انتخابی تقویم ================= */}
       {bookingDayModal && (() => {
         const modalDayCap = getDailyCapacity(bookingDayModal.date, bookings);
