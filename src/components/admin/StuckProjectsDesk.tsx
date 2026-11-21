@@ -9,6 +9,7 @@ import {
   Search,
   Calendar,
   Settings2,
+  Package,
 } from 'lucide-react';
 import { toPersianDigits, getUpcomingDays, formatJalaliDateTime } from '../../utils/jalali';
 import { PageHeader } from '../ui/PageHeader';
@@ -22,9 +23,16 @@ interface Props {
   currentUser?: User;
   onPatchProject: (id: string, patch: Partial<Project>) => void;
   onManageProject?: (project: Project) => void;
+  onReferToWarehouse?: (project: Project, note: string) => Promise<void> | void;
 }
 
-export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPatchProject, onManageProject }) => {
+export const StuckProjectsDesk: React.FC<Props> = ({
+  projects,
+  currentUser,
+  onPatchProject,
+  onManageProject,
+  onReferToWarehouse,
+}) => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [newScheduledDate, setNewScheduledDate] = useState('');
@@ -466,7 +474,21 @@ export const StuckProjectsDesk: React.FC<Props> = ({ projects, currentUser, onPa
                     </select>
                   </div>
 
-                  <div className="pt-2">
+                  <div className="pt-2 space-y-2">
+                    {onReferToWarehouse && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const note = resolutionNote.trim() || 'کسری فوری قطعه سر پروژه — نیازمند تامین و ارسال از انبار';
+                          onReferToWarehouse(selectedProject, note);
+                        }}
+                        className="w-full py-2.5 px-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
+                      >
+                        <Package className="w-4 h-4" />
+                        <span>ارجاع فوری به کارتابل انبار (تامین قطعه/پیک)</span>
+                      </button>
+                    )}
+
                     <Button
                       variant="primary"
                       size="md"

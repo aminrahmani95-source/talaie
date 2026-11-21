@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Project, User, ProjectStatus, MaterialRequest } from '../../types';
+import { Project, User, ProjectStatus, MaterialRequest, Ticket } from '../../types';
 import {
   Clock,
   MapPin,
@@ -47,6 +47,7 @@ interface Props {
   onOpenMaterialModal?: (project: Project) => void;
   onConfirmMaterialReceipt?: (request: MaterialRequest, dispatchId: string) => void;
   onResolveDefect?: (projectId: string, defectId: string, resolutionNotes: string, photos?: string[]) => void;
+  tickets?: Ticket[];
   isTransitioning?: boolean;
 }
 
@@ -67,8 +68,16 @@ export const ProjectCard: React.FC<Props> = ({
   onOpenMaterialModal,
   onConfirmMaterialReceipt,
   onResolveDefect,
+  tickets = [],
   isTransitioning = false,
 }) => {
+  const activeTicket = useMemo(() => {
+    return (tickets || []).find(
+      (t) =>
+        t.projectId === project.id &&
+        (t.assignedRole === 'WAREHOUSE' || Boolean(t.referralNote))
+    );
+  }, [tickets, project.id]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPreInstallModalOpen, setIsPreInstallModalOpen] = useState(false);
   const [resolvingDefectId, setResolvingDefectId] = useState<string | null>(null);
@@ -188,6 +197,29 @@ export const ProjectCard: React.FC<Props> = ({
           <span className="text-[10px] bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded font-bold shrink-0">
             همراه خودرو
           </span>
+        </div>
+      )}
+
+      {/* Active Warehouse & Courier Referral Section */}
+      {activeTicket && (
+        <div className="bg-[#191426] border border-purple-500/40 rounded-md p-3 text-xs space-y-1.5 text-purple-200">
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 font-bold text-purple-300">
+              <Package className="w-4 h-4 text-purple-400 shrink-0" />
+              <span>وضعیت ارجاع و تامین از انبار:</span>
+            </span>
+            <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 font-bold">
+              {activeTicket.resolutionNote?.includes('پیک') ? 'ارسال با پیک 🚚' : 'در دست اقدام انبار ⏳'}
+            </span>
+          </div>
+          <p className="text-[11px] text-purple-200/90 leading-relaxed">
+            {activeTicket.referralNote || activeTicket.description}
+          </p>
+          {activeTicket.resolutionNote && (
+            <p className="text-[11px] font-mono bg-purple-950/60 p-2 rounded border border-purple-500/30 text-[#E5CA8F]">
+              پاسخ انبار: {activeTicket.resolutionNote}
+            </p>
+          )}
         </div>
       )}
 

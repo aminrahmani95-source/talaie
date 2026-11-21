@@ -26,6 +26,8 @@ import {
   validateProjectPatchRoleGuards,
   validateTicketRoleGuards,
   validateEvaluationRoleGuards,
+  validateProjectDeleteRoleGuards,
+  validateCeoRegistryAccess,
   isValidStatusTransition,
   isHandoverGatePassed,
 } from './utils/roleGuards';
@@ -141,15 +143,19 @@ const ProjectManagerSheet = React.lazy(() =>
 );
 
 function mergeUsersList(localUsers: User[], cloudUsers: User[]): User[] {
+  const deletedIds = StorageService.getDeletedUserIds();
   const map = new Map<string, User>();
   for (const u of localUsers) {
-    if (u && u.id) {
+    if (u && u.id && !deletedIds.has(u.id)) {
       map.set(u.id, { ...u });
     }
   }
 
   for (const cu of cloudUsers) {
     if (!cu || !cu.id) continue;
+    // CRITICAL: Do NOT resurrect users from cloud if they were deleted locally
+    if (deletedIds.has(cu.id)) continue;
+
     const existingById = map.get(cu.id);
     const existingByPhone = Array.from(map.values()).find(
       (u) =>
@@ -160,19 +166,31 @@ function mergeUsersList(localUsers: User[], cloudUsers: User[]): User[] {
     const target = existingById || existingByPhone;
 
     if (target) {
-      map.set(target.id, {
-        ...cu,
-        ...target,
-        phone: cu.phone || target.phone,
-        avatar: cu.avatar || target.avatar,
-        active: cu.active !== undefined ? cu.active : target.active,
-      });
+      // Local edits are authoritative unless cloud record has a strictly newer updatedAt
+      const targetHasNewerEdit = target.updatedAt && (!cu.updatedAt || target.updatedAt >= cu.updatedAt);
+
+      if (targetHasNewerEdit) {
+        map.set(target.id, {
+          ...cu,
+          ...target,
+        });
+      } else {
+        map.set(target.id, {
+          ...cu,
+          ...target,
+          name: target.name || cu.name,
+          phone: target.phone || cu.phone,
+          role: target.role || cu.role,
+          avatar: target.avatar || cu.avatar,
+          active: target.active !== undefined ? target.active : (cu.active !== undefined ? cu.active : true),
+        });
+      }
     } else {
       map.set(cu.id, { ...cu });
     }
   }
 
-  return Array.from(map.values());
+  return Array.from(map.values()).filter((u) => !deletedIds.has(u.id));
 }
 
 export function getUserRoleLabel(role?: string): string {
@@ -219,25 +237,48 @@ export const App: React.FC = () => {
   });
 
   const [users, setUsers] = useState<User[]>(() => {
+    const isInitialized = StorageService.isInitialized();
     const stored = StorageService.getUsers();
-    if (stored.length === 0) return TEST_USERS;
-    // Seamless migration: ensure any new system test users (e.g. SALES_REP) are merged in
-    const existingIds = new Set(stored.map((u) => u.id));
-    const missing = TEST_USERS.filter((tu) => !existingIds.has(tu.id));
-    if (missing.length > 0) {
-      const merged = [...stored, ...missing];
-      StorageService.saveUsers(merged);
-      return merged;
+    const deletedIds = StorageService.getDeletedUserIds();
+
+    // Fresh first run
+    if (!isInitialized && stored.length === 0) {
+      StorageService.markInitialized(true);
+      const initialUsers = TEST_USERS.filter((tu) => !deletedIds.has(tu.id));
+      StorageService.saveUsers(initialUsers);
+      return initialUsers;
     }
-    return stored;
+
+    // Existing storage that predates the isInitialized flag
+    if (!isInitialized && stored.length > 0) {
+      StorageService.markInitialized(true);
+    }
+
+    // Never re-seed deleted test users!
+    return stored.filter((u) => !deletedIds.has(u.id));
   });
   const [teams, setTeams] = useState<InstallationTeam[]>(() => {
+    const isInitialized = StorageService.isInitialized();
     const stored = StorageService.getTeams();
-    return stored.length > 0 ? stored : DEFAULT_TEAMS;
+    if (!isInitialized && stored.length === 0) {
+      StorageService.saveTeams(DEFAULT_TEAMS);
+      return DEFAULT_TEAMS;
+    }
+    return stored.length > 0 ? stored : (isInitialized ? [] : DEFAULT_TEAMS);
   });
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
+    const isInitialized = StorageService.isInitialized();
     const stored = StorageService.getTeamMembers();
-    return stored.length > 0 ? stored : DEFAULT_TEAM_MEMBERS;
+    const deletedMemberIds = StorageService.getDeletedTeamMemberIds();
+    const deletedUserIds = StorageService.getDeletedUserIds();
+    if (!isInitialized && stored.length === 0) {
+      const initialMembers = DEFAULT_TEAM_MEMBERS.filter(
+        (m) => !deletedMemberIds.has(m.id) && !deletedUserIds.has(m.userId)
+      );
+      StorageService.saveTeamMembers(initialMembers);
+      return initialMembers;
+    }
+    return stored.filter((m) => !deletedMemberIds.has(m.id) && !deletedUserIds.has(m.userId));
   });
   const [projects, setProjects] = useState<Project[]>(() => StorageService.getProjects());
   const [tickets, setTickets] = useState<Ticket[]>(() => StorageService.getTickets());
@@ -428,7 +469,8 @@ export const App: React.FC = () => {
         if (cloudUsers && cloudUsers.length > 0) {
           setUsers((prevUsers) => {
             const current = prevUsers.length > 0 ? prevUsers : StorageService.getUsers();
-            const merged = mergeUsersList(current.length > 0 ? current : TEST_USERS, cloudUsers);
+            const fallback = StorageService.isInitialized() ? [] : TEST_USERS;
+            const merged = mergeUsersList(current.length > 0 ? current : fallback, cloudUsers);
             StorageService.saveUsers(merged);
             return merged;
           });
@@ -438,8 +480,13 @@ export const App: React.FC = () => {
           StorageService.saveTeams(cloudTeams);
         }
         if (cloudTeamMembers && cloudTeamMembers.length > 0) {
-          setTeamMembers(cloudTeamMembers);
-          StorageService.saveTeamMembers(cloudTeamMembers);
+          const deletedMemberIds = StorageService.getDeletedTeamMemberIds();
+          const deletedUserIds = StorageService.getDeletedUserIds();
+          const filteredMembers = cloudTeamMembers.filter(
+            (m) => !deletedMemberIds.has(m.id) && (!m.userId || !deletedUserIds.has(m.userId))
+          );
+          setTeamMembers(filteredMembers);
+          StorageService.saveTeamMembers(filteredMembers);
         }
         if (cloudScheduleChanges && cloudScheduleChanges.length >= 0) {
           setScheduleChangeRequests(cloudScheduleChanges);
@@ -712,19 +759,19 @@ export const App: React.FC = () => {
   }, [settings, currentUser]);
 
   useEffect(() => {
-    if (teams.length > 0) {
+    if (StorageService.isInitialized()) {
       StorageService.saveTeams(teams);
     }
   }, [teams]);
 
   useEffect(() => {
-    if (teamMembers.length > 0) {
+    if (StorageService.isInitialized()) {
       StorageService.saveTeamMembers(teamMembers);
     }
   }, [teamMembers]);
 
   useEffect(() => {
-    if (users.length > 0) {
+    if (StorageService.isInitialized()) {
       StorageService.saveUsers(users);
     }
   }, [users]);
@@ -762,8 +809,12 @@ export const App: React.FC = () => {
           return false;
         }
       } else if (mutation.type === 'DELETE_PROJECT') {
-        showToast('error', 'تنها مدیر ارشد QC مجاز به حذف مستقیم پروژه است.');
-        return false;
+        try {
+          validateProjectDeleteRoleGuards(currentUser);
+        } catch (err: any) {
+          showToast('error', err.message || 'دسترسی غیرمجاز: تنها مدیرعامل مجاز به حذف کامل پروژه است.');
+          return false;
+        }
       } else if (mutation.type === 'APPEND_PROJECT_EVALUATION') {
         try {
           validateEvaluationRoleGuards(currentUser);
@@ -861,6 +912,7 @@ export const App: React.FC = () => {
           projectsRef.current = next;
           setIsProjectFormOpen(false);
           setEditingProject(null);
+          setProjectFormInitialData(null);
         }
       );
       showToast('success', 'پروژه جدید با موفقیت ثبت شد.');
@@ -886,6 +938,7 @@ export const App: React.FC = () => {
           projectsRef.current = next;
           setIsProjectFormOpen(false);
           setEditingProject(null);
+          setProjectFormInitialData(null);
         }
       );
       showToast('success', 'تغییرات پروژه با موفقیت ذخیره شد.');
@@ -946,7 +999,12 @@ export const App: React.FC = () => {
     projectId: string,
     options: { reason: string; deleteTicketsAndFiles: boolean }
   ) => {
-    if (!currentUser || currentUser.role !== 'QC_MANAGER') return;
+    try {
+      validateProjectDeleteRoleGuards(currentUser);
+    } catch (err: any) {
+      showToast('error', err.message || 'دسترسی غیرمجاز: منحصراً مدیرعامل مجاز به حذف پروژه است.');
+      return;
+    }
     if (!isSyncedWithServer) {
       showToast('warning', 'اطلاعات در حال دریافت از سرور است، لطفاً شکیبا باشید.');
       return;
@@ -1430,7 +1488,117 @@ export const App: React.FC = () => {
         setStuckModalProject(null);
       }
     );
-    showToast('warning', 'پروژه به فهرست پروژه‌های متوقف‌شده ارجاع یافت و شناسنامه تحویل به اکیپ بعدی ثبت شد.');
+
+    // If stoppage is due to missing parts or shortage, auto-generate urgent ticket for warehouse
+    if (
+      handoverPayload?.requiredParts ||
+      incident.category === 'HARDWARE_SHORTAGE' ||
+      incident.category === 'FABRIC_SHORTAGE'
+    ) {
+      const partsText = handoverPayload?.requiredParts
+        ? `کسری قطعه سر پروژه: ${handoverPayload.requiredParts}`
+        : incident.description;
+      const nowIso = new Date().toISOString();
+      const autoTicket: Ticket = {
+        id: `ticket-stuck-${Date.now()}`,
+        projectId: projectId,
+        projectCode: current?.code || 'بدون کد',
+        projectTitle: current?.title || 'پروژه متوقف',
+        assignedRole: 'WAREHOUSE',
+        assignedDepartment: 'انبار و تدارکات',
+        assignedTeamName: 'انبار مرکزی و لجستیک',
+        assignedUserId: 'wh-davood',
+        assignedUserName: 'داوود حسینی (مسئول انبار)',
+        category: 'HARDWARE_FAULT',
+        description: partsText,
+        isBlocking: true,
+        blockingReason: `توقف کار در پروژه ${current?.code || current?.title} به علت کسری قطعات: ${partsText}`,
+        reportedByUserId: currentUser.id,
+        reportedByUserName: getDisplayName(currentUser.name),
+        status: 'OPEN',
+        createdAt: nowIso,
+        referralNote: `ارجاع خودکار سیستمی ناشی از اعلام توقف کار سر پروژه: ${partsText}`,
+        referredAt: nowIso,
+        referredByUserName: getDisplayName(currentUser.name),
+        actionHistory: [
+          {
+            id: `act-${Date.now()}`,
+            timestamp: nowIso,
+            action: 'REFERRED_TO_WAREHOUSE',
+            byUserId: currentUser.id,
+            byUserName: getDisplayName(currentUser.name),
+            note: `اعلام توقف کار و ارسال مستقیم به کارتابل انبار: ${partsText}`,
+          },
+        ],
+      };
+
+      await commit(
+        {
+          type: 'CREATE_TICKET',
+          orderingKey: `ticket:${autoTicket.id}`,
+          payload: autoTicket,
+        },
+        () => {
+          const nextTickets = [autoTicket, ...ticketsRef.current];
+          setTickets(nextTickets);
+          ticketsRef.current = nextTickets;
+        }
+      );
+    }
+
+    showToast('warning', 'پروژه به فهرست پروژه‌های متوقف‌شده ارجاع یافت و درخواست قطعه در کارتابل انبار ثبت گردید.');
+  };
+
+  // Refer stuck project to warehouse from StuckProjectsDesk
+  const handleReferProjectToWarehouse = async (project: Project, note: string) => {
+    if (!currentUser) return;
+    const nowIso = new Date().toISOString();
+    const urgentTicket: Ticket = {
+      id: `ticket-referral-${Date.now()}`,
+      projectId: project.id,
+      projectCode: project.code || 'بدون کد',
+      projectTitle: project.title,
+      assignedRole: 'WAREHOUSE',
+      assignedDepartment: 'انبار و تدارکات',
+      assignedTeamName: 'انبار مرکزی و لجستیک',
+      assignedUserId: 'wh-davood',
+      assignedUserName: 'داوود حسینی (مسئول انبار)',
+      category: 'HARDWARE_FAULT',
+      description: note,
+      isBlocking: true,
+      blockingReason: `ارجاع توقف پروژه ${project.code || project.title} به انبار: ${note}`,
+      reportedByUserId: currentUser.id,
+      reportedByUserName: getDisplayName(currentUser.name),
+      status: 'OPEN',
+      createdAt: nowIso,
+      referralNote: note,
+      referredAt: nowIso,
+      referredByUserName: getDisplayName(currentUser.name),
+      actionHistory: [
+        {
+          id: `act-${Date.now()}`,
+          timestamp: nowIso,
+          action: 'REFERRED_TO_WAREHOUSE',
+          byUserId: currentUser.id,
+          byUserName: getDisplayName(currentUser.name),
+          note: `دستور مدیر فنی به انبار: ${note}`,
+        },
+      ],
+    };
+
+    await commit(
+      {
+        type: 'CREATE_TICKET',
+        orderingKey: `ticket:${urgentTicket.id}`,
+        payload: urgentTicket,
+      },
+      () => {
+        const next = [urgentTicket, ...ticketsRef.current];
+        setTickets(next);
+        ticketsRef.current = next;
+      }
+    );
+    showToast('success', `تیکت اولویت فوری برای انباردار صادر و در کارتابل انبار قرار گرفت.`);
   };
 
   // Pre-Install Photos Confirmation and Start Execution Gate
@@ -1887,7 +2055,11 @@ export const App: React.FC = () => {
     const effectiveUser: User = {
       ...user,
       teamId: isFieldRole ? user.teamId : undefined,
+      updatedAt: new Date().toISOString(),
     };
+
+    // Remove from deletion blacklist if previously deleted
+    StorageService.removeDeletedUserId(effectiveUser.id);
 
     if (!isFieldRole) {
       // Office / Management roles cannot be attached to installation field teams
@@ -1967,10 +2139,36 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteUser = (userId: string) => {
+    // 1. Add to deletion blacklist (tombstones)
+    StorageService.addDeletedUserId(userId);
+
+    // 2. Remove user from state and storage
     setUsers((prev) => {
       const filtered = prev.filter((u) => u.id !== userId);
       StorageService.saveUsers(filtered);
       return filtered;
+    });
+
+    // 3. Clean up team membership
+    setTeamMembers((prev) => {
+      const removedMembers = prev.filter((m) => m.userId === userId);
+      for (const m of removedMembers) {
+        StorageService.addDeletedTeamMemberId(m.id);
+      }
+      const filtered = prev.filter((m) => m.userId !== userId);
+      StorageService.saveTeamMembers(filtered);
+      return filtered;
+    });
+
+    // 4. Clean up team supervisor role if applicable
+    setTeams((prevTeams) => {
+      const updatedTeams = prevTeams.map((t) =>
+        t.supervisorId === userId
+          ? { ...t, supervisorId: undefined, name: `اکیپ نصب (${t.code})` }
+          : t
+      );
+      StorageService.saveTeams(updatedTeams);
+      return updatedTeams;
     });
   };
 
@@ -1990,10 +2188,12 @@ export const App: React.FC = () => {
       const withoutExistingLead = roleInTeam === 'LEAD'
         ? filtered.filter((m) => !(m.teamId === teamId && m.roleInTeam === 'LEAD'))
         : filtered;
+      const newMemberId = `tm-${Date.now()}-${userId}`;
+      StorageService.removeDeletedTeamMemberId(newMemberId);
       const updated: TeamMember[] = [
         ...withoutExistingLead,
         {
-          id: `tm-${Date.now()}-${userId}`,
+          id: newMemberId,
           teamId,
           userId,
           roleInTeam,
@@ -2052,6 +2252,9 @@ export const App: React.FC = () => {
 
     setTeamMembers((prev) => {
       const removedMember = prev.find((m) => m.userId === userId);
+      if (removedMember) {
+        StorageService.addDeletedTeamMemberId(removedMember.id);
+      }
       const updated = prev.filter((m) => m.userId !== userId);
       StorageService.saveTeamMembers(updated);
 
@@ -2115,12 +2318,11 @@ export const App: React.FC = () => {
   };
 
   // Open Project Form Modal
+  const [projectFormInitialData, setProjectFormInitialData] = useState<Partial<Project> | null>(null);
+
   const handleOpenNewProject = (dateKey?: string, initialData?: Partial<Project>) => {
-    if (initialData) {
-      setEditingProject(initialData as Project);
-    } else {
-      setEditingProject(null);
-    }
+    setEditingProject(null);
+    setProjectFormInitialData(initialData || null);
     setPresetDateKey(dateKey);
     setIsProjectFormOpen(true);
   };
@@ -2390,12 +2592,21 @@ export const App: React.FC = () => {
             <div className="flex-1 min-w-0">
               <React.Suspense fallback={<DashboardSkeleton />}>
                 {activeTab === 'registry' && (
-                  <CeoMasterRegistry
-                    currentUser={currentUser}
-                    projects={projects}
-                    users={users}
-                    fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}
-                  />
+                  isCeo ? (
+                    <CeoMasterRegistry
+                      currentUser={currentUser}
+                      projects={projects}
+                      users={users}
+                      fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}
+                    />
+                  ) : (
+                    <div className="bg-[#151B23] border border-rose-500/30 rounded-2xl p-8 text-center text-rose-400 space-y-2">
+                      <p className="font-bold text-base">دسترسی غیرمجاز</p>
+                      <p className="text-xs text-[#9BA7B6]">
+                        مشاهده شناسنامه رسمی و داشبورد جامع مدیر کل منحصراً در اختیار مدیرعامل (CEO) می‌باشد.
+                      </p>
+                    </div>
+                  )
                 )}
 
                 {activeTab === 'control' && (
@@ -2460,6 +2671,7 @@ export const App: React.FC = () => {
                     currentUser={currentUser}
                     onPatchProject={handlePatchProject}
                     onManageProject={(p) => setManagedProjectId(p.id)}
+                    onReferToWarehouse={handleReferProjectToWarehouse}
                   />
                 )}
 
@@ -2554,6 +2766,7 @@ export const App: React.FC = () => {
               onOpenMaterialModal={(p) => setMaterialModalProject(p)}
               onConfirmMaterialReceipt={handleConfirmMaterialReceipt}
               onResolveDefect={handleResolveDefect}
+              tickets={tickets}
             />
           </div>
         )}
@@ -2564,6 +2777,7 @@ export const App: React.FC = () => {
         {isProjectFormOpen && (
           <ProjectFormModal
             project={editingProject}
+            initialData={projectFormInitialData}
             defaultDate={presetDateKey}
             users={users}
             teams={teams}
@@ -2572,6 +2786,7 @@ export const App: React.FC = () => {
             onClose={() => {
               setIsProjectFormOpen(false);
               setEditingProject(null);
+              setProjectFormInitialData(null);
               setPresetDateKey(undefined);
             }}
             onSave={handleSaveProject}
@@ -2657,7 +2872,7 @@ export const App: React.FC = () => {
               onClose={() => setManagedProjectId(null)}
               onEditInfo={(p) => handleOpenEditProject(p)}
               onApplyPatch={handleManagerPatch}
-              onDeleteProject={isQcManager ? handleManagerDelete : undefined}
+              onDeleteProject={isCeo ? handleManagerDelete : undefined}
               onOpenCertificate={(p) => setCertificateModalProject(p)}
               onViewProposal={(p) => setProposalModalProject(p)}
               fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}

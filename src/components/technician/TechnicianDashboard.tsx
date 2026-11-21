@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Project, User, SystemSettings, ProjectStatus, MaterialRequest } from '../../types';
+import { Project, User, SystemSettings, ProjectStatus, MaterialRequest, Ticket } from '../../types';
 import { ProjectCard } from './ProjectCard';
 import { Calendar, Users, WifiOff, AlertOctagon } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits, getTodayPersianString } from '../../utils/jalali';
@@ -24,6 +24,7 @@ interface Props {
   onOpenMaterialModal?: (project: Project) => void;
   onConfirmMaterialReceipt?: (request: MaterialRequest, dispatchId: string) => void;
   onResolveDefect?: (projectId: string, defectId: string, resolutionNotes: string, photos?: string[]) => void;
+  tickets?: Ticket[];
   inFlightTransitions?: Set<string>;
 }
 
@@ -45,6 +46,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
   onOpenMaterialModal,
   onConfirmMaterialReceipt,
   onResolveDefect,
+  tickets = [],
   inFlightTransitions,
 }) => {
   const isLead = currentUser.role === 'LEAD_TECHNICIAN';
@@ -230,6 +232,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 onOpenMaterialModal={onOpenMaterialModal}
                 onConfirmMaterialReceipt={onConfirmMaterialReceipt}
                 onResolveDefect={onResolveDefect}
+                tickets={tickets}
                 isTransitioning={inFlightTransitions?.has(proj.id)}
               />
             ))}
@@ -340,6 +343,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               onOpenMaterialModal={onOpenMaterialModal}
               onConfirmMaterialReceipt={onConfirmMaterialReceipt}
               onResolveDefect={onResolveDefect}
+              tickets={tickets}
               isTransitioning={inFlightTransitions?.has(proj.id)}
             />
           ))

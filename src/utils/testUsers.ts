@@ -180,3 +180,7 @@ export const ROLE_BADGES: Record<string, { title: string; color: string }> = {
   LEAD_TECHNICIAN: { title: 'سرپرست', color: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30' },
   TECHNICIAN: { title: 'تکنسین', color: 'bg-zinc-500/10 text-zinc-300 border-zinc-500/30' },
 };
+
+export const INITIAL_TEST_USER_IDS = new Set(TEST_USERS.map((u) => u.id));
+export const isTestUserId = (id: string): boolean => INITIAL_TEST_USER_IDS.has(id);
+

@@ -87,12 +87,6 @@ export const Sidebar: React.FC<Props> = ({
       ]
     : [
         {
-          id: 'registry' as const,
-          label: 'داشبورد مدیر کل (سوابق و شناسنامه)',
-          icon: FileCheck2,
-          badge: undefined,
-        },
-        {
           id: 'control' as const,
           label: 'میز کار عملیاتی',
           icon: Activity,

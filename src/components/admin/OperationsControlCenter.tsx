@@ -32,6 +32,10 @@ import {
   ChevronDown,
   ChevronUp,
   Percent,
+  Search,
+  FileCheck,
+  Lock,
+  Printer,
 } from 'lucide-react';
 import { toPersianDigits, getTodayPersianString, localDateKey } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
@@ -130,6 +134,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   }, [projects, registryStatusFilter, searchQuery]);
 
   const isQcManager = currentUser.role === 'QC_MANAGER';
+  const isCeo = currentUser.role === 'CEO';
   const todayKey = useMemo(() => localDateKey(new Date()), []);
   const todayPersian = useMemo(() => getTodayPersianString(), []);
 
@@ -293,7 +298,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               تقویم 4 روزه
             </button>
 
-            {onNavigateTab && !isQcManager && (
+            {onNavigateTab && isCeo && (
               <button
                 type="button"
                 onClick={() => onNavigateTab('registry')}
@@ -336,23 +341,25 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             )}
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('REGISTRY')}
-            aria-selected={activeSubTab === 'REGISTRY'}
-            role="tab"
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 min-h-[36px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] ${
-              activeSubTab === 'REGISTRY'
-                ? 'bg-[#C5A059] text-[#0D1117] shadow-xs'
-                : 'bg-[#151B23] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#212835]'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>شناسنامه و سوابق کل پروژه‌ها</span>
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#1C232D] text-[#9BA7B6] tabular-nums">
-              {toPersianDigits(projects.length)}
-            </span>
-          </button>
+          {isCeo && (
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('REGISTRY')}
+              aria-selected={activeSubTab === 'REGISTRY'}
+              role="tab"
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 min-h-[36px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] ${
+                activeSubTab === 'REGISTRY'
+                  ? 'bg-[#C5A059] text-[#0D1117] shadow-xs'
+                  : 'bg-[#151B23] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#212835]'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>شناسنامه و سوابق کل پروژه‌ها</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#1C232D] text-[#9BA7B6] tabular-nums">
+                {toPersianDigits(projects.length)}
+              </span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -922,8 +929,16 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           </section>
         </>
       ) : activeSubTab === 'REGISTRY' ? (
-        /* ================= نمای شناسنامه و سوابق جامع پروژه‌ها (MASTER REGISTRY) ================= */
-        <div className="space-y-5 animate-in fade-in duration-200">
+        !isCeo ? (
+          <div className="bg-[#151B23] border border-rose-500/30 rounded-2xl p-8 text-center text-rose-400 space-y-2">
+            <p className="font-bold">دسترسی غیرمجاز</p>
+            <p className="text-xs text-[#9BA7B6]">
+              مشاهده شناسنامه رسمی و سوابق پروژه‌ها منحصراً در اختیار مدیرعامل (CEO) می‌باشد.
+            </p>
+          </div>
+        ) : (
+          /* ================= نمای شناسنامه و سوابق جامع پروژه‌ها (MASTER REGISTRY) ================= */
+          <div className="space-y-5 animate-in fade-in duration-200">
           {/* باکس جستجو و فیلترها */}
           <div className="bg-[#151B23] rounded-2xl p-4 sm:p-5 border border-[#212835] space-y-4">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -1102,6 +1117,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             </div>
           )}
         </div>
+        )
       ) : (
         /* ================= نمای گزارش آماری و هوش عملیاتی (ANALYTICS) ================= */
         <div className="space-y-6 animate-in fade-in duration-200">

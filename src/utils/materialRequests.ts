@@ -218,11 +218,15 @@ export function canCreateMaterialRequest(user: User, project?: Project | null): 
 }
 
 /**
- * مجوز مدیریت تامین و ارسال متریال (تنها مدیر QC و هماهنگ‌کننده مجاز هستند)
+ * مجوز مدیریت تامین و ارسال متریال (مدیر QC، هماهنگ‌کننده و مسئول انبار مجاز هستند)
  */
 export function canManageMaterialProcurement(user: User): boolean {
   if (!user || !user.active) return false;
-  return user.role === 'QC_MANAGER' || user.role === 'SCHEDULING_COORDINATOR';
+  return (
+    user.role === 'QC_MANAGER' ||
+    user.role === 'SCHEDULING_COORDINATOR' ||
+    user.role === 'WAREHOUSE'
+  );
 }
 
 export interface ConfirmReceiptOptions {

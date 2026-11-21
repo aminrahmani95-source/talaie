@@ -39,6 +39,9 @@ const STORAGE_KEYS = {
   MATERIAL_REQUESTS: 'talaie_material_requests_v6',
   TEAMS: 'talaie_teams_v6',
   TEAM_MEMBERS: 'talaie_team_members_v6',
+  DELETED_USER_IDS: 'talaie_deleted_user_ids_v6',
+  DELETED_TEAM_MEMBER_IDS: 'talaie_deleted_team_member_ids_v6',
+  IS_INITIALIZED: 'talaie_storage_initialized_v6',
 };
 
 // Clean up legacy v5 mock caches on module evaluation
@@ -110,6 +113,113 @@ export const StorageService = {
     }
   },
 
+  // =========================================================================
+  // DELETION BLACKLIST (TOMBSTONES) & INITIALIZATION MARKERS
+  // =========================================================================
+
+  getDeletedUserIds(): Set<string> {
+    if (typeof window === 'undefined' && typeof localStorage === 'undefined') return new Set();
+    const raw = localStorage.getItem(STORAGE_KEYS.DELETED_USER_IDS);
+    if (!raw) return new Set();
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? new Set(parsed) : new Set();
+    } catch {
+      return new Set();
+    }
+  },
+
+  addDeletedUserId(userId: string): void {
+    if (!userId) return;
+    try {
+      const ids = this.getDeletedUserIds();
+      ids.add(userId);
+      localStorage.setItem(STORAGE_KEYS.DELETED_USER_IDS, JSON.stringify(Array.from(ids)));
+    } catch (e) {
+      console.warn('LocalStorage addDeletedUserId failed:', e);
+    }
+  },
+
+  removeDeletedUserId(userId: string): void {
+    if (!userId) return;
+    try {
+      const ids = this.getDeletedUserIds();
+      if (ids.has(userId)) {
+        ids.delete(userId);
+        localStorage.setItem(STORAGE_KEYS.DELETED_USER_IDS, JSON.stringify(Array.from(ids)));
+      }
+    } catch (e) {
+      console.warn('LocalStorage removeDeletedUserId failed:', e);
+    }
+  },
+
+  isUserDeleted(userId: string): boolean {
+    if (!userId) return false;
+    return this.getDeletedUserIds().has(userId);
+  },
+
+  clearDeletedUserIds(): void {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.DELETED_USER_IDS);
+    } catch {}
+  },
+
+  getDeletedTeamMemberIds(): Set<string> {
+    if (typeof window === 'undefined' && typeof localStorage === 'undefined') return new Set();
+    const raw = localStorage.getItem(STORAGE_KEYS.DELETED_TEAM_MEMBER_IDS);
+    if (!raw) return new Set();
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? new Set(parsed) : new Set();
+    } catch {
+      return new Set();
+    }
+  },
+
+  addDeletedTeamMemberId(memberId: string): void {
+    if (!memberId) return;
+    try {
+      const ids = this.getDeletedTeamMemberIds();
+      ids.add(memberId);
+      localStorage.setItem(STORAGE_KEYS.DELETED_TEAM_MEMBER_IDS, JSON.stringify(Array.from(ids)));
+    } catch (e) {
+      console.warn('LocalStorage addDeletedTeamMemberId failed:', e);
+    }
+  },
+
+  removeDeletedTeamMemberId(memberId: string): void {
+    if (!memberId) return;
+    try {
+      const ids = this.getDeletedTeamMemberIds();
+      if (ids.has(memberId)) {
+        ids.delete(memberId);
+        localStorage.setItem(STORAGE_KEYS.DELETED_TEAM_MEMBER_IDS, JSON.stringify(Array.from(ids)));
+      }
+    } catch (e) {
+      console.warn('LocalStorage removeDeletedTeamMemberId failed:', e);
+    }
+  },
+
+  isTeamMemberDeleted(memberId: string): boolean {
+    if (!memberId) return false;
+    return this.getDeletedTeamMemberIds().has(memberId);
+  },
+
+  isInitialized(): boolean {
+    if (typeof window === 'undefined' && typeof localStorage === 'undefined') return false;
+    return localStorage.getItem(STORAGE_KEYS.IS_INITIALIZED) === 'true';
+  },
+
+  markInitialized(initialized: boolean = true): void {
+    try {
+      if (initialized) {
+        localStorage.setItem(STORAGE_KEYS.IS_INITIALIZED, 'true');
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.IS_INITIALIZED);
+      }
+    } catch {}
+  },
+
   getUsers(): User[] {
     const raw = localStorage.getItem(STORAGE_KEYS.USERS);
     if (!raw) {
@@ -118,7 +228,8 @@ export const StorageService = {
     try {
       const parsed: User[] = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
-      return parsed.filter((u) => u && u.id && !isMockUserId(u.id));
+      const deletedIds = this.getDeletedUserIds();
+      return parsed.filter((u) => u && u.id && !isMockUserId(u.id) && !deletedIds.has(u.id));
     } catch {
       return [];
     }
@@ -126,7 +237,8 @@ export const StorageService = {
 
   saveUsers(users: User[]) {
     try {
-      const filtered = users.filter((u) => u && u.id && !isMockUserId(u.id));
+      const deletedIds = this.getDeletedUserIds();
+      const filtered = users.filter((u) => u && u.id && !isMockUserId(u.id) && !deletedIds.has(u.id));
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(filtered));
     } catch (e) {
       console.warn('LocalStorage saveUsers failed:', e);
@@ -207,7 +319,12 @@ export const StorageService = {
     if (!raw) return [];
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      const deletedMemberIds = this.getDeletedTeamMemberIds();
+      const deletedUserIds = this.getDeletedUserIds();
+      return parsed.filter(
+        (m) => m && m.id && !deletedMemberIds.has(m.id) && (!m.userId || !deletedUserIds.has(m.userId))
+      );
     } catch {
       return [];
     }
@@ -215,7 +332,12 @@ export const StorageService = {
 
   saveTeamMembers(teamMembers: TeamMember[]) {
     try {
-      localStorage.setItem(STORAGE_KEYS.TEAM_MEMBERS, JSON.stringify(teamMembers));
+      const deletedMemberIds = this.getDeletedTeamMemberIds();
+      const deletedUserIds = this.getDeletedUserIds();
+      const filtered = teamMembers.filter(
+        (m) => m && m.id && !deletedMemberIds.has(m.id) && (!m.userId || !deletedUserIds.has(m.userId))
+      );
+      localStorage.setItem(STORAGE_KEYS.TEAM_MEMBERS, JSON.stringify(filtered));
     } catch (e) {
       console.warn('LocalStorage saveTeamMembers failed:', e);
     }
@@ -268,6 +390,8 @@ export const StorageService = {
       tickets: this.getTickets(),
       materialRequests: this.getMaterialRequests(),
       settings: this.getSettings(),
+      deletedUserIds: Array.from(this.getDeletedUserIds()),
+      deletedTeamMemberIds: Array.from(this.getDeletedTeamMemberIds()),
     };
     return JSON.stringify(backup, null, 2);
   },
@@ -278,6 +402,12 @@ export const StorageService = {
       const data = JSON.parse(jsonString);
       if (!data || typeof data !== 'object') {
         return false;
+      }
+      if (Array.isArray(data.deletedUserIds)) {
+        for (const id of data.deletedUserIds) this.addDeletedUserId(id);
+      }
+      if (Array.isArray(data.deletedTeamMemberIds)) {
+        for (const id of data.deletedTeamMemberIds) this.addDeletedTeamMemberId(id);
       }
       if (Array.isArray(data.projects)) this.saveProjects(data.projects);
       if (Array.isArray(data.users)) this.saveUsers(data.users);
@@ -311,6 +441,11 @@ export const StorageService = {
     localStorage.removeItem(STORAGE_KEYS.SETTINGS);
     localStorage.removeItem(STORAGE_KEYS.MATERIAL_REQUESTS);
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    localStorage.removeItem(STORAGE_KEYS.TEAMS);
+    localStorage.removeItem(STORAGE_KEYS.TEAM_MEMBERS);
+    localStorage.removeItem(STORAGE_KEYS.DELETED_USER_IDS);
+    localStorage.removeItem(STORAGE_KEYS.DELETED_TEAM_MEMBER_IDS);
+    localStorage.removeItem(STORAGE_KEYS.IS_INITIALIZED);
     localStorage.removeItem('talaie_projects_v5');
     localStorage.removeItem('talaie_users_v5');
     localStorage.removeItem('talaie_tickets_v5');

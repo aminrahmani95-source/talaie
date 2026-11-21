@@ -689,3 +689,20 @@ export function validateTicketRoleGuards(
     );
   }
 }
+
+/**
+ * گارد امنیتی حذف پروژه: منحصراً در اختیار مدیرعامل (CEO)
+ */
+export function validateProjectDeleteRoleGuards(user: User): void {
+  if (!user || user.role !== 'CEO' || !user.active) {
+    throw new PermanentError('دسترسی غیرمجاز: منحصراً مدیرعامل (CEO) مجاز به حذف کامل پروژه است.');
+  }
+}
+
+/**
+ * گارد امنیتی مشاهده شناسنامه رسمی و داشبورد جامع مدیر کل: منحصراً در اختیار مدیرعامل (CEO)
+ */
+export function validateCeoRegistryAccess(user: User): boolean {
+  return Boolean(user && user.role === 'CEO' && user.active);
+}
+

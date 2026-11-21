@@ -89,12 +89,6 @@ export const BottomNav: React.FC<Props> = ({
       ]
     : [
         {
-          id: 'registry' as const,
-          label: 'مدیر کل',
-          icon: FileCheck2,
-          badge: undefined,
-        },
-        {
           id: 'control' as const,
           label: 'میز کار',
           icon: Activity,

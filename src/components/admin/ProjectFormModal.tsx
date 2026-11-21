@@ -35,6 +35,7 @@ export type ProjectFormSaveData =
 
 interface Props {
   project?: Project | null;
+  initialData?: Partial<Project> | null;
   defaultDate?: string;
   users: User[];
   teams?: InstallationTeam[];
@@ -46,6 +47,7 @@ interface Props {
 
 export const ProjectFormModal: React.FC<Props> = ({
   project,
+  initialData,
   defaultDate,
   users,
   teams,
@@ -54,10 +56,11 @@ export const ProjectFormModal: React.FC<Props> = ({
   onClose,
   onSave,
 }) => {
-  const isEditing = !!project;
+  const isEditing = Boolean(project);
+  const effective = project || initialData;
   const days: DayInfo[] = useMemo(() => {
     const list: DayInfo[] = getUpcomingDays(365);
-    const customDates = [project?.scheduledDate, project?.endDate, defaultDate].filter(Boolean) as string[];
+    const customDates = [effective?.scheduledDate, effective?.endDate, defaultDate].filter(Boolean) as string[];
     for (const cd of customDates) {
       if (!list.some((d) => d.dateKey === cd)) {
         const info = getDayInfoFromDateKey(cd);
@@ -67,7 +70,7 @@ export const ProjectFormModal: React.FC<Props> = ({
       }
     }
     return list.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
-  }, [project?.scheduledDate, project?.endDate, defaultDate]);
+  }, [effective?.scheduledDate, effective?.endDate, defaultDate]);
 
   const defaultTeams: InstallationTeam[] = [
     { id: 'TEAM_1', name: 'اکیپ نصب 1', code: 'TEAM_1', createdAt: '', updatedAt: '' },
@@ -79,92 +82,92 @@ export const ProjectFormModal: React.FC<Props> = ({
 
   // Gating & Technical Handover states (solely based on Warehouse Confirmation)
   const [whConfirmed, setWhConfirmed] = useState<boolean>(
-    Boolean(project?.technicalHandover?.warehouseConfirmation?.confirmed)
+    Boolean(effective?.technicalHandover?.warehouseConfirmation?.confirmed)
   );
   const [whConfirmedBy, setWhConfirmedBy] = useState<string>(
-    project?.technicalHandover?.warehouseConfirmation?.confirmedBy || ''
+    effective?.technicalHandover?.warehouseConfirmation?.confirmedBy || ''
   );
   const [whNotes, setWhNotes] = useState<string>(
-    project?.technicalHandover?.warehouseConfirmation?.notes || ''
+    effective?.technicalHandover?.warehouseConfirmation?.notes || ''
   );
 
-  const isHistorical = Boolean(project?.technicalHandover?.isHistoricalMigration);
+  const isHistorical = Boolean(effective?.technicalHandover?.isHistoricalMigration);
   const isHandoverComplete =
     whConfirmed ||
     isHistorical ||
-    Boolean(project && project.status !== 'MEASUREMENT_PENDING' && !project.technicalHandover);
+    Boolean(effective && effective.status !== 'MEASUREMENT_PENDING' && !effective.technicalHandover);
 
   // Teams & Workload states
   const [assignedTeamId, setAssignedTeamId] = useState<string>(
-    project?.assignedTeamId || ''
+    effective?.assignedTeamId || ''
   );
   const [assignedTeamName, setAssignedTeamName] = useState<string>(
-    project?.assignedTeamName || ''
+    effective?.assignedTeamName || ''
   );
   const [estimatedWorkload, setEstimatedWorkload] = useState<string>(
-    project?.estimatedWorkload ? String(project.estimatedWorkload) : ''
+    effective?.estimatedWorkload ? String(effective.estimatedWorkload) : ''
   );
   const [requiredDurationHours, setRequiredDurationHours] = useState<string>(
-    project?.requiredDurationHours ? String(project.requiredDurationHours) : ''
+    effective?.requiredDurationHours ? String(effective.requiredDurationHours) : ''
   );
   const [secondMeasurementDoc, setSecondMeasurementDoc] = useState<string>(
-    project?.secondMeasurementDoc || ''
+    effective?.secondMeasurementDoc || ''
   );
 
   // Form states
-  const [projectId] = useState(() => project?.id || `p-${Date.now()}`);
-  const [projectCode, setProjectCode] = useState(project?.code || '');
-  const [title, setTitle] = useState(project?.title || '');
-  const [customerName, setCustomerName] = useState(project?.customerName || '');
-  const [customerPhone, setCustomerPhone] = useState(project?.customerPhone || '');
-  const [address, setAddress] = useState(project?.address || '');
-  const [locationUrl, setLocationUrl] = useState(project?.locationUrl || '');
+  const [projectId] = useState(() => effective?.id || `p-${Date.now()}`);
+  const [projectCode, setProjectCode] = useState(effective?.code || '');
+  const [title, setTitle] = useState(effective?.title || '');
+  const [customerName, setCustomerName] = useState(effective?.customerName || '');
+  const [customerPhone, setCustomerPhone] = useState(effective?.customerPhone || '');
+  const [address, setAddress] = useState(effective?.address || '');
+  const [locationUrl, setLocationUrl] = useState(effective?.locationUrl || '');
 
-  const [shadePanels, setShadePanels] = useState<number>(project?.shadePanels ?? 0);
-  const [curtainPanels, setCurtainPanels] = useState<number>(project?.curtainPanels ?? 0);
-  const [mechanismType, setMechanismType] = useState(project?.mechanismType || '');
+  const [shadePanels, setShadePanels] = useState<number>(effective?.shadePanels ?? 0);
+  const [curtainPanels, setCurtainPanels] = useState<number>(effective?.curtainPanels ?? 0);
+  const [mechanismType, setMechanismType] = useState(effective?.mechanismType || '');
   const [approximateArea, setApproximateArea] = useState<string>(
-    project?.approximateArea ? String(project.approximateArea) : ''
+    effective?.approximateArea ? String(effective.approximateArea) : ''
   );
-  const [specialNotes, setSpecialNotes] = useState(project?.specialNotes || '');
+  const [specialNotes, setSpecialNotes] = useState(effective?.specialNotes || '');
 
   // Scheduled date & time
   const [scheduledDate, setScheduledDate] = useState(
-    project?.scheduledDate || (isHandoverComplete ? defaultDate || days[0]?.dateKey || '' : '')
+    effective?.scheduledDate || (isHandoverComplete ? defaultDate || days[0]?.dateKey || '' : '')
   );
   const [endDate, setEndDate] = useState(
-    project?.endDate || project?.scheduledDate || (isHandoverComplete ? defaultDate || days[0]?.dateKey || '' : '')
+    effective?.endDate || effective?.scheduledDate || (isHandoverComplete ? defaultDate || days[0]?.dateKey || '' : '')
   );
-  const [scheduledTime, setScheduledTime] = useState(project?.scheduledTime || '09:30');
+  const [scheduledTime, setScheduledTime] = useState(effective?.scheduledTime || '09:30');
 
   // Technician assignment
   const [assignedTechnicianIds, setAssignedTechnicianIds] = useState<string[]>(
-    project?.assignedTechnicianIds || []
+    effective?.assignedTechnicianIds || []
   );
   const [leadTechnicianId, setLeadTechnicianId] = useState<string>(
-    project?.leadTechnicianId || ''
+    effective?.leadTechnicianId || ''
   );
   const [techSearchQuery, setTechSearchQuery] = useState('');
 
   // Tools checklist
-  const [isFullTools, setIsFullTools] = useState<boolean>(project?.isFullTools ?? true);
+  const [isFullTools, setIsFullTools] = useState<boolean>(effective?.isFullTools ?? true);
   const [toolsRequired, setToolsRequired] = useState<string[]>(
-    project?.toolsRequired || settings.defaultTools
+    effective?.toolsRequired || settings.defaultTools
   );
-  const [customToolsNotes, setCustomToolsNotes] = useState(project?.customToolsNotes || '');
-  const [specialTools, setSpecialTools] = useState<string[]>(project?.specialTools || []);
-  const [isForceMajeure, setIsForceMajeure] = useState<boolean>(project?.isForceMajeure ?? false);
-  const [salesRepName, setSalesRepName] = useState<string>(project?.salesRepName || '');
+  const [customToolsNotes, setCustomToolsNotes] = useState(effective?.customToolsNotes || '');
+  const [specialTools, setSpecialTools] = useState<string[]>(effective?.specialTools || []);
+  const [isForceMajeure, setIsForceMajeure] = useState<boolean>(effective?.isForceMajeure ?? false);
+  const [salesRepName, setSalesRepName] = useState<string>(effective?.salesRepName || '');
 
   // Proposal images
   const [proposalImages, setProposalImages] = useState<ProposalImage[]>(
-    project?.proposalImages || []
+    effective?.proposalImages || []
   );
 
   // Status & QC
   const status: Project['status'] =
-    project?.status || (isHandoverComplete ? 'SCHEDULED' : 'MEASUREMENT_PENDING');
-  const qcStatus: Project['qcStatus'] = project?.qcStatus || 'NOT_STARTED';
+    effective?.status || (isHandoverComplete ? 'SCHEDULED' : 'MEASUREMENT_PENDING');
+  const qcStatus: Project['qcStatus'] = effective?.qcStatus || 'NOT_STARTED';
 
   // Form error and submission lock
   const [formError, setFormError] = useState('');

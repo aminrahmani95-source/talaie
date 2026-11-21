@@ -4,8 +4,10 @@ import {
   BookingOption,
   SalesRepProfile,
   TeamDayAllocation,
+  User,
 } from '../types';
 import { getUpcomingDays, formatToPersianDateString } from './jalali';
+import { PermanentError } from './offlineQueue';
 
 export const MAX_LATHS_PER_TEAM = 15;
 export const TOTAL_INSTALLATION_TEAMS = 4;
@@ -465,16 +467,50 @@ export function createSalesBooking(
 }
 
 /**
+ * بررسی دسترسی ویرایش رزرو فروش:
+ * ۱. مدیرعامل دسترسی کامل دارد.
+ * ۲. کارشناس فروش فقط مجاز به ویرایش رزروهای ثبت‌شده توسط خودش می‌باشد.
+ */
+export function canEditSalesBooking(user: User, booking: SalesProjectBooking): boolean {
+  if (!user || !user.active) return false;
+  if (user.role === 'CEO') return true;
+  if (user.role === 'SALES_REP' || user.role === 'SALES') {
+    const matchId = Boolean(booking.salesRepId && booking.salesRepId === user.id);
+    const matchName = Boolean(
+      booking.salesRepName &&
+      (booking.salesRepName.trim() === user.name.trim() ||
+        user.name.includes(booking.salesRepName) ||
+        booking.salesRepName.includes(user.name))
+    );
+    return matchId || matchName;
+  }
+  return false;
+}
+
+/**
+ * بررسی دسترسی حذف رزرو فروش:
+ * منحصراً در اختیار مدیرعامل (CEO) می‌باشد.
+ */
+export function canDeleteSalesBooking(user: User): boolean {
+  return Boolean(user && user.role === 'CEO' && user.active);
+}
+
+/**
  * به‌روزرسانی اطلاعات پروژه یا تغییر تاریخ/تعداد لت‌های رزرو
  */
 export function updateSalesBooking(
   bookingId: string,
-  updates: Partial<Omit<SalesProjectBooking, 'id' | 'createdAt'>>
+  updates: Partial<Omit<SalesProjectBooking, 'id' | 'createdAt'>>,
+  user?: User
 ): SalesProjectBooking {
   const bookings = getStoredBookings();
   const index = bookings.findIndex((b) => b.id === bookingId);
   if (index === -1) {
     throw new Error('رزرو مورد نظر یافت نشد.');
+  }
+
+  if (user && !canEditSalesBooking(user, bookings[index])) {
+    throw new PermanentError('دسترسی غیرمجاز: کارشناس فروش فقط مجاز به ویرایش پروژه‌های ثبت‌شده توسط خود می‌باشد.');
   }
 
   const updatedBooking: SalesProjectBooking = {
@@ -515,7 +551,11 @@ export function linkBookingToInstallationProject(
 /**
  * حذف رزرو پروژه و آزادسازی ظرفیت لت‌ها (انحصاراً در پنل مدیرعامل)
  */
-export function deleteSalesBooking(bookingId: string): boolean {
+export function deleteSalesBooking(bookingId: string, user?: User): boolean {
+  if (user && !canDeleteSalesBooking(user)) {
+    throw new PermanentError('دسترسی غیرمجاز: حذف پروژه منحصراً در اختیار مدیرعامل می‌باشد.');
+  }
+
   const bookings = getStoredBookings();
   const filtered = bookings.filter((b) => b.id !== bookingId);
   if (filtered.length === bookings.length) {

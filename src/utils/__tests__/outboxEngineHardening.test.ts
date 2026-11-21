@@ -160,8 +160,8 @@ describe('M1-B1 Outbox Engine Hardening Tests', () => {
       },
     });
 
-    // Give microtasks time to start processing and acquire lease
-    for (let i = 0; i < 25 && !isKeyInFlight('project:p-lease-test'); i++) {
+    // Give microtasks time to start processing, acquire lease, and enter dispatch
+    for (let i = 0; i < 50 && (!isKeyInFlight('project:p-lease-test') || dispatchCount === 0); i++) {
       await new Promise((r) => setTimeout(r, 10));
     }
 

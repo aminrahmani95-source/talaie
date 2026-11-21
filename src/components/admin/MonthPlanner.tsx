@@ -969,7 +969,7 @@ export const MonthPlanner: React.FC<Props> = ({
           onClose={() => setAssigningBooking(null)}
           onConfirm={(scheduledDate, teamId, teamName) => {
             const projectCode = `P-${Date.now().toString().slice(-4)}`;
-            const projectId = `p-from-sale-${Date.now()}`;
+            const projectId = `p-${Date.now()}`;
             
             // انتساب دیتای فروش به متدهای ثبت پروژه
             onNewProject(scheduledDate, {

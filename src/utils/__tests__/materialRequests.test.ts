@@ -165,9 +165,17 @@ describe('Material Requests Domain Logic (Phase P2.3-R1 Hardened)', () => {
     });
 
     describe('canManageMaterialProcurement', () => {
-      it('permits only QC_MANAGER and SCHEDULING_COORDINATOR', () => {
+      it('permits QC_MANAGER, SCHEDULING_COORDINATOR and WAREHOUSE', () => {
         expect(canManageMaterialProcurement(mockManagerUser)).toBe(true);
         expect(canManageMaterialProcurement(mockCoordinatorUser)).toBe(true);
+        const warehouseUser: User = {
+          id: 'u-wh-1',
+          name: 'انباردار ۱',
+          phone: '09120000008',
+          role: 'WAREHOUSE',
+          active: true,
+        };
+        expect(canManageMaterialProcurement(warehouseUser)).toBe(true);
         expect(canManageMaterialProcurement(mockLeadUser)).toBe(false);
         expect(canManageMaterialProcurement(mockTechUser)).toBe(false);
         expect(canManageMaterialProcurement(mockUnassignedTech)).toBe(false);

@@ -16,6 +16,7 @@ export interface User {
   avatar?: string;
   active: boolean;
   teamId?: string; // شناسه اکیپ منتسب (در صورت عضویت در یکی از 4 اکیپ)
+  updatedAt?: string;
 }
 
 export type QCInspectionResult = 'PASS' | 'FAIL' | 'CONDITIONAL';
