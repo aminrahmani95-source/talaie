@@ -206,46 +206,7 @@ export const LoginModal: React.FC<Props> = ({
             </button>
           </form>
 
-          {/* Quick Demo / Test User Switcher */}
-          {users.length > 0 && (
-            <div className="pt-3 border-t border-[#212835] space-y-2">
-              <div className="flex items-center justify-between text-[11px] text-[#9BA7B6] font-semibold">
-                <span>ورود سریع با حساب‌های سازمانی:</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
-                {users.map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => {
-                      onSelectUser(u);
-                      if (onClose) onClose();
-                    }}
-                    className="p-1.5 rounded bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] hover:border-[#C5A059]/60 text-right text-[11px] transition text-[#F0F4F8] flex items-center justify-between cursor-pointer"
-                  >
-                    <span className="truncate">{u.name}</span>
-                    <span className="text-[9px] text-[#C5A059] shrink-0 font-mono mr-1">
-                      {u.role === 'CEO'
-                        ? 'مدیرعامل'
-                        : u.role === 'QC_MANAGER'
-                        ? 'مدیر QC'
-                        : u.role === 'SALES_REP'
-                        ? 'فروش'
-                        : u.role === 'SCHEDULING_COORDINATOR'
-                        ? 'هماهنگی'
-                        : u.role === 'WAREHOUSE'
-                        ? 'انبار'
-                        : u.role === 'MEASUREMENT_LEAD'
-                        ? 'متراژ'
-                        : 'فنی'}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="pt-2 border-t border-[#212835] text-center">
+          <div className="pt-3 border-t border-[#212835] text-center">
             <p className="text-[11px] text-[#637184] leading-relaxed">
               مرکز پشتیبانی فنی و مدیریت کنترل کیفیت گالری طلایی | طراحی، پرده و شید هوشمند
             </p>
