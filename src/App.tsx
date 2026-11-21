@@ -220,7 +220,16 @@ export const App: React.FC = () => {
 
   const [users, setUsers] = useState<User[]>(() => {
     const stored = StorageService.getUsers();
-    return stored.length > 0 ? stored : TEST_USERS;
+    if (stored.length === 0) return TEST_USERS;
+    // Seamless migration: ensure any new system test users (e.g. SALES_REP) are merged in
+    const existingIds = new Set(stored.map((u) => u.id));
+    const missing = TEST_USERS.filter((tu) => !existingIds.has(tu.id));
+    if (missing.length > 0) {
+      const merged = [...stored, ...missing];
+      StorageService.saveUsers(merged);
+      return merged;
+    }
+    return stored;
   });
   const [teams, setTeams] = useState<InstallationTeam[]>(() => {
     const stored = StorageService.getTeams();

@@ -212,8 +212,8 @@ export const LoginModal: React.FC<Props> = ({
               <div className="flex items-center justify-between text-[11px] text-[#9BA7B6] font-semibold">
                 <span>ورود سریع با حساب‌های سازمانی:</span>
               </div>
-              <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-1">
-                {users.slice(0, 8).map((u) => (
+              <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                {users.map((u) => (
                   <button
                     key={u.id}
                     type="button"
