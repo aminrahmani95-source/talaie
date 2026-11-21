@@ -2962,7 +2962,7 @@ create table if not exists public.sales_bookings (
   customer_name text not null,
   customer_phone text not null,
   address text not null,
-  laths_count integer not null check (laths_count > 0 and laths_count <= 60),
+  laths_count integer not null check (laths_count > 0),
   is_smart boolean not null default true,
   notes text default '',
   requested_date text not null, -- YYYY-MM-DD

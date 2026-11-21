@@ -851,7 +851,7 @@ export interface SalesProjectBooking {
   customerName: string;
   customerPhone: string;
   address: string;
-  lathsCount: number; // تعداد لت‌ها
+  lathsCount: number; // تعداد لت‌ها (بدون سقف عددی پروژه)
   isSmart: boolean; // هوشمند/موتوردار یا مکانیکی/دستی
   notes: string;
   requestedDate: string; // YYYY-MM-DD
@@ -859,6 +859,11 @@ export interface SalesProjectBooking {
   allocationMode: SalesAllocationMode;
   allocatedTeams: string[]; // شناسه اکیپ‌ها مثلاً ['TEAM_1', 'TEAM_2']
   allocatedDaysCount: number; // تعداد روزهای تخصیص
+  daysDetails?: {
+    date: string;
+    jalaliDate: string;
+    teams: { teamId: string; teamName: string; laths: number }[];
+  }[];
   salesRepId: string;
   salesRepName: string;
   createdAt: string;

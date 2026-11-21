@@ -247,4 +247,29 @@ describe('Sales & 60-Lath Capacity Engine Tests', () => {
     expect(capAfter.bookedLaths).toBe(0);
     expect(capAfter.remainingLaths).toBe(60);
   });
+
+  it('11. enables consecutive option for 50 laths on empty days without bug', () => {
+    // 50 laths on an arbitrary future date
+    const options = calculateBookingOptions(50, '2026-12-18');
+    expect(options.consecutiveOption.isAvailable).toBe(true);
+    expect(options.consecutiveOption.requiredDays).toBe(4); // 50 / 15 = 4 days
+    expect(options.consecutiveOption.daysDetails).toHaveLength(4);
+
+    // Spread option in 1 day is also available (50 <= 60 across 4 teams)
+    expect(options.spreadOption.isAvailable).toBe(true);
+    expect(options.spreadOption.requiredDays).toBe(1);
+  });
+
+  it('12. allows large projects (>60 laths, e.g. 115 laths) across multi-day spread and consecutive days', () => {
+    const options = calculateBookingOptions(115, '2026-12-28');
+    // Spread option mobilizes teams at 60 laths/day cap: Math.ceil(115 / 60) = 2 days
+    expect(options.spreadOption.isAvailable).toBe(true);
+    expect(options.spreadOption.requiredDays).toBe(2);
+    expect(options.spreadOption.daysDetails).toHaveLength(2);
+
+    // Consecutive option: 1 team over Math.ceil(115 / 15) = 8 days
+    expect(options.consecutiveOption.isAvailable).toBe(true);
+    expect(options.consecutiveOption.requiredDays).toBe(8);
+    expect(options.consecutiveOption.daysDetails).toHaveLength(8);
+  });
 });

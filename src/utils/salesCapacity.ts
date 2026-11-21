@@ -174,7 +174,14 @@ export function getDailyCapacity(
   const bookings = excludeBookingId
     ? allBookings.filter((b) => b.id !== excludeBookingId)
     : allBookings;
-  const dayBookings = bookings.filter((b) => b.requestedDate === dateKey);
+
+  // فیلتر رزروهایی که این روز خاص را تحت پوشش قرار می‌دهند
+  const dayBookings = bookings.filter((b) => {
+    if (b.daysDetails && b.daysDetails.length > 0) {
+      return b.daysDetails.some((d) => d.date === dateKey);
+    }
+    return b.requestedDate === dateKey;
+  });
 
   // محاسبه پیش‌فرض برای ۴ اکیپ
   const teamAllocations: TeamDayAllocation[] = INSTALLATION_TEAMS.map((t) => ({
@@ -185,8 +192,20 @@ export function getDailyCapacity(
   }));
 
   dayBookings.forEach((booking) => {
+    const dayDetail = booking.daysDetails?.find((d) => d.date === dateKey);
+    if (dayDetail && dayDetail.teams && dayDetail.teams.length > 0) {
+      dayDetail.teams.forEach((t) => {
+        const teamAlloc = teamAllocations.find((item) => item.teamId === t.teamId);
+        if (teamAlloc) {
+          teamAlloc.bookedLaths = Math.min(MAX_LATHS_PER_TEAM, teamAlloc.bookedLaths + t.laths);
+        }
+      });
+      return;
+    }
+
+    // حالت پشتیبان برای داده‌های بدون daysDetails
     const teamsCount = Math.max(1, booking.allocatedTeams.length);
-    const lathsPerTeam = Math.ceil(booking.lathsCount / teamsCount);
+    const lathsPerTeam = Math.ceil(Math.min(booking.lathsCount, MAX_DAILY_COMPANY_LATHS) / teamsCount);
 
     booking.allocatedTeams.forEach((tId) => {
       const teamAlloc = teamAllocations.find((item) => item.teamId === tId);
@@ -254,109 +273,171 @@ export function calculateBookingOptions(
     : allBookings;
   const currentCapacity = getDailyCapacity(requestedDateKey, bookings);
 
-  // حالت اول: پخش بین چند اکیپ در همان روز
-  const availableTeams = currentCapacity.teams.filter(
-    (t) => t.maxLaths - t.bookedLaths > 0
-  );
+  const [gy, gm, gd] = requestedDateKey.split('-').map(Number);
+  const startDate = new Date(gy, gm - 1, gd, 12, 0, 0);
 
-  let remainingToSpread = lathsCount;
-  const spreadTeams: { teamId: string; teamName: string; laths: number }[] = [];
+  // --------------------------------------------------------------------------
+  // حالت اول: پخش بین چند اکیپ (SPREAD_DAILY)
+  // اگر تعداد لت <= ۶۰ باشد: در ۱ روز انجام می‌شود.
+  // اگر تعداد لت > ۶۰ باشد (مانند ۱۱۵ لت): بین اکیپ‌ها با سقف ۶۰ لت در روز پخش می‌شود.
+  // --------------------------------------------------------------------------
+  let spreadOption: BookingOption;
 
-  for (const team of availableTeams) {
-    if (remainingToSpread <= 0) break;
-    const freeCapacity = team.maxLaths - team.bookedLaths;
-    const allocated = Math.min(freeCapacity, remainingToSpread);
-    spreadTeams.push({
-      teamId: team.teamId,
-      teamName: team.teamName,
-      laths: allocated,
-    });
-    remainingToSpread -= allocated;
+  if (lathsCount <= MAX_DAILY_COMPANY_LATHS) {
+    const availableTeams = currentCapacity.teams.filter(
+      (t) => t.maxLaths - t.bookedLaths > 0
+    );
+
+    let remainingToSpread = lathsCount;
+    const spreadTeams: { teamId: string; teamName: string; laths: number }[] = [];
+
+    for (const team of availableTeams) {
+      if (remainingToSpread <= 0) break;
+      const freeCapacity = team.maxLaths - team.bookedLaths;
+      const allocated = Math.min(freeCapacity, remainingToSpread);
+      spreadTeams.push({
+        teamId: team.teamId,
+        teamName: team.teamName,
+        laths: allocated,
+      });
+      remainingToSpread -= allocated;
+    }
+
+    const isSpreadAvailable = currentCapacity.remainingLaths >= lathsCount && remainingToSpread === 0;
+
+    spreadOption = {
+      mode: 'SPREAD_DAILY',
+      title: `پخش همزمان بین ${spreadTeams.length > 1 ? `${spreadTeams.length} اکیپ` : 'اکیپ نصب'} در ۱ روز`,
+      description: isSpreadAvailable
+        ? `انجام کامل کار در روز ${currentCapacity.dayName} با همکاری ${spreadTeams.map((t) => t.teamName).join(' و ')}`
+        : `ظرفیت خالی این روز (${currentCapacity.remainingLaths} لت) کمتر از ${lathsCount} لت درخواستی است.`,
+      isAvailable: isSpreadAvailable,
+      requiredDays: 1,
+      allocatedTeams: spreadTeams.map((t) => t.teamId),
+      daysDetails: [
+        {
+          date: requestedDateKey,
+          jalaliDate: currentCapacity.jalaliDate,
+          teams: spreadTeams,
+        },
+      ],
+    };
+  } else {
+    // سناریوی لت‌های بالا (> ۶۰ لت، مانند ۱۱۵ لت) با بسیج اکیپ‌ها و سقف روزانه ۶۰ لت
+    const spreadDaysNeeded = Math.ceil(lathsCount / MAX_DAILY_COMPANY_LATHS);
+    let remLaths = lathsCount;
+    let spreadMultiFit = true;
+    const spreadDaysDetails: BookingOption['daysDetails'] = [];
+    const allAllocatedTeamsSet = new Set<string>();
+
+    for (let i = 0; i < spreadDaysNeeded; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const checkDateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const persianDateStr = formatToPersianDateString(d);
+      const dayCap = getDailyCapacity(checkDateKey, bookings);
+
+      const dayAllocatedTeams: { teamId: string; teamName: string; laths: number }[] = [];
+      let neededForToday = Math.min(remLaths, MAX_DAILY_COMPANY_LATHS);
+
+      if (dayCap.remainingLaths < neededForToday) {
+        spreadMultiFit = false;
+        break;
+      }
+
+      for (const t of dayCap.teams) {
+        if (neededForToday <= 0) break;
+        const freeInTeam = t.maxLaths - t.bookedLaths;
+        if (freeInTeam > 0) {
+          const alloc = Math.min(freeInTeam, neededForToday);
+          dayAllocatedTeams.push({ teamId: t.teamId, teamName: t.teamName, laths: alloc });
+          allAllocatedTeamsSet.add(t.teamId);
+          neededForToday -= alloc;
+        }
+      }
+
+      if (neededForToday > 0) {
+        spreadMultiFit = false;
+        break;
+      }
+
+      spreadDaysDetails.push({
+        date: checkDateKey,
+        jalaliDate: persianDateStr,
+        teams: dayAllocatedTeams,
+      });
+      remLaths -= Math.min(remLaths, MAX_DAILY_COMPANY_LATHS);
+    }
+
+    spreadOption = {
+      mode: 'SPREAD_DAILY',
+      title: `بسیج همزمان اکیپ‌ها (سقف ۶۰ لت/روز) در ${spreadDaysNeeded} روز`,
+      description: spreadMultiFit
+        ? `تحویل سریع ${lathsCount} لت ظرف ${spreadDaysNeeded} روز با حداکثر توان روزانه ۶۰ لت`
+        : `ظرفیت روزانه اکیپ‌ها در بازه ${spreadDaysNeeded} روزه پاسخگوی ${lathsCount} لت نیست.`,
+      isAvailable: spreadMultiFit,
+      requiredDays: spreadDaysNeeded,
+      allocatedTeams: Array.from(allAllocatedTeamsSet),
+      daysDetails: spreadDaysDetails,
+    };
   }
 
-  const isSpreadAvailable = currentCapacity.remainingLaths >= lathsCount && remainingToSpread === 0;
-
-  const spreadOption: BookingOption = {
-    mode: 'SPREAD_DAILY',
-    title: 'پخش همزمان بین چند اکیپ در یک روز',
-    description: isSpreadAvailable
-      ? `انجام کامل کار در روز ${currentCapacity.dayName} با همکاری ${spreadTeams.length} اکیپ`
-      : `ظرفیت خالی این روز (${currentCapacity.remainingLaths} لت) کمتر از ${lathsCount} لت درخواستی است.`,
-    isAvailable: isSpreadAvailable,
-    requiredDays: 1,
-    allocatedTeams: spreadTeams.map((t) => t.teamId),
-    daysDetails: [
-      {
-        date: requestedDateKey,
-        jalaliDate: currentCapacity.jalaliDate,
-        teams: spreadTeams,
-      },
-    ],
-  };
-
-  // حالت دوم: تخصیص یک اکیپ برای چند روز متوالی (سرریز روزانه)
-  const daysNeeded = Math.ceil(lathsCount / MAX_LATHS_PER_TEAM);
-  const upcoming = getUpcomingDays(daysNeeded + 5);
-  const startIdx = upcoming.findIndex((u) => u.dateKey === requestedDateKey);
-
+  // --------------------------------------------------------------------------
+  // حالت دوم: تخصیص یک اکیپ برای چند روز متوالی (CONSECUTIVE_DAYS)
+  // تولید مستقیم روزهای متوالی از requestedDateKey تا هرگز به اشتباه خاموش نباشد!
+  // --------------------------------------------------------------------------
+  const consecutiveDaysNeeded = Math.ceil(lathsCount / MAX_LATHS_PER_TEAM);
   let consecutiveAvailable = false;
   let chosenTeamId = 'TEAM_1';
   let chosenTeamName = INSTALLATION_TEAMS[0].name;
-  const consecutiveDaysDetails: {
-    date: string;
-    jalaliDate: string;
-    teams: { teamId: string; teamName: string; laths: number }[];
-  }[] = [];
+  let consecutiveDaysDetails: BookingOption['daysDetails'] = [];
 
-  if (startIdx !== -1) {
-    // یافتن اکیپی که در تمام این روزهای متوالی ظرفیت خالی ۱۵ لتی یا کافی داشته باشد
-    for (const team of INSTALLATION_TEAMS) {
-      let teamFit = true;
-      const tempDetails: typeof consecutiveDaysDetails = [];
-      let remLaths = lathsCount;
+  for (const team of INSTALLATION_TEAMS) {
+    let teamFit = true;
+    const tempDetails: BookingOption['daysDetails'] = [];
+    let remLaths = lathsCount;
 
-      for (let i = 0; i < daysNeeded; i++) {
-        const checkDay = upcoming[startIdx + i];
-        if (!checkDay) {
-          teamFit = false;
-          break;
-        }
-        const dayCap = getDailyCapacity(checkDay.dateKey, bookings);
-        const teamAlloc = dayCap.teams.find((t) => t.teamId === team.id);
-        const freeInTeam = teamAlloc ? teamAlloc.maxLaths - teamAlloc.bookedLaths : 0;
-        const neededToday = Math.min(MAX_LATHS_PER_TEAM, remLaths);
+    for (let i = 0; i < consecutiveDaysNeeded; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const checkDateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const persianDateStr = formatToPersianDateString(d);
 
-        if (freeInTeam < neededToday) {
-          teamFit = false;
-          break;
-        }
+      const dayCap = getDailyCapacity(checkDateKey, bookings);
+      const teamAlloc = dayCap.teams.find((t) => t.teamId === team.id);
+      const freeInTeam = teamAlloc ? teamAlloc.maxLaths - teamAlloc.bookedLaths : 0;
+      const neededToday = Math.min(MAX_LATHS_PER_TEAM, remLaths);
 
-        tempDetails.push({
-          date: checkDay.dateKey,
-          jalaliDate: checkDay.persianDateStr,
-          teams: [{ teamId: team.id, teamName: team.name, laths: neededToday }],
-        });
-        remLaths -= neededToday;
-      }
-
-      if (teamFit) {
-        consecutiveAvailable = true;
-        chosenTeamId = team.id;
-        chosenTeamName = team.name;
-        consecutiveDaysDetails.push(...tempDetails);
+      if (freeInTeam < neededToday) {
+        teamFit = false;
         break;
       }
+
+      tempDetails.push({
+        date: checkDateKey,
+        jalaliDate: persianDateStr,
+        teams: [{ teamId: team.id, teamName: team.name, laths: neededToday }],
+      });
+      remLaths -= neededToday;
+    }
+
+    if (teamFit && remLaths === 0) {
+      consecutiveAvailable = true;
+      chosenTeamId = team.id;
+      chosenTeamName = team.name;
+      consecutiveDaysDetails = tempDetails;
+      break;
     }
   }
 
   const consecutiveOption: BookingOption = {
     mode: 'CONSECUTIVE_DAYS',
-    title: `رزرو اختصاصی یک اکیپ در ${daysNeeded} روز متوالی`,
+    title: `رزرو اختصاصی یک اکیپ در ${consecutiveDaysNeeded} روز متوالی`,
     description: consecutiveAvailable
-      ? `اختصاص ${chosenTeamName} برای ${daysNeeded} روز متوالی بدون وقفه`
-      : `امکان رزرو ${daysNeeded} روز متوالی با یک اکیپ در این تاریخ وجود ندارد.`,
+      ? `اختصاص ${chosenTeamName} به مدت ${consecutiveDaysNeeded} روز متوالی (روزانه تا ۱۵ لت)`
+      : `امکان رزرو ${consecutiveDaysNeeded} روز متوالی با یک اکیپ در این تاریخ وجود ندارد.`,
     isAvailable: consecutiveAvailable,
-    requiredDays: daysNeeded,
+    requiredDays: consecutiveDaysNeeded,
     allocatedTeams: [chosenTeamId],
     daysDetails: consecutiveDaysDetails,
   };
