@@ -44,18 +44,70 @@ const STORAGE_KEYS = {
   IS_INITIALIZED: 'talaie_storage_initialized_v6',
 };
 
-// Clean up legacy v5 mock caches on module evaluation
+// Clean up legacy v5 mock caches & seed sales bookings on module evaluation
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
     localStorage.removeItem('talaie_projects_v5');
     localStorage.removeItem('talaie_tickets_v5');
     localStorage.removeItem('talaie_users_v5');
+    const rawBookings = localStorage.getItem('talaei_sales_bookings_v1');
+    if (rawBookings) {
+      const parsed = JSON.parse(rawBookings);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter(
+          (b: any) =>
+            b &&
+            b.id &&
+            !b.id.startsWith('book-seed-') &&
+            !b.id.startsWith('b-demo-') &&
+            !b.id.startsWith('test-')
+        );
+        localStorage.setItem('talaei_sales_bookings_v1', JSON.stringify(cleaned));
+      }
+    }
   } catch {}
 }
 
 const MOCK_PROJECT_IDS = new Set(['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6']);
-const isMockProjectId = (id: string) => !id || MOCK_PROJECT_IDS.has(id) || id.startsWith('p-demo-');
-const isMockTicketId = (id: string) => !id || id === 't-1' || id.startsWith('t-demo-');
+const isMockProjectId = (id: string) =>
+  !id ||
+  MOCK_PROJECT_IDS.has(id) ||
+  id.startsWith('p-demo-') ||
+  id.startsWith('p-test-') ||
+  id.startsWith('p-from-sale-book-seed-') ||
+  id.includes('seed-');
+
+const isMockProject = (p: Project) => {
+  if (!p || !p.id) return true;
+  if (isMockProjectId(p.id)) return true;
+  const name = (p.customerName || '').trim();
+  const title = (p.title || '').trim();
+  if (
+    name === 'دکتر ستاری' ||
+    name === 'مهندس پاشایی (ویلا لواسان)' ||
+    name === 'خانم افشار' ||
+    name === 'دفتر مرکزی شرکت پترو کیش'
+  ) {
+    return true;
+  }
+  if (
+    title.startsWith('رزرو فروش: دکتر ستاری') ||
+    title.startsWith('رزرو فروش: مهندس پاشایی') ||
+    title.startsWith('رزرو فروش: خانم افشار') ||
+    title.startsWith('رزرو فروش: دفتر مرکزی شرکت پترو کیش')
+  ) {
+    return true;
+  }
+  return false;
+};
+
+const isMockTicketId = (id: string) =>
+  !id ||
+  id === 't-1' ||
+  id.startsWith('t-demo-') ||
+  id.startsWith('t-test-') ||
+  id.includes('seed-');
+
 const isMockUserId = (id: string) => !id || id.startsWith('u-demo-');
 
 export const StorageService = {
@@ -69,7 +121,12 @@ export const StorageService = {
       const parsed: Project[] = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
       // Filter out any legacy mock/test projects
-      const filtered = parsed.filter((p) => p && p.id && !isMockProjectId(p.id));
+      const filtered = parsed.filter((p) => !isMockProject(p));
+      if (filtered.length !== parsed.length) {
+        try {
+          localStorage.setItem(key, JSON.stringify(filtered));
+        } catch {}
+      }
       return filtered.map((p) => ({
         ...p,
         __fromCache: true,
@@ -91,7 +148,7 @@ export const StorageService = {
       const key = userId ? `${STORAGE_KEYS.PROJECTS}_${userId}` : STORAGE_KEYS.PROJECTS;
       // Lightweight cache: strip large base64 strings and __fromCache flag so it never causes QuotaExceededError
       const lightweightProjects = projects
-        .filter((p) => p && p.id && !isMockProjectId(p.id))
+        .filter((p) => !isMockProject(p))
         .map((p) => {
           const copy: any = {
             ...p,
@@ -254,7 +311,13 @@ export const StorageService = {
     try {
       const parsed: Ticket[] = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
-      return parsed.filter((t) => t && t.id && !isMockTicketId(t.id));
+      const filtered = parsed.filter((t) => t && t.id && !isMockTicketId(t.id));
+      if (filtered.length !== parsed.length) {
+        try {
+          localStorage.setItem(key, JSON.stringify(filtered));
+        } catch {}
+      }
+      return filtered;
     } catch {
       return [];
     }
@@ -279,7 +342,20 @@ export const StorageService = {
     try {
       const parsed: MaterialRequest[] = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
-      return parsed.filter((r) => r && r.id);
+      const filtered = parsed.filter(
+        (r) =>
+          r &&
+          r.id &&
+          !r.id.startsWith('mat-demo-') &&
+          !r.id.startsWith('mat-test-') &&
+          !r.id.includes('seed-')
+      );
+      if (filtered.length !== parsed.length) {
+        try {
+          localStorage.setItem(key, JSON.stringify(filtered));
+        } catch {}
+      }
+      return filtered;
     } catch {
       return [];
     }
@@ -288,7 +364,14 @@ export const StorageService = {
   saveMaterialRequests(requests: MaterialRequest[], userId?: string) {
     try {
       const key = userId ? `${STORAGE_KEYS.MATERIAL_REQUESTS}_${userId}` : STORAGE_KEYS.MATERIAL_REQUESTS;
-      const filtered = requests.filter((r) => r && r.id);
+      const filtered = requests.filter(
+        (r) =>
+          r &&
+          r.id &&
+          !r.id.startsWith('mat-demo-') &&
+          !r.id.startsWith('mat-test-') &&
+          !r.id.includes('seed-')
+      );
       localStorage.setItem(key, JSON.stringify(filtered));
     } catch (e) {
       console.warn('LocalStorage saveMaterialRequests failed:', e);
@@ -427,7 +510,11 @@ export const StorageService = {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith('talaie_') && key !== 'talaie_theme') {
+        if (
+          key &&
+          (key.startsWith('talaie_') || key.startsWith('talaei_')) &&
+          key !== 'talaie_theme'
+        ) {
           keysToRemove.push(key);
         }
       }
@@ -446,6 +533,7 @@ export const StorageService = {
     localStorage.removeItem(STORAGE_KEYS.DELETED_USER_IDS);
     localStorage.removeItem(STORAGE_KEYS.DELETED_TEAM_MEMBER_IDS);
     localStorage.removeItem(STORAGE_KEYS.IS_INITIALIZED);
+    localStorage.removeItem('talaei_sales_bookings_v1');
     localStorage.removeItem('talaie_projects_v5');
     localStorage.removeItem('talaie_users_v5');
     localStorage.removeItem('talaie_tickets_v5');

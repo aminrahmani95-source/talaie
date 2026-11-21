@@ -28,10 +28,10 @@ export const SALES_REPS_SEED: SalesRepProfile[] = [
     avatarIcon: '🎯',
     caricatureTag: 'شکارچی لت و شید 🥇',
     rankBadge: 'GOLD',
-    monthlyProjectsCount: 18,
-    monthlyLathsCount: 290,
-    activeBookingDays: 16,
-    winStreak: 4,
+    monthlyProjectsCount: 0,
+    monthlyLathsCount: 0,
+    activeBookingDays: 0,
+    winStreak: 0,
   },
   {
     id: 'u-sales-2',
@@ -40,10 +40,10 @@ export const SALES_REPS_SEED: SalesRepProfile[] = [
     avatarIcon: '🌟',
     caricatureTag: 'تیرانداز سرعت رزرو 🥈',
     rankBadge: 'SILVER',
-    monthlyProjectsCount: 15,
-    monthlyLathsCount: 245,
-    activeBookingDays: 14,
-    winStreak: 2,
+    monthlyProjectsCount: 0,
+    monthlyLathsCount: 0,
+    activeBookingDays: 0,
+    winStreak: 0,
   },
   {
     id: 'u-sales-3',
@@ -52,104 +52,46 @@ export const SALES_REPS_SEED: SalesRepProfile[] = [
     avatarIcon: '⚡',
     caricatureTag: 'فرمانده روزهای طلایی 🥉',
     rankBadge: 'BRONZE',
-    monthlyProjectsCount: 12,
-    monthlyLathsCount: 180,
-    activeBookingDays: 11,
-    winStreak: 1,
+    monthlyProjectsCount: 0,
+    monthlyLathsCount: 0,
+    activeBookingDays: 0,
+    winStreak: 0,
   },
 ];
 
 const STORAGE_KEY = 'talaei_sales_bookings_v1';
 
 function getSeedBookings(): SalesProjectBooking[] {
-  const upcoming = getUpcomingDays(14);
-  const now = new Date().toISOString();
-
-  return [
-    {
-      id: 'book-seed-1',
-      customerName: 'دکتر ستاری',
-      customerPhone: '09123344556',
-      address: 'نیاوران، خیابان یاسر، برج نگین، طبقه ۸',
-      lathsCount: 15,
-      isSmart: true,
-      notes: 'پنجره‌های قدی سالن دوبلکس - نیاز به نردبان ۴ متری و تست لیمیت هوشمند',
-      requestedDate: upcoming[1]?.dateKey || '2026-11-21',
-      jalaliDate: upcoming[1]?.persianDateStr || '۱۴۰۵/۰۹/۰۱',
-      allocationMode: 'SPREAD_DAILY',
-      allocatedTeams: ['TEAM_1'],
-      allocatedDaysCount: 1,
-      salesRepId: 'u-sales-1',
-      salesRepName: 'سپهر رادمنش',
-      createdAt: now,
-    },
-    {
-      id: 'book-seed-2',
-      customerName: 'مهندس پاشایی (ویلا لواسان)',
-      customerPhone: '09129988776',
-      address: 'لواسان، بلوار باستی، پلاک ۲۴',
-      lathsCount: 30,
-      isSmart: true,
-      notes: 'شیدهای زیپ رول بیرونی برای تراس و سالن استخر',
-      requestedDate: upcoming[2]?.dateKey || '2026-11-22',
-      jalaliDate: upcoming[2]?.persianDateStr || '۱۴۰۵/۰۹/۰۲',
-      allocationMode: 'SPREAD_DAILY',
-      allocatedTeams: ['TEAM_2', 'TEAM_3'],
-      allocatedDaysCount: 1,
-      salesRepId: 'u-sales-2',
-      salesRepName: 'نیلوفر صبوری',
-      createdAt: now,
-    },
-    {
-      id: 'book-seed-3',
-      customerName: 'خانم افشار',
-      customerPhone: '09124455667',
-      address: 'سعادت‌آباد، علامه شمالی، برج سرو',
-      lathsCount: 10,
-      isSmart: false,
-      notes: 'شید دستی ساده زنجیری - رنگ پارچه کد زغالی ۷۰۲',
-      requestedDate: upcoming[4]?.dateKey || '2026-11-24',
-      jalaliDate: upcoming[4]?.persianDateStr || '۱۴۰۵/۰۹/۰۴',
-      allocationMode: 'SPREAD_DAILY',
-      allocatedTeams: ['TEAM_1'],
-      allocatedDaysCount: 1,
-      salesRepId: 'u-sales-3',
-      salesRepName: 'آرمان شایگان',
-      createdAt: now,
-    },
-    {
-      id: 'book-seed-4',
-      customerName: 'دفتر مرکزی شرکت پترو کیش',
-      customerPhone: '09125566778',
-      address: 'خیابان ولیعصر، نرسیده به پارک وی، ساختمان الماس',
-      lathsCount: 45,
-      isSmart: true,
-      notes: '۳ طبقه اداری - کار با ۳ اکیپ همزمان در روز پنج‌شنبه قبل از شروع ساعت کاری',
-      requestedDate: upcoming[6]?.dateKey || '2026-11-26',
-      jalaliDate: upcoming[6]?.persianDateStr || '۱۴۰۵/۰۹/۰۶',
-      allocationMode: 'SPREAD_DAILY',
-      allocatedTeams: ['TEAM_1', 'TEAM_2', 'TEAM_4'],
-      allocatedDaysCount: 1,
-      salesRepId: 'u-sales-1',
-      salesRepName: 'سپهر رادمنش',
-      createdAt: now,
-    },
-  ];
+  // Empty seed bookings for clean production environment (no mock/test data)
+  return [];
 }
 
 export function getStoredBookings(): SalesProjectBooking[] {
-  if (typeof window === 'undefined') return getSeedBookings();
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      const initial = getSeedBookings();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-      return initial;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+      return [];
     }
-    return JSON.parse(raw) as SalesProjectBooking[];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    // Automatically purge any dummy seed or test bookings
+    const cleaned = (parsed as SalesProjectBooking[]).filter(
+      (b) =>
+        b &&
+        b.id &&
+        !b.id.startsWith('book-seed-') &&
+        !b.id.startsWith('b-demo-') &&
+        !b.id.startsWith('test-')
+    );
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch (err) {
     console.error('Failed to read sales bookings from localStorage:', err);
-    return getSeedBookings();
+    return [];
   }
 }
 

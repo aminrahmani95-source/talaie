@@ -736,7 +736,38 @@ export const SupabaseSyncService = {
 
     if (Array.isArray(data)) {
       return data
-        .filter((row: any) => !['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6'].includes(row.id))
+        .filter((row: any) => {
+          if (!row || !row.id) return false;
+          const id = String(row.id);
+          if (['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6'].includes(id)) return false;
+          if (
+            id.startsWith('p-demo-') ||
+            id.startsWith('p-test-') ||
+            id.startsWith('p-from-sale-book-seed-') ||
+            id.includes('seed-')
+          ) {
+            return false;
+          }
+          const customer = (row.data?.customerName || '').trim();
+          const title = (row.data?.title || '').trim();
+          if (
+            customer === 'دکتر ستاری' ||
+            customer === 'مهندس پاشایی (ویلا لواسان)' ||
+            customer === 'خانم افشار' ||
+            customer === 'دفتر مرکزی شرکت پترو کیش'
+          ) {
+            return false;
+          }
+          if (
+            title.startsWith('رزرو فروش: دکتر ستاری') ||
+            title.startsWith('رزرو فروش: مهندس پاشایی') ||
+            title.startsWith('رزرو فروش: خانم افشار') ||
+            title.startsWith('رزرو فروش: دفتر مرکزی شرکت پترو کیش')
+          ) {
+            return false;
+          }
+          return true;
+        })
         .map((row: any) => ({
           ...row.data,
           id: row.id,
@@ -762,11 +793,20 @@ export const SupabaseSyncService = {
       }
 
       if (Array.isArray(data)) {
-        return data.map((row: any) => ({
-          ...row.data,
-          id: row.id,
-          updatedAt: row.data?.updatedAt || row.updated_at,
-        }));
+        return data
+          .filter((row: any) => {
+            if (!row || !row.id) return false;
+            const id = String(row.id);
+            if (id.startsWith('mat-demo-') || id.startsWith('mat-test-') || id.includes('seed-')) {
+              return false;
+            }
+            return true;
+          })
+          .map((row: any) => ({
+            ...row.data,
+            id: row.id,
+            updatedAt: row.data?.updatedAt || row.updated_at,
+          }));
       }
       return [];
     } catch {
@@ -1108,7 +1148,19 @@ export const SupabaseSyncService = {
 
     if (Array.isArray(data)) {
       return data
-        .filter((row: any) => row.id !== 't-1')
+        .filter((row: any) => {
+          if (!row || !row.id) return false;
+          const id = String(row.id);
+          if (
+            id === 't-1' ||
+            id.startsWith('t-demo-') ||
+            id.startsWith('t-test-') ||
+            id.includes('seed-')
+          ) {
+            return false;
+          }
+          return true;
+        })
         .map((row: any) => ({
           ...row.data,
           id: row.id,
