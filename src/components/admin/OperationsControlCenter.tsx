@@ -38,6 +38,9 @@ import { getDisplayName } from '../../utils/technicianName';
 import { isProjectMultiDay, isProjectScheduledOnDate } from '../../utils/multiDay';
 import { computeSlaMetrics } from '../../utils/sla';
 import { isAwaitingQc } from '../../utils/qcWorkflow';
+import { ProjectDossierModal } from '../ceo/ProjectDossierModal';
+import { ProjectPassportPrint } from '../common/ProjectPassportPrint';
+import { triggerToast } from '../Toast';
 
 export interface OperationsControlCenterProps {
   currentUser: User;
@@ -72,9 +75,59 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   onReviewScheduleRequest: _onReviewScheduleRequest,
   onNewProject,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'ACTIONS' | 'ANALYTICS'>('ACTIONS');
+  const [activeSubTab, setActiveSubTab] = useState<'ACTIONS' | 'REGISTRY' | 'ANALYTICS'>('ACTIONS');
   const [activeUrgentCategory, setActiveUrgentCategory] = useState<'ALL' | 'STUCK' | 'INCOMING' | 'QC'>('ALL');
   const [isAnalyticsExpanded, setIsAnalyticsExpanded] = useState(false);
+
+  // استیت‌های جستجو و فیلتر بخش شناسنامه و سوابق پروژه‌ها
+  const [searchQuery, setSearchQuery] = useState('');
+  const [registryStatusFilter, setRegistryStatusFilter] = useState<'ALL' | 'APPROVED' | 'IN_PROGRESS' | 'SCHEDULED' | 'STUCK'>('ALL');
+  const [dossierProject, setDossierProject] = useState<Project | null>(null);
+  const [printingProject, setPrintingProject] = useState<Project | null>(null);
+
+  const handlePrintCertificate = (project: Project) => {
+    const isQcApproved = project.status === 'COMPLETED' && project.qcStatus === 'APPROVED';
+    if (!isQcApproved) {
+      triggerToast(
+        'warning',
+        'چاپ شناسنامه رسمی منحصراً پس از اتمام کامل پروژه و صدور تأییدیه نهایی کنترل کیفی (QC) مجاز می‌باشد.'
+      );
+      return;
+    }
+    setPrintingProject(project);
+  };
+
+  // پروژه‌های فیلترشده در تب شناسنامه و آرشیو
+  const filteredRegistryProjects = useMemo(() => {
+    return projects.filter((p) => {
+      if (registryStatusFilter === 'APPROVED' && !(p.status === 'COMPLETED' && p.qcStatus === 'APPROVED')) {
+        return false;
+      }
+      if (registryStatusFilter === 'IN_PROGRESS' && p.status !== 'IN_PROGRESS' && p.status !== 'EN_ROUTE') {
+        return false;
+      }
+      if (registryStatusFilter === 'SCHEDULED' && p.status !== 'SCHEDULED' && p.status !== 'MEASUREMENT_PENDING') {
+        return false;
+      }
+      if (registryStatusFilter === 'STUCK' && p.status !== 'STUCK') {
+        return false;
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = (p.title || '').toLowerCase().includes(q);
+        const matchCustomer = (p.customerName || '').toLowerCase().includes(q);
+        const matchCode = (p.code || '').toLowerCase().includes(q);
+        const matchAddress = (p.address || '').toLowerCase().includes(q);
+        const matchTeam = (p.assignedTeamName || '').toLowerCase().includes(q);
+        if (!matchTitle && !matchCustomer && !matchCode && !matchAddress && !matchTeam) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [projects, registryStatusFilter, searchQuery]);
 
   const isQcManager = currentUser.role === 'QC_MANAGER';
   const todayKey = useMemo(() => localDateKey(new Date()), []);
@@ -240,19 +293,21 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               تقویم 4 روزه
             </button>
 
-            <button
-              type="button"
-              onClick={() => onNavigateTab('registry')}
-              className="px-3.5 py-2 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#F0F4F8] font-bold text-xs transition flex items-center gap-1.5 border border-[#2D3748] cursor-pointer min-h-[38px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
-            >
-              <FileText className="w-4 h-4 text-blue-400" />
-              شناسنامه پروژه‌ها
-            </button>
+            {onNavigateTab && !isQcManager && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('registry')}
+                className="px-3.5 py-2 rounded-lg bg-[#1C232D] hover:bg-[#252F3D] text-[#F0F4F8] font-bold text-xs transition flex items-center gap-1.5 border border-[#2D3748] cursor-pointer min-h-[38px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
+              >
+                <FileText className="w-4 h-4 text-blue-400" />
+                شناسنامه پروژه‌ها
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* ================= تب‌بار بین صف اقدام و تحلیل آماری ================= */}
+      {/* ================= تب‌بار بین صف اقدام، شناسنامه کل و تحلیل آماری ================= */}
       <div className="flex items-center justify-between border-b border-[#212835] pb-2">
         <div className="flex items-center gap-2">
           <button
@@ -283,6 +338,24 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
 
           <button
             type="button"
+            onClick={() => setActiveSubTab('REGISTRY')}
+            aria-selected={activeSubTab === 'REGISTRY'}
+            role="tab"
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 min-h-[36px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] ${
+              activeSubTab === 'REGISTRY'
+                ? 'bg-[#C5A059] text-[#0D1117] shadow-xs'
+                : 'bg-[#151B23] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#212835]'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>شناسنامه و سوابق کل پروژه‌ها</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#1C232D] text-[#9BA7B6] tabular-nums">
+              {toPersianDigits(projects.length)}
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveSubTab('ANALYTICS')}
             aria-selected={activeSubTab === 'ANALYTICS'}
             role="tab"
@@ -300,6 +373,8 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
         <span className="text-[11px] text-[#9BA7B6] hidden sm:inline">
           {activeSubTab === 'ACTIONS'
             ? 'اولویت‌های نیازمند اقدام + وضعیت زنده اکیپ‌ها'
+            : activeSubTab === 'REGISTRY'
+            ? 'جستجوی سوابق، چاپ شناسنامه و مدارک جامع'
             : 'کیفیت، رعایت SLA و راندمان اکیپ‌ها'}
         </span>
       </div>
@@ -846,6 +921,187 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             </div>
           </section>
         </>
+      ) : activeSubTab === 'REGISTRY' ? (
+        /* ================= نمای شناسنامه و سوابق جامع پروژه‌ها (MASTER REGISTRY) ================= */
+        <div className="space-y-5 animate-in fade-in duration-200">
+          {/* باکس جستجو و فیلترها */}
+          <div className="bg-[#151B23] rounded-2xl p-4 sm:p-5 border border-[#212835] space-y-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-[#637184] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="جستجوی سریع پروژه، نام کارفرما، کد رهگیری، نشانی یا اکیپ نصب..."
+                  className="w-full bg-[#0D1117] text-[#F0F4F8] border border-[#212835] rounded-xl pr-10 pl-4 py-2.5 text-xs placeholder:text-[#637184] focus:outline-none focus:border-[#C5A059] transition shadow-inner"
+                />
+              </div>
+
+              {/* فیلتر وضعیت */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {(['ALL', 'APPROVED', 'IN_PROGRESS', 'SCHEDULED', 'STUCK'] as const).map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setRegistryStatusFilter(st)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      registryStatusFilter === st
+                        ? 'bg-[#C5A059] text-[#0D1117]'
+                        : 'bg-[#0D1117] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#212835]'
+                    }`}
+                  >
+                    {st === 'ALL' && 'همه پروژه‌ها'}
+                    {st === 'APPROVED' && 'تایید کیفی QC'}
+                    {st === 'IN_PROGRESS' && 'در حال نصب'}
+                    {st === 'SCHEDULED' && 'برنامه‌ریزی‌شده'}
+                    {st === 'STUCK' && 'متوقف در کارگاه'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* لیست کارت‌های پروژه‌ها */}
+          {filteredRegistryProjects.length === 0 ? (
+            <div className="bg-[#151B23] rounded-2xl p-12 text-center border border-[#212835] text-xs text-[#9BA7B6] space-y-2">
+              <FileCheck2 className="w-8 h-8 text-[#637184] mx-auto opacity-50" />
+              <h4 className="font-bold text-[#F0F4F8]">پروژه‌ای مطابق با فیلتر انتخابی یافت نشد</h4>
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              {filteredRegistryProjects.map((p) => {
+                const isApproved = p.status === 'COMPLETED' && p.qcStatus === 'APPROVED';
+                const isStuck = p.status === 'STUCK';
+                const isInProgress = p.status === 'IN_PROGRESS' || p.status === 'EN_ROUTE';
+
+                return (
+                  <div
+                    key={p.id}
+                    className={`bg-[#151B23] rounded-2xl p-4 sm:p-5 border transition space-y-3.5 ${
+                      isApproved
+                        ? 'border-emerald-500/40 ring-1 ring-emerald-500/20'
+                        : isStuck
+                        ? 'border-rose-500/50'
+                        : isInProgress
+                        ? 'border-[#C5A059]/50'
+                        : 'border-[#212835]'
+                    }`}
+                  >
+                    {/* Header Row */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#212835] pb-3">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-black bg-[#0D1117] text-[#C5A059] border border-[#2D3748] px-2.5 py-0.5 rounded">
+                            {p.code}
+                          </span>
+                          {p.isForceMajeure && (
+                            <span className="flex items-center gap-1 text-[11px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded border border-rose-500/30">
+                              <Flame className="w-3 h-3 text-rose-400" />
+                              فورس‌ماژور
+                            </span>
+                          )}
+                          <span className="text-xs text-[#9BA7B6] font-bold">
+                            تاریخ نصب: {formatJalali(p.scheduledDate)}
+                          </span>
+                          {p.assignedTeamName && (
+                            <span className="text-xs text-[#C5A059] font-bold">
+                              • {p.assignedTeamName}
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="text-sm sm:text-base font-black text-[#F0F4F8] mt-1">{p.title}</h3>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
+                        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                          isApproved
+                            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                            : isStuck
+                            ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                            : isInProgress
+                            ? 'bg-[#C5A059]/15 text-[#C5A059] border-[#C5A059]/30'
+                            : 'bg-[#1C232D] text-[#9BA7B6] border-[#2D3748]'
+                        }`}>
+                          {isApproved ? 'تایید نهایی QC ✅' :
+                           isStuck ? 'متوقف در کارگاه ⚠️' :
+                           isInProgress ? 'در حال اجرا' : 'زمان‌بندی‌شده'}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setDossierProject(p)}
+                          className="px-3.5 py-1.5 bg-[#1C232D] hover:bg-[#252F3D] text-[#F0F4F8] hover:text-[#C5A059] border border-[#2D3748] rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-xs"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-[#C5A059]" />
+                          <span>پرونده ۳۶۰°</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handlePrintCertificate(p)}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-sm active:scale-95 cursor-pointer ${
+                            isApproved
+                              ? 'bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117]'
+                              : 'bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] border border-[#2D3748]'
+                          }`}
+                        >
+                          {isApproved ? (
+                            <Printer className="w-3.5 h-3.5" />
+                          ) : (
+                            <Lock className="w-3.5 h-3.5 text-amber-400" />
+                          )}
+                          <span>شناسنامه A4</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* مشخصات کارفرما و اقلام */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                      <div className="bg-[#0D1117] p-2.5 rounded-xl border border-[#212835] space-y-1">
+                        <span className="text-[#637184] font-bold block">کارفرما و نشانی:</span>
+                        <p className="font-bold text-[#F0F4F8]">{p.customerName}</p>
+                        <p className="text-[#9BA7B6] font-mono">{p.customerPhone || 'بدون شماره'}</p>
+                        <p className="text-[#9BA7B6] line-clamp-1">{p.address}</p>
+                      </div>
+
+                      <div className="bg-[#0D1117] p-2.5 rounded-xl border border-[#212835] space-y-1">
+                        <span className="text-[#637184] font-bold block">مشخصات فنی و مقادیر:</span>
+                        <p className="font-bold text-[#C5A059]">
+                          {p.shadePanels > 0 && `${toPersianDigits(p.shadePanels)} لت شید`}
+                          {p.shadePanels > 0 && p.curtainPanels > 0 && ' • '}
+                          {p.curtainPanels > 0 && `${toPersianDigits(p.curtainPanels)} لت پرده`}
+                        </p>
+                        <p className="text-[#9BA7B6]">{p.mechanismType || 'مکانیزم استاندارد'}</p>
+                      </div>
+
+                      <div className="bg-[#0D1117] p-2.5 rounded-xl border border-[#212835] space-y-1">
+                        <span className="text-[#637184] font-bold block">کیفیت و امتیاز:</span>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`w-3.5 h-3.5 ${
+                                (p.qcScore || 5) >= s ? 'text-[#C5A059] fill-[#C5A059]' : 'text-[#2D3748]'
+                              }`}
+                            />
+                          ))}
+                          <span className="font-bold text-[#F0F4F8] mr-1">
+                            {toPersianDigits(p.qcScore || 5)} از 5
+                          </span>
+                        </div>
+                        {p.customerSatisfaction && (
+                          <p className="text-[#9BA7B6]">رضایت مشتری: {toPersianDigits(p.customerSatisfaction)} ستاره</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       ) : (
         /* ================= نمای گزارش آماری و هوش عملیاتی (ANALYTICS) ================= */
         <div className="space-y-6 animate-in fade-in duration-200">
@@ -903,6 +1159,24 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             </div>
           </div>
         </div>
+      )}
+
+      {/* مودال مشاهده پرونده و سوابق جامع ۳۶۰ درجه */}
+      {dossierProject && (
+        <ProjectDossierModal
+          project={dossierProject}
+          users={_users}
+          onClose={() => setDossierProject(null)}
+          onPrintCertificate={() => handlePrintCertificate(dossierProject)}
+        />
+      )}
+
+      {/* مودال چاپ شناسنامه رسمی */}
+      {printingProject && (
+        <ProjectPassportPrint
+          project={printingProject}
+          onClose={() => setPrintingProject(null)}
+        />
       )}
     </div>
   );

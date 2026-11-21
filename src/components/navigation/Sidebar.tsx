@@ -33,6 +33,7 @@ export const Sidebar: React.FC<Props> = ({
   userRole,
 }) => {
   const isCeo = userRole === 'CEO';
+  const isQcManager = userRole === 'QC_MANAGER';
   const totalUrgentCount = openStuckCount + pendingQcCount + openTicketCount;
 
   const primaryItems = isCeo
@@ -53,6 +54,34 @@ export const Sidebar: React.FC<Props> = ({
           id: 'sales' as const,
           label: 'میز فروش و رزرو لت',
           icon: Trophy,
+          badge: undefined,
+        },
+      ]
+    : isQcManager
+    ? [
+        {
+          id: 'control' as const,
+          label: 'پیشخوان مدیر اپ و QC',
+          icon: Activity,
+          badge: totalUrgentCount > 0 ? totalUrgentCount : undefined,
+          badgeColor: 'bg-rose-600 text-white animate-pulse',
+        },
+        {
+          id: 'planner' as const,
+          label: 'تقویم اجرایی و برنامه نصب',
+          icon: CalendarDays,
+          badge: undefined,
+        },
+        {
+          id: 'technicians' as const,
+          label: 'پرسنل، اکیپ‌ها و ظرفیت',
+          icon: Users,
+          badge: undefined,
+        },
+        {
+          id: 'settings' as const,
+          label: 'تنظیمات و ابزارهای سیستم',
+          icon: Settings,
           badge: undefined,
         },
       ]
@@ -84,7 +113,7 @@ export const Sidebar: React.FC<Props> = ({
         },
       ];
 
-  const secondaryItems = isCeo
+  const secondaryItems = isCeo || isQcManager
     ? []
     : [
         {

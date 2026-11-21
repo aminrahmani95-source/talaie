@@ -67,7 +67,7 @@ describe('CEO / Management Impersonation & Panel Inspection', () => {
 
   it('maps all system roles to accurate and user-friendly Persian labels', () => {
     expect(getUserRoleLabel('CEO')).toBe('مدیرعامل');
-    expect(getUserRoleLabel('QC_MANAGER')).toBe('مدیر کنترل کیفیت و فنی');
+    expect(getUserRoleLabel('QC_MANAGER')).toBe('مدیر اپ و QC');
     expect(getUserRoleLabel('MEASUREMENT_LEAD')).toBe('مسئول متراژ و تایید بستر');
     expect(getUserRoleLabel('WAREHOUSE')).toBe('مسئول انبار و تدارکات');
     expect(getUserRoleLabel('SCHEDULING_COORDINATOR')).toBe('مسئول هماهنگی و زمان‌بندی');

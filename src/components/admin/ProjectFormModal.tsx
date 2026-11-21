@@ -252,15 +252,29 @@ export const ProjectFormModal: React.FC<Props> = ({
       return;
     }
 
-    if (assignedTechnicianIds.length === 0) {
-      setFormError('حداقل یک تکنسین یا سرپرست باید به این مأموریت اختصاص داده شود.');
-      return;
+    // انتساب خودکار سرپرست و تکنسین‌ها بر اساس اعضای اکیپ منتسب‌شده (در صورت عدم انتخاب دستی)
+    let finalTechnicianIds = [...assignedTechnicianIds];
+    let effectiveLead = leadTechnicianId;
+
+    if (assignedTeamId) {
+      const currentTeamMembers = (teamMembers || []).filter((m) => m.teamId === assignedTeamId);
+      const leadMember = currentTeamMembers.find((m) => m.roleInTeam === 'LEAD');
+      const selectedTeam = effectiveTeams.find((t) => t.id === assignedTeamId || t.code === assignedTeamId);
+      
+      if (!effectiveLead) {
+        effectiveLead = leadMember?.userId || selectedTeam?.supervisorId || '';
+      }
+      
+      if (finalTechnicianIds.length === 0) {
+        finalTechnicianIds = currentTeamMembers.map((m) => m.userId);
+        if (finalTechnicianIds.length === 0 && effectiveLead) {
+          finalTechnicianIds = [effectiveLead];
+        }
+      }
     }
 
-    const effectiveLead = leadTechnicianId || assignedTechnicianIds[0];
-    if (!effectiveLead) {
-      setFormError('لطفاً سرپرست اکیپ را مشخص کنید.');
-      return;
+    if (!effectiveLead && finalTechnicianIds.length > 0) {
+      effectiveLead = finalTechnicianIds[0];
     }
 
     // Handover Gate validation:
@@ -313,7 +327,7 @@ export const ProjectFormModal: React.FC<Props> = ({
           scheduledDate,
           endDate: endDate && endDate > scheduledDate ? endDate : undefined,
           scheduledTime,
-          assignedTechnicianIds,
+          assignedTechnicianIds: finalTechnicianIds,
           leadTechnicianId: effectiveLead,
           assignedTeamId: assignedTeamId || undefined,
           assignedTeamName: assignedTeamName || undefined,
@@ -367,7 +381,7 @@ export const ProjectFormModal: React.FC<Props> = ({
           scheduledDate,
           endDate: endDate && endDate > scheduledDate ? endDate : undefined,
           scheduledTime,
-          assignedTechnicianIds,
+          assignedTechnicianIds: finalTechnicianIds,
           leadTechnicianId: effectiveLead,
           assignedTeamId: assignedTeamId || undefined,
           assignedTeamName: assignedTeamName || undefined,
@@ -909,74 +923,6 @@ export const ProjectFormModal: React.FC<Props> = ({
                   onChange={(e) => setScheduledTime(e.target.value)}
                   className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white text-center font-bold font-mono"
                 />
-              </div>
-            </div>
-
-            {/* Technicians Multi-Select with Searchable Chip List */}
-            <div className="pt-1">
-              {!hasLeadTechnician && (
-                <div className="mb-2 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-md text-xs font-bold text-amber-800 dark:text-amber-200 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>حداقل یک سرپرست اکیپ در پرسنل تعریف کنید</span>
-                </div>
-              )}
-
-              <label className="block text-xs font-semibold text-[#9BA7B6] mb-1.5">
-                تکنسین‌های حاضر در این مأموریت (سرپرست مشخص شود):
-              </label>
-
-              {nonQcUsers.length > 6 && (
-                <div className="relative mb-2">
-                  <Search className="w-3.5 h-3.5 text-[#8A857B] absolute right-2.5 top-2.5" />
-                  <input
-                    type="text"
-                    placeholder="جستجوی تکنسین..."
-                    value={techSearchQuery}
-                    onChange={(e) => setTechSearchQuery(e.target.value)}
-                    className="w-full text-xs pr-8 pl-2.5 py-1.5 rounded-lg border border-[#212835] bg-[#0D1117] dark:text-white"
-                  />
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto">
-                {filteredUsers.map((u) => {
-                  const isSelected = assignedTechnicianIds.includes(u.id);
-                  const isLead = leadTechnicianId === u.id;
-
-                  return (
-                    <div
-                      key={u.id}
-                      onClick={() => handleTechnicianToggle(u.id)}
-                      className={`flex items-center justify-between p-2 rounded-md border cursor-pointer transition select-none ${
-                        isSelected
-                          ? 'border-[#C5A059] bg-white dark:bg-[#222222] ring-1 ring-[#C1A056]/30'
-                          : 'border-[#212835] bg-white/70 dark:bg-[#161616]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Avatar name={getDisplayName(u.name)} id={u.id} size="sm" />
-                        <span className="text-xs font-bold truncate">{getDisplayName(u.name)}</span>
-                      </div>
-
-                      {isSelected && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLeadTechnicianId(u.id);
-                          }}
-                          className={`text-xs px-2.5 py-0.5 rounded-full font-bold transition cursor-pointer ${
-                            isLead
-                              ? 'bg-[#0D1117] text-[#E5CA8F]'
-                              : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200'
-                          }`}
-                        >
-                          {isLead ? '⭐ سرپرست' : 'سرپرست کن'}
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
               </div>
             </div>
           </div>

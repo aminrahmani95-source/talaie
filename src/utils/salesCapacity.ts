@@ -489,6 +489,30 @@ export function updateSalesBooking(
 }
 
 /**
+ * انتساب رزرو فروش به پروژه اجرایی نصاب‌ها (توسط مدیر اپ و QC)
+ */
+export function linkBookingToInstallationProject(
+  bookingId: string,
+  projectId: string,
+  scheduledDate: string,
+  assignedTeamId: string
+): boolean {
+  const bookings = getStoredBookings();
+  const index = bookings.findIndex((b) => b.id === bookingId);
+  if (index === -1) return false;
+
+  bookings[index] = {
+    ...bookings[index],
+    convertedToProjectId: projectId,
+    scheduledInstallationDate: scheduledDate,
+    assignedInstallationTeamId: assignedTeamId,
+  };
+
+  saveStoredBookings(bookings);
+  return true;
+}
+
+/**
  * حذف رزرو پروژه و آزادسازی ظرفیت لت‌ها (انحصاراً در پنل مدیرعامل)
  */
 export function deleteSalesBooking(bookingId: string): boolean {

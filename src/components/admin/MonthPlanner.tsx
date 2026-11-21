@@ -25,6 +25,11 @@ import {
   Send,
   ArrowRightLeft,
   Wrench,
+  Trophy,
+  Sparkles,
+  User as UserIcon,
+  Phone,
+  MapPin,
 } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits, localDateKey, formatJalali } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
@@ -39,6 +44,10 @@ import {
   getProjectDailyDurationHours,
   getTeamDailyCapacity,
 } from '../../utils/capacity';
+import { getStoredBookings, linkBookingToInstallationProject } from '../../utils/salesCapacity';
+import { AssignSalesBookingModal } from './AssignSalesBookingModal';
+import { triggerToast } from '../Toast';
+import { SalesProjectBooking } from '../../types';
 
 interface Props {
   projects: Project[];
@@ -48,7 +57,7 @@ interface Props {
   settings: SystemSettings;
   scheduleChangeRequests?: ScheduleChangeRequest[];
   onUpdateSettings?: (settings: SystemSettings) => void;
-  onNewProject: (dateKey?: string) => void;
+  onNewProject: (dateKey?: string, initialData?: Partial<Project>) => void;
   onEditProject: (project: Project) => void;
   onManageProject: (project: Project) => void;
   onMoveProjectDate?: (projectId: string, newDateKey: string) => void;
@@ -103,6 +112,23 @@ export const MonthPlanner: React.FC<Props> = ({
   const [reviewingRequest, setReviewingRequest] = useState<ScheduleChangeRequest | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  // استخر رزروهای فروش برای تخصیص به نصاب‌ها
+  const [isSalesTrayOpen, setIsSalesTrayOpen] = useState(true);
+  const [assigningBooking, setAssigningBooking] = useState<SalesProjectBooking | null>(null);
+
+  // استخراج رزروهای فعال فروش که هنوز به پروژه اجرایی متصل نشده‌اند
+  const unassignedSalesBookings = useMemo(() => {
+    const allBookings = getStoredBookings();
+    return allBookings.filter((b) => {
+      // اگر تبدیل به پروژه شده بررسی می‌کنیم که آیا در لیست پروژه‌ها هست
+      if (b.convertedToProjectId) {
+        const exists = projects.some((p) => p.id === b.convertedToProjectId);
+        if (exists) return false;
+      }
+      return true;
+    });
+  }, [projects]);
 
   const displayedDays = useMemo(() => {
     if (viewMode === '4DAYS') return days.slice(startIndex, startIndex + 4);
@@ -238,6 +264,83 @@ export const MonthPlanner: React.FC<Props> = ({
           </div>
         }
       />
+
+      {/* استخر رزروهای فروش منتظر تخصیص به نصاب‌ها (Sales Intake Tray) */}
+      {unassignedSalesBookings.length > 0 && (
+        <div className="rounded-xl border border-[#C5A059]/40 bg-[#151B23] p-4 shadow-sm text-[#F0F4F8]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#C5A059]/15 border border-[#C5A059]/30 text-[#C5A059] flex items-center justify-center shrink-0">
+                <Trophy className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-black text-xs sm:text-sm text-[#F0F4F8]">
+                    استخر رزروهای فروش منتظر تخصیص به نصاب‌ها
+                  </h3>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#C5A059] text-[#0D1117] tabular-nums">
+                    {toPersianDigits(unassignedSalesBookings.length)} رزرو فروش
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#9BA7B6] mt-0.5">
+                  تاریخ‌های فروش تخمینی اولیه هستند؛ مدیر اپ و QC می‌تواند به صورت کاملاً آزادانه تاریخ و اکیپ قطعی را ست کند.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsSalesTrayOpen((prev) => !prev)}
+              className="text-xs font-bold text-[#C5A059] hover:underline flex items-center gap-1 cursor-pointer shrink-0"
+            >
+              {isSalesTrayOpen ? 'بستن نوار فروش' : 'مشاهده رزروها'}
+              {isSalesTrayOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {isSalesTrayOpen && (
+            <div className="mt-3 pt-3 border-t border-[#212835] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {unassignedSalesBookings.map((b) => (
+                <div
+                  key={b.id}
+                  className="p-3 rounded-xl bg-[#0D1117] border border-[#212835] hover:border-[#C5A059]/60 transition flex flex-col justify-between gap-2.5"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-bold text-xs text-[#F0F4F8] truncate">{b.customerName}</span>
+                      <span className="font-mono text-[11px] font-bold text-[#C5A059] bg-[#C5A059]/10 px-1.5 py-0.5 rounded shrink-0">
+                        {toPersianDigits(b.lathsCount)} لت
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-[#9BA7B6] mt-1.5">
+                      <span className="flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-[#637184]" />
+                        <span className="font-mono">{b.customerPhone}</span>
+                      </span>
+                      <span>•</span>
+                      <span className="truncate">{b.salesRepName}</span>
+                    </div>
+
+                    <div className="mt-2 text-[10px] bg-[#161B22] p-1.5 rounded border border-[#212835] flex items-center justify-between text-[#9BA7B6]">
+                      <span>پیشنهاد اولیه فروش:</span>
+                      <span className="font-mono font-bold text-[#E5CA8F]">{b.jalaliDate}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setAssigningBooking(b)}
+                    className="w-full py-1.5 rounded-lg bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-black text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>تخصیص به برنامه نصب</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* بنر تداخلات و هشدارهای برنامه‌ریزی (Conflict & Alerts Banner) */}
       {(conflicts.length > 0 || pendingRequests.length > 0) && (
@@ -549,10 +652,15 @@ export const MonthPlanner: React.FC<Props> = ({
                               <span>🔥 فورس‌ماژور</span>
                             </span>
                           )}
-                          {proj.warehousePrep?.isPackedAndReady && (
+                          {proj.warehousePrep?.isPackedAndReady ? (
                             <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
                               <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                              <span>بار آماده ✅</span>
+                              <span>بار انبار آماده ✅</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] bg-zinc-800 text-[#9BA7B6] font-medium px-1.5 py-0.5 rounded border border-zinc-700/50 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                              <span>در انتظار بارگیری انبار</span>
                             </span>
                           )}
                           {proj.specialTools && proj.specialTools.length > 0 && (
@@ -850,6 +958,41 @@ export const MonthPlanner: React.FC<Props> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* مودال تخصیص رزرو فروش به تقویم قطعی نصب */}
+      {assigningBooking && (
+        <AssignSalesBookingModal
+          booking={assigningBooking}
+          teams={teams}
+          users={users}
+          onClose={() => setAssigningBooking(null)}
+          onConfirm={(scheduledDate, teamId, teamName) => {
+            const projectCode = `P-${Date.now().toString().slice(-4)}`;
+            const projectId = `p-from-sale-${Date.now()}`;
+            
+            // انتساب دیتای فروش به متدهای ثبت پروژه
+            onNewProject(scheduledDate, {
+              id: projectId,
+              code: projectCode,
+              title: `پروژه ${assigningBooking.customerName}`,
+              customerName: assigningBooking.customerName,
+              customerPhone: assigningBooking.customerPhone,
+              address: assigningBooking.address,
+              shadePanels: assigningBooking.lathsCount,
+              curtainPanels: 0,
+              mechanismType: assigningBooking.isSmart ? 'موتور برقی هوشمند سامفی' : 'مکانیزم دستی استاندارد',
+              specialNotes: assigningBooking.notes ? `[رزرو فروش]: ${assigningBooking.notes}` : undefined,
+              assignedTeamId: teamId,
+              assignedTeamName: teamName,
+              status: 'SCHEDULED',
+            });
+
+            // ثبت پیوند رزرو فروش در استوریج فروش
+            linkBookingToInstallationProject(assigningBooking.id, projectId, scheduledDate, teamId);
+            triggerToast('success', `پروژه «${assigningBooking.customerName}» با موفقیت برای تاریخ ${scheduledDate} در برنامه نصب ثبت شد.`);
+          }}
+        />
       )}
     </div>
   );

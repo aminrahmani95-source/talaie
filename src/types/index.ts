@@ -1,6 +1,6 @@
 export type UserRole = 
   | 'CEO'                     // مدیرعامل (دسترسی انحصاری به شناسنامه جامع پروژه‌ها و پرینت)
-  | 'QC_MANAGER'              // مدیر فنی و QC (کاربر اصلی با دسترسی کامل عملیاتی)
+  | 'QC_MANAGER'              // مدیر اپ و QC (کاربر اصلی با دسترسی کامل عملیاتی و نظارتی)
   | 'MEASUREMENT_LEAD'        // مسئول اندازه‌گیری دوم و تایید بستر فضا (1 نفر)
   | 'LEAD_TECHNICIAN'         // سرپرست اکیپ نصب
   | 'TECHNICIAN'              // تکنسین نصب
@@ -867,6 +867,9 @@ export interface SalesProjectBooking {
   salesRepId: string;
   salesRepName: string;
   createdAt: string;
+  convertedToProjectId?: string; // شناسه پروژه معادل در صورت انتقال به برنامه نصب
+  scheduledInstallationDate?: string; // تاریخ قطعی نصب تعیین‌شده توسط مدیر اپ و QC
+  assignedInstallationTeamId?: string; // شناسه اکیپ قطعی تعیین‌شده
 }
 
 export interface TeamDayAllocation {

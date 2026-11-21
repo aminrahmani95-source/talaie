@@ -11,7 +11,7 @@ export const TEST_USERS: User[] = [
   },
   {
     id: 'u-qc-manager',
-    name: 'مهندس رحمانی (مدیر ارشد QC)',
+    name: 'مهندس رحمانی (مدیر اپ و QC)',
     phone: '09124339038',
     role: 'QC_MANAGER',
     avatar: '👔',
@@ -173,7 +173,7 @@ export const DEFAULT_TEAM_MEMBERS: TeamMember[] = [
 
 export const ROLE_BADGES: Record<string, { title: string; color: string }> = {
   CEO: { title: 'مدیر عامل', color: 'bg-purple-500/10 text-purple-300 border-purple-500/30' },
-  QC_MANAGER: { title: 'مدیر QC', color: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },
+  QC_MANAGER: { title: 'مدیر اپ و QC', color: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },
   SCHEDULING_COORDINATOR: { title: 'هماهنگی', color: 'bg-blue-500/10 text-blue-300 border-blue-500/30' },
   MEASUREMENT_LEAD: { title: 'متراژ دوم', color: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' },
   WAREHOUSE: { title: 'انبار', color: 'bg-orange-500/10 text-orange-300 border-orange-500/30' },

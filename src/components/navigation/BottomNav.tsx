@@ -36,6 +36,7 @@ export const BottomNav: React.FC<Props> = ({
   userRole,
 }) => {
   const isCeo = userRole === 'CEO';
+  const isQcManager = userRole === 'QC_MANAGER';
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const totalUrgentCount = openStuckCount + pendingQcCount + openTicketCount;
@@ -61,6 +62,28 @@ export const BottomNav: React.FC<Props> = ({
           id: 'planner' as const,
           label: 'دیدن برنامه',
           icon: CalendarDays,
+          badge: undefined,
+        },
+      ]
+    : isQcManager
+    ? [
+        {
+          id: 'control' as const,
+          label: 'پیشخوان',
+          icon: Activity,
+          badge: totalUrgentCount > 0 ? totalUrgentCount : undefined,
+          badgeColor: 'bg-rose-600 text-white animate-pulse',
+        },
+        {
+          id: 'planner' as const,
+          label: 'تقویم نصب',
+          icon: CalendarDays,
+          badge: undefined,
+        },
+        {
+          id: 'technicians' as const,
+          label: 'ناوگان',
+          icon: Users,
           badge: undefined,
         },
       ]

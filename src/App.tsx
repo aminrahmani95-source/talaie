@@ -180,7 +180,7 @@ export function getUserRoleLabel(role?: string): string {
     case 'CEO':
       return 'مدیرعامل';
     case 'QC_MANAGER':
-      return 'مدیر کنترل کیفیت و فنی';
+      return 'مدیر اپ و QC';
     case 'MEASUREMENT_LEAD':
       return 'مسئول متراژ و تایید بستر';
     case 'WAREHOUSE':
@@ -616,8 +616,8 @@ export const App: React.FC = () => {
     };
   }, [currentUser?.id, authChecking]);
 
-  // Navigation tab for QC Manager / Coordinator - default to General Manager Dashboard ('registry')
-  const [activeTab, setActiveTab] = useState<ManagerTab>('registry');
+  // Navigation tab for QC Manager / Coordinator - default to Operational Command Center ('control')
+  const [activeTab, setActiveTab] = useState<ManagerTab>('control');
 
   // CEO navigation restriction: CEO only accesses 'registry' (داشبورد مدیر کل) and 'planner' (دیدن برنامه)
   useEffect(() => {
@@ -2115,8 +2115,12 @@ export const App: React.FC = () => {
   };
 
   // Open Project Form Modal
-  const handleOpenNewProject = (dateKey?: string) => {
-    setEditingProject(null);
+  const handleOpenNewProject = (dateKey?: string, initialData?: Partial<Project>) => {
+    if (initialData) {
+      setEditingProject(initialData as Project);
+    } else {
+      setEditingProject(null);
+    }
     setPresetDateKey(dateKey);
     setIsProjectFormOpen(true);
   };
@@ -2167,7 +2171,7 @@ export const App: React.FC = () => {
     } catch (e) {
       console.warn('Could not clear impersonator CEO:', e);
     }
-    setActiveTab(restoredCeo.role === 'CEO' ? 'registry' : 'technicians');
+    setActiveTab(restoredCeo.role === 'CEO' ? 'registry' : 'control');
     showToast('success', `به حساب ${getUserRoleLabel(restoredCeo.role)} بازگشتید.`);
   };
 
