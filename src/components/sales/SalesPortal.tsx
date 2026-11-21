@@ -66,6 +66,8 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
   // فیلتر تقویم
   const [selectedMonthOffset, setSelectedMonthOffset] = useState<number>(0);
   const [inspectDayKey, setInspectDayKey] = useState<string | null>(null);
+  const [calendarFilter, setCalendarFilter] = useState<'ALL' | 'FULL' | 'NEAR_FULL' | 'AVAILABLE'>('ALL');
+  const [dateFilter, setDateFilter] = useState<'ALL' | 'AVAILABLE' | 'FULL'>('ALL');
 
   // بارگذاری داده‌ها و گوش‌دادن به رویدادها
   const refreshData = () => {
@@ -194,6 +196,67 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
 
   const activeMonthGroup = monthGroups[selectedMonthOffset] || monthGroups[0];
   const inspectedDay = threeMonthCapacities.find((d) => d.date === inspectDayKey);
+
+  // آمار وضعیت روزهای ماه انتخاب شده
+  const monthStats = useMemo(() => {
+    if (!activeMonthGroup) return { full: 0, nearFull: 0, available: 0, total: 0 };
+    let full = 0;
+    let nearFull = 0;
+    let available = 0;
+    for (const d of activeMonthGroup.days) {
+      if (d.remainingLaths <= 0) full++;
+      else if (d.remainingLaths <= 20) nearFull++;
+      else available++;
+    }
+    return { full, nearFull, available, total: activeMonthGroup.days.length };
+  }, [activeMonthGroup]);
+
+  // روزهای فیلترشده تقویم ماه
+  const filteredCalendarDays = useMemo(() => {
+    if (!activeMonthGroup) return [];
+    if (calendarFilter === 'FULL') {
+      return activeMonthGroup.days.filter((d) => d.remainingLaths <= 0);
+    }
+    if (calendarFilter === 'NEAR_FULL') {
+      return activeMonthGroup.days.filter((d) => d.remainingLaths > 0 && d.remainingLaths <= 20);
+    }
+    if (calendarFilter === 'AVAILABLE') {
+      return activeMonthGroup.days.filter((d) => d.remainingLaths > 20);
+    }
+    return activeMonthGroup.days;
+  }, [activeMonthGroup, calendarFilter]);
+
+  // ۳۰ روز آینده با وضعیت ظرفیت برای فرم ثبت
+  const upcoming30Days = useMemo(() => {
+    return upcomingDays.slice(0, 30).map((day) => {
+      const cap = getDailyCapacity(day.dateKey, bookings);
+      const isFull = cap.remainingLaths <= 0;
+      const isInsufficient = cap.remainingLaths < lathsCount;
+      const isNearFull = cap.remainingLaths > 0 && cap.remainingLaths <= 20;
+      return {
+        ...day,
+        cap,
+        isFull,
+        isInsufficient,
+        isNearFull,
+      };
+    });
+  }, [upcomingDays, bookings, lathsCount]);
+
+  const filteredUpcomingDays = useMemo(() => {
+    if (dateFilter === 'AVAILABLE') {
+      return upcoming30Days.filter((d) => !d.isInsufficient && !d.isFull);
+    }
+    if (dateFilter === 'FULL') {
+      return upcoming30Days.filter((d) => d.isFull || d.isInsufficient);
+    }
+    return upcoming30Days;
+  }, [upcoming30Days, dateFilter]);
+
+  const selectedDayCapacity = useMemo(() => {
+    if (!selectedDateKey) return null;
+    return getDailyCapacity(selectedDateKey, bookings);
+  }, [selectedDateKey, bookings]);
 
   return (
     <div className="space-y-6 dir-rtl text-right font-sans pb-16" dir="rtl">
@@ -496,32 +559,130 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                 </button>
               </div>
 
-              {/* تاریخ نصب درخواستی */}
+              {/* تاریخ نصب درخواستی با فیلتر رنگی وضعیت ظرفیت */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  تاریخ نصب مورد نظر کارشناس <span className="text-rose-400">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                  <label className="text-xs font-semibold text-slate-300">
+                    تاریخ نصب مورد نظر کارشناس <span className="text-rose-400">*</span>
+                  </label>
+                  {/* فیلترهای رنگی روزهای کاری */}
+                  <div className="flex items-center gap-1 text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => setDateFilter('ALL')}
+                      className={`px-2 py-0.5 rounded-lg font-bold transition cursor-pointer ${
+                        dateFilter === 'ALL'
+                          ? 'bg-[#C5A059] text-black shadow-xs'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      همه (۳۰)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDateFilter('AVAILABLE')}
+                      className={`px-2 py-0.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
+                        dateFilter === 'AVAILABLE'
+                          ? 'bg-emerald-500 text-black shadow-xs'
+                          : 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/40 hover:bg-emerald-900/50'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      ظرفیت کافی
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDateFilter('FULL')}
+                      className={`px-2 py-0.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
+                        dateFilter === 'FULL'
+                          ? 'bg-rose-500 text-white shadow-xs'
+                          : 'bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900/50'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                      تکمیل / ناکافی
+                    </button>
+                  </div>
+                </div>
+
                 <select
                   value={selectedDateKey}
                   onChange={(e) => setSelectedDateKey(e.target.value)}
-                  className="w-full bg-[#0D1117] border border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-white focus:border-[#C5A059] focus:outline-none transition cursor-pointer"
+                  className={`w-full bg-[#0D1117] border rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none transition cursor-pointer ${
+                    selectedDayCapacity && selectedDayCapacity.remainingLaths <= 0
+                      ? 'border-rose-500 ring-1 ring-rose-500/50'
+                      : selectedDayCapacity && selectedDayCapacity.remainingLaths < lathsCount
+                      ? 'border-amber-500 ring-1 ring-amber-500/50'
+                      : 'border-slate-700/80 focus:border-[#C5A059]'
+                  }`}
                 >
-                  {upcomingDays.slice(0, 30).map((day) => {
-                    const cap = getDailyCapacity(day.dateKey, bookings);
-                    const isFull = cap.remainingLaths < lathsCount;
+                  {filteredUpcomingDays.map((day) => {
+                    const isFull = day.isFull;
+                    const isInsufficient = day.isInsufficient;
+                    const isNearFull = day.isNearFull;
                     return (
                       <option
                         key={day.dateKey}
                         value={day.dateKey}
-                        disabled={isFull}
-                        className={isFull ? 'text-slate-600 bg-slate-900' : 'text-white bg-[#0D1117]'}
+                        disabled={isInsufficient}
+                        className={
+                          isFull
+                            ? 'text-rose-400 bg-rose-950 font-bold'
+                            : isInsufficient
+                            ? 'text-amber-400 bg-amber-950'
+                            : isNearFull
+                            ? 'text-amber-200 bg-[#0D1117]'
+                            : 'text-emerald-300 bg-[#0D1117]'
+                        }
                       >
-                        {day.persianDayName} {day.persianDateStr} — ({cap.remainingLaths} لت خالی از ۶۰)
-                        {isFull ? ' [تکمیل ظرفیت]' : ''}
+                        {isFull ? '🔴' : isInsufficient ? '⚠️' : isNearFull ? '🟡' : '🟢'}{' '}
+                        {day.persianDayName} {day.persianDateStr} —{' '}
+                        {isFull
+                          ? '[تکمیل ظرفیت - ۰ لت]'
+                          : isInsufficient
+                          ? `[ناکافی: ${day.cap.remainingLaths} لت آزاد برای نیاز ${lathsCount} لت]`
+                          : `[${day.cap.remainingLaths} لت خالی از ۶۰]`}
                       </option>
                     );
                   })}
                 </select>
+
+                {/* کارت وضعیت زنده ظرفیت روز انتخاب شده */}
+                {selectedDayCapacity && (
+                  <div
+                    className={`mt-2 p-2.5 rounded-xl border flex items-center justify-between text-xs transition-all ${
+                      selectedDayCapacity.remainingLaths <= 0
+                        ? 'bg-rose-950/50 border-rose-500 text-rose-200'
+                        : selectedDayCapacity.remainingLaths < lathsCount
+                        ? 'bg-amber-950/40 border-amber-500 text-amber-200'
+                        : selectedDayCapacity.remainingLaths <= 20
+                        ? 'bg-amber-950/20 border-amber-500/50 text-amber-300'
+                        : 'bg-emerald-950/20 border-emerald-500/50 text-emerald-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          selectedDayCapacity.remainingLaths <= 0
+                            ? 'bg-rose-500 animate-ping'
+                            : selectedDayCapacity.remainingLaths < lathsCount
+                            ? 'bg-amber-400'
+                            : 'bg-emerald-400'
+                        }`}
+                      />
+                      <span className="font-bold truncate">
+                        {selectedDayCapacity.remainingLaths <= 0
+                          ? 'تکمیل ظرفیت شرکت در این تاریخ (۰ لت خالی - انتخاب تاریخ دیگر الزامی است)'
+                          : selectedDayCapacity.remainingLaths < lathsCount
+                          ? `ظرفیت روز (${selectedDayCapacity.remainingLaths} لت) کمتر از نیاز پروژه (${lathsCount} لت) است`
+                          : `ظرفیت روز آماده رزرو: ${selectedDayCapacity.remainingLaths} لت آزاد از ۶۰ لت`}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono font-black shrink-0 mr-2">
+                      {selectedDayCapacity.bookedLaths}/۶۰ لت
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* کادر توضیحات تکمیلی */}
@@ -679,37 +840,112 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
       {/* ================= تب ۲: تقویم زنده ۳ ماهه ظرفیت ================= */}
       {activeTab === 'calendar' && (
         <div className="space-y-5">
-          {/* نوار انتخاب ماه */}
-          <div className="bg-[#14171F] border border-slate-800 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="w-5 h-5 text-[#C5A059]" />
-              <span className="font-bold text-white text-sm">
-                مشاهده ظرفیت خالی روزانه به تفکیک ۴ اکیپ (سقف روزانه ۶۰ لت)
-              </span>
+          {/* نوار انتخاب ماه و فیلترهای رنگی وضعیت ظرفیت */}
+          <div className="bg-[#14171F] border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-5 h-5 text-[#C5A059]" />
+                <span className="font-bold text-white text-sm">
+                  مشاهده ظرفیت خالی روزانه به تفکیک ۴ اکیپ (سقف روزانه ۶۰ لت)
+                </span>
+              </div>
+
+              {/* ماه‌های ۳ گانه */}
+              <div className="flex items-center gap-2">
+                {monthGroups.map((group, idx) => (
+                  <button
+                    key={group.monthName}
+                    type="button"
+                    onClick={() => {
+                      setSelectedMonthOffset(idx);
+                      setInspectDayKey(null);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      selectedMonthOffset === idx
+                        ? 'bg-[#C5A059] text-black shadow-md'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {group.monthName}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* ماه‌های ۳ گانه */}
-            <div className="flex items-center gap-2">
-              {monthGroups.map((group, idx) => (
+            {/* نوار فیلترهای تفکیکی رنگی و راهنما */}
+            <div className="flex items-center justify-between flex-wrap gap-2 pt-3 border-t border-slate-800/80 text-xs">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-slate-400 text-xs ml-1 font-semibold">فیلتر وضعیت:</span>
                 <button
-                  key={group.monthName}
                   type="button"
-                  onClick={() => setSelectedMonthOffset(idx)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    selectedMonthOffset === idx
-                      ? 'bg-[#C5A059] text-black shadow-md'
-                      : 'bg-slate-800 text-slate-300 hover:text-white'
+                  onClick={() => setCalendarFilter('ALL')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+                    calendarFilter === 'ALL'
+                      ? 'bg-white text-black'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                   }`}
                 >
-                  {group.monthName}
+                  همه روزها ({monthStats.total})
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setCalendarFilter('FULL')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    calendarFilter === 'FULL'
+                      ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25 ring-2 ring-rose-300'
+                      : 'bg-rose-950/40 text-rose-300 border border-rose-800/50 hover:bg-rose-900/50'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-rose-400" />
+                  🔴 تکمیل ظرفیت ({monthStats.full})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCalendarFilter('NEAR_FULL')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    calendarFilter === 'NEAR_FULL'
+                      ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/25 ring-2 ring-amber-300'
+                      : 'bg-amber-950/40 text-amber-300 border border-amber-800/50 hover:bg-amber-900/50'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  🟡 در آستانه تکمیل ({monthStats.nearFull})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCalendarFilter('AVAILABLE')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    calendarFilter === 'AVAILABLE'
+                      ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/25 ring-2 ring-emerald-300'
+                      : 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/50 hover:bg-emerald-900/50'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  🟢 ظرفیت آزاد ({monthStats.available})
+                </button>
+              </div>
+
+              {/* راهنمای رنگ‌ها */}
+              <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 inline-block shadow-xs" />
+                  قرمز: پر (۶۰/۶۰)
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 inline-block shadow-xs" />
+                  زرد: کمتر از ۲۰ لت
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-xs" />
+                  سبز: ظرفیت باز
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* شبکه روزهای تقویم */}
+          {/* شبکه روزهای تقویم با هایلایت رنگی واضح */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {activeMonthGroup?.days.map((dayCap) => {
+            {filteredCalendarDays.map((dayCap) => {
               const isFull = dayCap.remainingLaths <= 0;
               const isNearFull = dayCap.remainingLaths > 0 && dayCap.remainingLaths <= 20;
               const isSelected = inspectDayKey === dayCap.date;
@@ -718,22 +954,42 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                 <div
                   key={dayCap.date}
                   onClick={() => setInspectDayKey(dayCap.date)}
-                  className={`bg-[#14171F] border rounded-xl p-3 transition-all cursor-pointer relative overflow-hidden ${
+                  className={`border rounded-xl p-3 transition-all cursor-pointer relative overflow-hidden ${
                     isSelected
-                      ? 'border-[#C5A059] shadow-lg shadow-[#C5A059]/10 bg-[#1A202C]'
+                      ? 'border-[#C5A059] shadow-lg shadow-[#C5A059]/20 bg-[#1A202C] ring-2 ring-[#C5A059]'
                       : isFull
-                      ? 'border-rose-900/60 bg-rose-950/10 hover:border-rose-700'
+                      ? 'border-rose-500 bg-rose-950/40 text-rose-100 hover:border-rose-400 hover:bg-rose-950/60 ring-1 ring-rose-500/50 shadow-md shadow-rose-950/30'
                       : isNearFull
-                      ? 'border-amber-900/60 bg-amber-950/10 hover:border-amber-700'
-                      : 'border-slate-800 hover:border-slate-600'
+                      ? 'border-amber-500/70 bg-amber-950/30 text-amber-100 hover:border-amber-400 hover:bg-amber-950/50 ring-1 ring-amber-500/40 shadow-xs'
+                      : 'border-emerald-500/30 bg-[#14171F] hover:border-emerald-400 hover:bg-emerald-950/15'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] text-slate-400 font-medium">{dayCap.dayName}</span>
+                    <span className="text-[11px] text-slate-300 font-medium">{dayCap.dayName}</span>
                     <span className="text-xs font-bold text-white font-mono">{dayCap.jalaliDate.split('/')[2]}</span>
                   </div>
 
-                  <div className="my-2">
+                  {/* برچسب رنگی در بالای کارت */}
+                  <div className="mb-2">
+                    <span
+                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        isFull
+                          ? 'bg-rose-500/25 text-rose-200 border border-rose-500/60'
+                          : isNearFull
+                          ? 'bg-amber-500/20 text-amber-200 border border-amber-500/50'
+                          : 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/40'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          isFull ? 'bg-rose-400' : isNearFull ? 'bg-amber-400' : 'bg-emerald-400'
+                        }`}
+                      />
+                      {isFull ? '🔴 تکمیل ظرفیت' : isNearFull ? '🟡 ظرفیت محدود' : '🟢 ظرفیت آزاد'}
+                    </span>
+                  </div>
+
+                  <div className="my-1.5">
                     <div className="flex justify-between items-baseline text-[11px] mb-1">
                       <span className="text-slate-400">ظرفیت خالی:</span>
                       <span
@@ -750,7 +1006,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                     </div>
 
                     {/* Progress bar */}
-                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-300 ${
                           isFull ? 'bg-rose-500' : isNearFull ? 'bg-amber-400' : 'bg-emerald-500'
@@ -762,13 +1018,20 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-[10px] text-slate-500 border-t border-slate-800/80 pt-1.5 mt-1">
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800/80 pt-1.5 mt-2">
                     <span>{dayCap.bookingsCount} رزرو</span>
                     <span>سقف: ۶۰</span>
                   </div>
                 </div>
               );
             })}
+
+            {filteredCalendarDays.length === 0 && (
+              <div className="col-span-full py-12 text-center text-slate-400 bg-[#14171F] rounded-2xl border border-slate-800">
+                <CalendarDays className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                <p className="text-sm font-semibold">هیچ روزی با وضعیت انتخابی در این ماه یافت نشد.</p>
+              </div>
+            )}
           </div>
 
           {/* پنل نمایش جزئیات روز انتخابی */}
