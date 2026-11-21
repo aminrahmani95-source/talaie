@@ -6,6 +6,8 @@ import {
   getDailyCapacity,
   calculateBookingOptions,
   createSalesBooking,
+  updateSalesBooking,
+  deleteSalesBooking,
   getSalesRepLeaderboard,
   getThreeMonthCapacities,
 } from '../salesCapacity';
@@ -159,5 +161,90 @@ describe('Sales & 60-Lath Capacity Engine Tests', () => {
       expect(day.remainingLaths).toBeLessThanOrEqual(60);
       expect(day.remainingLaths).toBeGreaterThanOrEqual(0);
     });
+  });
+
+  it('8. updates an existing sales booking and persists changes', () => {
+    const created = createSalesBooking({
+      customerName: 'پروژه سعادت‌آباد قدیم',
+      customerPhone: '09123334455',
+      address: 'میدان کاج',
+      lathsCount: 15,
+      isSmart: false,
+      notes: 'شید معمولی',
+      requestedDate: '2026-12-15',
+      jalaliDate: '۱۴۰۵/۰۹/۲۴',
+      allocationMode: 'SPREAD_DAILY',
+      allocatedTeams: ['TEAM_1'],
+      allocatedDaysCount: 1,
+      salesRepId: 'u-sales-1',
+      salesRepName: 'سپهر رادمنش',
+    });
+
+    const updated = updateSalesBooking(created.id, {
+      customerName: 'پروژه سعادت‌آباد اصلاح‌شده',
+      lathsCount: 25,
+      isSmart: true,
+      notes: 'تغییر به شید هوشمند موتوردار',
+    });
+
+    expect(updated.customerName).toBe('پروژه سعادت‌آباد اصلاح‌شده');
+    expect(updated.lathsCount).toBe(25);
+    expect(updated.isSmart).toBe(true);
+    expect(updated.notes).toBe('تغییر به شید هوشمند موتوردار');
+  });
+
+  it('9. prevents self-capacity collision when recalculating options for existing booking via excludeBookingId', () => {
+    // Fill 60 laths on 2026-12-20
+    const booking = createSalesBooking({
+      customerName: 'پروژه فول ظرفیت',
+      customerPhone: '09120000000',
+      address: 'تهران',
+      lathsCount: 60,
+      isSmart: true,
+      notes: '',
+      requestedDate: '2026-12-20',
+      jalaliDate: '۱۴۰۵/۰۹/۲۹',
+      allocationMode: 'SPREAD_DAILY',
+      allocatedTeams: ['TEAM_1', 'TEAM_2', 'TEAM_3', 'TEAM_4'],
+      allocatedDaysCount: 1,
+      salesRepId: 'u-sales-1',
+      salesRepName: 'سپهر رادمنش',
+    });
+
+    // Without excludeBookingId, day is full (0 remaining)
+    const optionsFull = calculateBookingOptions(15, '2026-12-20');
+    expect(optionsFull.spreadOption.isAvailable).toBe(false);
+
+    // With excludeBookingId, booking's own 60 laths are excluded, freeing up capacity for edit
+    const optionsWithExclusion = calculateBookingOptions(30, '2026-12-20', booking.id);
+    expect(optionsWithExclusion.spreadOption.isAvailable).toBe(true);
+  });
+
+  it('10. deletes a booking and immediately restores free capacity', () => {
+    const bookingToDelete = createSalesBooking({
+      customerName: 'پروژه کنسلی مشتری',
+      customerPhone: '09129999999',
+      address: 'فرمانیه',
+      lathsCount: 30,
+      isSmart: true,
+      notes: 'کنسلی به دلیل تاخیر کارفرما',
+      requestedDate: '2026-12-25',
+      jalaliDate: '۱۴۰۵/۱۰/۰۴',
+      allocationMode: 'SPREAD_DAILY',
+      allocatedTeams: ['TEAM_1', 'TEAM_2'],
+      allocatedDaysCount: 1,
+      salesRepId: 'u-sales-2',
+      salesRepName: 'نیلوفر صبوری',
+    });
+
+    const capBefore = getDailyCapacity('2026-12-25');
+    expect(capBefore.bookedLaths).toBe(30);
+
+    const deleted = deleteSalesBooking(bookingToDelete.id);
+    expect(deleted).toBe(true);
+
+    const capAfter = getDailyCapacity('2026-12-25');
+    expect(capAfter.bookedLaths).toBe(0);
+    expect(capAfter.remainingLaths).toBe(60);
   });
 });

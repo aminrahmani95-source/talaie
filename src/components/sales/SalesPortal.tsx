@@ -19,6 +19,14 @@ import {
   Clock,
   ShieldCheck,
   Building,
+  Pencil,
+  Trash2,
+  Lock,
+  Search,
+  Filter,
+  X,
+  FileText,
+  AlertTriangle,
 } from 'lucide-react';
 import { User, SalesProjectBooking, SalesAllocationMode } from '../../types';
 import {
@@ -29,6 +37,8 @@ import {
   getDailyCapacity,
   calculateBookingOptions,
   createSalesBooking,
+  updateSalesBooking,
+  deleteSalesBooking,
   getSalesRepLeaderboard,
   getStoredBookings,
 } from '../../utils/salesCapacity';
@@ -38,11 +48,35 @@ interface Props {
   currentUser: User;
 }
 
-type TabType = 'booking' | 'calendar' | 'leaderboard';
+type TabType = 'booking' | 'all-bookings' | 'calendar' | 'leaderboard';
 
 export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
+  const isCeo = currentUser.role === 'CEO';
   const [activeTab, setActiveTab] = useState<TabType>('booking');
   const [bookings, setBookings] = useState<SalesProjectBooking[]>([]);
+
+  // استیت ویرایش پروژه
+  const [editingBooking, setEditingBooking] = useState<SalesProjectBooking | null>(null);
+  const [editCustomerName, setEditCustomerName] = useState('');
+  const [editCustomerPhone, setEditCustomerPhone] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editLathsCount, setEditLathsCount] = useState<number>(15);
+  const [editIsSmart, setEditIsSmart] = useState<boolean>(true);
+  const [editNotes, setEditNotes] = useState('');
+  const [editDateKey, setEditDateKey] = useState<string>('');
+  const [editMode, setEditMode] = useState<SalesAllocationMode>('SPREAD_DAILY');
+  const [editFormError, setEditFormError] = useState<string | null>(null);
+
+  // استیت حذف پروژه (انحصاراً برای مدیرعامل)
+  const [deletingBooking, setDeletingBooking] = useState<SalesProjectBooking | null>(null);
+
+  // پیام موفقیت فلوتینگ
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // فیلترهای تب لیست همه پروژه‌ها
+  const [searchQuery, setSearchQuery] = useState('');
+  const [repFilter, setRepFilter] = useState<'ALL' | 'MINE'>('ALL');
+  const [systemFilter, setSystemFilter] = useState<'ALL' | 'SMART' | 'MANUAL'>('ALL');
 
   // فرم ثبت پروژه
   const [customerName, setCustomerName] = useState('');
@@ -88,11 +122,131 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
     return () => window.removeEventListener('talaei_sales_bookings_updated', handleUpdate);
   }, []);
 
-  // محاسبه گزینه‌های رزرو برای روز انتخابی
+  useEffect(() => {
+    if (!successToast) return;
+    const t = setTimeout(() => setSuccessToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [successToast]);
+
+  // محاسبه گزینه‌های رزرو برای روز انتخابی (ثبت جدید)
   const bookingOptions = useMemo(() => {
     if (!selectedDateKey || lathsCount <= 0) return null;
     return calculateBookingOptions(lathsCount, selectedDateKey);
   }, [lathsCount, selectedDateKey, bookings]);
+
+  // محاسبه گزینه‌های رزرو برای ویرایش پروژه (با کسر خودکار ظرفیت رزرو جاری)
+  const editBookingOptions = useMemo(() => {
+    if (!editingBooking || !editDateKey || editLathsCount <= 0) return null;
+    return calculateBookingOptions(editLathsCount, editDateKey, editingBooking.id);
+  }, [editingBooking, editDateKey, editLathsCount, bookings]);
+
+  // فیلتر هوشمند پروژه‌ها در تب مدیریت پروژه‌ها
+  const filteredBookings = useMemo(() => {
+    return bookings.filter((b) => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchCustomer = b.customerName?.toLowerCase().includes(q);
+        const matchPhone = b.customerPhone?.includes(q);
+        const matchAddress = b.address?.toLowerCase().includes(q);
+        const matchRep = b.salesRepName?.toLowerCase().includes(q);
+        const matchId = b.id?.toLowerCase().includes(q);
+        if (!matchCustomer && !matchPhone && !matchAddress && !matchRep && !matchId) return false;
+      }
+      if (repFilter === 'MINE' && b.salesRepId !== currentUser.id) return false;
+      if (systemFilter === 'SMART' && !b.isSmart) return false;
+      if (systemFilter === 'MANUAL' && b.isSmart) return false;
+      return true;
+    });
+  }, [bookings, searchQuery, repFilter, systemFilter, currentUser.id]);
+
+  // عملیات ویرایش و حذف
+  const handleStartEdit = (b: SalesProjectBooking) => {
+    setEditingBooking(b);
+    setEditCustomerName(b.customerName);
+    setEditCustomerPhone(b.customerPhone);
+    setEditAddress(b.address);
+    setEditLathsCount(b.lathsCount);
+    setEditIsSmart(b.isSmart);
+    setEditNotes(b.notes || '');
+    setEditDateKey(b.requestedDate);
+    setEditMode(b.allocationMode);
+    setEditFormError(null);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBooking) return;
+    setEditFormError(null);
+
+    if (!editCustomerName.trim()) {
+      setEditFormError('نام مشتری نمی‌تواند خالی باشد.');
+      return;
+    }
+    if (!editCustomerPhone.trim() || editCustomerPhone.length < 10) {
+      setEditFormError('شماره تماس معتبر ۱۰ یا ۱۱ رقمی وارد نمایید.');
+      return;
+    }
+    if (!editAddress.trim()) {
+      setEditFormError('آدرس و لوکیشن پروژه الزامی است.');
+      return;
+    }
+    if (editLathsCount <= 0 || editLathsCount > 60) {
+      setEditFormError('تعداد لت‌ها باید بین ۱ تا ۶۰ باشد.');
+      return;
+    }
+
+    if (!editBookingOptions) {
+      setEditFormError('امکان بررسی ظرفیت برای تاریخ انتخابی وجود ندارد.');
+      return;
+    }
+
+    const chosenOption =
+      editMode === 'SPREAD_DAILY'
+        ? editBookingOptions.spreadOption
+        : editBookingOptions.consecutiveOption;
+
+    if (!chosenOption.isAvailable) {
+      setEditFormError('ظرفیت اکیپ‌ها در تاریخ انتخابی برای این تعداد لت کافی نیست.');
+      return;
+    }
+
+    const selDay = upcomingDays.find((d) => d.dateKey === editDateKey);
+    const jalaliDateStr = selDay?.persianDateStr || editDateKey;
+
+    updateSalesBooking(editingBooking.id, {
+      customerName: editCustomerName.trim(),
+      customerPhone: editCustomerPhone.trim(),
+      address: editAddress.trim(),
+      lathsCount: editLathsCount,
+      isSmart: editIsSmart,
+      notes: editNotes.trim(),
+      requestedDate: editDateKey,
+      jalaliDate: jalaliDateStr,
+      allocationMode: editMode,
+      allocatedTeams: chosenOption.allocatedTeams,
+      allocatedDaysCount: chosenOption.requiredDays,
+    });
+
+    setEditingBooking(null);
+    setSuccessToast(`تغییرات پروژه «${editCustomerName.trim()}» با موفقیت ذخیره و تقویم به‌روزرسانی شد.`);
+  };
+
+  const handleStartDelete = (b: SalesProjectBooking) => {
+    if (!isCeo) {
+      alert('دسترسی غیرمجاز: حذف پروژه منحصراً در اختیار مدیرعامل می‌باشد.');
+      return;
+    }
+    setDeletingBooking(b);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingBooking) return;
+    deleteSalesBooking(deletingBooking.id);
+    const name = deletingBooking.customerName;
+    const laths = deletingBooking.lathsCount;
+    setDeletingBooking(null);
+    setSuccessToast(`رزرو پروژه «${name}» با موفقیت حذف و ظرفیت ${laths} لت در تقویم آزاد گردید.`);
+  };
 
   // دریافت ظرفیت‌های ۳ ماهه
   const threeMonthCapacities = useMemo(() => {
@@ -323,6 +477,28 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
 
           <button
             type="button"
+            onClick={() => setActiveTab('all-bookings')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 cursor-pointer ${
+              activeTab === 'all-bookings'
+                ? 'bg-[#C5A059] text-black shadow-lg shadow-[#C5A059]/20 scale-102'
+                : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>مدیریت و اصلاح پروژه‌ها</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                activeTab === 'all-bookings'
+                  ? 'bg-black/20 text-black'
+                  : 'bg-[#C5A059]/20 text-[#E5CA8F]'
+              }`}
+            >
+              {bookings.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('calendar')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 cursor-pointer ${
               activeTab === 'calendar'
@@ -397,13 +573,27 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setJustBooked(null)}
-              className="w-full bg-[#C5A059] hover:bg-[#D4AF37] text-black font-black py-3 rounded-xl transition cursor-pointer"
-            >
-              متوجه شدم و بستن
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const b = justBooked;
+                  setJustBooked(null);
+                  handleStartEdit(b);
+                }}
+                className="flex-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-200 font-bold py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 text-xs"
+              >
+                <Pencil className="w-4 h-4" />
+                <span>ویرایش فوری اطلاعات یا تاریخ</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setJustBooked(null)}
+                className="flex-1 bg-[#C5A059] hover:bg-[#D4AF37] text-black font-black py-2.5 rounded-xl transition cursor-pointer text-xs"
+              >
+                متوجه شدم و بستن
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -827,13 +1017,33 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                 {bookings.slice(0, 5).map((item) => (
                   <div
                     key={item.id}
-                    className="bg-[#0D1117] border border-slate-800/80 rounded-xl p-3 text-xs space-y-1 hover:border-slate-700 transition"
+                    className="bg-[#0D1117] border border-slate-800/80 rounded-xl p-3 text-xs space-y-1.5 hover:border-slate-700 transition"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-slate-100">{item.customerName}</span>
-                      <span className="text-emerald-400 font-bold bg-emerald-950/60 px-1.5 py-0.5 rounded text-[11px]">
-                        {item.lathsCount} لت
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-emerald-400 font-bold bg-emerald-950/60 px-1.5 py-0.5 rounded text-[11px]">
+                          {item.lathsCount} لت
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleStartEdit(item)}
+                          title="ویرایش این پروژه"
+                          className="p-1 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition cursor-pointer"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        {isCeo && (
+                          <button
+                            type="button"
+                            onClick={() => handleStartDelete(item)}
+                            title="حذف پروژه و آزادسازی ظرفیت (مدیرعامل)"
+                            className="p-1 rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 transition cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between text-[11px] text-slate-400">
                       <span>{item.jalaliDate}</span>
@@ -841,9 +1051,285 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                     </div>
                   </div>
                 ))}
+
+                {bookings.length === 0 && (
+                  <div className="text-slate-500 text-center py-4 text-xs">
+                    هنوز پروژه‌ای ثبت نشده است.
+                  </div>
+                )}
+              </div>
+
+              {bookings.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('all-bookings')}
+                  className="w-full text-center text-xs font-bold text-[#E5CA8F] hover:text-[#C5A059] bg-[#1C232D] hover:bg-[#252E3B] border border-[#2D3748] py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 mt-2"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>مشاهده و مدیریت همه پروژه‌ها ({bookings.length} پروژه)</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= تب ۲: مدیریت و اصلاح پروژه‌ها (ویرایش برای همه، حذف منحصراً برای مدیرعامل) ================= */}
+      {activeTab === 'all-bookings' && (
+        <div className="space-y-5">
+          {/* نوار جستجو و فیلترها */}
+          <div className="bg-[#14171F] border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-[#C5A059]" />
+                  <span>مدیریت و اصلاح اطلاعات پروژه‌های رزرو شده</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  امکان ویرایش سریع مشخصات، تغییر تعداد لت یا جابجایی تاریخ برای کارشناسان |{' '}
+                  <span className="text-amber-300 font-semibold">
+                    حذف رزرو و آزادسازی لت‌ها منحصراً در پنل مدیرعامل
+                  </span>
+                </p>
+              </div>
+
+              {/* نشان اختیارات کاربر جاری */}
+              <div className="flex items-center gap-2">
+                {isCeo ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-500/15 border border-amber-500/40 text-amber-300">
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    <span>دسترسی مدیرعامل: مجاز به ویرایش و حذف</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800/80 border border-slate-700 text-slate-300">
+                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                    <span>دسترسی کارشناس: مجاز به ویرایش (حذف فقط با مدیرعامل)</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-3 border-t border-slate-800/80">
+              {/* کادر جستجو */}
+              <div className="sm:col-span-6 relative">
+                <Search className="w-4 h-4 text-slate-500 absolute right-3 top-3" />
+                <input
+                  type="text"
+                  placeholder="جستجو بر اساس نام مشتری، شماره تماس، آدرس یا نام کارشناس..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-[#0D1117] border border-slate-700/80 rounded-xl pr-9 pl-8 py-2 text-xs text-white placeholder-slate-500 focus:border-[#C5A059] focus:outline-none transition"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute left-2.5 top-2.5 text-slate-500 hover:text-slate-300 p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* فیلتر کارشناس */}
+              <div className="sm:col-span-3 flex items-center bg-[#0D1117] border border-slate-700/80 rounded-xl p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setRepFilter('ALL')}
+                  className={`flex-1 py-1.5 rounded-lg font-bold transition cursor-pointer ${
+                    repFilter === 'ALL'
+                      ? 'bg-[#C5A059] text-black shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  همه ثبت‌ها
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRepFilter('MINE')}
+                  className={`flex-1 py-1.5 rounded-lg font-bold transition cursor-pointer ${
+                    repFilter === 'MINE'
+                      ? 'bg-[#C5A059] text-black shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  پروژه‌های من
+                </button>
+              </div>
+
+              {/* فیلتر سیستم */}
+              <div className="sm:col-span-3 flex items-center bg-[#0D1117] border border-slate-700/80 rounded-xl p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSystemFilter('ALL')}
+                  className={`flex-1 py-1.5 rounded-lg font-bold transition cursor-pointer ${
+                    systemFilter === 'ALL'
+                      ? 'bg-slate-700 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  همه
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSystemFilter('SMART')}
+                  className={`flex-1 py-1.5 rounded-lg font-bold transition cursor-pointer ${
+                    systemFilter === 'SMART'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  هوشمند
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSystemFilter('MANUAL')}
+                  className={`flex-1 py-1.5 rounded-lg font-bold transition cursor-pointer ${
+                    systemFilter === 'MANUAL'
+                      ? 'bg-slate-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  دستی
+                </button>
               </div>
             </div>
           </div>
+
+          {/* لیست کارت‌های پروژه‌ها */}
+          {filteredBookings.length === 0 ? (
+            <div className="bg-[#14171F] border border-slate-800 rounded-2xl p-12 text-center text-slate-400 space-y-3">
+              <FileText className="w-10 h-10 text-slate-600 mx-auto" />
+              <p className="text-sm font-bold text-slate-300">پروژه‌ای با این مشخصات یافت نشد.</p>
+              <p className="text-xs text-slate-500">
+                می‌توانید عبارت جستجو را پاک کنید یا از تب «ثبت پروژه»، سفارش جدیدی ثبت نمایید.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredBookings.map((b) => (
+                <div
+                  key={b.id}
+                  className="bg-[#14171F] border border-slate-800 hover:border-slate-700/90 rounded-2xl p-4 sm:p-5 shadow-md flex flex-col justify-between space-y-4 transition"
+                >
+                  <div className="space-y-3">
+                    {/* ردیف بالا: نام و برچسب لت‌ها */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-white text-sm sm:text-base">{b.customerName}</h3>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              b.isSmart
+                                ? 'bg-blue-500/15 border border-blue-500/30 text-blue-300'
+                                : 'bg-slate-800 border border-slate-700 text-slate-300'
+                            }`}
+                          >
+                            {b.isSmart ? '⚡ هوشمند/موتوردار' : '🎛️ دستی/مکانیکی'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-mono mt-0.5 block">
+                          شناسه: {b.id}
+                        </span>
+                      </div>
+
+                      <div className="text-left shrink-0">
+                        <span className="inline-block bg-emerald-950/70 border border-emerald-800/80 text-emerald-300 text-xs sm:text-sm font-black px-2.5 py-1 rounded-xl">
+                          {b.lathsCount} لت
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* جزئیات تماس و لوکیشن */}
+                    <div className="space-y-1.5 text-xs text-slate-300 bg-[#0D1117] border border-slate-800/80 rounded-xl p-3">
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                        <span className="font-mono text-slate-200">{b.customerPhone}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-[#C5A059] shrink-0 mt-0.5" />
+                        <span className="text-slate-300 leading-relaxed text-[11px]">{b.address}</span>
+                      </div>
+                      {b.notes && (
+                        <div className="flex items-start gap-2 pt-1 border-t border-slate-800 text-[11px] text-slate-400">
+                          <Info className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                          <span>{b.notes}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* اطلاعات دیسپچ و زمان‌بندی */}
+                    <div className="flex items-center justify-between flex-wrap gap-2 text-xs pt-1">
+                      <div className="flex items-center gap-1.5 text-slate-300">
+                        <CalendarDays className="w-4 h-4 text-[#C5A059]" />
+                        <span className="font-bold text-white">{b.jalaliDate}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                        <span>نحوه تخصیص:</span>
+                        <span className="text-[#E5CA8F] font-semibold">
+                          {b.allocationMode === 'SPREAD_DAILY' ? 'پخش همزمان اکیپ‌ها' : 'روزهای متوالی'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* اکیپ‌های تخصیص‌یافته و کارشناس */}
+                    <div className="flex items-center justify-between flex-wrap gap-2 text-[11px] text-slate-400 border-t border-slate-800/80 pt-2">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-slate-500">اکیپ‌ها:</span>
+                        {b.allocatedTeams.map((tId) => {
+                          const t = INSTALLATION_TEAMS.find((item) => item.id === tId);
+                          return (
+                            <span
+                              key={tId}
+                              className="bg-slate-800 border border-slate-700/80 text-slate-200 px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                            >
+                              {t?.name || tId}
+                            </span>
+                          );
+                        })}
+                      </div>
+                      <div>
+                        <span>ثبت: {b.salesRepName}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* نوار اکشن‌ها: ویرایش برای همه، حذف منحصراً برای مدیرعامل */}
+                  <div className="flex items-center justify-between gap-2 border-t border-slate-800 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(b)}
+                      className="flex-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold py-2 rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>ویرایش اطلاعات یا تغییر تاریخ</span>
+                    </button>
+
+                    {isCeo ? (
+                      <button
+                        type="button"
+                        onClick={() => handleStartDelete(b)}
+                        className="bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/40 text-rose-300 font-bold px-3 py-2 rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                        title="حذف و آزادسازی ظرفیت لت‌ها (اختیار مدیرعامل)"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                        <span className="hidden sm:inline">حذف (مدیرعامل)</span>
+                        <span className="sm:hidden">حذف</span>
+                      </button>
+                    ) : (
+                      <div
+                        className="px-2 py-1.5 text-slate-500 text-[10px] flex items-center gap-1 shrink-0"
+                        title="حذف پروژه و آزادسازی ظرفیت منحصراً در پنل مدیرعامل امکان‌پذیر است."
+                      >
+                        <Lock className="w-3 h-3 text-slate-600" />
+                        <span className="hidden sm:inline">حذف: فقط مدیرعامل</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1093,6 +1579,84 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                   );
                 })}
               </div>
+
+              {/* پروژه‌های ثبت‌شده در این روز */}
+              <div className="pt-4 border-t border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-[#C5A059]" />
+                    <span>
+                      پروژه‌های رزرو شده در این روز (
+                      {bookings.filter((b) => b.requestedDate === inspectedDay.date).length} پروژه)
+                    </span>
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    مجموع رزرو این روز: {inspectedDay.bookedLaths} لت از ۶۰ لت
+                  </span>
+                </div>
+
+                {bookings.filter((b) => b.requestedDate === inspectedDay.date).length === 0 ? (
+                  <div className="text-xs text-slate-500 py-3 text-center bg-[#0D1117] rounded-xl border border-slate-800/80">
+                    هیچ پروژه‌ای برای این روز ثبت نشده و تمام ظرفیت ۶۰ لت آزاد است.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {bookings
+                      .filter((b) => b.requestedDate === inspectedDay.date)
+                      .map((item) => (
+                        <div
+                          key={item.id}
+                          className="bg-[#0D1117] border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-700 transition"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white text-xs">{item.customerName}</span>
+                              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded">
+                                {item.lathsCount} لت
+                              </span>
+                              <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
+                                {item.isSmart ? '⚡ هوشمند' : '🎛️ دستی'}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 flex items-center gap-3">
+                              <span className="flex items-center gap-1">
+                                <Phone className="w-3 h-3 text-[#C5A059]" />
+                                {item.customerPhone}
+                              </span>
+                              <span>ثبت توسط: {item.salesRepName}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEdit(item)}
+                              className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              <span>ویرایش</span>
+                            </button>
+                            {isCeo ? (
+                              <button
+                                type="button"
+                                onClick={() => handleStartDelete(item)}
+                                className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>حذف</span>
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-slate-500 flex items-center gap-1 px-1">
+                                <Lock className="w-3 h-3 text-slate-600" />
+                                <span>حذف: فقط مدیرعامل</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1219,6 +1783,358 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ================= مودال ویرایش اطلاعات و تاریخ پروژه ================= */}
+      {editingBooking && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#14171F] border border-[#C5A059] rounded-2xl max-w-2xl w-full p-5 sm:p-6 text-right shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
+            {/* هدر مودال */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-[#C5A059]" />
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-white">
+                    ویرایش اطلاعات و تاریخ پروژه
+                  </h3>
+                  <span className="text-[11px] text-slate-400">
+                    شناسه رزرو: <span className="font-mono text-[#E5CA8F]">{editingBooking.id}</span>
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingBooking(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {editFormError && (
+              <div className="bg-rose-950/60 border border-rose-800 text-rose-200 text-xs p-3 rounded-xl flex items-center gap-2 mb-4">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{editFormError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* نام مشتری */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    نام و نام‌خانوادگی مشتری <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <UserIcon className="w-4 h-4 text-slate-500 absolute right-3 top-3" />
+                    <input
+                      type="text"
+                      value={editCustomerName}
+                      onChange={(e) => setEditCustomerName(e.target.value)}
+                      className="w-full bg-[#0D1117] border border-slate-700/80 rounded-xl pr-9 pl-3 py-2.5 text-xs text-white focus:border-[#C5A059] focus:outline-none transition"
+                    />
+                  </div>
+                </div>
+
+                {/* شماره تماس */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    شماره تماس مشتری <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-slate-500 absolute right-3 top-3" />
+                    <input
+                      type="text"
+                      dir="ltr"
+                      value={editCustomerPhone}
+                      onChange={(e) => setEditCustomerPhone(e.target.value)}
+                      className="w-full bg-[#0D1117] border border-slate-700/80 rounded-xl pr-9 pl-3 py-2.5 text-xs text-white focus:border-[#C5A059] focus:outline-none transition text-right"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* آدرس پروژه */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  آدرس و لوکیشن پروژه <span className="text-rose-400">*</span>
+                </label>
+                <div className="relative">
+                  <MapPin className="w-4 h-4 text-slate-500 absolute right-3 top-3" />
+                  <input
+                    type="text"
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    className="w-full bg-[#0D1117] border border-slate-700/80 rounded-xl pr-9 pl-3 py-2.5 text-xs text-white focus:border-[#C5A059] focus:outline-none transition"
+                  />
+                </div>
+              </div>
+
+              {/* تعداد لت‌ها و نوع سیستم */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    تعداد کل لت‌ها (۱ تا ۶۰)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={editLathsCount}
+                      onChange={(e) =>
+                        setEditLathsCount(Math.max(1, Math.min(60, parseInt(e.target.value) || 1)))
+                      }
+                      className="w-24 bg-[#0D1117] border border-slate-700/80 rounded-xl px-3 py-2.5 text-xs font-black text-center text-white focus:border-[#C5A059] focus:outline-none"
+                    />
+                    <input
+                      type="range"
+                      min={1}
+                      max={60}
+                      value={editLathsCount}
+                      onChange={(e) => setEditLathsCount(parseInt(e.target.value))}
+                      className="flex-1 accent-[#C5A059] cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    مکانیزم حرکت
+                  </label>
+                  <div className="flex items-center gap-2 bg-[#0D1117] border border-slate-700/80 rounded-xl p-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditIsSmart(true)}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        editIsSmart ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      ⚡ هوشمند/موتوردار
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditIsSmart(false)}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        !editIsSmart ? 'bg-slate-700 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      🎛️ دستی/مکانیکی
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* انتخابگر تاریخ نصب با کسر رزرو فعلی */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  تاریخ نصب درخواستی (با کسر خودکار ظرفیت قبلی همین پروژه)
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-36 overflow-y-auto p-1 border border-slate-800 rounded-xl bg-[#0D1117]">
+                  {upcomingDays.slice(0, 30).map((day) => {
+                    const cap = getDailyCapacity(day.dateKey, bookings, editingBooking.id);
+                    const isSelected = editDateKey === day.dateKey;
+                    const isFull = cap.remainingLaths <= 0;
+                    const isInsufficient = cap.remainingLaths < editLathsCount;
+
+                    return (
+                      <button
+                        key={day.dateKey}
+                        type="button"
+                        onClick={() => setEditDateKey(day.dateKey)}
+                        className={`p-2 rounded-lg text-right transition border cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#C5A059] text-black border-[#C5A059] font-bold shadow-md'
+                            : isFull || isInsufficient
+                            ? 'bg-rose-950/20 border-rose-800/40 text-rose-300/80 hover:bg-rose-950/40'
+                            : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold">{day.dayName}</div>
+                        <div className="text-[10px] font-mono">{day.persianDateStr}</div>
+                        <div className="text-[9px] mt-0.5">
+                          {cap.remainingLaths} لت خالی
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* گزینه‌های محاسبه‌شده تخصیص */}
+              {editBookingOptions && (
+                <div className="space-y-2 pt-2">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    نحوه تخصیص اکیپ‌ها:
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div
+                      onClick={() =>
+                        editBookingOptions.spreadOption.isAvailable && setEditMode('SPREAD_DAILY')
+                      }
+                      className={`border rounded-xl p-3 text-xs transition cursor-pointer ${
+                        editMode === 'SPREAD_DAILY'
+                          ? 'border-[#C5A059] bg-[#C5A059]/10 text-white ring-1 ring-[#C5A059]'
+                          : !editBookingOptions.spreadOption.isAvailable
+                          ? 'opacity-40 border-slate-800 bg-slate-900/50 cursor-not-allowed'
+                          : 'border-slate-800 bg-[#0D1117] text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="font-bold flex items-center justify-between mb-1">
+                        <span>{editBookingOptions.spreadOption.title}</span>
+                        {editBookingOptions.spreadOption.isAvailable ? (
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">
+                            قابل رزرو
+                          </span>
+                        ) : (
+                          <span className="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded font-bold">
+                            ظرفیت پر
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        {editBookingOptions.spreadOption.description}
+                      </p>
+                    </div>
+
+                    <div
+                      onClick={() =>
+                        editBookingOptions.consecutiveOption.isAvailable &&
+                        setEditMode('CONSECUTIVE_DAYS')
+                      }
+                      className={`border rounded-xl p-3 text-xs transition cursor-pointer ${
+                        editMode === 'CONSECUTIVE_DAYS'
+                          ? 'border-[#C5A059] bg-[#C5A059]/10 text-white ring-1 ring-[#C5A059]'
+                          : !editBookingOptions.consecutiveOption.isAvailable
+                          ? 'opacity-40 border-slate-800 bg-slate-900/50 cursor-not-allowed'
+                          : 'border-slate-800 bg-[#0D1117] text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="font-bold flex items-center justify-between mb-1">
+                        <span>{editBookingOptions.consecutiveOption.title}</span>
+                        {editBookingOptions.consecutiveOption.isAvailable ? (
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">
+                            قابل رزرو
+                          </span>
+                        ) : (
+                          <span className="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded font-bold">
+                            ظرفیت پر
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        {editBookingOptions.consecutiveOption.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* یادداشت‌ها */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  یادداشت و دستور کار نصب
+                </label>
+                <textarea
+                  rows={2}
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  className="w-full bg-[#0D1117] border border-slate-700/80 rounded-xl p-2.5 text-xs text-white focus:border-[#C5A059] focus:outline-none transition resize-none"
+                />
+              </div>
+
+              {/* دکمه‌های تایید و انصراف */}
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 bg-[#C5A059] hover:bg-[#D4AF37] text-black font-black py-2.5 rounded-xl transition cursor-pointer text-xs"
+                >
+                  ذخیره تغییرات و به‌روزرسانی تقویم
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingBooking(null)}
+                  className="px-5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition cursor-pointer text-xs"
+                >
+                  انصراف
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= مودال تایید حذف رزرو (انحصاری مدیرعامل) ================= */}
+      {deletingBooking && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#151B23] border border-rose-600/80 rounded-2xl max-w-md w-full p-6 text-right shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-full bg-rose-500/20 border border-rose-500 flex items-center justify-center text-rose-400 mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8" />
+            </div>
+
+            <h3 className="text-lg font-black text-white text-center">
+              آیا از حذف این رزرو اطمینان دارید؟
+            </h3>
+            <p className="text-xs text-amber-300 font-semibold text-center mt-1">
+              عملیات ویژه مدیرعامل (CEO Authority)
+            </p>
+
+            <div className="bg-[#0D1117] border border-slate-800 rounded-xl p-3.5 my-4 space-y-2 text-xs">
+              <div className="flex justify-between text-slate-300">
+                <span className="text-slate-400">نام مشتری:</span>
+                <span className="font-bold text-white">{deletingBooking.customerName}</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span className="text-slate-400">تاریخ نصب:</span>
+                <span className="font-bold text-white">{deletingBooking.jalaliDate}</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span className="text-slate-400">تعداد لت‌ها:</span>
+                <span className="font-bold text-emerald-400">{deletingBooking.lathsCount} لت</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span className="text-slate-400">کارشناس ثبت‌کننده:</span>
+                <span className="text-slate-300">{deletingBooking.salesRepName}</span>
+              </div>
+            </div>
+
+            <div className="bg-rose-950/40 border border-rose-900/60 rounded-xl p-3 text-[11px] text-rose-200 leading-relaxed mb-5">
+              با حذف این پروژه، ظرفیت <strong className="text-white">{deletingBooking.lathsCount} لت</strong> بلافاصله در تقویم دیسپچ و اکیپ‌های نصب آزاد خواهد شد.
+            </div>
+
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-black py-2.5 rounded-xl transition cursor-pointer text-xs"
+              >
+                تایید و حذف قطعی رزرو
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeletingBooking(null)}
+                className="px-5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition cursor-pointer text-xs"
+              >
+                انصراف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* پیام فلوتینگ موفقیت */}
+      {successToast && (
+        <div className="fixed bottom-5 left-5 z-50 bg-[#151B23] border border-emerald-500/80 text-emerald-100 text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <span className="font-semibold">{successToast}</span>
+          <button
+            type="button"
+            onClick={() => setSuccessToast(null)}
+            className="mr-2 text-slate-400 hover:text-white p-0.5 cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>

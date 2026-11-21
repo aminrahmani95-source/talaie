@@ -3024,5 +3024,20 @@ create policy "sales_bookings_update_policy"
     )
   );
 
--- ط§ط¹ط·ط§غŒ ط¯ط³طھط±ط³غŒ ط¨ظ‡ ظ†ظ‚ط´ authenticated
-grant select, insert, update on public.sales_bookings to authenticated;
+-- سیاست حذف: انحصاراً در پنل مدیرعامل (CEO)
+drop policy if exists "sales_bookings_delete_policy" on public.sales_bookings;
+create policy "sales_bookings_delete_policy"
+  on public.sales_bookings
+  for delete
+  to authenticated
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid()
+        and role = 'CEO'
+        and active = true
+    )
+  );
+
+-- اعطای دسترسی به نقش authenticated
+grant select, insert, update, delete on public.sales_bookings to authenticated;

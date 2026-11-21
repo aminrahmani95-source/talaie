@@ -163,9 +163,17 @@ export function saveStoredBookings(bookings: SalesProjectBooking[]): void {
 
 /**
  * محاسبه وضعیت و ظرفیت لت‌های یک روز مشخص برای همه اکیپ‌ها
+ * با امکان مستثنی کردن یک رزرو خاص جهت سناریوی ویرایش
  */
-export function getDailyCapacity(dateKey: string, customBookings?: SalesProjectBooking[]): DailyLathCapacity {
-  const bookings = customBookings || getStoredBookings();
+export function getDailyCapacity(
+  dateKey: string,
+  customBookings?: SalesProjectBooking[],
+  excludeBookingId?: string
+): DailyLathCapacity {
+  const allBookings = customBookings || getStoredBookings();
+  const bookings = excludeBookingId
+    ? allBookings.filter((b) => b.id !== excludeBookingId)
+    : allBookings;
   const dayBookings = bookings.filter((b) => b.requestedDate === dateKey);
 
   // محاسبه پیش‌فرض برای ۴ اکیپ
@@ -230,15 +238,20 @@ export function getThreeMonthCapacities(daysCount = 90): DailyLathCapacity[] {
 
 /**
  * پیشنهاد دو حالت رزرو شناور به کارشناس فروش بر اساس تعداد لت درخواستی
+ * با امکان مستثنی کردن رزرو در حال ویرایش جهت جلوگیری از اشغال کاذب ظرفیت
  */
 export function calculateBookingOptions(
   lathsCount: number,
-  requestedDateKey: string
+  requestedDateKey: string,
+  excludeBookingId?: string
 ): {
   spreadOption: BookingOption;
   consecutiveOption: BookingOption;
 } {
-  const bookings = getStoredBookings();
+  const allBookings = getStoredBookings();
+  const bookings = excludeBookingId
+    ? allBookings.filter((b) => b.id !== excludeBookingId)
+    : allBookings;
   const currentCapacity = getDailyCapacity(requestedDateKey, bookings);
 
   // حالت اول: پخش بین چند اکیپ در همان روز
@@ -368,6 +381,43 @@ export function createSalesBooking(
   const updated = [newBooking, ...bookings];
   saveStoredBookings(updated);
   return newBooking;
+}
+
+/**
+ * به‌روزرسانی اطلاعات پروژه یا تغییر تاریخ/تعداد لت‌های رزرو
+ */
+export function updateSalesBooking(
+  bookingId: string,
+  updates: Partial<Omit<SalesProjectBooking, 'id' | 'createdAt'>>
+): SalesProjectBooking {
+  const bookings = getStoredBookings();
+  const index = bookings.findIndex((b) => b.id === bookingId);
+  if (index === -1) {
+    throw new Error('رزرو مورد نظر یافت نشد.');
+  }
+
+  const updatedBooking: SalesProjectBooking = {
+    ...bookings[index],
+    ...updates,
+  };
+
+  const updatedList = [...bookings];
+  updatedList[index] = updatedBooking;
+  saveStoredBookings(updatedList);
+  return updatedBooking;
+}
+
+/**
+ * حذف رزرو پروژه و آزادسازی ظرفیت لت‌ها (انحصاراً در پنل مدیرعامل)
+ */
+export function deleteSalesBooking(bookingId: string): boolean {
+  const bookings = getStoredBookings();
+  const filtered = bookings.filter((b) => b.id !== bookingId);
+  if (filtered.length === bookings.length) {
+    return false;
+  }
+  saveStoredBookings(filtered);
+  return true;
 }
 
 /**
