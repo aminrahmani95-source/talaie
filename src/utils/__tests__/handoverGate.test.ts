@@ -130,36 +130,41 @@ describe('Official Technical Handover Gate (Gating & Verification)', () => {
   });
 
   describe('Handover Gate Enforcement on Scheduling & Dispatch', () => {
-    it('blocks transitioning to SCHEDULED when handover gate is incomplete', () => {
+    it('blocks transitioning to EN_ROUTE when handover gate is incomplete', () => {
       expect(() =>
-        validateProjectPatchRoleGuards(coordinator, rawProject, { status: 'SCHEDULED' })
+        validateProjectPatchRoleGuards(coordinator, rawProject, { status: 'EN_ROUTE' })
       ).toThrow(PermanentError);
       expect(() =>
-        validateProjectPatchRoleGuards(coordinator, rawProject, { status: 'SCHEDULED' })
-      ).toThrow('پروژه تا زمان ثبت و تأیید پیش‌نیاز تحویل و ورود کالا به انبار، قابل زمان‌بندی و اعزام اکیپ نیست');
+        validateProjectPatchRoleGuards(coordinator, rawProject, { status: 'EN_ROUTE' })
+      ).toThrow('پروژه تا زمان ثبت و تأیید پیش‌نیاز تحویل و ورود کالا به انبار، قابل اعزام اکیپ و شروع کار نیست');
     });
 
-    it('blocks setting scheduledDate when handover gate is incomplete', () => {
+    it('blocks transitioning to IN_PROGRESS when handover gate is incomplete', () => {
       expect(() =>
-        validateProjectPatchRoleGuards(coordinator, rawProject, { scheduledDate: '2026-11-15' })
-      ).toThrow(PermanentError);
-    });
-
-    it('blocks assigning a team when handover gate is incomplete', () => {
-      expect(() =>
-        validateProjectPatchRoleGuards(coordinator, rawProject, { assignedTeamId: 'team-1' })
+        validateProjectPatchRoleGuards(coordinator, rawProject, { status: 'IN_PROGRESS' })
       ).toThrow(PermanentError);
     });
 
-    it('blocks QC Manager from scheduling if gate is not passed (database integrity)', () => {
+    it('permits planning stage: setting scheduledDate, team and SCHEDULED status before warehouse confirmation', () => {
       expect(() =>
-        validateProjectPatchRoleGuards(qcManager, rawProject, { status: 'SCHEDULED', scheduledDate: '2026-11-15' })
-      ).toThrow(PermanentError);
+        validateProjectPatchRoleGuards(coordinator, rawProject, {
+          status: 'SCHEDULED',
+          scheduledDate: '2026-11-15',
+          assignedTeamId: 'team-1',
+        })
+      ).not.toThrow();
+
+      expect(() =>
+        validateProjectPatchRoleGuards(qcManager, rawProject, {
+          status: 'SCHEDULED',
+          scheduledDate: '2026-11-15',
+        })
+      ).not.toThrow();
     });
 
-    it('permits scheduling once warehouse confirmation is supplied in the patch', () => {
+    it('permits dispatch to EN_ROUTE once warehouse confirmation is supplied in the project or patch', () => {
       const validPatch = {
-        status: 'SCHEDULED',
+        status: 'EN_ROUTE',
         scheduledDate: '2026-11-15',
         assignedTeamId: 'team-1',
         technicalHandover: {

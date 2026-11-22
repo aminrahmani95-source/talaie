@@ -1391,8 +1391,7 @@ export const App: React.FC = () => {
 
     // Only change status if current status is MEASUREMENT_PENDING or SCHEDULED
     if (current && (current.status === 'MEASUREMENT_PENDING' || current.status === 'SCHEDULED')) {
-      const gatePassed = isHandoverGatePassed(current, patch);
-      patch.status = (isPassed && gatePassed ? 'SCHEDULED' : 'MEASUREMENT_PENDING') as Project['status'];
+      patch.status = (isPassed ? 'SCHEDULED' : 'MEASUREMENT_PENDING') as Project['status'];
     }
 
     await commit(

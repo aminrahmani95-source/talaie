@@ -436,10 +436,10 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
   // ۴. انباردار (WAREHOUSE) - گیت ورود کالا، بسته‌بندی و رفع تیکت‌های کسری
   // ============================================================================
   describe('4. WAREHOUSE: Goods Intake Gate, Preparation & Shortage Ticket Resolution', () => {
-    it('enforces Goods Intake Gate: projects cannot be scheduled or dispatched without warehouse intake confirmation', () => {
+    it('enforces Goods Intake Gate: projects cannot be dispatched to site (EN_ROUTE) without warehouse intake confirmation', () => {
       const projectWithoutIntake: Project = {
         ...baseProject,
-        status: 'MEASUREMENT_PENDING',
+        status: 'SCHEDULED',
         technicalHandover: {
           isHandoverComplete: false,
           warehouseConfirmation: { confirmed: false },
@@ -450,14 +450,12 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
 
       expect(() =>
         validateProjectPatchRoleGuards(coordinatorUser, projectWithoutIntake, {
-          status: 'SCHEDULED',
-          scheduledDate: '2026-11-25',
-          assignedTeamId: 'TEAM_1',
+          status: 'EN_ROUTE',
         })
       ).toThrow(PermanentError);
       expect(() =>
         validateProjectPatchRoleGuards(coordinatorUser, projectWithoutIntake, {
-          status: 'SCHEDULED',
+          status: 'EN_ROUTE',
         })
       ).toThrowError(/پیش‌نیاز تحویل و ورود کالا به انبار/);
     });

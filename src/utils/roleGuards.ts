@@ -257,14 +257,12 @@ export function validateProjectPatchRoleGuards(
     throw new PermanentError('دسترسی غیرمجاز: امکان تغییر یا انتساب دستی پرچم سوابق تاریخی وجود ندارد.');
   }
 
-  // ۰. بررسی گیت تحویل رسمی واحد فنی
-  const isScheduling =
-    (patch.status && ['SCHEDULED', 'EN_ROUTE', 'IN_PROGRESS', 'PAUSED'].includes(patch.status)) ||
-    (patch.scheduledDate !== undefined && patch.scheduledDate !== null && patch.scheduledDate !== '') ||
-    (patch.assignedTeamId !== undefined && patch.assignedTeamId !== null && patch.assignedTeamId !== '');
+  // ۰. بررسی گیت تحویل رسمی واحد فنی (اعزام اکیپ و شروع کار در کارگاه منوط به تایید ورود کالا به انبار است)
+  const isDispatching =
+    Boolean(patch.status && ['EN_ROUTE', 'IN_PROGRESS'].includes(patch.status));
 
-  if (isScheduling && !isHandoverGatePassed(project, patch)) {
-    throw new PermanentError('دسترسی غیرمجاز: پروژه تا زمان ثبت و تأیید پیش‌نیاز تحویل و ورود کالا به انبار، قابل زمان‌بندی و اعزام اکیپ نیست.');
+  if (isDispatching && !isHandoverGatePassed(project, patch)) {
+    throw new PermanentError('دسترسی غیرمجاز: پروژه تا زمان ثبت و تأیید پیش‌نیاز تحویل و ورود کالا به انبار، قابل اعزام اکیپ و شروع کار نیست.');
   }
 
   // ۰.۱. گیت اجرایی انتقال اکیپ: تا زمان تایید تحویل توسط سرپرست اکیپ جدید یا رفع انسداد مدیر QC، شروع یا ادامه کار ممنوع است

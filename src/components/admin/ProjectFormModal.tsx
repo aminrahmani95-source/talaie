@@ -133,10 +133,10 @@ export const ProjectFormModal: React.FC<Props> = ({
 
   // Scheduled date & time
   const [scheduledDate, setScheduledDate] = useState(
-    effective?.scheduledDate || (isHandoverComplete ? defaultDate || days[0]?.dateKey || '' : '')
+    effective?.scheduledDate || defaultDate || days[0]?.dateKey || ''
   );
   const [endDate, setEndDate] = useState(
-    effective?.endDate || effective?.scheduledDate || (isHandoverComplete ? defaultDate || days[0]?.dateKey || '' : '')
+    effective?.endDate || effective?.scheduledDate || defaultDate || days[0]?.dateKey || ''
   );
   const [scheduledTime, setScheduledTime] = useState(effective?.scheduledTime || '09:30');
 
@@ -166,7 +166,7 @@ export const ProjectFormModal: React.FC<Props> = ({
 
   // Status & QC
   const status: Project['status'] =
-    effective?.status || (isHandoverComplete ? 'SCHEDULED' : 'MEASUREMENT_PENDING');
+    effective?.status || 'SCHEDULED';
   const qcStatus: Project['qcStatus'] = effective?.qcStatus || 'NOT_STARTED';
 
   // Form error and submission lock
@@ -280,32 +280,29 @@ export const ProjectFormModal: React.FC<Props> = ({
       effectiveLead = finalTechnicianIds[0];
     }
 
-    // Handover Gate validation:
-    const isScheduling =
-      ['SCHEDULED', 'EN_ROUTE', 'IN_PROGRESS', 'PAUSED'].includes(status) ||
-      Boolean(scheduledDate && scheduledDate.trim() !== '') ||
-      Boolean(assignedTeamId && assignedTeamId.trim() !== '');
+    // Handover Gate validation: فقط شروع اعزام به کارگاه (EN_ROUTE / IN_PROGRESS) منوط به تایید فیزیکی ورود کالا به انبار است
+    const isDispatching = ['EN_ROUTE', 'IN_PROGRESS'].includes(status);
 
-    if (isScheduling && !isHandoverComplete) {
-      setFormError('دسترسی غیرمجاز: پروژه تا زمان ثبت و تأیید پیش‌نیاز تحویل و ورود کالا به انبار، قابل زمان‌بندی و اعزام اکیپ نیست.');
+    if (isDispatching && !whConfirmed) {
+      setFormError('دسترسی غیرمجاز: پروژه تا زمان ثبت و تأیید ورود کالا به انبار، قابل اعزام اکیپ و شروع کار در کارگاه نیست.');
       return;
     }
 
     const technicalHandover: ProjectTechnicalHandover = {
-      isHandoverComplete,
+      isHandoverComplete: whConfirmed,
       warehouseConfirmation: {
         confirmed: whConfirmed,
-        confirmedBy: whConfirmedBy.trim() || 'مسئول انبار مرکزی',
+        confirmedBy: whConfirmed ? (whConfirmedBy.trim() || 'مسئول انبار مرکزی') : undefined,
         confirmedAt: whConfirmed
           ? project?.technicalHandover?.warehouseConfirmation?.confirmedAt || new Date().toISOString()
           : undefined,
         notes: whNotes.trim() || undefined,
         shelfLocation: project?.technicalHandover?.warehouseConfirmation?.shelfLocation,
       },
-      officialHandoverDate: isHandoverComplete
+      officialHandoverDate: whConfirmed
         ? project?.technicalHandover?.officialHandoverDate || new Date().toISOString()
         : undefined,
-      unlockedAt: isHandoverComplete
+      unlockedAt: whConfirmed
         ? project?.technicalHandover?.unlockedAt || new Date().toISOString()
         : undefined,
     };
@@ -580,25 +577,25 @@ export const ProjectFormModal: React.FC<Props> = ({
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
                 <CheckSquare className="w-4 h-4 text-[#C5A059]" />
-                <span>گیت تحویل رسمی به واحد فنی (پیش‌نیاز زمان‌بندی و اعزام)</span>
+                <span>گیت ورود کالا به انبار (محموله کارخانه)</span>
               </h4>
               <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                isHandoverComplete
+                whConfirmed
                   ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                   : 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30'
               }`}>
-                {isHandoverComplete ? '✓ گیت تایید شده' : '⏳ در انتظار تایید پیش‌نیازها'}
+                {whConfirmed ? '✓ کالا در انبار تایید شده' : '📦 در انتظار تایید ورود در کارتابل انبار'}
               </span>
             </div>
 
-            {!isHandoverComplete && (
-              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-md text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>پروژه تا زمان ثبت و تأیید ورود و تحویل کالا به انبار مرکزی، قابل زمان‌بندی و اعزام اکیپ نیست.</span>
+            {!whConfirmed && (
+              <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-md text-xs font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-2">
+                <Warehouse className="w-4 h-4 text-blue-400 shrink-0" />
+                <span>این پروژه پس از زمان‌بندی، در کارتابل انبار قرار می‌گیرد تا مسئول انبار پس از تحویل فیزیکی کالا از کارخانه، رسید کالا را تایید نماید.</span>
               </div>
             )}
 
-            {/* Warehouse Confirmation Card (Sole Handover Gate Prerequisite) */}
+            {/* Warehouse Confirmation Card (Optional at planning stage) */}
             <div className={`p-4 rounded-md border transition-all ${
               whConfirmed
                 ? 'border-emerald-500/40 bg-emerald-500/5'
@@ -620,10 +617,10 @@ export const ProjectFormModal: React.FC<Props> = ({
                 <div className="text-xs space-y-0.5">
                   <span className="font-bold text-[#F0F4F8] flex items-center gap-1.5">
                     <Warehouse className="w-4 h-4 text-[#C5A059]" />
-                    <span>تأیید ورود و تحویل فیزیکی کالا به انبار مرکزی</span>
+                    <span>تأیید دستی ورود فیزیکی کالا به انبار مرکزی (اختیاری در زمان زمان‌بندی)</span>
                   </span>
                   <span className="text-slate-500 dark:text-zinc-400 block text-[11px]">
-                    پارچه‌ها، پرده‌ها، شیدها و یراق‌آلات کامل تحویل انبار مرکزی شده، در قفسه چیدمان گردیده و آماده بارگیری اکیپ است.
+                    چنانچه بار هم‌اکنون در انبار تحویل شده تیک بزنید؛ در غیر این صورت تایید توسط مسئول انبار در کارتابل انبار انجام خواهد شد.
                   </span>
                 </div>
               </label>
