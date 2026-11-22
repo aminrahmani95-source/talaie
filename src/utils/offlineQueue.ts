@@ -795,6 +795,42 @@ export const Outbox = {
   },
 
   /**
+   * تخلیه و پاکسازی عملیات‌های در صف انتظار
+   */
+  async clearPendingOperations(userId?: string): Promise<number> {
+    const db = await openDb();
+    const ops = await this.getPendingOperations(userId);
+    if (ops.length === 0) return 0;
+
+    const opIds = new Set(ops.map((o) => o.id));
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction([STORE_PENDING, STORE_UPLOADS], 'readwrite');
+      const pStore = tx.objectStore(STORE_PENDING);
+      const uStore = tx.objectStore(STORE_UPLOADS);
+
+      for (const op of ops) {
+        pStore.delete(op.id);
+      }
+
+      const uReq = uStore.getAll();
+      uReq.onsuccess = () => {
+        const uploads = (uReq.result || []) as PendingUpload[];
+        for (const u of uploads) {
+          if (opIds.has(u.operationId)) {
+            uStore.delete(u.id);
+          }
+        }
+      };
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+
+    await updateCountsInternal();
+    return ops.length;
+  },
+
+  /**
    * Destructively purges all Outbox stores (pending, failed, uploads)
    * MUST only be called during a confirmed, destructive application reset.
    */

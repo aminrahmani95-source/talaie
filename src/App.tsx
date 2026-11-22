@@ -91,6 +91,9 @@ const PersonnelEvaluationModal = React.lazy(() =>
 const FailedOperationsModal = React.lazy(() =>
   import('./components/admin/FailedOperationsModal').then((m) => ({ default: m.FailedOperationsModal }))
 );
+const PendingOperationsModal = React.lazy(() =>
+  import('./components/admin/PendingOperationsModal').then((m) => ({ default: m.PendingOperationsModal }))
+);
 const CeoMasterRegistry = React.lazy(() =>
   import('./components/ceo/CeoMasterRegistry').then((m) => ({ default: m.CeoMasterRegistry }))
 );
@@ -225,6 +228,7 @@ export const App: React.FC = () => {
   const [pendingQueueCount, setPendingQueueCount] = useState<number>(0);
   const [failedQueueCount, setFailedQueueCount] = useState<number>(0);
   const [isFailedOpsModalOpen, setIsFailedOpsModalOpen] = useState<boolean>(false);
+  const [isPendingOpsModalOpen, setIsPendingOpsModalOpen] = useState<boolean>(false);
 
   // CEO Impersonation Mode (ورود و بازرسی پنل پرسنل توسط مدیرعامل)
   const [impersonatorCeo, setImpersonatorCeo] = useState<User | null>(() => {
@@ -2521,6 +2525,7 @@ export const App: React.FC = () => {
         pendingQueueCount={pendingQueueCount}
         failedQueueCount={failedQueueCount}
         onOpenFailedOperations={() => setIsFailedOpsModalOpen(true)}
+        onOpenPendingOperations={() => setIsPendingOpsModalOpen(true)}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         onLogout={handleLogout}
@@ -2959,6 +2964,18 @@ export const App: React.FC = () => {
         <FailedOperationsModal
           isOpen={isFailedOpsModalOpen}
           onClose={() => setIsFailedOpsModalOpen(false)}
+          currentUserId={currentUser?.id}
+          onActionComplete={() => {
+            const uid = currentUser?.id;
+            OfflineQueue.getFailedCount(uid).then(setFailedQueueCount);
+            OfflineQueue.getPendingCount(uid).then(setPendingQueueCount);
+          }}
+        />
+
+        {/* Pending Operations Modal */}
+        <PendingOperationsModal
+          isOpen={isPendingOpsModalOpen}
+          onClose={() => setIsPendingOpsModalOpen(false)}
           currentUserId={currentUser?.id}
           onActionComplete={() => {
             const uid = currentUser?.id;

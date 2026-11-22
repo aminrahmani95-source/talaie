@@ -12,6 +12,7 @@ interface Props {
   pendingQueueCount?: number;
   failedQueueCount?: number;
   onOpenFailedOperations?: () => void;
+  onOpenPendingOperations?: () => void;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
   onLogout: () => void;
@@ -25,6 +26,7 @@ export const Header: React.FC<Props> = ({
   pendingQueueCount = 0,
   failedQueueCount = 0,
   onOpenFailedOperations,
+  onOpenPendingOperations,
   isDarkMode = false,
   onToggleDarkMode,
   onLogout,
@@ -96,13 +98,16 @@ export const Header: React.FC<Props> = ({
                 <span className="hidden xs:inline">آفلاین</span>
               </div>
             ) : pendingQueueCount > 0 ? (
-              <div
-                className="flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold animate-pulse tabular-nums"
-                title={`${pendingQueueCount} تغییر محلی در صف همگام‌سازی`}
+              <button
+                type="button"
+                onClick={onOpenPendingOperations}
+                className="flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold animate-pulse tabular-nums cursor-pointer hover:bg-amber-500/20 transition active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-400"
+                title={`${pendingQueueCount} تغییر محلی در صف همگام‌سازی — کلیک جهت بررسی و ارسال`}
+                aria-label={`${pendingQueueCount} تغییر محلی در صف همگام‌سازی`}
               >
                 <Cloud className="w-3.5 h-3.5 text-amber-400" />
                 <span>{pendingQueueCount} در صف</span>
-              </div>
+              </button>
             ) : (
               <div
                 className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold"
