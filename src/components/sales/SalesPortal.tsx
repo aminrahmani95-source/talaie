@@ -278,10 +278,11 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
     return getThreeMonthCapacities(90);
   }, [bookings]);
 
-  // لیدربورد زنده
+  // لیدربورد زنده (منحصراً برای کارشناسان رسمی فروش؛ مدیران سامانه و QC مستثنی هستند)
   const leaderboard = useMemo(() => {
-    return getSalesRepLeaderboard();
-  }, [bookings]);
+    const excludedIds = currentUser.role !== 'SALES_REP' ? [currentUser.id] : [];
+    return getSalesRepLeaderboard(undefined, excludedIds);
+  }, [bookings, currentUser.id, currentUser.role]);
 
   // باز کردن مودال ثبت پروژه برای روز کلیک‌شده در تقویم
   const handleOpenDayModal = (dayCap: DailyLathCapacity) => {
@@ -468,23 +469,25 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               <span>سامانه هوشمند فروش و رزرو لت‌های طلایی</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white">
-              میز کارشناس فروش و برنامه‌ریزی نصب
+              {isQcManager || isCeo
+                ? 'میز مدیریت فروش و برنامه‌ریزی نصب'
+                : 'میز کارشناس فروش و برنامه‌ریزی نصب'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
               ثبت پروژه جدید بدون محاسبات مالی، تخصیص هوشمند بین ۲ اکیپ (سقف روزانه ۴۰ لت) و تقویم ۳ ماهه
             </p>
           </div>
 
-          {/* نشان کارشناس آنلاین */}
+          {/* نشان کاربر آنلاین / مدیر سامانه یا کارشناس */}
           <div className="flex items-center gap-3 bg-[#1A202C]/80 border border-slate-700/60 rounded-xl px-3.5 py-2 shrink-0">
             <div className="w-10 h-10 rounded-full bg-[#C5A059]/20 border border-[#C5A059] flex items-center justify-center text-xl shrink-0">
-              {currentUser.avatar || '🎯'}
+              {currentUser.avatar || (isQcManager ? '👔' : '🎯')}
             </div>
             <div>
               <div className="text-sm font-bold text-slate-100 flex items-center gap-1.5">
                 {currentUser.name}
                 <span className="text-[10px] bg-[#C5A059]/20 text-[#E5CA8F] px-1.5 py-0.5 rounded font-mono font-medium">
-                  کارشناس فعال
+                  {isQcManager ? 'مدیر سامانه و QC' : isCeo ? 'مدیر عامل' : 'کارشناس فعال'}
                 </span>
               </div>
               <div className="text-xs text-slate-400">
@@ -992,6 +995,12 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                     <span className="font-bold text-slate-200">{leaderboard[2].activeBookingDays} روز</span>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {leaderboard.length === 0 && (
+              <div className="col-span-1 md:col-span-3 bg-[#0D1117] border border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-400">
+                هنوز پروژه‌ای توسط کارشناسان رسمی فروش ثبت نشده است. رتبه‌بندی منحصراً متعلق به کارشناسان فروش است.
               </div>
             )}
           </div>

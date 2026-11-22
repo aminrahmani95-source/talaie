@@ -158,6 +158,31 @@ describe('Sales & 40-Lath Capacity Engine Tests', () => {
     );
   });
 
+  it('6b. strictly excludes site managers (QC Manager / CEO / Amin Rahmani) from the sales leaderboard', () => {
+    // Simulate booking created by QC Manager Amin Rahmani
+    createSalesBooking({
+      customerName: 'پروژه ثبت‌شده توسط مدیر',
+      customerPhone: '09120000000',
+      address: 'تهران',
+      lathsCount: 20,
+      isSmart: true,
+      notes: '',
+      requestedDate: '2026-12-11',
+      jalaliDate: '۱۴۰۵/۰۹/۲۰',
+      allocationMode: 'SPREAD_DAILY',
+      allocatedTeams: ['TEAM_1'],
+      allocatedDaysCount: 1,
+      salesRepId: 'u-qc-manager',
+      salesRepName: 'امین رحمانی',
+    });
+
+    const leaderboard = getSalesRepLeaderboard();
+    const hasManager = leaderboard.some(
+      (rep) => rep.id === 'u-qc-manager' || rep.name.includes('رحمانی') || rep.name.includes('مدیر')
+    );
+    expect(hasManager).toBe(false);
+  });
+
   it('7. generates 90-day upcoming capacities correctly', () => {
     const days = getThreeMonthCapacities(90);
     expect(days).toHaveLength(90);

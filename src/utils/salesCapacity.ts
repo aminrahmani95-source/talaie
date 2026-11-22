@@ -468,22 +468,87 @@ export function deleteSalesBooking(bookingId: string, user?: User): boolean {
   return true;
 }
 
+function getNonSalesUserIds(): Set<string> {
+  const ids = new Set<string>([
+    'u-ceo',
+    'u-qc-manager',
+    'u-real-technician',
+    'u-coordinator',
+    'u-measurement',
+    'u-warehouse',
+  ]);
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('talaei_users_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((u: any) => {
+            if (u && u.id && u.role && u.role !== 'SALES_REP') {
+              ids.add(u.id);
+            }
+          });
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return ids;
+}
+
+export function isExcludedFromSalesLeaderboard(
+  repId: string,
+  repName?: string,
+  excludedUserIds?: string[]
+): boolean {
+  if (excludedUserIds && excludedUserIds.includes(repId)) return true;
+  const nonSalesIds = getNonSalesUserIds();
+  if (nonSalesIds.has(repId)) return true;
+  if (repName) {
+    const clean = repName.trim().toLowerCase();
+    if (
+      clean.includes('رحمانی') ||
+      clean.includes('طلایی') ||
+      clean.includes('مدیر') ||
+      clean.includes('سرپرست') ||
+      clean.includes('تکنسین') ||
+      clean.includes('انبار') ||
+      clean.includes('هماهنگی') ||
+      clean.includes('متراژ') ||
+      clean.includes('qc')
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * محاسبه جدول رده‌بندی زنده کارشناسان فروش با منطق گیمیفیکیشن
+ * مدیران سامانه، مدیرعامل و پرسنل غیرفروش از این جدول مستثنی هستند
  */
-export function getSalesRepLeaderboard(customReps?: SalesRepProfile[]): SalesRepProfile[] {
+export function getSalesRepLeaderboard(
+  customReps?: SalesRepProfile[],
+  excludedUserIds?: string[]
+): SalesRepProfile[] {
   const bookings = getStoredBookings();
   const baseReps = customReps || SALES_REPS_SEED;
 
   let candidateReps: SalesRepProfile[] = [];
 
   if (baseReps.length > 0) {
-    candidateReps = baseReps;
+    candidateReps = baseReps.filter(
+      (r) => !isExcludedFromSalesLeaderboard(r.id, r.name, excludedUserIds)
+    );
   } else {
     // If no seeded reps, compute dynamically from existing bookings
     const repsMap = new Map<string, SalesRepProfile>();
     bookings.forEach((b) => {
-      if (b.salesRepId) {
+      if (
+        b.salesRepId &&
+        !isExcludedFromSalesLeaderboard(b.salesRepId, b.salesRepName, excludedUserIds)
+      ) {
         const existing = repsMap.get(b.salesRepId) || {
           id: b.salesRepId,
           name: b.salesRepName || 'کارشناس فروش',
