@@ -197,9 +197,9 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
       expect(validateCeoRegistryAccess({ ...ceoUser, active: false })).toBe(false);
     });
 
-    it('authorizes CEO exclusively to delete sales bookings', () => {
-      expect(canDeleteSalesBooking(ceoUser)).toBe(true);
-      expect(canDeleteSalesBooking(qcManagerUser)).toBe(false);
+    it('authorizes QC Manager exclusively to delete sales bookings', () => {
+      expect(canDeleteSalesBooking(qcManagerUser)).toBe(true);
+      expect(canDeleteSalesBooking(ceoUser)).toBe(false);
       expect(canDeleteSalesBooking(coordinatorUser)).toBe(false);
       expect(canDeleteSalesBooking(salesRepUser1)).toBe(false);
       expect(canDeleteSalesBooking(warehouseUser)).toBe(false);
@@ -220,12 +220,12 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
         salesRepName: salesRepUser1.name,
       });
 
-      // Non-CEO attempt to delete fails
+      // Non-QC-Manager attempt to delete fails
       expect(() => deleteSalesBooking(booking.id, salesRepUser1)).toThrow(PermanentError);
-      expect(() => deleteSalesBooking(booking.id, qcManagerUser)).toThrow(PermanentError);
+      expect(() => deleteSalesBooking(booking.id, ceoUser)).toThrow(PermanentError);
 
-      // CEO succeeds
-      expect(deleteSalesBooking(booking.id, ceoUser)).toBe(true);
+      // QC Manager succeeds
+      expect(deleteSalesBooking(booking.id, qcManagerUser)).toBe(true);
     });
 
     it('denies CEO from approving final QC or submitting personnel evaluations', () => {
@@ -336,9 +336,9 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
       ).not.toThrow();
     });
 
-    it('strictly denies QC Manager from deleting projects or bookings', () => {
+    it('authorizes QC Manager to delete sales bookings while denying deletion of installation projects', () => {
       expect(() => validateProjectDeleteRoleGuards(qcManagerUser)).toThrow(PermanentError);
-      expect(canDeleteSalesBooking(qcManagerUser)).toBe(false);
+      expect(canDeleteSalesBooking(qcManagerUser)).toBe(true);
     });
   });
 

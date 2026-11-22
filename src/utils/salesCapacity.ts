@@ -394,10 +394,10 @@ export function canEditSalesBooking(user: User, booking: SalesProjectBooking): b
 
 /**
  * بررسی دسترسی حذف رزرو فروش:
- * منحصراً در اختیار مدیرعامل (CEO) می‌باشد.
+ * منحصراً در اختیار مدیر اپ و QC (QC_MANAGER) می‌باشد.
  */
 export function canDeleteSalesBooking(user: User): boolean {
-  return Boolean(user && user.role === 'CEO' && user.active);
+  return Boolean(user && user.role === 'QC_MANAGER' && user.active);
 }
 
 /**
@@ -454,11 +454,11 @@ export function linkBookingToInstallationProject(
 }
 
 /**
- * حذف رزرو پروژه و آزادسازی ظرفیت لت‌ها (انحصاراً در پنل مدیرعامل)
+ * حذف رزرو پروژه و آزادسازی ظرفیت لت‌ها (انحصاراً در پنل مدیر اپ و QC)
  */
 export function deleteSalesBooking(bookingId: string, user?: User): boolean {
   if (user && !canDeleteSalesBooking(user)) {
-    throw new PermanentError('دسترسی غیرمجاز: حذف پروژه منحصراً در اختیار مدیرعامل می‌باشد.');
+    throw new PermanentError('دسترسی غیرمجاز: حذف پروژه منحصراً در اختیار مدیریت اپ و QC می‌باشد.');
   }
 
   const bookings = getStoredBookings();

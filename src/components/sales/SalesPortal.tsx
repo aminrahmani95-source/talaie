@@ -257,8 +257,8 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
   };
 
   const handleStartDelete = (b: SalesProjectBooking) => {
-    if (!isCeo) {
-      alert('دسترسی غیرمجاز: حذف پروژه منحصراً در اختیار مدیرعامل می‌باشد.');
+    if (!isQcManager) {
+      alert('دسترسی غیرمجاز: حذف پروژه منحصراً در اختیار مدیریت اپ و QC می‌باشد.');
       return;
     }
     setDeletingBooking(b);
@@ -844,24 +844,24 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                       </div>
                     )}
 
-                    {isCeo ? (
+                    {isQcManager ? (
                       <button
                         type="button"
                         onClick={() => handleStartDelete(b)}
                         className="bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/40 text-rose-300 font-bold px-3 py-2 rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-                        title="حذف و آزادسازی ظرفیت لت‌ها (اختیار مدیرعامل)"
+                        title="حذف و آزادسازی ظرفیت لت‌ها (اختیار مدیر اپ و QC)"
                       >
                         <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                        <span className="hidden sm:inline">حذف (مدیرعامل)</span>
+                        <span className="hidden sm:inline">حذف پروژه</span>
                         <span className="sm:hidden">حذف</span>
                       </button>
                     ) : (
                       <div
                         className="px-2 py-1.5 text-slate-500 text-[10px] flex items-center gap-1 shrink-0"
-                        title="حذف پروژه و آزادسازی ظرفیت منحصراً در پنل مدیرعامل امکان‌پذیر است."
+                        title="حذف پروژه و آزادسازی ظرفیت منحصراً در پنل مدیر اپ و QC امکان‌پذیر است."
                       >
                         <Lock className="w-3 h-3 text-slate-600" />
-                        <span className="hidden sm:inline">حذف: فقط مدیرعامل</span>
+                        <span className="hidden sm:inline">حذف: فقط مدیر اپ و QC</span>
                       </div>
                     )}
                   </div>
@@ -1609,7 +1609,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                             </span>
                           )}
 
-                          {isCeo ? (
+                          {isQcManager ? (
                             <button
                               type="button"
                               onClick={() => {
@@ -1624,7 +1624,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                           ) : (
                             <span className="text-[10px] text-slate-500 flex items-center gap-1 px-1">
                               <Lock className="w-3 h-3 text-slate-600" />
-                              <span>حذف: مدیرعامل</span>
+                              <span>حذف: فقط مدیر اپ و QC</span>
                             </span>
                           )}
                         </div>
@@ -1948,7 +1948,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               آیا از حذف این رزرو اطمینان دارید؟
             </h3>
             <p className="text-xs text-amber-300 font-semibold text-center mt-1">
-              عملیات ویژه مدیرعامل (CEO Authority)
+              عملیات انحصاری مدیر اپ و QC
             </p>
 
             <div className="bg-[#0D1117] border border-slate-800 rounded-xl p-3.5 my-4 space-y-2 text-xs">
