@@ -73,15 +73,22 @@ export const Sidebar: React.FC<Props> = ({
           badge: undefined,
         },
         {
-          id: 'technicians' as const,
-          label: 'پرسنل، اکیپ‌ها و ظرفیت',
-          icon: Users,
+          id: 'sales' as const,
+          label: 'میز فروش و رزرو لت‌ها',
+          icon: Trophy,
           badge: undefined,
         },
         {
-          id: 'settings' as const,
-          label: 'تنظیمات و ابزارهای سیستم',
-          icon: Settings,
+          id: 'materials' as const,
+          label: 'انبار، متریال و تدارکات',
+          icon: Package,
+          badge: pendingMaterialCount > 0 ? pendingMaterialCount : undefined,
+          badgeColor: 'bg-purple-600 text-white',
+        },
+        {
+          id: 'technicians' as const,
+          label: 'پرسنل، اکیپ‌ها و ظرفیت',
+          icon: Users,
           badge: undefined,
         },
       ]
@@ -107,8 +114,44 @@ export const Sidebar: React.FC<Props> = ({
         },
       ];
 
-  const secondaryItems = isCeo || isQcManager
+  const secondaryItems = isCeo
     ? []
+    : isQcManager
+    ? [
+        {
+          id: 'qc' as const,
+          label: 'بررسی کیفی و تایید QC',
+          icon: ShieldCheck,
+          badge: pendingQcCount > 0 ? pendingQcCount : undefined,
+          badgeColor: 'bg-[#C5A059] text-[#0D1117]',
+        },
+        {
+          id: 'stuck' as const,
+          label: 'پروژه‌های متوقف (استاک)',
+          icon: AlertOctagon,
+          badge: openStuckCount > 0 ? openStuckCount : undefined,
+          badgeColor: 'bg-rose-600 text-white animate-pulse',
+        },
+        {
+          id: 'tickets' as const,
+          label: 'تیکت‌ها و SLA اضطراری',
+          icon: AlertTriangle,
+          badge: openTicketCount > 0 ? openTicketCount : undefined,
+          badgeColor: 'bg-rose-500 text-white',
+        },
+        {
+          id: 'registry' as const,
+          label: 'شناسنامه و سوابق جامع پروژه‌ها',
+          icon: FileCheck2,
+          badge: undefined,
+        },
+        {
+          id: 'settings' as const,
+          label: 'تنظیمات و ابزارهای سیستم',
+          icon: Settings,
+          badge: undefined,
+        },
+      ]
     : [
         {
           id: 'qc' as const,

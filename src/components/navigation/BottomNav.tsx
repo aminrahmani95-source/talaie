@@ -81,9 +81,9 @@ export const BottomNav: React.FC<Props> = ({
           badge: undefined,
         },
         {
-          id: 'technicians' as const,
-          label: 'ناوگان',
-          icon: Users,
+          id: 'sales' as const,
+          label: 'میز فروش',
+          icon: Trophy,
           badge: undefined,
         },
       ]
@@ -386,6 +386,29 @@ export const BottomNav: React.FC<Props> = ({
               </div>
               <div className="text-[11px] text-[#9BA7B6] mt-0.5">
                 ثبت پروژه، تقویم ۳ ماهه و لیدربورد رقابتی کارشناسان
+              </div>
+            </div>
+          </button>
+          {/* شناسنامه و سوابق جامع پروژه‌ها */}
+          <button
+            type="button"
+            onClick={() => {
+              onSelectTab('registry');
+              setIsMoreOpen(false);
+            }}
+            className={`flex items-center gap-3 p-3 rounded-md border transition text-right cursor-pointer min-h-[52px] ${
+              activeTab === 'registry'
+                ? 'border-[#C5A059]/60 bg-[#C5A059]/10 text-[#C5A059] font-bold'
+                : 'border-[#212835] bg-[#151B23] text-[#F0F4F8] hover:border-[#C5A059]/40'
+            }`}
+          >
+            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#2D3748] flex items-center justify-center text-[#C5A059]">
+              <FileCheck2 className="w-4 h-4" />
+            </div>
+            <div className="flex-1">
+              <div className="text-xs font-bold">شناسنامه و سوابق جامع پروژه‌ها</div>
+              <div className="text-[11px] text-[#9BA7B6] mt-0.5">
+                سوابق اجرایی، چاپ شناسنامه و بررسی لاگ‌های سیستمی
               </div>
             </div>
           </button>

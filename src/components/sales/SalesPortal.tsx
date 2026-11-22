@@ -52,6 +52,8 @@ type TabType = 'calendar' | 'all-bookings';
 
 export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
   const isCeo = currentUser.role === 'CEO';
+  const isQcManager = currentUser.role === 'QC_MANAGER';
+  const isFullAdmin = isCeo || isQcManager;
   const [activeTab, setActiveTab] = useState<TabType>('calendar');
   const [bookings, setBookings] = useState<SalesProjectBooking[]>([]);
 
@@ -163,10 +165,10 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
   }, [bookings, searchQuery, repFilter, systemFilter, currentUser.id]);
 
   // کنترل سطح دسترسی ویرایش:
-  // ۱. مدیرعامل دسترسی مدیریتی کامل دارد (isCeo).
+  // ۱. مدیرعامل و مدیر اپ و QC دسترسی مدیریتی کامل دارند (isFullAdmin).
   // ۲. هر کارشناس فروش (یا هر نقش دیگری) صرفاً و منحصراً پروژه‌های ثبت‌شده توسط خودش را می‌تواند ویرایش کند.
   const canEditBooking = (b: SalesProjectBooking) => {
-    if (isCeo) return true;
+    if (isFullAdmin) return true;
     const matchId = Boolean(b.salesRepId && b.salesRepId === currentUser.id);
     const matchName = Boolean(
       b.salesRepName &&
@@ -835,7 +837,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                     ) : (
                       <div
                         className="flex-1 bg-slate-900/60 border border-slate-800 text-slate-500 font-medium py-2 rounded-xl text-[11px] flex items-center justify-center gap-1.5"
-                        title={`ویرایش منحصراً توسط ثبت‌کننده (${b.salesRepName}) یا مدیرعامل مجاز است`}
+                        title={`ویرایش منحصراً توسط ثبت‌کننده (${b.salesRepName}) یا مدیریت مجاز است`}
                       >
                         <Lock className="w-3.5 h-3.5 text-slate-600" />
                         <span>فقط ثبت‌کننده ({b.salesRepName})</span>

@@ -2592,7 +2592,7 @@ export const App: React.FC = () => {
             <div className="flex-1 min-w-0">
               <React.Suspense fallback={<DashboardSkeleton />}>
                 {activeTab === 'registry' && (
-                  isCeo ? (
+                  isCeo || isQcManager ? (
                     <CeoMasterRegistry
                       currentUser={currentUser}
                       projects={projects}
@@ -2603,7 +2603,7 @@ export const App: React.FC = () => {
                     <div className="bg-[#151B23] border border-rose-500/30 rounded-2xl p-8 text-center text-rose-400 space-y-2">
                       <p className="font-bold text-base">دسترسی غیرمجاز</p>
                       <p className="text-xs text-[#9BA7B6]">
-                        مشاهده شناسنامه رسمی و داشبورد جامع مدیر کل منحصراً در اختیار مدیرعامل (CEO) می‌باشد.
+                        مشاهده شناسنامه رسمی و داشبورد جامع مدیر کل منحصراً در اختیار مدیرعامل (CEO) و مدیر اپ و QC می‌باشد.
                       </p>
                     </div>
                   )

@@ -378,7 +378,7 @@ export function createSalesBooking(
  */
 export function canEditSalesBooking(user: User, booking: SalesProjectBooking): boolean {
   if (!user || !user.active) return false;
-  if (user.role === 'CEO') return true;
+  if (user.role === 'CEO' || user.role === 'QC_MANAGER') return true;
   if (user.role === 'SALES_REP' || user.role === 'SALES') {
     const matchId = Boolean(booking.salesRepId && booking.salesRepId === user.id);
     const matchName = Boolean(

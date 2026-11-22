@@ -30,6 +30,7 @@ import {
   User as UserIcon,
   Phone,
   MapPin,
+  ShieldCheck,
 } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits, localDateKey, formatJalali } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
@@ -93,7 +94,9 @@ export const MonthPlanner: React.FC<Props> = ({
   onReviewScheduleChange,
 }) => {
   const days = useMemo(() => getUpcomingDays(365), []);
+  const isCeo = currentUser?.role === 'CEO';
   const isQcManager = currentUser?.role === 'QC_MANAGER';
+  const canEditSchedule = !isCeo && Boolean(onNewProject);
 
   // View modes: '4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'
   const [viewMode, setViewMode] = useState<'4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'>('4DAYS');
@@ -253,14 +256,23 @@ export const MonthPlanner: React.FC<Props> = ({
               );
             })()}
 
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => onNewProject()}
-              icon={<Plus className="w-4 h-4" />}
-            >
-              پروژه جدید
-            </Button>
+            {isCeo && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>نمای نظارتی برنامه (فقط‌خواندنی — تنظیم برنامه با مدیر اپ و QC)</span>
+              </div>
+            )}
+
+            {canEditSchedule && onNewProject && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => onNewProject()}
+                icon={<Plus className="w-4 h-4" />}
+              >
+                پروژه جدید
+              </Button>
+            )}
           </div>
         }
       />
@@ -327,14 +339,20 @@ export const MonthPlanner: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setAssigningBooking(b)}
-                    className="w-full py-1.5 rounded-lg bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-black text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
-                  >
-                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>تخصیص به برنامه نصب</span>
-                  </button>
+                  {canEditSchedule ? (
+                    <button
+                      type="button"
+                      onClick={() => setAssigningBooking(b)}
+                      className="w-full py-1.5 rounded-lg bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-black text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>تخصیص به برنامه نصب</span>
+                    </button>
+                  ) : (
+                    <div className="w-full py-1.5 rounded-lg bg-[#161B22] border border-[#212835] text-[#9BA7B6] text-[11px] font-medium text-center">
+                      در انتظار تخصیص توسط مدیر اپ و QC
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -539,7 +557,7 @@ export const MonthPlanner: React.FC<Props> = ({
                               );
                             })}
 
-                            {load.assignedProjects.length === 0 && (
+                            {canEditSchedule && onNewProject && load.assignedProjects.length === 0 && (
                               <button
                                 onClick={() => onNewProject(day.dateKey)}
                                 className="w-full h-12 border border-dashed border-[#212835] hover:border-[#C5A059] rounded-md flex items-center justify-center text-[#637184] hover:text-[#C5A059] text-xs transition cursor-pointer"
@@ -696,24 +714,32 @@ export const MonthPlanner: React.FC<Props> = ({
 
                         {/* اکشن‌ها */}
                         <div className="flex items-center justify-between pt-1 border-t border-[#212835] text-xs">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenProposeModal(proj)}
-                            className="text-[#C5A059] hover:underline font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
-                          >
-                            <ArrowRightLeft className="w-3 h-3" />
-                            تغییر برنامه
-                          </button>
-
-                          <div className="flex items-center gap-1">
+                          {canEditSchedule && onProposeScheduleChange ? (
                             <button
                               type="button"
-                              onClick={() => onEditProject(proj)}
-                              className="p-1.5 text-[#9BA7B6] hover:text-[#F0F4F8] rounded cursor-pointer"
-                              title="ویرایش"
+                              onClick={() => handleOpenProposeModal(proj)}
+                              className="text-[#C5A059] hover:underline font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <ArrowRightLeft className="w-3 h-3" />
+                              تغییر برنامه
                             </button>
+                          ) : (
+                            <span className="text-[10px] text-[#637184] font-mono">
+                              {proj.status === 'COMPLETED' ? 'تکمیل‌شده' : 'مأموریت مصوب'}
+                            </span>
+                          )}
+
+                          <div className="flex items-center gap-1">
+                            {canEditSchedule && onEditProject && (
+                              <button
+                                type="button"
+                                onClick={() => onEditProject(proj)}
+                                className="p-1.5 text-[#9BA7B6] hover:text-[#F0F4F8] rounded cursor-pointer"
+                                title="ویرایش"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => onManageProject(proj)}
@@ -728,7 +754,7 @@ export const MonthPlanner: React.FC<Props> = ({
                     );
                   })}
 
-                  {dayProjects.length === 0 && (
+                  {canEditSchedule && onNewProject && dayProjects.length === 0 && (
                     <button
                       onClick={() => onNewProject(day.dateKey)}
                       className="w-full py-5 border border-dashed border-[#212835] hover:border-[#C5A059] rounded-md flex items-center justify-center text-[#637184] hover:text-[#C5A059] text-xs transition cursor-pointer"

@@ -35,13 +35,13 @@ interface Props {
 }
 
 export const CeoMasterRegistry: React.FC<Props> = ({ currentUser, projects, users = [], fetchAudit }) => {
-  if (currentUser.role !== 'CEO') {
+  if (currentUser.role !== 'CEO' && currentUser.role !== 'QC_MANAGER') {
     return (
       <div className="bg-[#151B23] border border-rose-500/30 rounded-2xl p-8 text-center text-rose-400 space-y-3 my-6 max-w-2xl mx-auto">
         <ShieldCheck className="w-12 h-12 text-rose-500 mx-auto opacity-70" />
         <h2 className="text-lg font-bold">دسترسی غیرمجاز: شناسنامه رسمی پروژه‌ها</h2>
         <p className="text-xs text-[#9BA7B6] leading-relaxed">
-          مشاهده شناسنامه رسمی و احراز هویت کیفی پروژه‌ها منحصراً در حیطه وظایف و اختیارات مدیریت عامل (CEO) می‌باشد.
+          مشاهده شناسنامه رسمی و احراز هویت کیفی پروژه‌ها منحصراً در حیطه وظایف مدیریت ارشد می‌باشد.
         </p>
       </div>
     );
