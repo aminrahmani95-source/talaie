@@ -11,6 +11,7 @@ import { toPersianDigits, getTodayPersianString, formatJalali } from '../../util
 import { getDisplayName } from '../../utils/technicianName';
 import { CloudImage } from './CloudImage';
 import { LOGO_GOLD } from '../../assets/logo';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   project: Project;
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onClose }) => {
+  useEscapeKey(onClose);
   const handlePrint = () => {
     window.print();
   };

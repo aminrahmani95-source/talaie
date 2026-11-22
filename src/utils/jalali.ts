@@ -218,7 +218,7 @@ export function formatJalali(isoOrDateKey?: string | null, fallback = '—'): st
   const str = isoOrDateKey.trim();
 
   // If already Jalali (e.g. 1405/08/09 or 1405-08-09)
-  if (/^1[34]\d{2}[\/\-]\d{1,2}[\/\-]\d{1,2}/.test(str)) {
+  if (/^1[34]\d{2}[/\-]\d{1,2}[/\-]\d{1,2}/.test(str)) {
     return str.replace(/-/g, '/');
   }
 

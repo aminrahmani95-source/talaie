@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StorageService } from '../storage';
-import { TEST_USERS, DEFAULT_TEAMS, DEFAULT_TEAM_MEMBERS } from '../testUsers';
-import { User, InstallationTeam, TeamMember } from '../../types';
+import { TEST_USERS } from '../testUsers';
+import { User, TeamMember } from '../../types';
 
 // Standard in-memory localStorage mock for node environment
 const createLocalStorageMock = () => {

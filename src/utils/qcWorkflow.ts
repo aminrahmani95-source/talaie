@@ -461,3 +461,20 @@ export function createCustomerAcceptancePayload(params: CustomerAcceptanceParams
 
   return patch;
 }
+
+/**
+ * مدارک تحویل لازم برای تایید نهایی QC:
+ * حداقل یک عکس بعد از نصب + امضای مشتری (یا ثبت مستند علت عدم حضور/امضا).
+ * پروژه‌های منتقل‌شده از قبل از سامانه (isHistoricalMigration) از این شرط معاف‌اند.
+ */
+export function getHandoverEvidence(project: Project): { hasPhotos: boolean; hasAcceptance: boolean; exempt: boolean } {
+  const photos = [...(project.afterPhotos || []), ...(project.completionPhotos || [])].filter(Boolean);
+  const acceptance = project.customerAcceptance;
+  const hasAcceptance = Boolean(
+    project.customerSignature ||
+      acceptance?.signature ||
+      (project.unavailabilityReason && project.unavailabilityReason.trim()) ||
+      (acceptance?.unavailabilityReason && acceptance.unavailabilityReason.trim())
+  );
+  return { hasPhotos: photos.length > 0, hasAcceptance, exempt: Boolean((project as any).isHistoricalMigration) };
+}

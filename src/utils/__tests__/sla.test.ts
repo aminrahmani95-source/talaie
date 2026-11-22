@@ -4,7 +4,6 @@ import {
   getRemainingSlaHours,
   getElapsedHours,
   computeSlaMetrics,
-  SLA_MS_LIMIT,
 } from '../sla';
 import { Ticket } from '../../types';
 

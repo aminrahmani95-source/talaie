@@ -1,0 +1,187 @@
+# CLAUDE.md — راهنمای کامل پروژه برای هر چت/جلسه‌ی جدید
+
+> این فایل را اول بخوان. هر چیزی که تا ۲۳ نوامبر ۲۰۲۶ (۲ آذر ۱۴۰۵) درباره‌ی این پروژه می‌دانیم اینجاست.
+> جزئیات تاریخی هر مرحله در `IMPROVEMENTS_REPORT.md` است؛ این فایل «وضعیت فعلی + قوانین کار» است.
+> هر وقت کار مهمی انجام دادی، بخش «تاریخچه» و «کارهای باز» همین فایل را به‌روز کن.
+
+---
+
+## ۱. صاحب پروژه و نحوه‌ی کار با او (مهم‌ترین بخش)
+
+- **سپهر سیمیاری** — معمار/طراح؛ **خودش کد نمی‌نویسد و نمی‌خواند** و کاملاً به Claude متکی است.
+- **زبان پاسخ: فارسی با خط فارسی** (او معمولاً فینگلیش تایپ می‌کند، ولی جواب باید فارسی باشد).
+- **از سؤال‌های زیاد خسته می‌شود.** گفته: «هر کاری لازمه انجام بده، تو همه زمینه‌ها، دیگه هی من بهت نگم… حتی ساختار بخش‌ها رو اگه لازمه عوض کن». پس:
+  - پیش‌فرض: خودت تصمیم بگیر، انجام بده، بعد کوتاه گزارش بده.
+  - فقط وقتی سؤال کن که واقعاً به او بستگی دارد (پول، حساب کاربری، کلید API، تصمیم غیرقابل‌برگشت).
+- انتظار دارد **مثل کاربر واقعی تست شود** (کلیک واقعی، پر کردن فرم)، نه فقط «کد را خواندم». باگ تقویم ۴روزه را خودش پیدا کرد چون قبلاً این‌طور تست نشده بود.
+- وقتی می‌پرسد «چیز دیگری به چشمت نیامد؟» یعنی عمیق‌تر بگرد؛ گزارش سطحی نپذیرفتنی است.
+- گزارش نهایی: فارسی، کوتاه، با بولت؛ بگو چه چیزی رفع شد، چه چیزی را نتوانستی (صادقانه)، و او چه کاری باید بکند (با دستور دقیق، چون برنامه‌نویس نیست).
+- **هرگز** فایل‌های پروژه را از صفر بازنویسی نکن («نمی‌خوام از اول کاری انجام بدی، همینو بهبود بده»).
+
+---
+
+## ۲. پروژه چیست
+
+**سامانه‌ی عملیات و QC «گالری طلایی» (talaei.ir)** — مدیریت نصب پرده و شید: از فروش و رزرو ظرفیت، تا زمان‌بندی اکیپ‌ها، کار سر کارگاه، انبار، کنترل کیفیت و شناسنامه‌ی پروژه. اپ وب PWA، بیشتر روی **گوشی** (تکنسین‌ها سر کارگاه، گاهی بدون اینترنت) و دسکتاپ (مدیر QC).
+
+- مسیر روی کامپیوتر سپهر: `C:\Users\P30\Desktop\1` (ویندوز)
+- گیت‌هاب: `https://github.com/aminrahmani95-source/talaie.git` (شاخه `main`)؛ سایت روی **GitHub Pages** با `npm run deploy` (پکیج `gh-pages`، پوشه `dist`).
+- سرور: **Supabase** — پروژه `https://jlrjiiyobukeeralxkpb.supabase.co` (کلید anon در `src/utils/supabase.ts` به‌عنوان fallback هست؛ `.env` محلی هم دارد و در git نیست).
+- در همان پوشه فایل‌های متفرقه‌ای هم هست (`qc_talaei_m1b_*.md`، `NEW OFFICE SOURCE/`، `Claude outputs/`، PDF راهنما) که جزو کد نیستند؛ دست نزن.
+
+### نقش‌ها (`UserRole` در `src/types/index.ts`)
+| نقش | کد | صفحه‌ی اصلی |
+|---|---|---|
+| مدیرعامل | `CEO` | شناسنامه پروژه‌ها (`CeoMasterRegistry`)، تقویم (فقط‌خواندنی)، فروش |
+| مدیر QC (کاربر اصلی، دسترسی کامل) | `QC_MANAGER` | پیشخوان (`OperationsControlCenter`) + همه بخش‌ها |
+| هماهنگی زمان‌بندی | `SCHEDULING_COORDINATOR` | مثل مدیر QC با محدودیت |
+| سرپرست اکیپ / تکنسین | `LEAD_TECHNICIAN` / `TECHNICIAN` | `TechnicianDashboard` (موبایل) |
+| انبار | `WAREHOUSE` | `WarehouseDesk` + `MaterialCenter` |
+| فروش | `SALES_REP` | `SalesPortal` (تقویم ظرفیت لت) |
+| اندازه‌گیری دوم | `MEASUREMENT_LEAD` | `MeasurementDashboard` |
+
+برچسب رسمی نقش QC در `utils/roleLabels.ts` «مدیر اپ و QC» است؛ در متن‌های رابط کاربری «مدیر QC» استفاده شده.
+
+### چرخه‌ی پروژه (`ProjectStatus`)
+`MEASUREMENT_PENDING → SCHEDULED → EN_ROUTE → IN_PROGRESS → (PAUSED | STUCK) → COMPLETED (qcStatus: PENDING → APPROVED/REJECTED)`؛ `CANCELLED`.
+- گیت ورود به فنی: تحویل کالا در انبار (`technicalHandover.warehouseConfirmation`) پیش از زمان‌بندی.
+- گیت شروع نصب: عکس‌های قبل از نصب (`PreInstallPhotoModal`).
+- اتمام: `ReportCompletionModal` (عکس بعد از نصب + چک‌لیست + امضا یا «عدم حضور کارفرما» با دلیل) — **الزامی**.
+- تایید QC: `QcDesk` با پیش‌نیاز «مدارک تحویل» (`getHandoverEvidence` در `utils/qcWorkflow.ts`).
+
+---
+
+## ۳. تکنولوژی و دستورها
+
+- React 19 + TypeScript ~6 + **Vite 8 (rolldown)** + **Tailwind v4** (توکن‌های `@theme` در `src/index.css`، `@custom-variant dark`)
+- Supabase JS (auth، RLS، realtime)، **vitest 5**، **oxlint**
+- دستورها (`package.json`):
+  - `npm run dev` · `npm run build` (اول typecheck بعد vite build) · `npm test` · `npm run lint` · `npm run typecheck` · `npm run deploy`
+- **نکته:** `tsc -p tsconfig.node.json` یک خطای قدیمی دارد (پسوند ایمپورت در `vite.config.ts`)؛ در build اجرا نمی‌شود و بی‌خطر است.
+- **وضعیت فعلی:** ۴۶۷ تست همه موفق، lint بدون error (فقط warning قدیمی)، build موفق.
+
+### قراردادهای کد (رعایت کن)
+- **پایان خط فایل‌ها CRLF است** (ویندوز). اگر با اسکریپت ویرایش می‌کنی، CRLF را حفظ کن. فایل‌های جدید LF هستند (مشکلی نیست).
+- رنگ‌ها فقط با توکن‌ها: `canvas, surface, sunken, raised, hover, line, line-strong, ink, ink-2, ink-3, brand, brand-hover, brand-ink, brand-soft, on-brand`. تم روشن با `html:not(.dark)` در `index.css` بازنگاشت شده (پالت‌های وضعیت 100–400 و 950 هم).
+- متن‌ها فارسی، اعداد با `toPersianDigits`، تاریخ‌ها با `utils/jalali.ts` (`formatJalali`، `localDateKey`، `getDayInfoFromDateKey`).
+- پنجره‌ها: یا از `ui/Sheet` استفاده کن یا `role="dialog" aria-modal="true"` + `useEscapeKey(onClose, isOpen)` (هوک پشته‌ای است؛ Escape فقط بالاترین پنجره را می‌بندد).
+- پیام‌ها: `showToast` در App یا `triggerToast` از `components/Toast.tsx`.
+- منو: از یک منبع (`components/navigation/navConfig.ts`) برای Sidebar و BottomNav.
+- کامنت‌های جدید را انگلیسی یا فارسی کوتاه بنویس؛ «چرا» را بنویس، نه «چه».
+
+---
+
+## ۴. معماری (کجا چیست)
+
+```
+src/
+  App.tsx                      ← حالت کل برنامه، commit()، همگام‌سازی، هندلرها (~۲۹۰۰ خط)
+  main.tsx                     ← ثبت service worker + UpdatePrompt
+  app/lazyScreens.ts           ← صفحات مدیریتی lazy (تکنسین کدشان را دانلود نمی‌کند)
+  app/registerServiceWorker.ts ← آپدیت نسخه + پیام کلیک اعلان
+  hooks/  useEscapeKey · useTheme · useLatestRef · useNotificationWatcher
+  components/
+    admin/  OperationsControlCenter(پیشخوان) · MonthPlanner(تقویم ۴روزه/هفتگی/خط سیر) · QcDesk · StuckProjectsDesk
+            TicketCenter · MaterialCenter · TechniciansManager(پرسنل و اکیپ‌ها) · SettingsView · CapacitySettingsCard
+            ProjectFormModal · ProjectManagerSheet · AssignSalesBookingModal · ...
+    technician/ TechnicianDashboard · ProjectCard · ReportCompletionModal · ReportStuckModal · DailyLogModal · ...
+    sales/SalesPortal · warehouse/WarehouseDesk · ceo/CeoMasterRegistry · measurement/MeasurementDashboard
+    layout/ NotificationBell(زنگوله+کارت فعال‌سازی) · OfflineBanner · SplashScreen · UpdatePrompt · ImpersonationBanner
+    navigation/ navConfig · Sidebar · BottomNav       ui/ Button, Sheet, Badge, ...
+  utils/
+    supabase.ts        ← SupabaseSyncService: همه‌ی fetch/patch/RPC/subscribe
+    offlineQueue.ts    ← Outbox (IndexedDB + Web Locks): صف آفلاین، applyPendingTo*
+    storage.ts         ← کش localStorage (کلیدهای talaie_*_v6، بعضی per-user)
+    salesCapacity.ts   ← تقویم ظرفیت فروش (اکیپ×لت، روزهای کاری، رزروها)
+    salesBookingSync.ts← همگام‌سازی رزروهای فروش با جدول sales_bookings
+    capacity.ts        ← ظرفیت برنامه‌ریزی نصب (workingDaysPerWeek، TEAM_DATE_SEP='::')
+    qcWorkflow.ts      ← isAwaitingQc، getHandoverEvidence، امتیاز QC
+    actionQueue.ts     ← صف اقدام پیشخوان (یک ردیف برای هر پروژه) — منبع عدد نشان «پیشخوان»
+    navCounts.ts       ← شمارنده‌های منو (isStuckOpen ...)
+    notificationRules.ts ← قوانین اعلان هر نقش (تابع خالص، تست دارد)
+    notifications.ts   ← نمایش اعلان (SW showNotification، تاریخچه، badge، اجازه)
+    teamNaming.ts · warehouseLists.ts · planProgress.ts · multiDay.ts · roleGuards.ts · ticketFactory.ts · userMerge.ts · jalali.ts
+build/serviceWorkerPlugin.ts   ← sw.js را موقع build می‌سازد (precache + notificationclick + push)
+public/  manifest.json · icon-192/512 · icon-maskable-512 · apple-touch-icon · badge-96
+supabase/ migrations/001..023 · complete_setup.sql (همه‌ی مایگریشن‌ها در یک فایل) · verify_setup.sql
+dev-tools/e2e/                 ← ابزار تست مرورگری (پایین را ببین)
+```
+
+### جریان داده و همگام‌سازی
+1. ورود → `loadCloudData()` در App همه را از سرور می‌گیرد و تغییرات ارسال‌نشده‌ی Outbox را رویش اعمال می‌کند (`Outbox.applyPendingTo*`).
+2. هر تغییر کاربر → `commit(mutation, optimisticApply)` → نگهبان نقش‌ها → `markLocalChange` (برای اعلان) → `Outbox.commit` → ارسال به سرور (یا صف آفلاین).
+3. Realtime: کانال برای `projects, tickets, talaie_sync(settings), profiles, installation_teams, team_members, schedule_change_requests, material_requests, sales_bookings`.
+   - به‌روزرسانی پروژه از سرور: سطر سرور + تغییرات ارسال‌نشده‌ی خود دستگاه (دیگر ساعت دستگاه‌ها مقایسه نمی‌شود).
+4. برگشت به اپ (`visibilitychange`) پس از ≥۲۰ ثانیه → `loadCloudData()` دوباره (گوشی‌ها اتصال را در پس‌زمینه قطع می‌کنند).
+5. آنلاین شدن → load + پردازش صف؛ وقتی همگام نیست هر ۳۰ ثانیه تلاش.
+- تنظیمات (`SystemSettings`) به‌صورت JSON در جدول `talaie_sync` با کلید `'settings'`.
+- ظرفیت فروش: `installationTeamCount`، `lathsPerTeamPerDay`، `workingDaysPerWeek` (پیش‌فرض بدون جمعه `[0,1,2,3,4,6]`) — App با `setSalesCapacityConfig` به `salesCapacity.ts` می‌دهد.
+
+### اعلان‌ها
+- `useNotificationWatcher` هر تغییر داده را با قبلی مقایسه می‌کند ← `computeNotificationEvents` (بر اساس نقش) ← `deliverNotifications`.
+- اپ باز: toast + لرزش برای موارد فوری؛ اپ در پس‌زمینه: اعلان سیستمی از طریق `registration.showNotification`.
+- تا اولین همگام‌سازی با سرور فقط «خط پایه» ثبت می‌شود (داده‌ی موجود اعلان نمی‌شود). شناسه‌ی ثابت هر رویداد → تکراری نمی‌شود. بیش از ۳ مورد → یک اعلان خلاصه.
+- **محدودیت:** وقتی اپ کاملاً بسته است اعلان نمی‌آید (نیاز به سرور Push). هندلر `push` در sw.js آماده است. FCM گوگل در ایران قابل‌اعتماد نیست → پیشنهاد به سپهر: **پیامک (کاوه‌نگار)** یا **سرویس ایرانی (نجوا/پوشه)**؛ منتظر انتخاب و کلید API از اوست.
+
+---
+
+## ۵. دیپلوی و کارهایی که سپهر باید خودش بکند
+
+Claude **اجازه‌ی push به گیت‌هاب ندارد** (سیستم امنیتی رد کرد) و **به سوپابیس دسترسی ندارد** (کانکتور Supabase وصل نیست). پس:
+
+1. **مایگریشن ۰۲۳** (`supabase/migrations/023_sales_bookings_server_sync.sql`) را در Supabase → SQL Editor اجرا کند (idempotent است). تا امروز تأیید نشده که اجرا کرده باشد.
+2. در `Desktop\1` با cmd:
+   ```
+   npm install          (فقط بار اول؛ node_modules روی سیستمش نبود)
+   git add -A
+   git commit -m "..."
+   git push
+   npm run deploy
+   ```
+3. اگر کانکتور Supabase را در claude.ai وصل کند، Claude خودش می‌تواند مایگریشن اجرا و بررسی کند.
+
+### روش Claude برای ذخیره در پوشه‌ی سپهر (وقتی از طریق اپ دسکتاپ وصل است)
+- ابزارهای `mcp__remote-devices__device_list_dir / device_stage_files / device_commit_files` (shell روی کامپیوتر او معمولاً در دسترس نیست).
+- فایل‌ها را در `/mnt/user-data/outputs/...` کپی کن، ~۳ ثانیه صبر، بعد `device_commit_files` با مسیر ویندوزی `C:\Users\P30\Desktop\1\...` (حداکثر ۵۰ فایل در هر بار).
+- برای فهمیدن فایل‌های تغییرکرده، یک git محلی در محیط کار نگه دار و `git diff --name-only` بگیر.
+
+---
+
+## ۶. تست
+
+- واحد: `npm test` (vitest؛ تست‌ها کنار فایل‌ها یا در `__tests__`). تست‌ها **نباید** به سرور واقعی وصل شوند (`vi.spyOn(SupabaseSyncService,'getClient')`).
+- SQL: مایگریشن‌ها با PostgreSQL 16 محلی + stub شِمای Supabase (auth.uid، نقش‌ها) قابل آزمایش‌اند.
+- **تست مرورگری واقعی** (`dev-tools/e2e/`): حالت «کاملاً محلی» بدون سرور:
+  1. یک کپی از پروژه بساز و در `src/utils/supabase.ts` اول `getClient()` این خط را بگذار:
+     `if (import.meta.env.VITE_SUPABASE_URL === 'none') return null;` (فقط در کپی تست، نه در پروژه‌ی اصلی!)
+  2. `VITE_SUPABASE_URL=none npx vite --port 5175`
+  3. `seed.js` کاربران/اکیپ‌ها/پروژه‌های نمونه را در localStorage می‌ریزد؛ ورود با شماره + هر رمزی.
+     - مدیر QC `09124339038` · مدیرعامل `09121111110` · سرپرست اکیپ۱ `09120000001` · تکنسین `09120000002`
+     - سرپرست اکیپ۲ `09120000003` · انبار `09120000005` · فروش `09120000006`
+  4. `e2e.py` توابع کمکی Playwright دارد (`start(p, phone, vp)`, `nav(s,'برچسب منو')`, `text`, `toasts`)؛ `crawl.py` روی همه‌ی دکمه‌های هر نقش کلیک می‌کند و خطاها را گزارش می‌دهد.
+  - برای شبیه‌سازی «تغییر از دستگاه دیگر» در کپی تست می‌شود `window.__setProjects = setProjects` را موقتاً در App گذاشت.
+
+---
+
+## ۷. تاریخچه‌ی کارها (خلاصه؛ جزئیات در IMPROVEMENTS_REPORT.md)
+
+1. **مرحله ۱–۲:** رفع باگ ورود (fallback آفلاین فقط برای خطای شبکه)، همگام‌سازی رزروهای فروش با سرور (مایگریشن ۰۲۳ + `salesBookingSync.ts`)، سیستم رنگ واحد + تم روشن واقعی، ناوبری یکپارچه، خلوت کردن صفحه‌ها، تقسیم کد، رفع `TEAM_DATE_SEP`.
+2. **مرحله ۳:** باز شدن اپ بدون اینترنت (service worker ساخته‌شده در build)، اعلان نسخه‌ی جدید، خوانایی روی گوشی.
+3. **مرحله ۴:** ظرفیت قابل تنظیم توسط مدیر QC (تعداد اکیپ × لت هر اکیپ)، حذف رزرو فروش فقط مدیر QC (در سرور هم).
+4. **مرحله ۵:** باگ «ثبت مأموریت دوم در تقویم ۴روزه» (دکمه بعد از اولین مأموریت ناپدید می‌شد)، ثبت مأموریت آفلاین، Escape برای پنجره‌ها.
+5. **مرحله ۶ (شکار باگ نقش‌به‌نقش):** QC بدون عکس/امضا تایید نمی‌کند؛ اتمام کار بدون امضا/عکس ممکن نیست؛ پیشرفت «۰/۸» برای کار تمام‌شده؛ هشدار شروع مأموریت فردا/کار دوم؛ «کار امروز تمام نشد؟»؛ جمعه تعطیل در تقویم فروش؛ خطاهای واقعی سرور در مدیریت پرسنل؛ شماره‌ی تکراری؛ ساخت/حذف اکیپ؛ ۲۳ پنجره‌ی بدون Escape؛ toast ماندگار؛ امنیت ویرایش رزرو؛ عدد «بار فردا».
+6. **پیشخوان:** صف اقدام یکپارچه (`actionQueue.ts`)، حذف کارت‌های تکراری، عدد یکسان با منو، اکیپ‌ها ردیفی.
+7. **همگام‌سازی:** realtime درخواست متریال، تازه‌سازی هنگام برگشت به اپ، رفع مشکل ساعت گوشی، تیکت جاافتاده.
+8. **اعلان گوشی:** قوانین نقش‌به‌نقش، زنگوله، کارت فعال‌سازی، راهنمای آیفون، آیکون‌های PWA (قبلاً وجود نداشتند).
+9. **خلوت کردن QC، متوقف‌ها و تیکت‌ها:** «مدارک تحویل» یکپارچه در QC، نمایش فقط پیش‌نیازهای ناقص، حذف کاشی‌های آماری تکراری، کارت تیکت جمع‌وجور، رفع ارجاع به «داوود حسینی» خیالی.
+
+---
+
+## ۸. کارهای باز / ایده‌های بعدی
+
+- [ ] **اعلان با اپ بسته:** منتظر انتخاب سپهر (پیامک کاوه‌نگار یا نجوا) و کلید API. پیاده‌سازی پیشنهادی: trigger/edge function در Supabase روی insert/update جدول‌ها.
+- [ ] تأیید اجرای مایگریشن ۰۲۳ و دیپلوی آخرین تغییرات.
+- [ ] تست دو‌دستگاهی واقعی همگام‌سازی بعد از دیپلوی (چک‌لیست در پیام‌های قبلی: درخواست متریال ← انبار؛ برگشت به اپ؛ مأموریت ← سرپرست).
+- [ ] رفع توقف پروژه، تیکت انبارِ مربوط را باز می‌گذارد — عمداً تغییر داده نشد (شاید انبار هنوز باید بفرستد)؛ از سپهر پرسیده شده.
+- [ ] warningهای قدیمی lint (react-hooks/immutability در App، متغیرهای بی‌استفاده) — بی‌خطر ولی قابل تمیزکاری.
+- [ ] پیام اعتبارسنجی پیش‌فرض مرورگر (مثل «Please fill out this field») روی گوشی‌های فارسی معمولاً فارسی است؛ در صورت نیاز پیام سفارشی.

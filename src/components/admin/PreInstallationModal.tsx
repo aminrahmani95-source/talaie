@@ -17,6 +17,7 @@ import { getUpcomingDays, toPersianDigits } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { CloudImage } from '../common/CloudImage';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   project: Project;
@@ -73,6 +74,7 @@ export const PreInstallationModal: React.FC<Props> = ({
   onSaveInspection,
   onCreateTicket,
 }) => {
+  useEscapeKey(onClose, isOpen);
   const existing = project.siteReadiness;
   const days = getUpcomingDays(180);
 
@@ -181,24 +183,24 @@ export const PreInstallationModal: React.FC<Props> = ({
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
     >
-      <div className="bg-[#151B23] rounded-lg max-w-xl w-full shadow-2xl border border-[#E8E4DC] dark:border-[#2D2D2D] overflow-hidden my-4 sm:my-6 transition-all animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+      <div className="bg-surface rounded-lg max-w-xl w-full shadow-2xl border border-line-strong overflow-hidden my-4 sm:my-6 transition-all animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-[#0D1117] px-5 py-4 text-white flex items-center justify-between border-b-2 border-[#C5A059] shrink-0">
+        <div className="bg-canvas px-5 py-4 text-ink flex items-center justify-between border-b-2 border-brand shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-md bg-white/10 flex items-center justify-center text-[#C5A059] border border-[#C5A059]/30">
+            <div className="w-10 h-10 rounded-md bg-white/10 flex items-center justify-center text-brand-ink border border-brand/30">
               <Ruler className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-sm sm:text-base text-white">
+              <h3 className="font-black text-sm sm:text-base text-ink">
                 برگه بازبینی و آمادگی فیزیکی بستر نصب
               </h3>
-              <p className="text-xs text-[#C5A059] font-bold line-clamp-1">{project.title}</p>
+              <p className="text-xs text-brand-ink font-bold line-clamp-1">{project.title}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 text-white transition"
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 text-ink transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -214,7 +216,7 @@ export const PreInstallationModal: React.FC<Props> = ({
 
           {/* Inspection Type Selector */}
           <div>
-            <label className="block text-xs font-bold text-[#212121] dark:text-white mb-2">
+            <label className="block text-xs font-bold text-ink mb-2">
               نوع بازبینی بستر پروژه:
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -223,11 +225,11 @@ export const PreInstallationModal: React.FC<Props> = ({
                 onClick={() => setInspectionType('IN_PERSON')}
                 className={`p-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 transition ${
                   inspectionType === 'IN_PERSON'
-                    ? 'border-[#C5A059] bg-[#FAF7F2] dark:bg-[#252525] text-[#C5A059] ring-2 ring-[#C1A056]/30 '
-                    : 'border-[#212835] text-slate-600 dark:text-zinc-400'
+                    ? 'border-brand bg-raised text-brand-ink ring-2 ring-brand/30 '
+                    : 'border-line text-ink-2'
                 }`}
               >
-                <MapPin className="w-4 h-4 text-[#C5A059]" />
+                <MapPin className="w-4 h-4 text-brand-ink" />
                 <span>بازدید حضوری در محل پروژه</span>
               </button>
               <button
@@ -235,17 +237,17 @@ export const PreInstallationModal: React.FC<Props> = ({
                 onClick={() => setInspectionType('REMOTE')}
                 className={`p-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 transition ${
                   inspectionType === 'REMOTE'
-                    ? 'border-[#C5A059] bg-[#FAF7F2] dark:bg-[#252525] text-[#C5A059] ring-2 ring-[#C1A056]/30 '
-                    : 'border-[#212835] text-slate-600 dark:text-zinc-400'
+                    ? 'border-brand bg-raised text-brand-ink ring-2 ring-brand/30 '
+                    : 'border-line text-ink-2'
                 }`}
               >
-                <Video className="w-4 h-4 text-[#C5A059]" />
+                <Video className="w-4 h-4 text-brand-ink" />
                 <span>بازبینی از راه دور (عکس / ویدئو)</span>
               </button>
             </div>
           </div>
 
-          <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed bg-[#1C232D] p-3 rounded-lg border border-[#E8E4DC] dark:border-[#2D2D2D]">
+          <p className="text-xs text-ink-2 leading-relaxed bg-raised p-3 rounded-lg border border-line-strong">
             جهت جلوگیری از مأموریت ناموفق و هزینه‌های اکیپ، وضعیت فیزیکی هر بند را بررسی و تعیین وضعیت کنید. پروژه تنها در صورت تأیید کلیه بندهای کاربردی قابل اعزام اکیپ خواهد بود.
           </p>
 
@@ -269,16 +271,16 @@ export const PreInstallationModal: React.FC<Props> = ({
                       : item.state === 'ISSUE_DETECTED'
                       ? 'border-rose-500/50 bg-rose-500/5 ring-1 ring-rose-500/20'
                       : item.state === 'NOT_APPLICABLE'
-                      ? 'border-zinc-300 dark:border-zinc-700 bg-zinc-100/50 dark:bg-zinc-800/40'
-                      : 'border-[#E8E4DC] dark:border-[#2D2D2D] bg-[#111620]'
+                      ? 'border-line-strong bg-raised/40'
+                      : 'border-line-strong bg-sunken'
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="space-y-0.5">
-                      <span className="font-bold text-xs text-[#212121] dark:text-white block">
+                      <span className="font-bold text-xs text-ink block">
                         {itemMeta.title}
                       </span>
-                      <span className="text-[11px] text-slate-500 dark:text-zinc-400 block leading-relaxed">
+                      <span className="text-[12px] text-ink-2 block leading-relaxed">
                         {itemMeta.description}
                       </span>
                     </div>
@@ -291,7 +293,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                         className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1 ${
                           item.state === 'CONFIRMED'
                             ? 'bg-emerald-600 text-white '
-                            : 'bg-white dark:bg-[#181818] border border-[#212835] text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50'
+                            : 'bg-surface border border-line text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50'
                         }`}
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
@@ -304,7 +306,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                         className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1 ${
                           item.state === 'ISSUE_DETECTED'
                             ? 'bg-rose-600 text-white '
-                            : 'bg-white dark:bg-[#181818] border border-[#212835] text-rose-700 dark:text-rose-400 hover:bg-rose-50'
+                            : 'bg-surface border border-line text-rose-700 dark:text-rose-400 hover:bg-rose-50'
                         }`}
                       >
                         <AlertTriangle className="w-3.5 h-3.5" />
@@ -316,8 +318,8 @@ export const PreInstallationModal: React.FC<Props> = ({
                         onClick={() => handleStateChange(itemMeta.id, 'NOT_APPLICABLE')}
                         className={`px-2 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1 ${
                           item.state === 'NOT_APPLICABLE'
-                            ? 'bg-zinc-600 text-white '
-                            : 'bg-white dark:bg-[#181818] border border-[#212835] text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50'
+                            ? 'bg-zinc-600 text-ink '
+                            : 'bg-surface border border-line text-ink-2 hover:bg-zinc-50'
                         }`}
                       >
                         <MinusCircle className="w-3.5 h-3.5" />
@@ -330,7 +332,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                   {item.state === 'ISSUE_DETECTED' && (
                     <div className="mt-2.5 pt-2 border-t border-rose-200 dark:border-rose-900/40 space-y-1.5 animate-in fade-in">
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-rose-800 dark:text-rose-300">
+                        <label className="text-[12px] font-bold text-rose-800 dark:text-rose-300">
                           شرح نقص یا مانع شناسایی‌شده:
                         </label>
                         {onCreateTicket && (
@@ -343,7 +345,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                                 description: item.notes || itemMeta.description,
                               })
                             }
-                            className="text-[11px] font-bold text-rose-700 dark:text-rose-400 flex items-center gap-1 hover:underline"
+                            className="text-[12px] font-bold text-rose-700 dark:text-rose-400 flex items-center gap-1 hover:underline"
                           >
                             <TicketIcon className="w-3 h-3" />
                             <span>ثبت تیکت پیگیری</span>
@@ -355,7 +357,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                         placeholder="مثال: کابل برق به درگاه پنجره غربی کشیده نشده است یا کناف نیاز به شاسی‌کشی مجدد دارد."
                         value={item.notes || ''}
                         onChange={(e) => handleNotesChange(itemMeta.id, e.target.value)}
-                        className="w-full text-xs p-2.5 rounded-md border border-rose-300 dark:border-rose-800 bg-white dark:bg-[#151515] dark:text-white"
+                        className="w-full text-xs p-2.5 rounded-md border border-rose-300 dark:border-rose-800 bg-surface text-ink"
                       />
                     </div>
                   )}
@@ -367,11 +369,11 @@ export const PreInstallationModal: React.FC<Props> = ({
           {/* Photos */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-bold text-[#212121] dark:text-white flex items-center gap-1.5">
-                <Camera className="w-4 h-4 text-[#C5A059]" />
+              <label className="text-xs font-bold text-ink flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-brand-ink" />
                 <span>تصاویر و مستندات میدانی وضعیت بستر ({photos.length}):</span>
               </label>
-              <label className="cursor-pointer px-3 py-1.5 rounded-md border border-[#C5A059]/40 bg-[#1C232D] text-xs font-bold text-[#C5A059] hover:bg-[#C1A056]/10 transition flex items-center gap-1.5">
+              <label className="cursor-pointer px-3 py-1.5 rounded-md border border-brand/40 bg-raised text-xs font-bold text-brand-ink hover:bg-brand/10 transition flex items-center gap-1.5">
                 <Camera className="w-3.5 h-3.5" />
                 <span>افزودن تصویر</span>
                 <input
@@ -389,7 +391,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                 {photos.map((photo, idx) => (
                   <div
                     key={idx}
-                    className="relative group aspect-square rounded-md overflow-hidden border border-[#212835] bg-zinc-100 dark:bg-zinc-800"
+                    className="relative group aspect-square rounded-md overflow-hidden border border-line bg-raised"
                   >
                     <CloudImage
                       src={photo}
@@ -411,7 +413,7 @@ export const PreInstallationModal: React.FC<Props> = ({
 
           {/* Overall Readiness Outcome */}
           <div className="pt-2">
-            <label className="block text-xs font-bold text-[#212121] dark:text-white mb-2">
+            <label className="block text-xs font-bold text-ink mb-2">
               نتیجه نهایی کارشناسی آمادگی بستر نصب:
             </label>
             <div className={`p-4 rounded-lg border flex items-center justify-between gap-3 ${
@@ -431,7 +433,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                       ? 'بستر پروژه کاملاً آماده نصب و اعزام اکیپ است'
                       : 'بستر پروژه دارای نقص/مانع است — نصب موکول می‌شود'}
                   </h4>
-                  <p className="text-[11px] opacity-80 mt-0.5">
+                  <p className="text-[12px] opacity-80 mt-0.5">
                     {isReady
                       ? 'تمامی بندهای استاندارد فنی تایید شدند و مانعی برای اعزام وجود ندارد.'
                       : 'تا زمان رفع نقص و آماده‌سازی بستر توسط مشتری یا کارگاه، اعزام اکیپ متوقف می‌ماند.'}
@@ -451,7 +453,7 @@ export const PreInstallationModal: React.FC<Props> = ({
               <select
                 value={postponeDate}
                 onChange={(e) => setPostponeDate(e.target.value)}
-                className="w-full text-xs p-2.5 rounded-md border border-amber-300 dark:border-amber-700 bg-white dark:bg-[#151515] dark:text-white font-bold"
+                className="w-full text-xs p-2.5 rounded-md border border-amber-300 dark:border-amber-700 bg-surface text-ink font-bold"
               >
                 <option value="">انتخاب تاریخ موکول‌شدن (اختیاری)...</option>
                 {days.map((d) => (
@@ -466,7 +468,7 @@ export const PreInstallationModal: React.FC<Props> = ({
 
           {/* General Notes */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
+            <label className="block text-xs font-bold text-ink mb-1.5">
               توضیحات و جمع‌بندی کارشناس بازبینی:
             </label>
             <textarea
@@ -474,24 +476,24 @@ export const PreInstallationModal: React.FC<Props> = ({
               placeholder="مثال: کارفرما کارهای کناف را تمام کرده و پریزهای برق نصب شده‌اند؛ هیچ تداخلی با سایر پیمانکاران وجود ندارد."
               value={generalNotes}
               onChange={(e) => setGeneralNotes(e.target.value)}
-              className="w-full text-xs p-3 rounded-md border border-[#212835] bg-[#FAF7F2] dark:bg-[#151515] dark:text-white"
+              className="w-full text-xs p-3 rounded-md border border-line bg-surface text-ink"
             />
           </div>
 
           {/* Submit & Cancel Actions */}
-          <div className="flex items-center gap-2 pt-2 border-t border-[#E8E4DC] dark:border-[#2D2D2D]">
+          <div className="flex items-center gap-2 pt-2 border-t border-line-strong">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="flex-1 py-3 rounded-md border border-[#212835] text-slate-700 dark:text-zinc-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-[#252525] disabled:opacity-50"
+              className="flex-1 py-3 rounded-md border border-line text-ink text-xs font-bold hover:bg-slate-50 hover:bg-raised disabled:opacity-50"
             >
               انصراف
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 py-3 bg-[#0D1117] hover:bg-[#333333] text-[#C5A059] font-black rounded-md text-xs transition border border-[#C5A059]/30 shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-canvas hover:bg-hover text-brand-ink font-black rounded-md text-xs transition border border-brand/30 shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isSubmitting ? 'در حال ثبت...' : 'ثبت برگه بازبینی بستر نصب'}
             </button>

@@ -8,10 +8,10 @@ import {
   CheckCircle2,
   Clock,
   FolderKanban,
-  FileText,
 } from 'lucide-react';
 import { OfflineQueue, FailedOperation } from '../../utils/offlineQueue';
 import { toPersianDigits, formatJalaliDateTime } from '../../utils/jalali';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   isOpen: boolean;
@@ -26,6 +26,7 @@ export const FailedOperationsModal: React.FC<Props> = ({
   onActionComplete,
   currentUserId,
 }) => {
+  useEscapeKey(onClose, isOpen);
   const [failedOps, setFailedOps] = useState<FailedOperation[]>([]);
   const [loading, setLoading] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -170,9 +171,9 @@ export const FailedOperationsModal: React.FC<Props> = ({
       aria-labelledby="failed-ops-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="bg-[#151B23] w-full max-w-2xl rounded-lg border border-[#E8E4DC] dark:border-[#2E2E2E] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+      <div className="bg-surface w-full max-w-2xl rounded-lg border border-line-strong shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-[#E8E4DC] dark:border-[#2E2E2E] flex items-center justify-between bg-[#111620]">
+        <div className="p-4 sm:p-6 border-b border-line-strong flex items-center justify-between bg-sunken">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
               <AlertOctagon className="w-5 h-5" />
@@ -181,7 +182,7 @@ export const FailedOperationsModal: React.FC<Props> = ({
               <h2 id="failed-ops-title" className="text-base sm:text-lg font-black text-[#1E1E1E] dark:text-[#F5EFEB]">
                 مدیریت ارسال‌های ناموفق به سرور
               </h2>
-              <p className="text-xs text-[#71717A] dark:text-[#A1A1AA] mt-0.5">
+              <p className="text-xs text-ink-3 mt-0.5">
                 تغییراتی که پس از چند تلاش به دلیل خطا یا اعتبارسنجی سرور ارسال نشدند
               </p>
             </div>
@@ -225,19 +226,19 @@ export const FailedOperationsModal: React.FC<Props> = ({
             </div>
           )}
           {loading ? (
-            <div className="py-12 text-center text-sm text-[#71717A] dark:text-[#A1A1AA] flex items-center justify-center gap-2">
-              <RefreshCw className="w-4 h-4 animate-spin text-[#C5A059]" />
+            <div className="py-12 text-center text-sm text-ink-3 flex items-center justify-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin text-brand-ink" />
               <span>در حال بارگذاری لیست ارسال‌های ناموفق...</span>
             </div>
           ) : failedOps.length === 0 ? (
-            <div className="py-12 text-center text-zinc-500 flex flex-col items-center gap-3">
+            <div className="py-12 text-center text-ink-3 flex flex-col items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 flex items-center justify-center">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <div className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+              <div className="text-sm font-bold text-ink">
                 هیچ عملیات ناموفقی در سیستم وجود ندارد.
               </div>
-              <p className="text-xs text-zinc-400">تمام تغییرات با موفقیت در سرور ابری ثبت شده‌اند.</p>
+              <p className="text-xs text-ink-2">تمام تغییرات با موفقیت در سرور ابری ثبت شده‌اند.</p>
             </div>
           ) : (
             failedOps.map((op) => (
@@ -252,21 +253,21 @@ export const FailedOperationsModal: React.FC<Props> = ({
                         {getOperationTitle(op)}
                       </span>
                       {op.orderingKey && (
-                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-white dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300">
+                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-white dark:bg-black/40 border border-line text-ink">
                           {op.orderingKey}
                         </span>
                       )}
                     </div>
                     {op.payload?.title && (
-                      <div className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1">
-                        <FolderKanban className="w-3.5 h-3.5 text-[#C5A059]" />
+                      <div className="text-xs font-bold text-ink flex items-center gap-1">
+                        <FolderKanban className="w-3.5 h-3.5 text-brand-ink" />
                         <span>{op.payload.title}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                  <div className="text-xs text-ink-2 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-ink-2" />
                     <span>{formatJalaliDateTime(new Date(op.failedAt))}</span>
                   </div>
                 </div>
@@ -279,15 +280,15 @@ export const FailedOperationsModal: React.FC<Props> = ({
 
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-1 border-t border-rose-500/10">
-                  <span className="text-xs text-zinc-500">
-                    تعداد تلاش‌ها: <strong className="text-zinc-700 dark:text-zinc-300">{toPersianDigits(op.retryCount)}</strong>
+                  <span className="text-xs text-ink-3">
+                    تعداد تلاش‌ها: <strong className="text-ink">{toPersianDigits(op.retryCount)}</strong>
                   </span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       disabled={processingId === op.id}
                       onClick={() => handleRetry(op.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#C1A056] text-[#212121] text-xs font-bold hover:bg-[#A88738] active:scale-95 transition disabled:opacity-50 cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand text-[#212121] text-xs font-bold hover:bg-brand active:scale-95 transition disabled:opacity-50 cursor-pointer"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${processingId === op.id ? 'animate-spin' : ''}`} />
                       <span>تلاش دوباره</span>
@@ -309,14 +310,14 @@ export const FailedOperationsModal: React.FC<Props> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-5 border-t border-[#E8E4DC] dark:border-[#2E2E2E] bg-[#111620] flex items-center justify-between">
-          <span className="text-xs text-[#71717A] dark:text-[#A1A1AA]">
+        <div className="p-4 sm:p-5 border-t border-line-strong bg-sunken flex items-center justify-between">
+          <span className="text-xs text-ink-3">
             {toPersianDigits(failedOps.length)} مورد ناموفق در انتظار بررسی
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-md bg-[#0D1117] dark:bg-[#FAF7F2] text-white dark:text-[#212121] text-xs font-bold active:scale-95 transition"
+            className="px-5 py-2 rounded-md bg-canvas dark:bg-[#FAF7F2] text-white dark:text-[#212121] text-xs font-bold active:scale-95 transition"
           >
             بستن
           </button>

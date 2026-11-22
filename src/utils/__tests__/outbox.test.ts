@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createClient, PostgrestError } from '@supabase/supabase-js';
 import {
   Outbox,
@@ -7,13 +7,11 @@ import {
   isTransientError,
   isPermanentError,
   getNextBackoffDelay,
-  extractUploadsAndDeduplicate,
-  computeProjectDiff,
   resetProcessingStateForTesting,
   openDb,
   PermanentError,
 } from '../offlineQueue';
-import { Project, Ticket } from '../../types';
+import { Project } from '../../types';
 
 describe('Talaei Outbox Writing Layer & Sync Tests', () => {
   beforeEach(async () => {

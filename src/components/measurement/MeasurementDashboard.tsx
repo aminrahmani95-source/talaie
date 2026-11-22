@@ -7,17 +7,12 @@ import {
   Navigation,
   FileText,
   Camera,
-  Upload,
-  AlertTriangle,
   Loader2,
   Clock,
-  Sparkles,
   MapPin,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { compressImageFile } from '../../utils/imageCompressor';
-import { toPersianDigits, getTodayPersianString } from '../../utils/jalali';
+import { toPersianDigits } from '../../utils/jalali';
 import { CloudImage } from '../common/CloudImage';
 
 interface Props {
@@ -54,13 +49,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
   const [error, setError] = useState('');
 
   // Pending visits: either MEASUREMENT_PENDING or not yet verified (strictly active, excluding completed/cancelled)
-  const pendingVisits = projects.filter(
-    (p) =>
-      p.status !== 'COMPLETED' &&
-      p.status !== 'CANCELLED' &&
-      (p.status === 'MEASUREMENT_PENDING' ||
-        (p.status === 'DRAFT' && !p.secondMeasurementDetails?.isReadinessApproved))
-  );
+  const pendingVisits = projects.filter((p) => p.status === 'MEASUREMENT_PENDING');
 
   const completedVisits = projects.filter(
     (p) => Boolean(p.secondMeasurementDetails?.isReadinessApproved)
@@ -129,28 +118,28 @@ export const MeasurementDashboard: React.FC<Props> = ({
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="bg-[#151B23] rounded-2xl p-5 border border-[#212835] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-surface rounded-2xl p-5 border border-line flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg sm:text-xl font-black text-[#F0F4F8] flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-black text-ink flex items-center gap-2">
             <span>میز کار اندازه‌گیری دوم و تایید بستر فضا</span>
-            <span className="text-xs font-bold bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/30 px-2.5 py-0.5 rounded-full">
+            <span className="text-xs font-bold bg-brand/15 text-brand-ink border border-brand/30 px-2.5 py-0.5 rounded-full">
               مسئول فنی متراژ
             </span>
           </h2>
-          <p className="text-xs text-[#9BA7B6] mt-1">
+          <p className="text-xs text-ink-2 mt-1">
             برنامه روزانه بازدید درگاه‌ها، تطبیق دقیق ابعاد با برگه سفارش و تایید کناف و سیم‌کشی برق
           </p>
         </div>
 
         {/* Tab Toggle */}
-        <div className="flex items-center gap-1.5 bg-[#0D1117] p-1.5 rounded-xl border border-[#212835] w-full sm:w-auto">
+        <div className="flex items-center gap-1.5 bg-canvas p-1.5 rounded-xl border border-line w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setViewTab('PENDING')}
             className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition cursor-pointer ${
               viewTab === 'PENDING'
-                ? 'bg-[#C5A059] text-[#0D1117] shadow-md shadow-[#C5A059]/20'
-                : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
+                ? 'bg-brand text-on-brand shadow-md shadow-brand/20'
+                : 'text-ink-2 hover:text-ink'
             }`}
           >
             <Clock className="w-4 h-4" />
@@ -161,8 +150,8 @@ export const MeasurementDashboard: React.FC<Props> = ({
             onClick={() => setViewTab('COMPLETED')}
             className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition cursor-pointer ${
               viewTab === 'COMPLETED'
-                ? 'bg-[#C5A059] text-[#0D1117] shadow-md shadow-[#C5A059]/20'
-                : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
+                ? 'bg-brand text-on-brand shadow-md shadow-brand/20'
+                : 'text-ink-2 hover:text-ink'
             }`}
           >
             <CheckCircle2 className="w-4 h-4" />
@@ -173,10 +162,10 @@ export const MeasurementDashboard: React.FC<Props> = ({
 
       {/* Main List */}
       <div className="space-y-3">
-        <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2 px-1">
+        <h3 className="text-sm font-black text-ink flex items-center gap-2 px-1">
           {viewTab === 'PENDING' ? (
             <>
-              <Clock className="w-4 h-4 text-[#C5A059]" />
+              <Clock className="w-4 h-4 text-brand-ink" />
               <span>پروژه‌های نیازمند اندازه‌گیری و تایید بستر ({toPersianDigits(pendingVisits.length)})</span>
             </>
           ) : (
@@ -188,7 +177,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
         </h3>
 
         {(viewTab === 'PENDING' ? pendingVisits : completedVisits).length === 0 ? (
-          <div className="bg-[#151B23] rounded-2xl p-8 text-center border border-[#212835] text-xs text-[#9BA7B6]">
+          <div className="bg-surface rounded-2xl p-8 text-center border border-line text-xs text-ink-2">
             {viewTab === 'PENDING'
               ? 'تمامی پروژه‌ها اندازه‌گیری و تایید شده‌اند. موردی در صف انتظار نیست.'
               : 'هنوز سابقه‌ای از متراژهای تاییدشده ثبت نشده است.'}
@@ -201,27 +190,27 @@ export const MeasurementDashboard: React.FC<Props> = ({
               return (
                 <div
                   key={proj.id}
-                  className={`bg-[#151B23] rounded-2xl p-5 border transition space-y-4 ${
-                    isSelected ? 'border-[#C5A059] ring-1 ring-[#C5A059]/30' : 'border-[#212835]'
+                  className={`bg-surface rounded-2xl p-5 border transition space-y-4 ${
+                    isSelected ? 'border-brand ring-1 ring-brand/30' : 'border-line'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-black bg-[#0D1117] text-[#C5A059] border border-[#2D3748] px-2 py-0.5 rounded">
+                        <span className="font-mono text-xs font-black bg-canvas text-brand-ink border border-line-strong px-2 py-0.5 rounded">
                           {proj.code}
                         </span>
                         {proj.isForceMajeure && (
-                          <span className="text-[11px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded border border-rose-500/30">
+                          <span className="text-[12px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded border border-rose-500/30">
                             فورس‌ماژور 🔥
                           </span>
                         )}
-                        <h4 className="text-sm font-black text-[#F0F4F8]">{proj.title}</h4>
+                        <h4 className="text-sm font-black text-ink">{proj.title}</h4>
                       </div>
-                      <p className="text-xs text-[#9BA7B6] mt-1 flex items-center gap-1.5">
-                        <span className="font-bold text-[#F0F4F8]">{proj.customerName}</span>
+                      <p className="text-xs text-ink-2 mt-1 flex items-center gap-1.5">
+                        <span className="font-bold text-ink">{proj.customerName}</span>
                         <span>•</span>
-                        <MapPin className="w-3.5 h-3.5 text-[#C5A059]" />
+                        <MapPin className="w-3.5 h-3.5 text-brand-ink" />
                         <span>{proj.address}</span>
                       </p>
                     </div>
@@ -230,7 +219,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                       {proj.customerPhone && (
                         <a
                           href={`tel:${proj.customerPhone}`}
-                          className="p-2 rounded-xl bg-[#1C232D] text-[#C5A059] hover:bg-[#252F3D] border border-[#212835]"
+                          className="p-2 rounded-xl bg-raised text-brand-ink hover:bg-hover border border-line"
                           title="تماس"
                         >
                           <Phone className="w-4 h-4" />
@@ -240,7 +229,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                         href={proj.locationUrl || `https://nshn.ir/search/${encodeURIComponent(proj.address)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="p-2 rounded-xl bg-[#1C232D] text-[#C5A059] hover:bg-[#252F3D] border border-[#212835]"
+                        className="p-2 rounded-xl bg-raised text-brand-ink hover:bg-hover border border-line"
                         title="مسیریابی"
                       >
                         <Navigation className="w-4 h-4" />
@@ -249,7 +238,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                         <button
                           type="button"
                           onClick={() => onViewProposal(proj)}
-                          className="px-3 py-1.5 rounded-xl bg-[#1C232D] text-xs font-bold text-[#C5A059] hover:bg-[#252F3D] border border-[#212835] flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-raised text-xs font-bold text-brand-ink hover:bg-hover border border-line flex items-center gap-1 cursor-pointer"
                         >
                           <FileText className="w-3.5 h-3.5" />
                           <span>پروپوزال فروش</span>
@@ -260,18 +249,18 @@ export const MeasurementDashboard: React.FC<Props> = ({
 
                   {/* Verified Details preview if already completed */}
                   {!isSelected && proj.secondMeasurementDetails?.isReadinessApproved && (
-                    <div className="bg-[#0D1117] p-3 rounded-xl border border-emerald-500/30 text-xs space-y-1.5">
+                    <div className="bg-canvas p-3 rounded-xl border border-emerald-500/30 text-xs space-y-1.5">
                       <div className="flex items-center justify-between text-emerald-400 font-bold">
                         <span className="flex items-center gap-1.5">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>ابعاد و بستر کارگاه تایید شده است</span>
                         </span>
                       </div>
-                      <p className="text-[#F0F4F8] font-mono text-[11px] whitespace-pre-line leading-relaxed">
+                      <p className="text-ink font-mono text-[12px] whitespace-pre-line leading-relaxed">
                         {proj.secondMeasurementDetails.verifiedDimensions}
                       </p>
                       {proj.secondMeasurementDetails.siteReadinessNotes && (
-                        <p className="text-[#9BA7B6] text-[11px]">
+                        <p className="text-ink-2 text-[12px]">
                           {proj.secondMeasurementDetails.siteReadinessNotes}
                         </p>
                       )}
@@ -283,7 +272,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenForm(proj)}
-                      className="w-full py-2.5 px-4 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                      className="w-full py-2.5 px-4 bg-brand hover:bg-brand-hover text-on-brand rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer shadow-md"
                     >
                       <Ruler className="w-4 h-4" />
                       <span>
@@ -294,10 +283,10 @@ export const MeasurementDashboard: React.FC<Props> = ({
                     </button>
                   ) : (
                     /* Active Inspection Form */
-                    <div className="p-4 bg-[#0D1117] rounded-xl border border-[#212835] space-y-4 animate-in fade-in">
+                    <div className="p-4 bg-canvas rounded-xl border border-line space-y-4 animate-in fade-in">
                       {/* Dimensions Input */}
                       <div>
-                        <label className="block text-xs font-bold text-[#F0F4F8] mb-1.5">
+                        <label className="block text-xs font-bold text-ink mb-1.5">
                           ابعاد دقیق و قطعی اندازه‌گیری دوم (عرض × ارتفاع به تفکیک پنجره‌ها): *
                         </label>
                         <textarea
@@ -305,19 +294,19 @@ export const MeasurementDashboard: React.FC<Props> = ({
                           value={verifiedDimensions}
                           onChange={(e) => setVerifiedDimensions(e.target.value)}
                           placeholder="مثال:&#10;پنجره سالن 1: عرض 2.45 متر در ارتفاع 2.80 متر (شید برقی)&#10;پنجره خواب مستر: عرض 1.80 متر در ارتفاع 2.60 متر"
-                          className="w-full text-xs p-3 rounded-xl border border-[#212835] bg-[#111620] text-[#F0F4F8] focus:border-[#C5A059] outline-none leading-relaxed"
+                          className="w-full text-xs p-3 rounded-xl border border-line bg-sunken text-ink focus:border-brand outline-none leading-relaxed"
                           required
                         />
                       </div>
 
                       {/* Site Readiness Checks */}
                       <div className="space-y-2">
-                        <label className="block text-xs font-bold text-[#9BA7B6]">
+                        <label className="block text-xs font-bold text-ink-2">
                           بررسی چک‌لیست بستر کارگاه:
                         </label>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                           <label className={`p-2.5 rounded-xl border cursor-pointer flex items-center gap-2 ${
-                            isDrywallOk ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold' : 'bg-[#151B23] border-[#212835] text-[#9BA7B6]'
+                            isDrywallOk ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold' : 'bg-surface border-line text-ink-2'
                           }`}>
                             <input
                               type="checkbox"
@@ -329,7 +318,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                           </label>
 
                           <label className={`p-2.5 rounded-xl border cursor-pointer flex items-center gap-2 ${
-                            isElectricalOk ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold' : 'bg-[#151B23] border-[#212835] text-[#9BA7B6]'
+                            isElectricalOk ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold' : 'bg-surface border-line text-ink-2'
                           }`}>
                             <input
                               type="checkbox"
@@ -341,7 +330,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                           </label>
 
                           <label className={`p-2.5 rounded-xl border cursor-pointer flex items-center gap-2 ${
-                            isAccessOk ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold' : 'bg-[#151B23] border-[#212835] text-[#9BA7B6]'
+                            isAccessOk ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold' : 'bg-surface border-line text-ink-2'
                           }`}>
                             <input
                               type="checkbox"
@@ -356,11 +345,11 @@ export const MeasurementDashboard: React.FC<Props> = ({
 
                       {/* Photos */}
                       <div>
-                        <label className="block text-xs font-bold text-[#9BA7B6] mb-1.5">
+                        <label className="block text-xs font-bold text-ink-2 mb-1.5">
                           عکس‌های اندازه‌گیری پنجره‌ها و کناف:
                         </label>
                         <div className="flex items-center gap-2">
-                          <label className="px-3 py-2 bg-[#1C232D] hover:bg-[#252F3D] text-[#C5A059] rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-[#C5A059]/30">
+                          <label className="px-3 py-2 bg-raised hover:bg-hover text-brand-ink rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-brand/30">
                             <input
                               type="file"
                               accept="image/*"
@@ -373,7 +362,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                             <Camera className="w-4 h-4" />
                             <span>{isUploading ? 'در حال بهینه‌سازی...' : '+ افزودن عکس کارگاه'}</span>
                           </label>
-                          <span className="text-[11px] text-[#637184]">
+                          <span className="text-[12px] text-ink-3">
                             {photos.length > 0 ? `${toPersianDigits(photos.length)} عکس پیوست شد` : 'اختیاری اما مستند'}
                           </span>
                         </div>
@@ -381,7 +370,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                         {photos.length > 0 && (
                           <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1">
                             {photos.map((p, i) => (
-                              <div key={i} className="w-14 h-14 rounded-lg overflow-hidden shrink-0 border border-[#212835]">
+                              <div key={i} className="w-14 h-14 rounded-lg overflow-hidden shrink-0 border border-line">
                                 <CloudImage
                                   src={p}
                                   alt="عکس کارگاه"
@@ -395,7 +384,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
 
                       {/* Notes */}
                       <div>
-                        <label className="block text-xs font-bold text-[#9BA7B6] mb-1.5">
+                        <label className="block text-xs font-bold text-ink-2 mb-1.5">
                           یادداشت فنی کارگاه (اختیاری):
                         </label>
                         <input
@@ -403,18 +392,18 @@ export const MeasurementDashboard: React.FC<Props> = ({
                           value={siteReadinessNotes}
                           onChange={(e) => setSiteReadinessNotes(e.target.value)}
                           placeholder="نکات خاص بستر، نیاز به پایه دوبل، فاصله قرنیز..."
-                          className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#111620] text-[#F0F4F8] outline-none"
+                          className="w-full text-xs p-2.5 rounded-xl border border-line bg-sunken text-ink outline-none"
                         />
                       </div>
 
                       {error && <p className="text-xs font-bold text-rose-400">{error}</p>}
 
                       {/* Form Actions */}
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#212835]">
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
                         <button
                           type="button"
                           onClick={() => setSelectedProjectId(null)}
-                          className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1C232D] text-[#9BA7B6] hover:bg-[#252F3D] cursor-pointer transition"
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-raised text-ink-2 hover:bg-hover cursor-pointer transition"
                         >
                           انصراف
                         </button>
@@ -422,7 +411,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                           type="button"
                           disabled={isSubmitting || isUploading}
                           onClick={() => handleSubmit(proj.id)}
-                          className="px-5 py-2 rounded-xl text-xs font-black bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] flex items-center gap-1.5 shadow-md cursor-pointer transition active:scale-95"
+                          className="px-5 py-2 rounded-xl text-xs font-black bg-brand hover:bg-brand-hover text-on-brand flex items-center gap-1.5 shadow-md cursor-pointer transition active:scale-95"
                         >
                           {isSubmitting ? (
                             <Loader2 className="w-4 h-4 animate-spin" />

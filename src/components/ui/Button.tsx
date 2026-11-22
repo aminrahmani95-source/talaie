@@ -38,7 +38,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const isCurrentlyLoading = loading ?? isLoading;
     // Base styles: minimum 44px touch target, flex layout, focus ring
     const baseClasses =
-      'relative inline-flex items-center justify-center font-bold select-none transition-all duration-150 rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0D1117] active:scale-[0.99] cursor-pointer tracking-tight';
+      'relative inline-flex items-center justify-center font-bold select-none transition-all duration-150 rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand focus-visible:ring-offset-1 focus-visible:ring-offset-canvas active:scale-[0.99] cursor-pointer tracking-tight';
 
     // Touch-friendly sizes with min-h-[44px] accessibility standard
     const sizeClasses = {
@@ -50,11 +50,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     // Enterprise industrial color tokens
     const variantClasses = {
       primary:
-        'bg-[#C5A059] text-[#0D1117] hover:bg-[#D4AF37] border border-[#C5A059] shadow-xs',
+        'bg-brand text-on-brand hover:bg-brand-hover border border-brand shadow-xs',
       secondary:
-        'bg-[#151B23] text-[#F0F4F8] border border-[#2D3748] hover:border-[#3E4C63] hover:bg-[#1C232D] shadow-xs',
+        'bg-surface text-ink border border-line-strong hover:border-line-strong hover:bg-raised shadow-xs',
       ghost:
-        'bg-transparent text-[#9BA7B6] hover:bg-[#1C232D] hover:text-[#F0F4F8]',
+        'bg-transparent text-ink-2 hover:bg-raised hover:text-ink',
       danger:
         'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 hover:border-rose-500/50 shadow-xs',
     }[variant];

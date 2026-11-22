@@ -77,7 +77,7 @@ export const CloudImage: React.FC<Props> = ({
     if (fallback) return <>{fallback}</>;
     return (
       <div
-        className={`bg-stone-100 text-stone-400 text-[10px] flex items-center justify-center rounded p-1 text-center ${className}`}
+        className={`bg-stone-100 text-stone-400 text-[11px] flex items-center justify-center rounded p-1 text-center ${className}`}
       >
         <span>تصویر در دسترس نیست</span>
       </div>
@@ -88,7 +88,7 @@ export const CloudImage: React.FC<Props> = ({
     if (fallback) return <>{fallback}</>;
     return (
       <div
-        className={`bg-stone-200 animate-pulse rounded flex items-center justify-center text-stone-500 text-[10px] ${className}`}
+        className={`bg-stone-200 animate-pulse rounded flex items-center justify-center text-stone-500 text-[11px] ${className}`}
       >
         <span>در حال بارگذاری تصویر...</span>
       </div>

@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   canAccessProject,
-  isValidStatusTransition,
   validateProjectPatchRoleGuards,
   validateTicketRoleGuards,
   validateEvaluationRoleGuards,

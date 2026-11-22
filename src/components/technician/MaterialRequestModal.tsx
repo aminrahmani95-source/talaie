@@ -22,6 +22,7 @@ import {
   COMMON_MATERIAL_SUGGESTIONS,
 } from '../../utils/materialRequests';
 import { toPersianDigits } from '../../utils/jalali';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   project: Project;
@@ -53,6 +54,7 @@ export const MaterialRequestModal: React.FC<Props> = ({
   onClose,
   onSubmit,
 }) => {
+  useEscapeKey(onClose);
   const [selectedCategory, setSelectedCategory] = useState<MaterialCategory>('HARDWARE');
   const [selectedReason, setSelectedReason] = useState<MaterialRequestReason>('SHORTAGE');
   const [selectedUrgency, setSelectedUrgency] = useState<MaterialUrgency>('URGENT');
@@ -145,18 +147,18 @@ export const MaterialRequestModal: React.FC<Props> = ({
       aria-labelledby="material-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
     >
-      <div className="bg-[#151B23] w-full max-w-2xl rounded-lg shadow-2xl border border-[#212835] overflow-hidden my-6">
+      <div className="bg-surface w-full max-w-2xl rounded-lg shadow-2xl border border-line overflow-hidden my-6">
         {/* Modal Header */}
-        <div className="bg-[#0D1117] text-[#F0F4F8] p-4 sm:p-5 flex items-center justify-between border-b border-[#212835]">
+        <div className="bg-canvas text-ink p-4 sm:p-5 flex items-center justify-between border-b border-line">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#C5A059]/30 flex items-center justify-center text-[#C5A059]">
+            <div className="w-8 h-8 rounded-md bg-raised border border-brand/30 flex items-center justify-center text-brand-ink">
               <Package className="w-4 h-4" />
             </div>
             <div>
-              <h2 id="material-modal-title" className="text-base sm:text-lg font-bold text-[#F0F4F8]">
+              <h2 id="material-modal-title" className="text-base sm:text-lg font-bold text-ink">
                 درخواست کسری و تامین متریال
               </h2>
-              <p className="text-xs text-[#9BA7B6] font-medium">
+              <p className="text-xs text-ink-2 font-medium">
                 {project.title} ({project.code}) — {project.customerName}
               </p>
             </div>
@@ -164,7 +166,7 @@ export const MaterialRequestModal: React.FC<Props> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-md hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition flex items-center justify-center cursor-pointer"
+            className="w-8 h-8 rounded-md hover:bg-raised text-ink-2 hover:text-ink transition flex items-center justify-center cursor-pointer"
             aria-label="بستن پنجره"
           >
             <X className="w-4 h-4" />
@@ -182,7 +184,7 @@ export const MaterialRequestModal: React.FC<Props> = ({
 
           {/* 1. Category Selector */}
           <div>
-            <label className="block text-xs font-semibold text-[#F0F4F8] mb-2">
+            <label className="block text-xs font-semibold text-ink mb-2">
               دسته‌بندی اصلی متریال:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -198,8 +200,8 @@ export const MaterialRequestModal: React.FC<Props> = ({
                     }}
                     className={`flex items-center gap-2 p-2.5 rounded-md border text-xs font-semibold transition text-right cursor-pointer min-h-[44px] ${
                       isSelected
-                        ? 'border-[#C5A059] bg-[#1C232D] text-[#E5CA8F] ring-1 ring-[#C5A059]/40'
-                        : 'border-[#212835] bg-[#111620] text-[#9BA7B6] hover:bg-[#1C232D] hover:text-[#F0F4F8]'
+                        ? 'border-brand bg-raised text-brand-soft ring-1 ring-brand/40'
+                        : 'border-line bg-sunken text-ink-2 hover:bg-raised hover:text-ink'
                     }`}
                   >
                     <Icon className="w-4 h-4 shrink-0" />
@@ -212,9 +214,9 @@ export const MaterialRequestModal: React.FC<Props> = ({
 
           {/* Quick Suggestions Pills (Zero typing!) */}
           {filteredSuggestions.length > 0 && (
-            <div className="bg-[#111620] p-3 rounded-md border border-[#212835]">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#9BA7B6] mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+            <div className="bg-sunken p-3 rounded-md border border-line">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-2 mb-2">
+                <Sparkles className="w-3.5 h-3.5 text-brand-ink" />
                 <span>اقلام پرکاربرد (یک‌کلیک برای افزودن):</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -223,9 +225,9 @@ export const MaterialRequestModal: React.FC<Props> = ({
                     key={idx}
                     type="button"
                     onClick={() => handleAddSuggestion(sug)}
-                    className="text-xs bg-[#1C232D] hover:bg-[#252F3D] hover:border-[#C5A059] border border-[#2D3748] px-2.5 py-1.5 rounded-md text-[#F0F4F8] transition cursor-pointer flex items-center gap-1 min-h-[36px]"
+                    className="text-xs bg-raised hover:bg-hover hover:border-brand border border-line-strong px-2.5 py-1.5 rounded-md text-ink transition cursor-pointer flex items-center gap-1 min-h-[36px]"
                   >
-                    <Plus className="w-3 h-3 text-[#C5A059]" />
+                    <Plus className="w-3 h-3 text-brand-ink" />
                     <span>{sug.title}</span>
                   </button>
                 ))}
@@ -236,13 +238,13 @@ export const MaterialRequestModal: React.FC<Props> = ({
           {/* 2. Items List */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-[#F0F4F8]">
+              <label className="text-xs font-semibold text-ink">
                 اقلام مورد نیاز جهت ارسال به کارگاه:
               </label>
               <button
                 type="button"
                 onClick={handleAddItemRow}
-                className="text-xs font-semibold text-[#C5A059] hover:underline flex items-center gap-1 cursor-pointer py-1 px-2"
+                className="text-xs font-semibold text-brand-ink hover:underline flex items-center gap-1 cursor-pointer py-1 px-2"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>افزودن ردیف جدید</span>
@@ -253,9 +255,9 @@ export const MaterialRequestModal: React.FC<Props> = ({
               {items.map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2.5 bg-[#111620] rounded-md border border-[#212835]"
+                  className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2.5 bg-sunken rounded-md border border-line"
                 >
-                  <span className="text-xs font-bold text-[#C5A059] self-center shrink-0 w-6 text-center tabular-nums">
+                  <span className="text-xs font-bold text-brand-ink self-center shrink-0 w-6 text-center tabular-nums">
                     {toPersianDigits(idx + 1)}.
                   </span>
 
@@ -264,7 +266,7 @@ export const MaterialRequestModal: React.FC<Props> = ({
                     placeholder="عنوان دقیق قطعه یا متریال..."
                     value={item.title}
                     onChange={(e) => handleUpdateItem(idx, { title: e.target.value })}
-                    className="flex-1 text-xs p-2 rounded-md bg-[#0D1117] border border-[#212835] text-[#F0F4F8] focus:border-[#C5A059] min-h-[40px]"
+                    className="flex-1 text-xs p-2 rounded-md bg-canvas border border-line text-ink focus:border-brand min-h-[40px]"
                     required
                   />
 
@@ -280,13 +282,13 @@ export const MaterialRequestModal: React.FC<Props> = ({
                           const val = parseFloat(e.target.value);
                           handleUpdateItem(idx, { requestedQty: isNaN(val) ? 0 : val });
                         }}
-                        className="w-14 text-xs p-2 rounded-md bg-[#0D1117] border border-[#212835] text-[#F0F4F8] text-center font-bold tabular-nums focus:border-[#C5A059] min-h-[40px]"
+                        className="w-14 text-xs p-2 rounded-md bg-canvas border border-line text-ink text-center font-bold tabular-nums focus:border-brand min-h-[40px]"
                         required
                       />
                       <select
                         value={item.unit}
                         onChange={(e) => handleUpdateItem(idx, { unit: e.target.value })}
-                        className="text-xs p-2 rounded-md bg-[#0D1117] border border-[#212835] text-[#F0F4F8] focus:border-[#C5A059] min-h-[40px]"
+                        className="text-xs p-2 rounded-md bg-canvas border border-line text-ink focus:border-brand min-h-[40px]"
                       >
                         <option value="عدد">عدد</option>
                         <option value="متر">متر</option>
@@ -317,13 +319,13 @@ export const MaterialRequestModal: React.FC<Props> = ({
           {/* 3. Reason & Urgency */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#F0F4F8] mb-1.5">
+              <label className="block text-xs font-semibold text-ink mb-1.5">
                 علت نیاز به متریال:
               </label>
               <select
                 value={selectedReason}
                 onChange={(e) => setSelectedReason(e.target.value as MaterialRequestReason)}
-                className="w-full text-xs p-2.5 rounded-md bg-[#0D1117] border border-[#212835] text-[#F0F4F8] font-medium focus:border-[#C5A059] min-h-[44px]"
+                className="w-full text-xs p-2.5 rounded-md bg-canvas border border-line text-ink font-medium focus:border-brand min-h-[44px]"
               >
                 {(Object.keys(MATERIAL_REASON_LABELS) as MaterialRequestReason[]).map((r) => (
                   <option key={r} value={r}>
@@ -334,13 +336,13 @@ export const MaterialRequestModal: React.FC<Props> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#F0F4F8] mb-1.5">
+              <label className="block text-xs font-semibold text-ink mb-1.5">
                 اولویت و فوریت تحویل:
               </label>
               <select
                 value={selectedUrgency}
                 onChange={(e) => setSelectedUrgency(e.target.value as MaterialUrgency)}
-                className="w-full text-xs p-2.5 rounded-md bg-[#0D1117] border border-[#212835] text-[#F0F4F8] font-medium focus:border-[#C5A059] min-h-[44px]"
+                className="w-full text-xs p-2.5 rounded-md bg-canvas border border-line text-ink font-medium focus:border-brand min-h-[44px]"
               >
                 {(Object.keys(MATERIAL_URGENCY_LABELS) as MaterialUrgency[]).map((u) => (
                   <option key={u} value={u}>
@@ -353,7 +355,7 @@ export const MaterialRequestModal: React.FC<Props> = ({
 
           {/* 4. Notes */}
           <div>
-            <label className="block text-xs font-semibold text-[#F0F4F8] mb-1.5">
+            <label className="block text-xs font-semibold text-ink mb-1.5">
               توضیحات تکمیلی سر کارگاه (اختیاری):
             </label>
             <textarea
@@ -361,24 +363,24 @@ export const MaterialRequestModal: React.FC<Props> = ({
               placeholder="مثال: جهت پنجره دوم سالن، به دلیل بتن بودن سقف نیاز به پایه‌های دوبل داریم..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full text-xs p-2.5 rounded-md bg-[#0D1117] border border-[#212835] text-[#F0F4F8] focus:border-[#C5A059] resize-none"
+              className="w-full text-xs p-2.5 rounded-md bg-canvas border border-line text-ink focus:border-brand resize-none"
             />
           </div>
 
           {/* Modal Footer */}
-          <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#212835]">
+          <div className="pt-2 flex items-center justify-end gap-3 border-t border-line">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2.5 rounded-md border border-[#212835] bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] text-xs font-semibold hover:bg-[#252F3D] transition min-h-[44px] cursor-pointer"
+              className="px-4 py-2.5 rounded-md border border-line bg-raised text-ink-2 hover:text-ink text-xs font-semibold hover:bg-hover transition min-h-[44px] cursor-pointer"
             >
               انصراف
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 rounded-md bg-[#C5A059] text-[#0D1117] hover:bg-[#D4AF37] text-xs font-bold transition min-h-[44px] flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-6 py-2.5 rounded-md bg-brand text-on-brand hover:bg-brand-hover text-xs font-bold transition min-h-[44px] flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Package className="w-4 h-4" />
               <span>{submitting ? 'در حال ثبت...' : 'ارسال درخواست به انبار و دفتر'}</span>

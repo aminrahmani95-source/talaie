@@ -447,3 +447,19 @@ describe('Team Capacity & Workload-Based Scheduling (Configurable Capacity & Con
     });
   });
 });
+
+describe('detectScheduleConflicts with real team ids (regression)', () => {
+  it('keeps team id and date intact when the team id contains an underscore', async () => {
+    const { detectScheduleConflicts } = await import('../capacity');
+    const project: any = {
+      id: 'p-x', code: 'PRJ-X', title: 'x', status: 'SCHEDULED', scheduledDate: '2026-12-01',
+      assignedTeamId: 'TEAM_1', assignedTechnicianIds: [], requiredDurationHours: 4,
+    };
+    const conflicts = detectScheduleConflicts([project], [{ id: 'TEAM_1', name: 'اکیپ نصب ۱' } as any], {} as any);
+    for (const c of conflicts) {
+      if (c.teamId !== undefined) expect(c.teamId).toBe('TEAM_1');
+      if (c.teamName !== undefined) expect(c.teamName).not.toBe('اکیپ نامشخص');
+      expect(c.dateKey).toBe('2026-12-01');
+    }
+  });
+});

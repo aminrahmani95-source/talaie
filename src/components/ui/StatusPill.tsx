@@ -30,7 +30,7 @@ export const StatusPill: React.FC<StatusPillProps> = ({
   size = 'sm',
   className = '',
 }) => {
-  const sizeClasses = size === 'sm' ? 'text-[11px] px-2 py-0.5 gap-1.5' : 'text-xs px-2.5 py-1 gap-1.5';
+  const sizeClasses = size === 'sm' ? 'text-[12px] px-2 py-0.5 gap-1.5' : 'text-xs px-2.5 py-1 gap-1.5';
 
   // Handle QC Status if provided explicitly or alone
   if (qcStatus && qcStatus !== 'NOT_STARTED') {
@@ -80,9 +80,9 @@ export const StatusPill: React.FC<StatusPillProps> = ({
     case 'SCHEDULED':
       return (
         <span
-          className={`inline-flex items-center font-medium rounded bg-[#1C232D] text-[#9BA7B6] border border-[#2D3748] ${sizeClasses} ${className}`}
+          className={`inline-flex items-center font-medium rounded bg-raised text-ink-2 border border-line-strong ${sizeClasses} ${className}`}
         >
-          <Calendar className="w-3.5 h-3.5 shrink-0 text-[#637184]" />
+          <Calendar className="w-3.5 h-3.5 shrink-0 text-ink-3" />
           <span>{customLabel || 'برنامه‌ریزی‌شده'}</span>
         </span>
       );
@@ -141,16 +141,16 @@ export const StatusPill: React.FC<StatusPillProps> = ({
       if (qcStatus === 'NOT_STARTED') {
         return (
           <span
-            className={`inline-flex items-center font-medium rounded bg-[#151B23] text-[#637184] border border-[#212835] ${sizeClasses} ${className}`}
+            className={`inline-flex items-center font-medium rounded bg-surface text-ink-3 border border-line ${sizeClasses} ${className}`}
           >
-            <MinusCircle className="w-3.5 h-3.5 shrink-0 text-[#637184]" />
+            <MinusCircle className="w-3.5 h-3.5 shrink-0 text-ink-3" />
             <span>{customLabel || 'شروع‌نشده'}</span>
           </span>
         );
       }
       return customLabel ? (
         <span
-          className={`inline-flex items-center font-medium rounded bg-[#151B23] text-[#9BA7B6] border border-[#212835] ${sizeClasses} ${className}`}
+          className={`inline-flex items-center font-medium rounded bg-surface text-ink-2 border border-line ${sizeClasses} ${className}`}
         >
           <span>{customLabel}</span>
         </span>

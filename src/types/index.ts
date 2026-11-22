@@ -721,6 +721,8 @@ export interface SystemSettings {
   defaultTools: string[];
   defaultTeamDailyCapacityHours?: number | null; // ظرفیت کاری پیش‌فرض روزانه اکیپ‌ها به ساعت (تعیین توسط مدیر QC)
   workingDaysPerWeek?: number[]; // روزهای کاری مجاز هفته (پیش‌فرض: [0, 1, 2, 3, 4, 6] بدون جمعه)
+  installationTeamCount?: number; // تعداد اکیپ‌های نصب برای محاسبه ظرفیت فروش (پیش‌فرض ۲)
+  lathsPerTeamPerDay?: number; // ظرفیت روزانه هر اکیپ به لت (پیش‌فرض ۲۰)
 }
 
 export interface ProjectAuditRecord {
@@ -889,6 +891,8 @@ export interface DailyLathCapacity {
   remainingLaths: number;
   teams: TeamDayAllocation[];
   bookingsCount: number;
+  /** روز غیرکاری (مثلاً جمعه): ظرفیت صفر و غیرقابل رزرو */
+  isClosed?: boolean;
 }
 
 export interface BookingOption {

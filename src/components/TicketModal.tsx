@@ -14,13 +14,13 @@ import {
   HelpCircle,
   Trash2,
   AlertOctagon,
-  ShieldAlert,
 } from 'lucide-react';
-import { toPersianDigits } from '../utils/jalali';
+
 import { compressImageFile } from '../utils/imageCompressor';
 import { CloudImage } from './common/CloudImage';
 import { getDisplayName } from '../utils/technicianName';
 import { getSlaDeadline, ISSUE_CATEGORY_LABELS } from '../utils/sla';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface Props {
   project: Project;
@@ -83,6 +83,7 @@ const TICKET_TYPES: TicketTypeConfig[] = [
 ];
 
 export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, onSubmit }) => {
+  useEscapeKey(onClose);
   const [selectedType, setSelectedType] = useState<TicketType>('DEFICIENCY_FABRIC');
   const [selectedCategory, setSelectedCategory] = useState<IssueCategory>('PRODUCTION_DEFECT');
   const [isBlocking, setIsBlocking] = useState<boolean>(false);
@@ -179,25 +180,25 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
       aria-labelledby="ticket-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-[#151B23] rounded-lg max-w-lg w-full overflow-hidden shadow-2xl my-8 border border-[#212835] transition-colors animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-surface rounded-lg max-w-lg w-full overflow-hidden shadow-2xl my-8 border border-line transition-colors animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-[#0D1117] px-6 py-4 text-[#F0F4F8] flex items-center justify-between border-b border-[#212835]">
+        <div className="bg-canvas px-6 py-4 text-ink flex items-center justify-between border-b border-line">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#C5A059]/30 flex items-center justify-center text-[#C5A059]">
+            <div className="w-8 h-8 rounded-md bg-raised border border-brand/30 flex items-center justify-center text-brand-ink">
               <AlertTriangle className="w-4 h-4" aria-hidden="true" />
             </div>
             <div>
-              <h3 id="ticket-modal-title" className="font-bold text-base sm:text-lg text-[#F0F4F8]">
+              <h3 id="ticket-modal-title" className="font-bold text-base sm:text-lg text-ink">
                 ثبت تیکت کسری یا خرابی سر پروژه
               </h3>
-              <p className="text-xs text-[#9BA7B6] line-clamp-1">{project.title}</p>
+              <p className="text-xs text-ink-2 line-clamp-1">{project.title}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="بستن پنجره تیکت"
-            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-raised text-ink-2 hover:text-ink transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -213,7 +214,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
           )}
           {/* Ticket Type Picker */}
           <div>
-            <label className="block text-xs font-semibold text-[#F0F4F8] mb-2">
+            <label className="block text-xs font-semibold text-ink mb-2">
               نوع ایراد یا کسری را انتخاب کنید:
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -227,22 +228,22 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                     onClick={() => handleSelectType(t.type, t.category)}
                     className={`flex items-start gap-2.5 p-2.5 rounded-md border text-right transition cursor-pointer min-h-[48px] ${
                       isSelected
-                        ? 'border-[#C5A059] bg-[#1C232D] text-[#E5CA8F] ring-1 ring-[#C5A059]/40 font-bold'
-                        : 'border-[#212835] bg-[#111620] text-[#9BA7B6] hover:bg-[#1C232D] hover:text-[#F0F4F8]'
+                        ? 'border-brand bg-raised text-brand-soft ring-1 ring-brand/40 font-bold'
+                        : 'border-line bg-sunken text-ink-2 hover:bg-raised hover:text-ink'
                     }`}
                   >
                     <div
                       className={`p-1.5 rounded shrink-0 mt-0.5 ${
                         isSelected
-                          ? 'bg-[#C5A059] text-[#0D1117]'
-                          : 'bg-[#1C232D] text-[#9BA7B6]'
+                          ? 'bg-brand text-on-brand'
+                          : 'bg-raised text-ink-2'
                       }`}
                     >
                       <IconComponent className="w-4 h-4" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="font-semibold text-xs leading-snug">{t.label}</div>
-                      <div className="text-[11px] opacity-75 leading-tight mt-0.5 line-clamp-2">
+                      <div className="text-[12px] opacity-75 leading-tight mt-0.5 line-clamp-2">
                         {t.desc}
                       </div>
                     </div>
@@ -254,13 +255,13 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
           {/* Issue Category (8 Official Categories) */}
           <div>
-            <label className="block text-xs font-semibold text-[#F0F4F8] mb-1.5">
+            <label className="block text-xs font-semibold text-ink mb-1.5">
               دسته‌بندی استاندارد ایراد (جهت پایش کیفیت و ریشه‌یابی):
             </label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value as IssueCategory)}
-              className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-[#C5A059]"
+              className="w-full text-xs p-2.5 rounded-md border border-line bg-canvas text-ink focus:border-brand"
             >
               {Object.entries(ISSUE_CATEGORY_LABELS).map(([catKey, catLabel]) => (
                 <option key={catKey} value={catKey}>
@@ -284,7 +285,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                   <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
                   این مشکل مانع پیشرفت و ادامه عملیات نصب است (مسدودکننده / Blocking)
                 </span>
-                <span className="text-[11px] text-rose-400/80 block mt-0.5">
+                <span className="text-[12px] text-rose-400/80 block mt-0.5">
                   تیکت‌های مسدودکننده در دسک کنترل توقف با اولویت بحرانی پیگیری می‌شوند.
                 </span>
               </div>
@@ -300,7 +301,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
                   value={blockingReason}
                   onChange={(e) => setBlockingReason(e.target.value)}
                   placeholder="مثال: عدم امکان ادامه به دلیل نبود برق / شکستگی بازو حین نصب"
-                  className="w-full text-xs p-2 rounded-md border border-rose-500/40 bg-[#0D1117] text-[#F0F4F8] focus:ring-1 focus:ring-rose-500"
+                  className="w-full text-xs p-2 rounded-md border border-rose-500/40 bg-canvas text-ink focus:ring-1 focus:ring-rose-500"
                   required={isBlocking}
                 />
               </div>
@@ -309,7 +310,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
           {/* Description */}
           <div>
-            <label htmlFor="ticket-description" className="block text-xs font-semibold text-[#F0F4F8] mb-1.5">
+            <label htmlFor="ticket-description" className="block text-xs font-semibold text-ink mb-1.5">
               توضیح دقیق مشکل (ویژه مسئولین فنی و کنترل کیفیت):
             </label>
             <textarea
@@ -319,20 +320,20 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="مثال: پارچه شید لت سوم دارای پارگی 5 سانتی‌متری است یا ریل پرده برای قاب سمت راست 15 سانتی‌متر کوتاه است..."
-              className="w-full text-xs p-3 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] placeholder:text-[#637184] focus:outline-none focus:border-[#C5A059] transition"
+              className="w-full text-xs p-3 rounded-md border border-line bg-canvas text-ink placeholder:text-ink-3 focus:outline-none focus:border-brand transition"
             />
           </div>
 
           {/* Photo attachments */}
           <div>
-            <label className="block text-xs font-semibold text-[#F0F4F8] mb-2">
+            <label className="block text-xs font-semibold text-ink mb-2">
               بارگذاری عکس از محل ایراد یا برچسب قطعه (اختیاری):
             </label>
             <div className="flex flex-wrap gap-2.5 items-center">
               {photos.map((p, idx) => (
                 <div
                   key={idx}
-                  className="relative w-16 h-16 rounded-md overflow-hidden border border-[#212835] shadow-xs group"
+                  className="relative w-16 h-16 rounded-md overflow-hidden border border-line shadow-xs group"
                 >
                   <CloudImage src={p} alt={`تصویر ایراد ${idx + 1}`} className="w-full h-full object-cover" />
                   <button
@@ -348,10 +349,10 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
               {/* Camera Button (with capture) */}
               <label
-                className="flex flex-col items-center justify-center w-16 h-16 rounded-md border border-dashed border-[#C5A059]/60 bg-[#C5A059]/10 hover:bg-[#C5A059]/20 cursor-pointer text-[#C5A059] transition min-h-[64px] min-w-[64px]"
+                className="flex flex-col items-center justify-center w-16 h-16 rounded-md border border-dashed border-brand/60 bg-brand/10 hover:bg-brand/20 cursor-pointer text-brand-ink transition min-h-[64px] min-w-[64px]"
               >
                 <Camera className="w-4 h-4 mb-0.5" aria-hidden="true" />
-                <span className="text-[10px] font-semibold">دوربین</span>
+                <span className="text-[11px] font-semibold">دوربین</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -363,10 +364,10 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
               {/* Gallery Button (without capture) */}
               <label
-                className="flex flex-col items-center justify-center w-16 h-16 rounded-md border border-dashed border-[#2D3748] hover:border-[#C5A059] bg-[#111620] hover:bg-[#1C232D] cursor-pointer text-[#9BA7B6] hover:text-[#F0F4F8] transition min-h-[64px] min-w-[64px]"
+                className="flex flex-col items-center justify-center w-16 h-16 rounded-md border border-dashed border-line-strong hover:border-brand bg-sunken hover:bg-raised cursor-pointer text-ink-2 hover:text-ink transition min-h-[64px] min-w-[64px]"
               >
                 <Upload className="w-4 h-4 mb-0.5" aria-hidden="true" />
-                <span className="text-[10px] font-semibold">گالری</span>
+                <span className="text-[11px] font-semibold">گالری</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -379,19 +380,19 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
           </div>
 
           {/* Action buttons with minimum 44px touch targets */}
-          <div className="flex items-center gap-3 pt-4 border-t border-[#212835]">
+          <div className="flex items-center gap-3 pt-4 border-t border-line">
             <button
               type="button"
               disabled={submitting}
               onClick={onClose}
-              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-md border border-[#212835] bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] font-semibold transition text-xs cursor-pointer disabled:opacity-50"
+              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-md border border-line bg-raised text-ink-2 hover:text-ink font-semibold transition text-xs cursor-pointer disabled:opacity-50"
             >
               انصراف
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-md bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-bold transition text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-md bg-brand hover:bg-brand-hover text-on-brand font-bold transition text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
             >
               <CheckCircle2 className="w-4 h-4" />
               {submitting ? 'در حال ارسال تیکت...' : 'ارسال فوری تیکت به QC'}

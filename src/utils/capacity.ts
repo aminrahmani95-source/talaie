@@ -11,6 +11,8 @@ import {
   getMultiDayDateRange,
 } from './multiDay';
 
+const TEAM_DATE_SEP = '::';
+
 // Aliases for readability
 export const isProjectOnDate = isProjectScheduledOnDate;
 export const isMultiDayProject = isProjectMultiDay;
@@ -344,7 +346,8 @@ export function detectScheduleConflicts(
 
     for (const d of dateRange) {
       if (!d) continue;
-      const key = `${p.assignedTeamId}_${d}`;
+      // NOTE: team ids such as "TEAM_1" contain "_", so a separator that cannot appear in ids is used
+      const key = `${p.assignedTeamId}${TEAM_DATE_SEP}${d}`;
       const list = teamDateAssignments.get(key) || [];
       list.push(p);
       teamDateAssignments.set(key, list);
@@ -353,7 +356,9 @@ export function detectScheduleConflicts(
 
   // Check 4, 5 & 6: Capacity, unconfigured capacity, and simultaneous clock conflicts
   for (const [key, assignedList] of teamDateAssignments.entries()) {
-    const [teamId, dateKey] = key.split('_');
+    const sepIdx = key.lastIndexOf(TEAM_DATE_SEP);
+    const teamId = key.slice(0, sepIdx);
+    const dateKey = key.slice(sepIdx + TEAM_DATE_SEP.length);
     const team = teamMap.get(teamId);
     const teamName = team ? team.name : 'اکیپ نامشخص';
 

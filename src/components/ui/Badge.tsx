@@ -14,13 +14,13 @@ export const Badge: React.FC<BadgeProps> = ({
   children,
   ...props
 }) => {
-  const sizeClasses = size === 'sm' ? 'text-[11px] px-2 py-0.5 gap-1' : 'text-xs px-2.5 py-1 gap-1.5';
+  const sizeClasses = size === 'sm' ? 'text-[12px] px-2 py-0.5 gap-1' : 'text-xs px-2.5 py-1 gap-1.5';
 
   const variantClasses = {
     default:
-      'bg-[#1C232D] text-[#9BA7B6] border border-[#2D3748]',
+      'bg-raised text-ink-2 border border-line-strong',
     gold:
-      'bg-[#C5A059]/15 text-[#E5CA8F] border border-[#C5A059]/30',
+      'bg-brand/15 text-brand-soft border border-brand/30',
     success:
       'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
     warning:

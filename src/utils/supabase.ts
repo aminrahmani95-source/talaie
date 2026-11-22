@@ -192,6 +192,17 @@ export const SupabaseSyncService = {
 
     if (authRes.error || !authRes.data.user) {
       const msg = authRes.error?.message || '';
+      const errName = (authRes.error as any)?.name || '';
+      const errStatus = (authRes.error as any)?.status;
+      // Network failures must not be reported as "wrong password": that misleads field staff
+      // and prevents the offline fallback in LoginModal from kicking in.
+      if (
+        errName === 'AuthRetryableFetchError' ||
+        errStatus === 0 ||
+        /failed to fetch|networkerror|load failed|fetch/i.test(msg)
+      ) {
+        throw new Error('خطا در اتصال به شبکه یا سرور. لطفاً اتصال اینترنت را بررسی و دوباره تلاش کنید.');
+      }
       if (msg.toLowerCase().includes('email not confirmed')) {
         throw new Error('حساب کاربری شما در دیتابیس تایید نشده است. لطفاً کوئری تایید را در پنل SQL اجرا فرمایید.');
       }
@@ -627,6 +638,49 @@ export const SupabaseSyncService = {
     if (error) {
       console.warn('Failed to update team capacity:', error);
       throw error;
+    }
+  },
+
+  async createInstallationTeam(
+    name: string,
+    code: string,
+  ): Promise<{ success: boolean; data?: InstallationTeam; error?: string }> {
+    const client = this.getClient();
+    if (!client) return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
+    try {
+      const { data, error } = await client
+        .from('installation_teams')
+        .insert({ name, code })
+        .select('id, name, code, supervisor_id, daily_capacity_hours, created_at, updated_at')
+        .single();
+      if (error) return { success: false, error: error.message || 'خطا در ساخت اکیپ.' };
+      return {
+        success: true,
+        data: {
+          id: data.id,
+          name: data.name,
+          code: data.code,
+          supervisorId: data.supervisor_id || undefined,
+          dailyCapacityHours: data.daily_capacity_hours ?? null,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        },
+      };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'خطای غیرمنتظره در ارتباط با سرور' };
+    }
+  },
+
+  async deleteInstallationTeam(teamId: string): Promise<{ success: boolean; error?: string }> {
+    const client = this.getClient();
+    if (!client) return { success: false, error: 'سرویس اتصال در دسترس نیست.' };
+    if (!isValidUUID(teamId)) return { success: true };
+    try {
+      const { error } = await client.from('installation_teams').delete().eq('id', teamId);
+      if (error) return { success: false, error: error.message || 'خطا در حذف اکیپ.' };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'خطای غیرمنتظره در ارتباط با سرور' };
     }
   },
 
@@ -2051,6 +2105,28 @@ export const SupabaseSyncService = {
       p_notes: notes.trim() || null,
     });
     if (error) throw error;
+  },
+
+  /**
+   * اشتراک بیدرنگ درخواست‌های متریال: قبلاً اشتراکی نبود و انبار درخواست تازه‌ی
+   * تکنسین را تا رفرش دستی صفحه نمی‌دید (جدول از قبل در publication بود).
+   */
+  subscribeMaterialRequests(onReload: () => void): () => void {
+    const client = this.getClient();
+    if (!client) return () => {};
+    try {
+      const channel = (client as any)
+        .channel('talaie_material_requests_channel')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'material_requests' }, () => onReload())
+        .subscribe();
+      return () => {
+        try {
+          client.removeChannel(channel);
+        } catch {}
+      };
+    } catch {
+      return () => {};
+    }
   },
 
   /**

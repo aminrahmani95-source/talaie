@@ -6,13 +6,12 @@ import {
   Trash2,
   CheckCircle2,
   Clock,
-  Layers,
-  ArrowUpRight,
   AlertCircle,
 } from 'lucide-react';
 import { OfflineQueue, OutboxOperation } from '../../utils/offlineQueue';
 import { SupabaseSyncService } from '../../utils/supabase';
 import { toPersianDigits, formatJalaliDateTime } from '../../utils/jalali';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   isOpen: boolean;
@@ -27,6 +26,7 @@ export const PendingOperationsModal: React.FC<Props> = ({
   onActionComplete,
   currentUserId,
 }) => {
+  useEscapeKey(onClose, isOpen);
   const [pendingOps, setPendingOps] = useState<OutboxOperation[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -93,21 +93,21 @@ export const PendingOperationsModal: React.FC<Props> = ({
       aria-label="مدیریت صف تغییرات آفلاین"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
     >
-      <div className="bg-[#151B23] border border-[#212835] rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl text-[#F0F4F8] overflow-hidden">
+      <div className="bg-surface border border-line rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl text-ink overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#212835] flex items-center justify-between bg-[#0D1117] shrink-0">
+        <div className="px-5 py-4 border-b border-line flex items-center justify-between bg-canvas shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
               <Cloud className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-[#F0F4F8] flex items-center gap-2">
+              <h3 className="font-bold text-sm text-ink flex items-center gap-2">
                 <span>صف تغییرات محلی و آفلاین</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono">
                   {toPersianDigits(pendingOps.length)} مورد
                 </span>
               </h3>
-              <p className="text-[11px] text-[#9BA7B6]">
+              <p className="text-[12px] text-ink-2">
                 تغییراتی که در حافظه محلی دستگاه ذخیره شده و در صف ارسال به سرور ابری هستند
               </p>
             </div>
@@ -115,7 +115,7 @@ export const PendingOperationsModal: React.FC<Props> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#1C232D] transition cursor-pointer"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-2 hover:text-ink hover:bg-raised transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -123,8 +123,8 @@ export const PendingOperationsModal: React.FC<Props> = ({
 
         {/* Notice */}
         {notice && (
-          <div className="mx-5 mt-4 p-3 rounded-xl bg-[#1C232D] border border-[#2D3748] text-xs text-[#E5CA8F] flex items-center gap-2 shrink-0">
-            <AlertCircle className="w-4 h-4 text-[#C5A059] shrink-0" />
+          <div className="mx-5 mt-4 p-3 rounded-xl bg-raised border border-line-strong text-xs text-brand-soft flex items-center gap-2 shrink-0">
+            <AlertCircle className="w-4 h-4 text-brand-ink shrink-0" />
             <span>{notice}</span>
           </div>
         )}
@@ -132,14 +132,14 @@ export const PendingOperationsModal: React.FC<Props> = ({
         {/* Content list */}
         <div className="p-5 flex-1 overflow-y-auto space-y-3">
           {loading ? (
-            <div className="py-12 text-center text-[#9BA7B6] text-xs">
+            <div className="py-12 text-center text-ink-2 text-xs">
               در حال دریافت اطلاعات صف...
             </div>
           ) : pendingOps.length === 0 ? (
             <div className="py-12 text-center space-y-2">
               <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto opacity-80" />
-              <p className="font-bold text-sm text-[#F0F4F8]">صف کاملاً خالی و همگام است</p>
-              <p className="text-xs text-[#9BA7B6]">
+              <p className="font-bold text-sm text-ink">صف کاملاً خالی و همگام است</p>
+              <p className="text-xs text-ink-2">
                 تمامی تغییرات و ثبت‌های شما با سرور یا حافظه محلی تطبیق یافته است.
               </p>
             </div>
@@ -147,25 +147,25 @@ export const PendingOperationsModal: React.FC<Props> = ({
             pendingOps.map((op) => (
               <div
                 key={op.id}
-                className="p-3.5 rounded-xl bg-[#0D1117] border border-[#212835] hover:border-[#2D3748] transition space-y-2 text-xs"
+                className="p-3.5 rounded-xl bg-canvas border border-line hover:border-line-strong transition space-y-2 text-xs"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-[#E5CA8F]">{op.type}</span>
-                    <span className="font-mono text-[10px] text-[#637184] bg-[#161B22] px-1.5 py-0.5 rounded">
+                    <span className="font-bold text-brand-soft">{op.type}</span>
+                    <span className="font-mono text-[11px] text-ink-3 bg-surface px-1.5 py-0.5 rounded">
                       {op.orderingKey}
                     </span>
                   </div>
-                  <span className="text-[10px] text-[#637184] flex items-center gap-1 font-mono">
+                  <span className="text-[11px] text-ink-3 flex items-center gap-1 font-mono">
                     <Clock className="w-3 h-3" />
                     {formatJalaliDateTime(new Date(op.createdAt).toISOString())}
                   </span>
                 </div>
 
                 {op.executionState && (
-                  <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <div className="text-[11px] text-ink-2 flex items-center gap-1.5">
                     <span>وضعیت:</span>
-                    <span className={`font-mono px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                    <span className={`font-mono px-1.5 py-0.5 rounded text-[10px] font-bold ${
                       op.executionState === 'QUEUED'
                         ? 'bg-amber-500/10 text-amber-300'
                         : op.executionState === 'CONFLICT_HOLD'
@@ -187,7 +187,7 @@ export const PendingOperationsModal: React.FC<Props> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-5 py-3.5 border-t border-[#212835] bg-[#0D1117] flex items-center justify-between gap-3 shrink-0">
+        <div className="px-5 py-3.5 border-t border-line bg-canvas flex items-center justify-between gap-3 shrink-0">
           <button
             type="button"
             disabled={isClearing || pendingOps.length === 0}
@@ -202,7 +202,7 @@ export const PendingOperationsModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-raised hover:bg-hover text-ink-2 hover:text-ink transition cursor-pointer"
             >
               بستن
             </button>
@@ -210,7 +210,7 @@ export const PendingOperationsModal: React.FC<Props> = ({
               type="button"
               disabled={isSyncing || pendingOps.length === 0}
               onClick={handleSyncNow}
-              className="px-4 py-2 rounded-xl text-xs font-black bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] transition flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-black bg-brand hover:bg-brand-hover text-on-brand transition flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95 disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>{isSyncing ? 'در حال ارسال...' : 'ارسال فوری به سرور'}</span>

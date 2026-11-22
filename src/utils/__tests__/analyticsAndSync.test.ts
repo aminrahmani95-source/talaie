@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Project, InstallationTeamWithMembers, MaterialRequest, User } from '../../types';
 import { SupabaseSyncService } from '../supabase';
 import { createConfirmReceiptPayload, canConfirmMaterialReceipt } from '../materialRequests';
@@ -751,8 +751,17 @@ describe('Phase P4: Analytics, Operational Intelligence & Sync Hardening', () =>
   });
 
   it('handles Supabase fetchMaterialRequests gracefully in both online and offline/unmigrated states', async () => {
-    // When no client or error happens, fetchMaterialRequests returns empty array without throwing
-    const res = await SupabaseSyncService.fetchMaterialRequests();
-    expect(Array.isArray(res)).toBe(true);
+    // When no client or error happens, fetchMaterialRequests returns empty array without throwing.
+    // No real network in unit tests: offline = no client, unmigrated = the query returns an error.
+    const spy = vi.spyOn(SupabaseSyncService, 'getClient').mockReturnValue(null);
+    expect(await SupabaseSyncService.fetchMaterialRequests()).toEqual([]);
+
+    const failingQuery = {
+      select: () => failingQuery,
+      order: () => Promise.resolve({ data: null, error: { message: 'relation does not exist' } }),
+    };
+    spy.mockReturnValue({ from: () => failingQuery } as any);
+    expect(await SupabaseSyncService.fetchMaterialRequests()).toEqual([]);
+    spy.mockRestore();
   });
 });

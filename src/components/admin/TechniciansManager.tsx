@@ -8,12 +8,7 @@ import {
   KeyRound,
   Phone,
   CheckCircle2,
-  X,
-  Shield,
   Wrench,
-  ShieldCheck,
-  Ruler,
-  Lock,
   Loader2,
   AlertTriangle,
   Search,
@@ -21,8 +16,8 @@ import {
   UserCheck,
   UserMinus,
   Sparkles,
-  ClipboardList,
   Eye,
+  Plus,
 } from 'lucide-react';
 import { toPersianDigits, toEnglishDigits } from '../../utils/jalali';
 import { SupabaseSyncService } from '../../utils/supabase';
@@ -44,6 +39,8 @@ interface Props {
   onDeleteUser: (userId: string) => void;
   onAssignTeamMember?: (teamId: string, userId: string, roleInTeam: 'LEAD' | 'TECHNICIAN') => Promise<{ success: boolean; error?: string }>;
   onRemoveTeamMember?: (userId: string) => Promise<{ success: boolean; error?: string }>;
+  onCreateTeam?: () => Promise<{ success: boolean; error?: string }>;
+  onDeleteTeam?: (teamId: string) => Promise<{ success: boolean; error?: string }>;
   onImpersonateUser?: (user: User) => void;
 }
 
@@ -59,6 +56,8 @@ export const TechniciansManager: React.FC<Props> = ({
   onDeleteUser,
   onAssignTeamMember,
   onRemoveTeamMember,
+  onCreateTeam,
+  onDeleteTeam,
   onImpersonateUser,
 }) => {
   const [mainSection, setMainSection] = useState<MainSection>('PERSONNEL');
@@ -118,6 +117,10 @@ export const TechniciansManager: React.FC<Props> = ({
     setIsResetPasswordOpen(true);
   };
 
+  // When the app is connected to the server, a failed server call must stop the
+  // action: otherwise the screen shows a user/password that does not exist on the server.
+  const isServerConnected = () => SupabaseSyncService.getClient() !== null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -129,6 +132,14 @@ export const TechniciansManager: React.FC<Props> = ({
 
     if (!trimmedName || !trimmedPhone) {
       setModalError('لطفاً نام و شماره تلفن را وارد کنید.');
+      return;
+    }
+
+    const duplicate = users.find(
+      (u) => u.id !== editingUser?.id && toEnglishDigits(String(u.phone || '')).trim() === trimmedPhone,
+    );
+    if (duplicate) {
+      setModalError(`این شماره قبلاً برای «${getDisplayName(duplicate.name)}» ثبت شده است.`);
       return;
     }
 
@@ -148,7 +159,7 @@ export const TechniciansManager: React.FC<Props> = ({
 
     try {
       if (editingUser) {
-        try {
+        if (isServerConnected()) {
           const res = await SupabaseSyncService.adminUpdatePersonnel({
             id: editingUser.id,
             name: plainName,
@@ -156,12 +167,10 @@ export const TechniciansManager: React.FC<Props> = ({
             role,
             active: isActive,
           });
-
-          if (!res.success && res.error) {
-            console.warn('Supabase remote personnel update notice:', res.error);
+          if (!res.success) {
+            setModalError(`ویرایش روی سرور انجام نشد: ${res.error || 'خطای نامشخص'}`);
+            return;
           }
-        } catch (e: any) {
-          console.warn('Supabase adminUpdatePersonnel background sync error:', e);
         }
 
         const updated: User = {
@@ -174,21 +183,21 @@ export const TechniciansManager: React.FC<Props> = ({
         onSaveUser(updated);
       } else {
         let newId = `u-${Date.now()}`;
-        try {
+        if (isServerConnected()) {
           const res = await SupabaseSyncService.adminCreatePersonnel({
             name: plainName,
             phone: trimmedPhone,
             password: toEnglishDigits(password.trim()),
             role,
           });
-
-          if (res.success && res.data?.user?.id) {
-            newId = res.data.user.id;
-          } else if (!res.success && res.error) {
-            console.warn('Supabase remote personnel create notice:', res.error);
+          if (!res.success) {
+            setModalError(
+              `حساب روی سرور ساخته نشد، پس این فرد نمی‌تواند وارد شود: ${res.error || 'خطای نامشخص'}`,
+            );
+            return;
           }
-        } catch (e: any) {
-          console.warn('Supabase adminCreatePersonnel background sync error:', e);
+          const serverId = res.data?.user?.id ?? res.data?.id ?? (typeof res.data === 'string' ? res.data : null);
+          if (serverId) newId = String(serverId);
         }
 
         const newUser: User = {
@@ -228,17 +237,15 @@ export const TechniciansManager: React.FC<Props> = ({
     setResetError(null);
 
     try {
-      try {
+      if (isServerConnected()) {
         const res = await SupabaseSyncService.adminResetPersonnelPassword({
           id: selectedUserForReset.id,
           newPassword: toEnglishDigits(newPassword.trim()),
         });
-
-        if (!res.success && res.error) {
-          console.warn('Supabase remote password reset notice:', res.error);
+        if (!res.success) {
+          setResetError(`رمز روی سرور تغییر نکرد: ${res.error || 'خطای نامشخص'}`);
+          return;
         }
-      } catch (e: any) {
-        console.warn('Supabase adminResetPersonnelPassword background sync error:', e);
       }
 
       alert(`رمز عبور حساب ${getDisplayName(selectedUserForReset.name)} با موفقیت تغییر یافت.`);
@@ -259,15 +266,12 @@ export const TechniciansManager: React.FC<Props> = ({
 
     setDeleteLoadingId(u.id);
     try {
-      try {
-        const res = await SupabaseSyncService.adminDeletePersonnel({
-          id: u.id,
-        });
-        if (!res.success && res.error) {
-          console.warn('Supabase remote personnel delete notice:', res.error);
+      if (isServerConnected()) {
+        const res = await SupabaseSyncService.adminDeletePersonnel({ id: u.id });
+        if (!res.success) {
+          alert(`حذف روی سرور انجام نشد: ${res.error || 'خطای نامشخص'}`);
+          return;
         }
-      } catch (e: any) {
-        console.warn('Supabase adminDeletePersonnel background sync error:', e);
       }
       onDeleteUser(u.id);
     } catch (err: any) {
@@ -314,7 +318,7 @@ export const TechniciansManager: React.FC<Props> = ({
     if (u.role === 'QC_MANAGER') {
       return {
         label: 'مسئول QC و فنی',
-        classes: 'bg-[#C5A059]/20 text-[#E5CA8F] border border-[#C5A059]/40',
+        classes: 'bg-brand/20 text-brand-soft border border-brand/40',
       };
     }
     if (u.role === 'SCHEDULING_COORDINATOR') {
@@ -349,7 +353,7 @@ export const TechniciansManager: React.FC<Props> = ({
     }
     return {
       label: 'تکنسین نصب',
-      classes: 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/40',
+      classes: 'bg-zinc-500/20 text-ink border border-zinc-500/40',
     };
   };
 
@@ -375,11 +379,10 @@ export const TechniciansManager: React.FC<Props> = ({
     setTeamActionLoading(true);
     setTeamActionError(null);
     try {
-      if (onAssignTeamMember) {
-        await onAssignTeamMember(teamId, userId, roleInTeam);
-      } else {
-        await SupabaseSyncService.adminAssignTeamMember(teamId, userId, roleInTeam);
-      }
+      const res = onAssignTeamMember
+        ? await onAssignTeamMember(teamId, userId, roleInTeam)
+        : await SupabaseSyncService.adminAssignTeamMember(teamId, userId, roleInTeam);
+      if (res && !res.success) setTeamActionError(res.error || 'خطا در ثبت عضو اکیپ.');
     } catch (err: any) {
       setTeamActionError(err.message || 'خطا در ثبت عضو اکیپ.');
     } finally {
@@ -391,13 +394,37 @@ export const TechniciansManager: React.FC<Props> = ({
     setTeamActionLoading(true);
     setTeamActionError(null);
     try {
-      if (onRemoveTeamMember) {
-        await onRemoveTeamMember(userId);
-      } else {
-        await SupabaseSyncService.adminRemoveTeamMember(userId);
-      }
+      const res = onRemoveTeamMember
+        ? await onRemoveTeamMember(userId)
+        : await SupabaseSyncService.adminRemoveTeamMember(userId);
+      if (res && !res.success) setTeamActionError(res.error || 'خطا در حذف عضو.');
     } catch (err: any) {
       setTeamActionError(err.message || 'خطا در حذف عضو.');
+    } finally {
+      setTeamActionLoading(false);
+    }
+  };
+
+  const handleCreateTeam = async () => {
+    if (!onCreateTeam) return;
+    setTeamActionLoading(true);
+    setTeamActionError(null);
+    try {
+      const res = await onCreateTeam();
+      if (!res.success) setTeamActionError(res.error || 'خطا در ساخت اکیپ.');
+    } finally {
+      setTeamActionLoading(false);
+    }
+  };
+
+  const handleDeleteTeam = async (team: InstallationTeam) => {
+    if (!onDeleteTeam) return;
+    if (!confirm(`«${team.name}» حذف شود؟`)) return;
+    setTeamActionLoading(true);
+    setTeamActionError(null);
+    try {
+      const res = await onDeleteTeam(team.id);
+      if (!res.success) setTeamActionError(res.error || 'خطا در حذف اکیپ.');
     } finally {
       setTeamActionLoading(false);
     }
@@ -407,8 +434,7 @@ export const TechniciansManager: React.FC<Props> = ({
     <div className="space-y-5 pb-10">
       {/* Page Header */}
       <PageHeader
-        title="پرسنل و دسترسی‌ها"
-        subtitle="مدیریت حساب‌های کاربری، تعیین نقش‌ها و بازنشانی رمز عبور"
+        title="پرسنل و اکیپ‌ها"
         actions={
           <Button
             variant="primary"
@@ -421,50 +447,12 @@ export const TechniciansManager: React.FC<Props> = ({
         }
       />
 
-      {/* Stats Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
-          <div className="text-xs text-[#637184]">کل اعضا</div>
-          <div className="text-xl font-black text-[#F0F4F8] mt-1">
-            {toPersianDigits(users.length)} نفر
-          </div>
-        </div>
-
-        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
-          <div className="text-xs text-[#C5A059] font-bold">مسئولین QC</div>
-          <div className="text-xl font-black text-[#F0F4F8] mt-1">
-            {toPersianDigits(qcLeads.length)} نفر
-          </div>
-        </div>
-
-        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
-          <div className="text-xs text-blue-600 dark:text-blue-400 font-bold">هماهنگی و زمان‌بندی</div>
-          <div className="text-xl font-black text-[#F0F4F8] mt-1">
-            {toPersianDigits(coordinators.length)} نفر
-          </div>
-        </div>
-
-        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
-          <div className="text-xs text-[#C5A059] font-bold">سرپرستان اکیپ</div>
-          <div className="text-xl font-black text-[#F0F4F8] mt-1">
-            {toPersianDigits(crewLeads.length)} نفر
-          </div>
-        </div>
-
-        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
-          <div className="text-xs text-[#637184]">تکنسین‌های نصب</div>
-          <div className="text-xl font-black text-[#F0F4F8] mt-1">
-            {toPersianDigits(crewMembers.length)} نفر
-          </div>
-        </div>
-      </div>
-
       {/* Main Section Switch: Personnel vs 4 Teams */}
-      <div className="flex items-center justify-start border-b border-[#212835] pb-3">
+      <div className="flex items-center justify-start">
         <SegmentedControl
           options={[
-            { id: 'PERSONNEL', label: 'حساب‌های پرسنل و دسترسی‌ها', badge: users.length },
-            { id: 'TEAMS', label: '۲ اکیپ نصب فنی (۶ نفر)', badge: effectiveTeams.length },
+            { id: 'PERSONNEL', label: 'پرسنل', badge: users.length },
+            { id: 'TEAMS', label: 'اکیپ‌ها', badge: effectiveTeams.length },
           ]}
           value={mainSection}
           onChange={(val) => setMainSection(val as MainSection)}
@@ -473,22 +461,28 @@ export const TechniciansManager: React.FC<Props> = ({
 
       {mainSection === 'TEAMS' ? (
         <div className="space-y-4">
-          <div className="bg-[#111620] p-4 rounded-lg border border-[#C5A059]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h4 className="text-sm font-bold text-[#F0F4F8] flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[#C5A059]" />
-                <span>سازماندهی ۲ اکیپ نصب فنی شرکت گالری طلایی</span>
-              </h4>
-              <p className="text-xs text-[#637184] mt-1 leading-relaxed">
-                دپارتمان فنی دارای ۲ اکیپ رسمی نصب است. هر اکیپ متشکل از ۱ سرپرست و ۲ تکنسین (مجموعاً ۳ نفر) است که کل کادر ۶ نفره را پوشش می‌دهد. هر کاربر در یک زمان فقط عضو یک اکیپ می‌تواند باشد.
-              </p>
-            </div>
-          </div>
-
           {teamActionError && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
               <span>{teamActionError}</span>
+            </div>
+          )}
+
+          {onCreateTeam && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-ink-3">
+                {toPersianDigits(effectiveTeams.length)} اکیپ تعریف شده · هر اکیپ یک سرپرست و حداکثر ۲ تکنسین
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Plus className="w-4 h-4" />}
+                loading={teamActionLoading}
+                disabled={teamActionLoading}
+                onClick={handleCreateTeam}
+              >
+                اکیپ جدید
+              </Button>
             </div>
           )}
 
@@ -530,21 +524,34 @@ export const TechniciansManager: React.FC<Props> = ({
               return (
                 <div
                   key={team.id || team.code}
-                  className="bg-[#151B23] rounded-lg p-4 sm:p-5 border border-[#212835]  space-y-4"
+                  className="bg-surface rounded-lg p-4 sm:p-5 border border-line  space-y-4"
                 >
                   {/* Team Card Header */}
-                  <div className="flex items-center justify-between pb-3 border-b border-[#212835]">
+                  <div className="flex items-center justify-between pb-3 border-b border-line">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-md bg-[#212121] dark:bg-[#141414] border border-[#C5A059]/40 flex items-center justify-center text-[#C5A059]">
+                      <div className="w-9 h-9 rounded-md bg-sunken border border-brand/40 flex items-center justify-center text-brand-ink">
                         <Building2 className="w-4 h-4" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-sm text-[#F0F4F8]">
+                        <h4 className="font-bold text-sm text-ink">
                           {supervisorUser ? `اکیپ نصب ${getDisplayName(supervisorUser.name)}` : team.name}
                         </h4>
-                        <span className="text-xs font-mono text-zinc-500">{team.code}</span>
+                        <span className="text-xs font-mono text-ink-3">{team.code}</span>
                       </div>
                     </div>
+
+                    {onDeleteTeam && totalCount === 0 && effectiveTeams.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTeam(team)}
+                        disabled={teamActionLoading}
+                        aria-label={`حذف ${team.name}`}
+                        title="حذف اکیپ خالی"
+                        className="mr-auto ml-2 w-9 h-9 rounded-md border border-line text-ink-3 hover:text-rose-600 hover:border-rose-500/40 flex items-center justify-center cursor-pointer disabled:opacity-40"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
 
                     <span
                       className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
@@ -559,27 +566,27 @@ export const TechniciansManager: React.FC<Props> = ({
 
                   {/* 1. Supervisor Slot */}
                   <div className="space-y-2">
-                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
+                    <span className="text-xs font-bold text-ink flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+                        <Sparkles className="w-3.5 h-3.5 text-brand-ink" />
                         <span>سرپرست اکیپ (1 نفر):</span>
                       </span>
                       {supervisorUser && (
-                        <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                        <span className="text-[12px] font-bold text-emerald-700 dark:text-emerald-400">
                           ثبت شده
                         </span>
                       )}
                     </span>
 
                     {supervisorUser ? (
-                      <div className="flex items-center justify-between p-2.5 rounded-md border border-[#C5A059]/30 bg-[#1C232D]">
+                      <div className="flex items-center justify-between p-2.5 rounded-md border border-brand/30 bg-raised">
                         <div className="flex items-center gap-2">
                           <Avatar name={supervisorUser.name} role={supervisorUser.role} size="sm" />
                           <div>
-                            <span className="font-bold text-xs text-[#F0F4F8] block">
+                            <span className="font-bold text-xs text-ink block">
                               {supervisorUser.name}
                             </span>
-                            <span className="text-[11px] font-mono text-slate-500 dark:text-zinc-400" dir="ltr">
+                            <span className="text-[12px] font-mono text-ink-2" dir="ltr">
                               {supervisorUser.phone}
                             </span>
                           </div>
@@ -590,7 +597,7 @@ export const TechniciansManager: React.FC<Props> = ({
                             <button
                               type="button"
                               onClick={() => onImpersonateUser(supervisorUser)}
-                              className="px-2.5 py-1.5 text-[#C5A059] hover:bg-[#C5A059]/15 rounded-md transition cursor-pointer flex items-center gap-1 text-xs font-bold border border-[#C5A059]/40 active:scale-95"
+                              className="px-2.5 py-1.5 text-brand-ink hover:bg-brand/15 rounded-md transition cursor-pointer flex items-center gap-1 text-xs font-bold border border-brand/40 active:scale-95"
                               title={`ورود و بازرسی پنل سرپرست ${supervisorUser.name}`}
                             >
                               <Eye className="w-3.5 h-3.5" />
@@ -616,7 +623,7 @@ export const TechniciansManager: React.FC<Props> = ({
                           onChange={(e) =>
                             setSelectedLeadToAdd((prev) => ({ ...prev, [team.id]: e.target.value }))
                           }
-                          className="flex-1 text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
+                          className="flex-1 text-xs p-2.5 rounded-md border border-line bg-canvas text-ink"
                         >
                           <option value="">
                             {availableLeads.length > 0
@@ -649,10 +656,10 @@ export const TechniciansManager: React.FC<Props> = ({
                   </div>
 
                   {/* 2. Technicians Slot (Up to 2) */}
-                  <div className="space-y-2 pt-2 border-t border-[#212835]">
-                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
+                  <div className="space-y-2 pt-2 border-t border-line">
+                    <span className="text-xs font-bold text-ink flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        <Wrench className="w-3.5 h-3.5 text-[#C5A059]" />
+                        <Wrench className="w-3.5 h-3.5 text-brand-ink" />
                         <span>تکنسین‌های نصب ({toPersianDigits(techUsers.length)} از 2 نفر):</span>
                       </span>
                     </span>
@@ -663,15 +670,15 @@ export const TechniciansManager: React.FC<Props> = ({
                         {techUsers.map((tech) => (
                           <div
                             key={tech.id}
-                            className="flex items-center justify-between p-2.5 rounded-md border border-[#212835] bg-[#1C232D]"
+                            className="flex items-center justify-between p-2.5 rounded-md border border-line bg-raised"
                           >
                             <div className="flex items-center gap-2">
                               <Avatar name={tech.name} role={tech.role} size="sm" />
                               <div>
-                                <span className="font-bold text-xs text-[#F0F4F8] block">
+                                <span className="font-bold text-xs text-ink block">
                                   {tech.name}
                                 </span>
-                                <span className="text-[11px] font-mono text-slate-500 dark:text-zinc-400" dir="ltr">
+                                <span className="text-[12px] font-mono text-ink-2" dir="ltr">
                                   {tech.phone}
                                 </span>
                               </div>
@@ -682,7 +689,7 @@ export const TechniciansManager: React.FC<Props> = ({
                                 <button
                                   type="button"
                                   onClick={() => onImpersonateUser(tech)}
-                                  className="px-2 py-1 text-[#C5A059] hover:bg-[#C5A059]/15 rounded-md transition cursor-pointer flex items-center gap-1 text-xs font-bold border border-[#C5A059]/40 active:scale-95"
+                                  className="px-2 py-1 text-brand-ink hover:bg-brand/15 rounded-md transition cursor-pointer flex items-center gap-1 text-xs font-bold border border-brand/40 active:scale-95"
                                   title={`ورود و بازرسی پنل تکنسین ${tech.name}`}
                                 >
                                   <Eye className="w-3.5 h-3.5" />
@@ -713,7 +720,7 @@ export const TechniciansManager: React.FC<Props> = ({
                           onChange={(e) =>
                             setSelectedTechToAdd((prev) => ({ ...prev, [team.id]: e.target.value }))
                           }
-                          className="flex-1 text-xs p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
+                          className="flex-1 text-xs p-2.5 rounded-md border border-line bg-canvas text-ink"
                         >
                           <option value="">
                             {availableTechs.length > 0
@@ -746,12 +753,12 @@ export const TechniciansManager: React.FC<Props> = ({
                   </div>
 
                   {/* 3. Daily Capacity Configuration for this Team */}
-                  <div className="pt-3 border-t border-[#212835] flex items-center justify-between gap-2">
+                  <div className="pt-3 border-t border-line flex items-center justify-between gap-2">
                     <div className="text-xs">
-                      <span className="font-bold text-slate-700 dark:text-zinc-300 block">
+                      <span className="font-bold text-ink block">
                         ظرفیت روزانه اکیپ:
                       </span>
-                      <span className="text-[10px] text-neutral-400">
+                      <span className="text-[11px] text-ink-2">
                         {team.dailyCapacityHours
                           ? `${toPersianDigits(team.dailyCapacityHours)} ساعت در روز`
                           : 'پیروی از سقف سامانه یا نامشخص'}
@@ -767,7 +774,7 @@ export const TechniciansManager: React.FC<Props> = ({
                         placeholder="ساعت"
                         defaultValue={team.dailyCapacityHours ?? ''}
                         id={`capacity-input-${team.id}`}
-                        className="w-16 text-center text-xs p-1.5 rounded-lg border border-[#212835] bg-[#0D1117] dark:text-white"
+                        className="w-16 text-center text-xs p-1.5 rounded-lg border border-line bg-canvas text-ink"
                       />
                       <Button
                         variant="secondary"
@@ -818,13 +825,13 @@ export const TechniciansManager: React.FC<Props> = ({
             />
 
             <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 text-[#8A857B] absolute right-3 top-3" />
+              <Search className="w-4 h-4 text-ink-3 absolute right-3 top-3" />
               <input
                 type="text"
                 placeholder="جستجوی نام یا تلفن..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full text-xs pr-9 pl-3 py-2 rounded-md border border-[#212835] bg-[#151B23] text-[#F0F4F8]"
+                className="w-full text-xs pr-9 pl-3 py-2 rounded-md border border-line bg-surface text-ink"
               />
             </div>
           </div>
@@ -837,13 +844,13 @@ export const TechniciansManager: React.FC<Props> = ({
               return (
                 <div
                   key={u.id}
-                  className="bg-[#151B23] rounded-lg p-4 border border-[#212835]  hover:border-[#C5A059]/60 transition space-y-3 relative"
+                  className="bg-surface rounded-lg p-4 border border-line  hover:border-brand/60 transition space-y-3 relative"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3 min-w-0">
                       <Avatar name={getDisplayName(u.name)} id={u.id} size="lg" />
                       <div className="min-w-0">
-                        <h4 className="font-bold text-sm text-[#F0F4F8] truncate">
+                        <h4 className="font-bold text-sm text-ink truncate">
                           {getDisplayName(u.name)}
                         </h4>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -867,7 +874,7 @@ export const TechniciansManager: React.FC<Props> = ({
                       <button
                         type="button"
                         onClick={() => handleOpenEdit(u)}
-                        className="w-8 h-8 flex items-center justify-center text-[#637184] hover:text-[#8E6F27] dark:hover:text-[#E5CA8F] hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition cursor-pointer"
+                        className="w-8 h-8 flex items-center justify-center text-ink-3 hover:text-brand-soft hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition cursor-pointer"
                         title="ویرایش حساب"
                         aria-label={`ویرایش حساب ${getDisplayName(u.name)}`}
                       >
@@ -876,7 +883,7 @@ export const TechniciansManager: React.FC<Props> = ({
                       <button
                         type="button"
                         onClick={() => handleOpenResetPassword(u)}
-                        className="w-8 h-8 flex items-center justify-center text-[#637184] hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition cursor-pointer"
+                        className="w-8 h-8 flex items-center justify-center text-ink-3 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition cursor-pointer"
                         title="تغییر رمز عبور"
                         aria-label={`تغییر رمز عبور ${getDisplayName(u.name)}`}
                       >
@@ -886,7 +893,7 @@ export const TechniciansManager: React.FC<Props> = ({
                         type="button"
                         disabled={Boolean(deleteLoadingId) || isSubmitting}
                         onClick={() => handleDelete(u)}
-                        className="w-8 h-8 flex items-center justify-center text-[#637184] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer disabled:opacity-50"
+                        className="w-8 h-8 flex items-center justify-center text-ink-3 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer disabled:opacity-50"
                         title="حذف حساب"
                         aria-label={`حذف حساب ${getDisplayName(u.name)}`}
                       >
@@ -899,13 +906,13 @@ export const TechniciansManager: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  <div className="bg-[#111620] rounded-md p-2.5 border border-[#E2DDD4] dark:border-[#282828] text-xs">
-                    <div className="flex items-center justify-between text-[#637184]">
+                  <div className="bg-sunken rounded-md p-2.5 border border-line-strong text-xs">
+                    <div className="flex items-center justify-between text-ink-3">
                       <span className="flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-[#C5A059]" />
+                        <Phone className="w-3.5 h-3.5 text-brand-ink" />
                         <span>موبایل سازمانی:</span>
                       </span>
-                      <span className="font-mono font-bold text-[#F0F4F8]" dir="ltr">
+                      <span className="font-mono font-bold text-ink" dir="ltr">
                         {u.phone}
                       </span>
                     </div>
@@ -915,10 +922,10 @@ export const TechniciansManager: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => onImpersonateUser(u)}
-                      className="w-full py-2 px-3 rounded-lg text-xs font-bold bg-[#C5A059]/10 hover:bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/40 hover:border-[#C5A059] flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
+                      className="w-full py-2 px-3 rounded-lg text-xs font-bold bg-brand/10 hover:bg-brand/20 text-brand-ink border border-brand/40 hover:border-brand flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
                       title={`ورود به پنل و مشاهده سامانه از دیدگاه ${getDisplayName(u.name)}`}
                     >
-                      <Eye className="w-3.5 h-3.5 text-[#C5A059]" />
+                      <Eye className="w-3.5 h-3.5 text-brand-ink" />
                       <span>ورود و بازرسی پنل این کاربر</span>
                     </button>
                   )}
@@ -944,7 +951,7 @@ export const TechniciansManager: React.FC<Props> = ({
           )}
 
           <div>
-            <label htmlFor="tech-name" className="block text-xs font-bold text-[#9BA7B6] mb-1">
+            <label htmlFor="tech-name" className="block text-xs font-bold text-ink-2 mb-1">
               نام و نام‌خانوادگی:
             </label>
             <input
@@ -954,12 +961,12 @@ export const TechniciansManager: React.FC<Props> = ({
               placeholder="مثال: علی رضایی"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-sm p-2.5 rounded-md border border-[#212835] bg-[#0D1117] dark:text-white"
+              className="w-full text-sm p-2.5 rounded-md border border-line bg-canvas text-ink"
             />
           </div>
 
           <div>
-            <label htmlFor="tech-phone" className="block text-xs font-bold text-[#9BA7B6] mb-1">
+            <label htmlFor="tech-phone" className="block text-xs font-bold text-ink-2 mb-1">
               شماره موبایل:
             </label>
             <input
@@ -970,14 +977,14 @@ export const TechniciansManager: React.FC<Props> = ({
               autoComplete="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full text-sm p-2.5 rounded-md border border-[#212835] font-mono text-left bg-[#0D1117] dark:text-white"
+              className="w-full text-sm p-2.5 rounded-md border border-line font-mono text-left bg-canvas text-ink"
               dir="ltr"
             />
           </div>
 
           {!editingUser && (
             <div>
-              <label htmlFor="tech-password" className="block text-xs font-bold text-[#9BA7B6] mb-1">
+              <label htmlFor="tech-password" className="block text-xs font-bold text-ink-2 mb-1">
                 رمز عبور اولیه:
               </label>
               <input
@@ -988,14 +995,14 @@ export const TechniciansManager: React.FC<Props> = ({
                 placeholder="حداقل 8 کاراکتر"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full text-sm p-2.5 rounded-md border border-[#212835] font-mono text-left bg-[#0D1117] dark:text-white"
+                className="w-full text-sm p-2.5 rounded-md border border-line font-mono text-left bg-canvas text-ink"
                 dir="ltr"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-bold text-[#9BA7B6] mb-1.5">
+            <label className="block text-xs font-bold text-ink-2 mb-1.5">
               نقش سازمانی:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -1005,7 +1012,7 @@ export const TechniciansManager: React.FC<Props> = ({
                 className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'CEO'
                     ? 'border-purple-500 bg-purple-500/20 text-purple-300'
-                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                    : 'border-line text-ink-3 hover:text-ink'
                 }`}
               >
                 مدیرعامل
@@ -1015,8 +1022,8 @@ export const TechniciansManager: React.FC<Props> = ({
                 onClick={() => setRole('QC_MANAGER')}
                 className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'QC_MANAGER'
-                    ? 'border-[#C5A059] bg-[#C5A059]/20 text-[#E5CA8F]'
-                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                    ? 'border-brand bg-brand/20 text-brand-soft'
+                    : 'border-line text-ink-3 hover:text-ink'
                 }`}
               >
                 مدیر QC
@@ -1027,7 +1034,7 @@ export const TechniciansManager: React.FC<Props> = ({
                 className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'SCHEDULING_COORDINATOR'
                     ? 'border-blue-500 bg-blue-500/20 text-blue-300'
-                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                    : 'border-line text-ink-3 hover:text-ink'
                 }`}
               >
                 مسئول هماهنگی
@@ -1038,7 +1045,7 @@ export const TechniciansManager: React.FC<Props> = ({
                 className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'SALES_REP'
                     ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
-                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                    : 'border-line text-ink-3 hover:text-ink'
                 }`}
               >
                 کارشناس فروش
@@ -1049,7 +1056,7 @@ export const TechniciansManager: React.FC<Props> = ({
                 className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'MEASUREMENT_LEAD'
                     ? 'border-cyan-500 bg-cyan-500/20 text-cyan-300'
-                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                    : 'border-line text-ink-3 hover:text-ink'
                 }`}
               >
                 مسئول متراژ دوم
@@ -1060,7 +1067,7 @@ export const TechniciansManager: React.FC<Props> = ({
                 className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'WAREHOUSE'
                     ? 'border-orange-500 bg-orange-500/20 text-orange-300'
-                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                    : 'border-line text-ink-3 hover:text-ink'
                 }`}
               >
                 مسئول انبار
@@ -1071,7 +1078,7 @@ export const TechniciansManager: React.FC<Props> = ({
                 className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'LEAD_TECHNICIAN'
                     ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300'
-                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                    : 'border-line text-ink-3 hover:text-ink'
                 }`}
               >
                 سرپرست اکیپ
@@ -1081,8 +1088,8 @@ export const TechniciansManager: React.FC<Props> = ({
                 onClick={() => setRole('TECHNICIAN')}
                 className={`p-2 rounded-md border text-xs font-bold transition text-center min-h-[44px] cursor-pointer ${
                   role === 'TECHNICIAN'
-                    ? 'border-zinc-500 bg-zinc-500/20 text-zinc-300'
-                    : 'border-[#212835] text-[#637184] hover:text-[#F0F4F8]'
+                    ? 'border-zinc-500 bg-zinc-500/20 text-ink'
+                    : 'border-line text-ink-3 hover:text-ink'
                 }`}
               >
                 تکنسین نصب
@@ -1091,22 +1098,22 @@ export const TechniciansManager: React.FC<Props> = ({
           </div>
 
           {editingUser && (
-            <div className="pt-2 border-t border-[#212835]">
+            <div className="pt-2 border-t border-line">
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-xs font-bold text-[#9BA7B6]">
+                <span className="text-xs font-bold text-ink-2">
                   وضعیت فعالیت حساب:
                 </span>
                 <input
                   type="checkbox"
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
-                  className="w-4 h-4 accent-[#C5A059] rounded cursor-pointer"
+                  className="w-4 h-4 accent-brand rounded cursor-pointer"
                 />
               </label>
             </div>
           )}
 
-          <div className="flex items-center gap-3 pt-3 border-t border-[#212835]">
+          <div className="flex items-center gap-3 pt-3 border-t border-line">
             <Button
               type="button"
               variant="ghost"
@@ -1146,9 +1153,9 @@ export const TechniciansManager: React.FC<Props> = ({
                 <span>{resetError}</span>
               </div>
             )}
-            <div className="text-xs text-[#637184]">
+            <div className="text-xs text-ink-3">
               تنظیم رمز عبور جدید برای:
-              <div className="font-bold text-sm text-[#F0F4F8] mt-1">
+              <div className="font-bold text-sm text-ink mt-1">
                 {getDisplayName(selectedUserForReset.name)}
               </div>
               <div className="text-xs font-mono mt-0.5" dir="ltr">
@@ -1157,7 +1164,7 @@ export const TechniciansManager: React.FC<Props> = ({
             </div>
 
             <div>
-              <label htmlFor="new-password" className="block text-xs font-bold text-[#9BA7B6] mb-1">
+              <label htmlFor="new-password" className="block text-xs font-bold text-ink-2 mb-1">
                 رمز عبور جدید:
               </label>
               <input
@@ -1168,12 +1175,12 @@ export const TechniciansManager: React.FC<Props> = ({
                 placeholder="حداقل 8 کاراکتر"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full text-sm p-2.5 rounded-md border border-[#212835] font-mono text-left bg-[#0D1117] dark:text-white"
+                className="w-full text-sm p-2.5 rounded-md border border-line font-mono text-left bg-canvas text-ink"
                 dir="ltr"
               />
             </div>
 
-            <div className="flex items-center gap-3 pt-3 border-t border-[#212835]">
+            <div className="flex items-center gap-3 pt-3 border-t border-line">
               <Button
                 type="button"
                 variant="ghost"

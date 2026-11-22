@@ -8,7 +8,6 @@ import {
   resetProcessingStateForTesting,
   openDb,
   isKeyInFlight,
-  isOpInFlight,
   getActiveLeasesCount,
   abortActiveProcessing,
   isOperationRetrySafe,

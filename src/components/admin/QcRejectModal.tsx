@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Project } from '../../types';
 import { XCircle, X, AlertTriangle, Send, Calendar } from 'lucide-react';
 import { getUpcomingDays, formatJalali, toPersianDigits } from '../../utils/jalali';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   project: Project;
@@ -16,6 +17,7 @@ export const QcRejectModal: React.FC<Props> = ({
   onClose,
   onSubmit,
 }) => {
+  useEscapeKey(onClose, isOpen);
   const initialReason =
     project.isExceptionalCompletion && project.exceptionalCompletionDetails
       ? `رد اتمام استثنایی: الزام به اعزام مجدد اکیپ جهت تکمیل اقلام باقیمانده طرح (${project.exceptionalCompletionDetails.remainingActivities.map((a) => `${a.title}: ${toPersianDigits(a.remainingQuantity)} ${a.unit}`).join('، ')})`
@@ -83,15 +85,15 @@ export const QcRejectModal: React.FC<Props> = ({
       aria-labelledby="qc-reject-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-[#151B23] rounded-lg max-w-lg w-full border border-rose-500/40 overflow-hidden my-6 transition-all animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface rounded-lg max-w-lg w-full border border-rose-500/40 overflow-hidden my-6 transition-all animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="bg-[#0D1117] px-5 py-3.5 text-white flex items-center justify-between border-b border-[#212835]">
+        <div className="bg-canvas px-5 py-3.5 text-ink flex items-center justify-between border-b border-line">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-md bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
               <XCircle className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
-              <h3 id="qc-reject-title" className="font-bold text-sm text-[#F0F4F8]">
+              <h3 id="qc-reject-title" className="font-bold text-sm text-ink">
                 عدم تایید کیفی / دستور اصلاح
               </h3>
               <p className="text-xs text-rose-400 mt-0.5">
@@ -102,7 +104,7 @@ export const QcRejectModal: React.FC<Props> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-md bg-[#1C232D] hover:bg-[#2D3748] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-md bg-raised hover:bg-line-strong text-ink-2 hover:text-ink transition cursor-pointer"
             aria-label="بستن پنجره"
           >
             <X className="w-4 h-4" />
@@ -118,7 +120,7 @@ export const QcRejectModal: React.FC<Props> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-[#F0F4F8] mb-2">
+            <label className="block text-xs font-bold text-ink mb-2">
               نواقص پرتکرار جهت انتخاب سریع:
             </label>
             <div className="space-y-1.5">
@@ -135,7 +137,7 @@ export const QcRejectModal: React.FC<Props> = ({
                     className={`w-full text-right p-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer border ${
                       isSelected
                         ? 'bg-rose-500/15 border-rose-500 text-rose-300 font-bold'
-                        : 'bg-[#111620] border-[#212835] text-[#9BA7B6] hover:border-rose-500/50 hover:text-[#F0F4F8]'
+                        : 'bg-sunken border-line text-ink-2 hover:border-rose-500/50 hover:text-ink'
                     }`}
                   >
                     <span>{item}</span>
@@ -147,7 +149,7 @@ export const QcRejectModal: React.FC<Props> = ({
           </div>
 
           <div>
-            <label htmlFor="qc-reject-notes" className="block text-xs font-bold text-[#F0F4F8] mb-1.5">
+            <label htmlFor="qc-reject-notes" className="block text-xs font-bold text-ink mb-1.5">
               شرح تکمیلی و دستورالعمل اصلاح برای تکنسین:
             </label>
             <textarea
@@ -159,13 +161,13 @@ export const QcRejectModal: React.FC<Props> = ({
                 setError('');
               }}
               placeholder="مثال: چین لت سمت چپ 2 سانتیمتر نامتقارن است و نیاز به بخاردهی مجدد دارد..."
-              className="w-full text-xs p-3 rounded-md border border-[#2D3748] focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-[#0D1117] text-[#F0F4F8] leading-relaxed resize-none"
+              className="w-full text-xs p-3 rounded-md border border-line-strong focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-canvas text-ink leading-relaxed resize-none"
             />
             {error && <p className="text-rose-400 text-xs font-bold mt-1">{error}</p>}
           </div>
 
           <div>
-            <label htmlFor="qc-reject-date" className="block text-xs font-bold text-[#F0F4F8] mb-1.5 flex items-center gap-1.5">
+            <label htmlFor="qc-reject-date" className="block text-xs font-bold text-ink mb-1.5 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-rose-400" />
               <span>تاریخ برنامه‌ریزی مجدد کارتابل (اختیاری):</span>
             </label>
@@ -173,7 +175,7 @@ export const QcRejectModal: React.FC<Props> = ({
               id="qc-reject-date"
               value={newScheduledDate}
               onChange={(e) => setNewScheduledDate(e.target.value)}
-              className="w-full text-xs p-2.5 rounded-md border border-[#2D3748] focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-[#0D1117] text-[#F0F4F8]"
+              className="w-full text-xs p-2.5 rounded-md border border-line-strong focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-canvas text-ink"
             >
               <option value="">بدون تغییر ({formatJalali(project.scheduledDate, 'تعیین‌نشده')})</option>
               {upcomingDays.map((d) => (
@@ -185,12 +187,12 @@ export const QcRejectModal: React.FC<Props> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#212835]">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-line">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2 rounded-md text-xs font-bold bg-[#1C232D] hover:bg-[#2D3748] text-[#9BA7B6] hover:text-[#F0F4F8] transition disabled:opacity-50 cursor-pointer"
+              className="px-4 py-2 rounded-md text-xs font-bold bg-raised hover:bg-line-strong text-ink-2 hover:text-ink transition disabled:opacity-50 cursor-pointer"
             >
               انصراف
             </button>

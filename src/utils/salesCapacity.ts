@@ -9,6 +9,7 @@ import {
 import { getUpcomingDays, formatToPersianDateString } from './jalali';
 import { PermanentError } from './offlineQueue';
 
+// مقادیر پیش‌فرض (فقط وقتی مدیر QC در تنظیمات چیزی تعیین نکرده باشد)
 export const MAX_LATHS_PER_TEAM = 20;
 export const TOTAL_INSTALLATION_TEAMS = 2;
 export const MAX_DAILY_COMPANY_LATHS = 40; // ۲ اکیپ × ۲۰ لت
@@ -18,9 +19,184 @@ export const INSTALLATION_TEAMS = [
   { id: 'TEAM_2', name: 'اکیپ نصب ۲', lead: '' },
 ];
 
+// ============================================================================
+// ظرفیت قابل تنظیم (تعداد اکیپ و لت هر اکیپ) — تعیین توسط مدیر QC در تنظیمات
+// ============================================================================
+export const SALES_CAPACITY_LIMITS = { minTeams: 1, maxTeams: 12, minLaths: 1, maxLaths: 200 } as const;
+const CAPACITY_CONFIG_KEY = 'talaei_sales_capacity_config_v1';
+export const SALES_CAPACITY_CHANGED_EVENT = 'talaei_sales_capacity_changed';
+
+export interface SalesCapacityConfig {
+  teamCount: number;
+  lathsPerTeam: number;
+  /** نام نمایشی اکیپ‌ها بر اساس شناسه (اختیاری؛ از فهرست اکیپ‌های واقعی) */
+  teamNames?: Record<string, string>;
+  /** روزهای کاری هفته به شماره Date.getDay() (۵ = جمعه). همان تنظیمی که برنامه‌ریزی نصب استفاده می‌کند */
+  workingDays?: number[];
+}
+
+/** پیش‌فرض: همه روزها به جز جمعه — مطابق برنامه‌ریز نصب (capacity.ts) */
+export const DEFAULT_WORKING_DAYS = [0, 1, 2, 3, 4, 6];
+
+export interface ResolvedSalesCapacity {
+  teamCount: number;
+  lathsPerTeam: number;
+  dailyTotal: number;
+  teams: { id: string; name: string }[];
+}
+
+const PERSIAN_NUM = (n: number) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+
+function clampInt(value: unknown, min: number, max: number, fallback: number): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+export function normalizeSalesCapacityConfig(cfg?: Partial<SalesCapacityConfig> | null): SalesCapacityConfig {
+  return {
+    teamCount: clampInt(cfg?.teamCount, SALES_CAPACITY_LIMITS.minTeams, SALES_CAPACITY_LIMITS.maxTeams, TOTAL_INSTALLATION_TEAMS),
+    lathsPerTeam: clampInt(cfg?.lathsPerTeam, SALES_CAPACITY_LIMITS.minLaths, SALES_CAPACITY_LIMITS.maxLaths, MAX_LATHS_PER_TEAM),
+    teamNames: cfg?.teamNames || {},
+    workingDays: normalizeWorkingDays(cfg?.workingDays),
+  };
+}
+
+function normalizeWorkingDays(days: unknown): number[] {
+  if (!Array.isArray(days)) return [...DEFAULT_WORKING_DAYS];
+  const clean = Array.from(new Set(days.map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))).sort();
+  return clean.length > 0 ? clean : [...DEFAULT_WORKING_DAYS];
+}
+
+function dateFromKey(dateKey: string): Date {
+  const [gy, gm, gd] = dateKey.split('-').map(Number);
+  return new Date(gy, gm - 1, gd, 12, 0, 0);
+}
+
+function keyFromDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** آیا در این تاریخ نصب انجام می‌شود؟ (جمعه و روزهای غیرکاری: خیر) */
+export function isSalesWorkingDay(dateKey: string): boolean {
+  const days = capacityConfig.workingDays || DEFAULT_WORKING_DAYS;
+  return days.includes(dateFromKey(dateKey).getDay());
+}
+
+/**
+ * چند روز کاری پشت‌سرهم از تاریخ شروع (روزهای تعطیل رد می‌شوند).
+ * اگر خود تاریخ شروع تعطیل باشد، فهرست خالی برمی‌گردد.
+ */
+function workingDaysFrom(startKey: string, count: number): string[] {
+  if (!isSalesWorkingDay(startKey)) return [];
+  const out: string[] = [];
+  const d = dateFromKey(startKey);
+  for (let guard = 0; out.length < count && guard < count * 7 + 7; guard++) {
+    const key = keyFromDate(d);
+    if (isSalesWorkingDay(key)) out.push(key);
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
+/** وضعیت یک روز در تقویم فروش؛ «محدود» یعنی کمتر از ظرفیت یک اکیپ باقی مانده */
+export type SalesDayStatus = 'CLOSED' | 'FULL' | 'LIMITED' | 'FREE';
+export function getSalesDayStatus(day: DailyLathCapacity): SalesDayStatus {
+  if (day.isClosed) return 'CLOSED';
+  if (day.remainingLaths <= 0) return 'FULL';
+  if (day.remainingLaths <= getSalesCapacity().lathsPerTeam) return 'LIMITED';
+  return 'FREE';
+}
+
+function loadCapacityConfig(): SalesCapacityConfig {
+  if (typeof window === 'undefined') return normalizeSalesCapacityConfig(null);
+  try {
+    const raw = localStorage.getItem(CAPACITY_CONFIG_KEY);
+    return normalizeSalesCapacityConfig(raw ? JSON.parse(raw) : null);
+  } catch {
+    return normalizeSalesCapacityConfig(null);
+  }
+}
+
+let capacityConfig: SalesCapacityConfig = loadCapacityConfig();
+
+/** ظرفیت فعلی (تعداد اکیپ، لت هر اکیپ، سقف کل روزانه و فهرست اکیپ‌ها) */
+export function getSalesCapacity(): ResolvedSalesCapacity {
+  const { teamCount, lathsPerTeam, teamNames = {} } = capacityConfig;
+  const teams = Array.from({ length: teamCount }, (_, i) => {
+    const id = `TEAM_${i + 1}`;
+    return { id, name: teamNames[id] || `اکیپ نصب ${PERSIAN_NUM(i + 1)}` };
+  });
+  return { teamCount, lathsPerTeam, dailyTotal: teamCount * lathsPerTeam, teams };
+}
+
+/** به‌روزرسانی ظرفیت (از تنظیمات سامانه). تقویم‌های باز بلافاصله دوباره محاسبه می‌شوند. */
+export function setSalesCapacityConfig(cfg: Partial<SalesCapacityConfig>): void {
+  const next = normalizeSalesCapacityConfig({ ...capacityConfig, ...cfg });
+  const changed = JSON.stringify(next) !== JSON.stringify(capacityConfig);
+  capacityConfig = next;
+  if (!changed || typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CAPACITY_CONFIG_KEY, JSON.stringify(next));
+  } catch {
+    // ignore storage errors; in-memory config still applies
+  }
+  window.dispatchEvent(new Event(SALES_CAPACITY_CHANGED_EVENT));
+  window.dispatchEvent(new Event('talaei_sales_bookings_updated'));
+}
+
 export const SALES_REPS_SEED: SalesRepProfile[] = [];
 
 const STORAGE_KEY = 'talaei_sales_bookings_v1';
+const PENDING_SYNC_KEY = 'talaei_sales_bookings_pending_sync_v1';
+
+/** رویدادی که ماژول همگام‌سازی سرور به آن گوش می‌دهد تا تغییرات محلی را به Supabase ارسال کند. */
+export const SALES_BOOKINGS_DIRTY_EVENT = 'talaei_sales_bookings_dirty';
+
+export interface PendingSalesSync {
+  upserts: string[];
+  deletes: string[];
+}
+
+export function getPendingSalesSync(): PendingSalesSync {
+  if (typeof window === 'undefined') return { upserts: [], deletes: [] };
+  try {
+    const raw = localStorage.getItem(PENDING_SYNC_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return {
+      upserts: Array.isArray(parsed?.upserts) ? parsed.upserts : [],
+      deletes: Array.isArray(parsed?.deletes) ? parsed.deletes : [],
+    };
+  } catch {
+    return { upserts: [], deletes: [] };
+  }
+}
+
+export function savePendingSalesSync(pending: PendingSalesSync): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(pending));
+  } catch {
+    // ignore quota errors; the next full sync will reconcile
+  }
+}
+
+/** علامت‌گذاری یک رزرو برای ارسال به سرور (ایجاد/ویرایش یا حذف). */
+function markSalesBookingForSync(bookingId: string, kind: 'upsert' | 'delete'): void {
+  if (typeof window === 'undefined') return;
+  const pending = getPendingSalesSync();
+  const upserts = new Set(pending.upserts);
+  const deletes = new Set(pending.deletes);
+  if (kind === 'upsert') {
+    upserts.add(bookingId);
+    deletes.delete(bookingId);
+  } else {
+    upserts.delete(bookingId);
+    deletes.add(bookingId);
+  }
+  savePendingSalesSync({ upserts: [...upserts], deletes: [...deletes] });
+  window.dispatchEvent(new Event(SALES_BOOKINGS_DIRTY_EVENT));
+}
 
 function getSeedBookings(): SalesProjectBooking[] {
   // Empty seed bookings for clean production environment (no mock/test data)
@@ -88,12 +264,14 @@ export function getDailyCapacity(
     return b.requestedDate === dateKey;
   });
 
-  // محاسبه پیش‌فرض برای ۲ اکیپ
-  const teamAllocations: TeamDayAllocation[] = INSTALLATION_TEAMS.map((t) => ({
+  // ظرفیت هر اکیپ طبق تنظیمات مدیر QC؛ روز تعطیل ظرفیت ندارد
+  const cap = getSalesCapacity();
+  const isClosed = !isSalesWorkingDay(dateKey);
+  const teamAllocations: TeamDayAllocation[] = cap.teams.map((t) => ({
     teamId: t.id,
     teamName: t.name,
     bookedLaths: 0,
-    maxLaths: MAX_LATHS_PER_TEAM,
+    maxLaths: isClosed ? 0 : cap.lathsPerTeam,
   }));
 
   dayBookings.forEach((booking) => {
@@ -102,7 +280,7 @@ export function getDailyCapacity(
       dayDetail.teams.forEach((t) => {
         const teamAlloc = teamAllocations.find((item) => item.teamId === t.teamId);
         if (teamAlloc) {
-          teamAlloc.bookedLaths = Math.min(MAX_LATHS_PER_TEAM, teamAlloc.bookedLaths + t.laths);
+          teamAlloc.bookedLaths = Math.min(cap.lathsPerTeam, teamAlloc.bookedLaths + t.laths);
         }
       });
       return;
@@ -110,18 +288,19 @@ export function getDailyCapacity(
 
     // حالت پشتیبان برای داده‌های بدون daysDetails
     const teamsCount = Math.max(1, booking.allocatedTeams.length);
-    const lathsPerTeam = Math.ceil(Math.min(booking.lathsCount, MAX_DAILY_COMPANY_LATHS) / teamsCount);
+    const lathsPerTeam = Math.ceil(Math.min(booking.lathsCount, cap.dailyTotal) / teamsCount);
 
     booking.allocatedTeams.forEach((tId) => {
       const teamAlloc = teamAllocations.find((item) => item.teamId === tId);
       if (teamAlloc) {
-        teamAlloc.bookedLaths = Math.min(MAX_LATHS_PER_TEAM, teamAlloc.bookedLaths + lathsPerTeam);
+        teamAlloc.bookedLaths = Math.min(cap.lathsPerTeam, teamAlloc.bookedLaths + lathsPerTeam);
       }
     });
   });
 
   const totalBookedLaths = teamAllocations.reduce((sum, t) => sum + t.bookedLaths, 0);
-  const remainingLaths = Math.max(0, MAX_DAILY_COMPANY_LATHS - totalBookedLaths);
+  const maxLaths = isClosed ? 0 : cap.dailyTotal;
+  const remainingLaths = Math.max(0, maxLaths - totalBookedLaths);
 
   // استخراج نام روز جلالی
   const [gy, gm, gd] = dateKey.split('-').map(Number);
@@ -133,29 +312,23 @@ export function getDailyCapacity(
     date: dateKey,
     jalaliDate: jalaliDateStr,
     dayName,
-    maxLaths: MAX_DAILY_COMPANY_LATHS,
+    maxLaths,
     bookedLaths: totalBookedLaths,
     remainingLaths,
     teams: teamAllocations,
     bookingsCount: dayBookings.length,
+    isClosed,
   };
 }
 
 /**
- * دریافت وضعیت ظرفیت برای یک بازه ۳ ماهه (۹۰ روز) با شروع از ماه جاری (آذر)
+ * وضعیت ظرفیت روزانه از امروز تا ۹۰ روز آینده
  */
 export function getThreeMonthCapacities(daysCount = 90): DailyLathCapacity[] {
-  const upcomingDays = getUpcomingDays(daysCount + 15);
+  const upcomingDays = getUpcomingDays(daysCount);
   const bookings = getStoredBookings();
 
-  // عدم نمایش روزهای ماه قبل (آبان) و شروع مستقیم از آذر
-  const activeDays = upcomingDays.filter((day) => {
-    const parts = day.persianDateStr.split('/');
-    const month = parseInt(parts[1], 10);
-    return month >= 9 || parseInt(parts[0], 10) > 1405;
-  });
-
-  return activeDays.slice(0, daysCount).map((day) => {
+  return upcomingDays.slice(0, daysCount).map((day) => {
     return getDailyCapacity(day.dateKey, bookings);
   });
 }
@@ -178,8 +351,6 @@ export function calculateBookingOptions(
     : allBookings;
   const currentCapacity = getDailyCapacity(requestedDateKey, bookings);
 
-  const [gy, gm, gd] = requestedDateKey.split('-').map(Number);
-  const startDate = new Date(gy, gm - 1, gd, 12, 0, 0);
 
   // --------------------------------------------------------------------------
   // حالت اول: پخش بین چند اکیپ (SPREAD_DAILY)
@@ -188,7 +359,10 @@ export function calculateBookingOptions(
   // --------------------------------------------------------------------------
   let spreadOption: BookingOption;
 
-  if (lathsCount <= MAX_DAILY_COMPANY_LATHS) {
+  const cap = getSalesCapacity();
+  const dailyTotalFa = PERSIAN_NUM(cap.dailyTotal);
+
+  if (lathsCount <= cap.dailyTotal) {
     const availableTeams = currentCapacity.teams.filter(
       (t) => t.maxLaths - t.bookedLaths > 0
     );
@@ -229,21 +403,21 @@ export function calculateBookingOptions(
     };
   } else {
     // سناریوی لت‌های بالا (> ۴۰ لت، مانند ۱۱۵ لت) با بسیج اکیپ‌ها و سقف روزانه ۴۰ لت
-    const spreadDaysNeeded = Math.ceil(lathsCount / MAX_DAILY_COMPANY_LATHS);
+    const spreadDaysNeeded = Math.ceil(lathsCount / cap.dailyTotal);
     let remLaths = lathsCount;
     let spreadMultiFit = true;
     const spreadDaysDetails: BookingOption['daysDetails'] = [];
     const allAllocatedTeamsSet = new Set<string>();
 
-    for (let i = 0; i < spreadDaysNeeded; i++) {
-      const d = new Date(startDate);
-      d.setDate(d.getDate() + i);
-      const checkDateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const persianDateStr = formatToPersianDateString(d);
+    const spreadDayKeys = workingDaysFrom(requestedDateKey, spreadDaysNeeded);
+    if (spreadDayKeys.length < spreadDaysNeeded) spreadMultiFit = false;
+    for (let i = 0; i < spreadDayKeys.length; i++) {
+      const checkDateKey = spreadDayKeys[i];
+      const persianDateStr = formatToPersianDateString(dateFromKey(checkDateKey));
       const dayCap = getDailyCapacity(checkDateKey, bookings);
 
       const dayAllocatedTeams: { teamId: string; teamName: string; laths: number }[] = [];
-      let neededForToday = Math.min(remLaths, MAX_DAILY_COMPANY_LATHS);
+      let neededForToday = Math.min(remLaths, cap.dailyTotal);
 
       if (dayCap.remainingLaths < neededForToday) {
         spreadMultiFit = false;
@@ -271,14 +445,14 @@ export function calculateBookingOptions(
         jalaliDate: persianDateStr,
         teams: dayAllocatedTeams,
       });
-      remLaths -= Math.min(remLaths, MAX_DAILY_COMPANY_LATHS);
+      remLaths -= Math.min(remLaths, cap.dailyTotal);
     }
 
     spreadOption = {
       mode: 'SPREAD_DAILY',
-      title: `بسیج همزمان اکیپ‌ها (سقف ۴۰ لت/روز) در ${spreadDaysNeeded} روز`,
+      title: `بسیج همزمان اکیپ‌ها (سقف ${dailyTotalFa} لت/روز) در ${spreadDaysNeeded} روز`,
       description: spreadMultiFit
-        ? `تحویل سریع ${lathsCount} لت ظرف ${spreadDaysNeeded} روز با حداکثر توان روزانه ۴۰ لت`
+        ? `تحویل سریع ${lathsCount} لت ظرف ${spreadDaysNeeded} روز با حداکثر توان روزانه ${dailyTotalFa} لت`
         : `ظرفیت روزانه اکیپ‌ها در بازه ${spreadDaysNeeded} روزه پاسخگوی ${lathsCount} لت نیست.`,
       isAvailable: spreadMultiFit,
       requiredDays: spreadDaysNeeded,
@@ -291,27 +465,27 @@ export function calculateBookingOptions(
   // حالت دوم: تخصیص یک اکیپ برای چند روز متوالی (CONSECUTIVE_DAYS)
   // تولید مستقیم روزهای متوالی از requestedDateKey تا هرگز به اشتباه خاموش نباشد!
   // --------------------------------------------------------------------------
-  const consecutiveDaysNeeded = Math.ceil(lathsCount / MAX_LATHS_PER_TEAM);
+  const consecutiveDaysNeeded = Math.ceil(lathsCount / cap.lathsPerTeam);
   let consecutiveAvailable = false;
   let chosenTeamId = 'TEAM_1';
-  let chosenTeamName = INSTALLATION_TEAMS[0].name;
+  let chosenTeamName = cap.teams[0]?.name || 'اکیپ نصب';
   let consecutiveDaysDetails: BookingOption['daysDetails'] = [];
 
-  for (const team of INSTALLATION_TEAMS) {
+  for (const team of cap.teams) {
     let teamFit = true;
     const tempDetails: BookingOption['daysDetails'] = [];
     let remLaths = lathsCount;
 
-    for (let i = 0; i < consecutiveDaysNeeded; i++) {
-      const d = new Date(startDate);
-      d.setDate(d.getDate() + i);
-      const checkDateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const persianDateStr = formatToPersianDateString(d);
+    const teamDayKeys = workingDaysFrom(requestedDateKey, consecutiveDaysNeeded);
+    if (teamDayKeys.length < consecutiveDaysNeeded) teamFit = false;
+    for (let i = 0; teamFit && i < teamDayKeys.length; i++) {
+      const checkDateKey = teamDayKeys[i];
+      const persianDateStr = formatToPersianDateString(dateFromKey(checkDateKey));
 
       const dayCap = getDailyCapacity(checkDateKey, bookings);
       const teamAlloc = dayCap.teams.find((t) => t.teamId === team.id);
       const freeInTeam = teamAlloc ? teamAlloc.maxLaths - teamAlloc.bookedLaths : 0;
-      const neededToday = Math.min(MAX_LATHS_PER_TEAM, remLaths);
+      const neededToday = Math.min(cap.lathsPerTeam, remLaths);
 
       if (freeInTeam < neededToday) {
         teamFit = false;
@@ -339,13 +513,21 @@ export function calculateBookingOptions(
     mode: 'CONSECUTIVE_DAYS',
     title: `رزرو اختصاصی یک اکیپ در ${consecutiveDaysNeeded} روز متوالی`,
     description: consecutiveAvailable
-      ? `اختصاص ${chosenTeamName} به مدت ${consecutiveDaysNeeded} روز متوالی (روزانه تا ۲۰ لت)`
+      ? `اختصاص ${chosenTeamName} به مدت ${consecutiveDaysNeeded} روز کاری متوالی (روزانه تا ${PERSIAN_NUM(cap.lathsPerTeam)} لت)`
       : `امکان رزرو ${consecutiveDaysNeeded} روز متوالی با یک اکیپ در این تاریخ وجود ندارد.`,
     isAvailable: consecutiveAvailable,
     requiredDays: consecutiveDaysNeeded,
     allocatedTeams: [chosenTeamId],
     daysDetails: consecutiveDaysDetails,
   };
+
+  if (!isSalesWorkingDay(requestedDateKey)) {
+    const closedText = 'این روز تعطیل است و نصب انجام نمی‌شود؛ یک روز کاری انتخاب کنید.';
+    spreadOption.isAvailable = false;
+    spreadOption.description = closedText;
+    consecutiveOption.isAvailable = false;
+    consecutiveOption.description = closedText;
+  }
 
   return { spreadOption, consecutiveOption };
 }
@@ -366,6 +548,7 @@ export function createSalesBooking(
 
   const updated = [newBooking, ...bookings];
   saveStoredBookings(updated);
+  markSalesBookingForSync(newBooking.id, 'upsert');
   return newBooking;
 }
 
@@ -377,15 +560,12 @@ export function createSalesBooking(
 export function canEditSalesBooking(user: User, booking: SalesProjectBooking): boolean {
   if (!user || !user.active) return false;
   if (user.role === 'CEO' || user.role === 'QC_MANAGER') return true;
-  if (user.role === 'SALES_REP' || user.role === 'SALES') {
-    const matchId = Boolean(booking.salesRepId && booking.salesRepId === user.id);
-    const matchName = Boolean(
-      booking.salesRepName &&
-      (booking.salesRepName.trim() === user.name.trim() ||
-        user.name.includes(booking.salesRepName) ||
-        booking.salesRepName.includes(user.name))
-    );
-    return matchId || matchName;
+  if (user.role === 'SALES_REP') {
+    // Ownership is decided by ID. Fuzzy name matching (substring) allowed one rep
+    // to edit another rep's bookings when names overlapped (e.g. "علی" ⊂ "علی رضایی").
+    if (booking.salesRepId) return booking.salesRepId === user.id;
+    // Legacy bookings without an ID: exact (trimmed) name match only.
+    return Boolean(booking.salesRepName && booking.salesRepName.trim() === user.name.trim());
   }
   return false;
 }
@@ -424,6 +604,7 @@ export function updateSalesBooking(
   const updatedList = [...bookings];
   updatedList[index] = updatedBooking;
   saveStoredBookings(updatedList);
+  markSalesBookingForSync(updatedBooking.id, 'upsert');
   return updatedBooking;
 }
 
@@ -448,6 +629,7 @@ export function linkBookingToInstallationProject(
   };
 
   saveStoredBookings(bookings);
+  markSalesBookingForSync(bookingId, 'upsert');
   return true;
 }
 
@@ -465,6 +647,7 @@ export function deleteSalesBooking(bookingId: string, user?: User): boolean {
     return false;
   }
   saveStoredBookings(filtered);
+  markSalesBookingForSync(bookingId, 'delete');
   return true;
 }
 

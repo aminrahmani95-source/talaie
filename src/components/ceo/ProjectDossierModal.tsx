@@ -31,6 +31,7 @@ import {
 import { CloudImage } from '../common/CloudImage';
 import { getDisplayName } from '../../utils/technicianName';
 import { triggerToast } from '../Toast';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   project: Project;
@@ -49,6 +50,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
   fetchAudit,
   onPrintCertificate,
 }) => {
+  useEscapeKey(onClose);
   const [activeTab, setActiveTab] = useState<DossierTab>('reports');
   const [auditRecords, setAuditRecords] = useState<ProjectAuditRecord[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
@@ -101,23 +103,23 @@ export const ProjectDossierModal: React.FC<Props> = ({
       aria-labelledby="dossier-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-5 overflow-y-auto"
     >
-      <div className="bg-[#151B23] border border-[#212835] rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden my-4 flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface border border-line rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden my-4 flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
         {/* ================= Header ================= */}
-        <div className="bg-[#0D1117] p-4 sm:p-5 border-b border-[#212835] flex items-start justify-between gap-3">
+        <div className="bg-canvas p-4 sm:p-5 border-b border-line flex items-start justify-between gap-3">
           <div className="space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-xs font-black bg-[#151B23] text-[#C5A059] border border-[#C5A059]/30 px-2.5 py-0.5 rounded-md">
+              <span className="font-mono text-xs font-black bg-surface text-brand-ink border border-brand/30 px-2.5 py-0.5 rounded-md">
                 {project.code}
               </span>
               <span
-                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                className={`text-[12px] font-bold px-2.5 py-0.5 rounded-full border ${
                   isQcApprovedAndCompleted
                     ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                     : project.status === 'STUCK'
                     ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
                     : project.status === 'IN_PROGRESS'
                     ? 'bg-amber-400/15 text-amber-300 border-amber-400/30'
-                    : 'bg-[#1C232D] text-[#9BA7B6] border-[#2D3748]'
+                    : 'bg-raised text-ink-2 border-line-strong'
                 }`}
               >
                 {isQcApprovedAndCompleted
@@ -131,27 +133,27 @@ export const ProjectDossierModal: React.FC<Props> = ({
                   : 'در جریان اجرا'}
               </span>
               {project.assignedTeamName && (
-                <span className="text-xs text-[#9BA7B6] font-medium">
-                  اکیپ: <strong className="text-[#F0F4F8]">{project.assignedTeamName}</strong>
+                <span className="text-xs text-ink-2 font-medium">
+                  اکیپ: <strong className="text-ink">{project.assignedTeamName}</strong>
                 </span>
               )}
             </div>
-            <h2 id="dossier-title" className="text-base sm:text-lg font-black text-[#F0F4F8] truncate">
+            <h2 id="dossier-title" className="text-base sm:text-lg font-black text-ink truncate">
               {project.title}
             </h2>
-            <div className="flex items-center gap-4 text-xs text-[#9BA7B6] flex-wrap">
+            <div className="flex items-center gap-4 text-xs text-ink-2 flex-wrap">
               <span className="flex items-center gap-1">
-                <Building2 className="w-3.5 h-3.5 text-[#637184]" />
+                <Building2 className="w-3.5 h-3.5 text-ink-3" />
                 {project.customerName}
               </span>
               {project.customerPhone && (
                 <span className="flex items-center gap-1 font-mono">
-                  <Phone className="w-3.5 h-3.5 text-[#637184]" />
+                  <Phone className="w-3.5 h-3.5 text-ink-3" />
                   {project.customerPhone}
                 </span>
               )}
               <span className="flex items-center gap-1 truncate max-w-xs">
-                <MapPin className="w-3.5 h-3.5 text-[#637184] shrink-0" />
+                <MapPin className="w-3.5 h-3.5 text-ink-3 shrink-0" />
                 {project.address}
               </span>
             </div>
@@ -161,14 +163,14 @@ export const ProjectDossierModal: React.FC<Props> = ({
             type="button"
             onClick={onClose}
             aria-label="بستن پرونده پروژه"
-            className="p-2 rounded-xl text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#1C232D] transition cursor-pointer shrink-0"
+            className="p-2 rounded-xl text-ink-2 hover:text-ink hover:bg-raised transition cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* ================= 3 Distinct Tabs Navigation ================= */}
-        <div className="bg-[#111620] px-4 sm:px-6 border-b border-[#212835] flex items-center gap-2 overflow-x-auto">
+        <div className="bg-sunken px-4 sm:px-6 border-b border-line flex items-center gap-2 overflow-x-auto">
           {[
             {
               id: 'reports' as const,
@@ -198,18 +200,18 @@ export const ProjectDossierModal: React.FC<Props> = ({
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-3 px-3.5 font-bold text-xs flex items-center gap-2 border-b-2 transition cursor-pointer shrink-0 focus-visible:outline-none ${
                   isSelected
-                    ? 'border-[#C5A059] text-[#C5A059]'
-                    : 'border-transparent text-[#9BA7B6] hover:text-[#F0F4F8] hover:border-[#384457]'
+                    ? 'border-brand text-brand-ink'
+                    : 'border-transparent text-ink-2 hover:text-ink hover:border-line-strong'
                 }`}
               >
                 <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
                 {tab.badge > 0 && (
                   <span
-                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono tabular-nums ${
+                    className={`px-1.5 py-0.5 rounded-full text-[11px] font-mono tabular-nums ${
                       isSelected
-                        ? 'bg-[#C5A059] text-[#0D1117] font-black'
-                        : 'bg-[#212835] text-[#9BA7B6]'
+                        ? 'bg-brand text-on-brand font-black'
+                        : 'bg-line text-ink-2'
                     }`}
                   >
                     {toPersianDigits(tab.badge)}
@@ -221,72 +223,90 @@ export const ProjectDossierModal: React.FC<Props> = ({
         </div>
 
         {/* ================= Tab Content Body ================= */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 text-xs text-[#9BA7B6]">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 text-xs text-ink-2">
           {/* TAB 1: REPORTS & STUCK INCIDENTS */}
           {activeTab === 'reports' && (
             <div className="space-y-6">
               {/* 1. Daily Reports */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-[#C5A059]" />
+                  <h3 className="text-sm font-black text-ink flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-brand-ink" />
                     گزارش‌های روزانه ثبت‌شده توسط نصابان
                   </h3>
-                  <span className="text-[11px] font-bold text-[#637184]">
+                  <span className="text-[12px] font-bold text-ink-3">
                     {toPersianDigits(project.dailyLogs?.length || 0)} گزارش ثبت‌شده
                   </span>
                 </div>
 
                 {!project.dailyLogs || project.dailyLogs.length === 0 ? (
-                  <div className="p-6 rounded-xl bg-[#0D1117] border border-[#212835] text-center space-y-1">
-                    <Clock className="w-6 h-6 text-[#637184] mx-auto opacity-60" />
-                    <p className="font-bold text-[#9BA7B6]">هنوز گزارش روزانه‌ای برای این پروژه ثبت نشده است.</p>
+                  <div className="p-6 rounded-xl bg-canvas border border-line text-center space-y-1">
+                    <Clock className="w-6 h-6 text-ink-3 mx-auto opacity-60" />
+                    <p className="font-bold text-ink-2">هنوز گزارش روزانه‌ای برای این پروژه ثبت نشده است.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {project.dailyLogs.map((log, idx) => (
                       <div
                         key={log.id || idx}
-                        className="p-4 rounded-xl bg-[#0D1117] border border-[#212835] space-y-2.5"
+                        className="p-4 rounded-xl bg-canvas border border-line space-y-2.5"
                       >
-                        <div className="flex items-center justify-between border-b border-[#212835] pb-2 flex-wrap gap-2">
+                        <div className="flex items-center justify-between border-b border-line pb-2 flex-wrap gap-2">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-[#F0F4F8]">{log.technicianName || leadTech}</span>
-                            <span className="text-[#637184]">•</span>
-                            <span className="font-mono text-[#C5A059]">{formatJalali(log.date)}</span>
+                            <span className="font-bold text-ink">{log.byUserName ? getDisplayName(log.byUserName) : leadTech}</span>
+                            <span className="text-ink-3">•</span>
+                            <span className="font-mono text-brand-ink">{formatJalali(log.date)}</span>
                           </div>
-                          {typeof log.progressPercentage === 'number' && (
-                            <span className="font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-[11px]">
-                              پیشرفت: {toPersianDigits(log.progressPercentage)}٪
+                          {typeof log.completedQuantity === 'number' && (
+                            <span className="font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-[12px]">
+                              اجرا شده: {toPersianDigits(log.completedQuantity)} {log.quantityUnit || 'لت'}
+                              {typeof log.remainingQuantity === 'number' &&
+                                ` • باقی‌مانده: ${toPersianDigits(log.remainingQuantity)}`}
                             </span>
                           )}
                         </div>
 
-                        {log.workSummary && (
+                        {log.note && (
                           <div>
-                            <span className="font-bold text-[#637184] block mb-0.5">خلاصه کار:</span>
-                            <p className="text-[#F0F4F8] font-medium leading-relaxed">{log.workSummary}</p>
+                            <span className="font-bold text-ink-3 block mb-0.5">خلاصه کار:</span>
+                            <p className="text-ink font-medium leading-relaxed">{log.note}</p>
                           </div>
                         )}
 
-                        {log.detailedNotes && (
-                          <div className="bg-[#151B23] p-2.5 rounded-lg border border-[#212835]/60">
-                            <span className="font-bold text-[#637184] block mb-0.5">توضیحات و نکات تکمیلی:</span>
-                            <p className="text-[#9BA7B6] leading-relaxed">{log.detailedNotes}</p>
+                        {log.activityProgress && log.activityProgress.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {log.activityProgress.map((a) => (
+                              <span
+                                key={a.activityId}
+                                className="text-[12px] bg-surface border border-line text-ink-2 px-2 py-0.5 rounded"
+                              >
+                                {a.activityTitle || a.activityId}: {toPersianDigits(a.completedQuantity)} {a.unit || ''}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {(log.obstacles || log.equipmentIssues) && (
+                          <div className="bg-surface p-2.5 rounded-lg border border-line/60 space-y-1">
+                            <span className="font-bold text-ink-3 block mb-0.5">موانع و نکات تکمیلی:</span>
+                            {log.obstacles && <p className="text-ink-2 leading-relaxed">موانع: {log.obstacles}</p>}
+                            {log.equipmentIssues && (
+                              <p className="text-ink-2 leading-relaxed">ابزار و متریال: {log.equipmentIssues}</p>
+                            )}
                           </div>
                         )}
 
                         {/* Log Photos */}
                         {log.photos && log.photos.length > 0 && (
                           <div className="pt-2">
-                            <span className="font-bold text-[#637184] block mb-1.5">تصاویر گزارش:</span>
+                            <span className="font-bold text-ink-3 block mb-1.5">تصاویر گزارش:</span>
                             <div className="flex gap-2 flex-wrap">
                               {log.photos.map((ph, pIdx) => (
                                 <button
                                   key={pIdx}
                                   type="button"
                                   onClick={() => setSelectedImage(ph)}
-                                  className="w-16 h-16 rounded-lg overflow-hidden border border-[#2D3748] hover:border-[#C5A059] transition cursor-pointer relative group"
+                                  className="w-16 h-16 rounded-lg overflow-hidden border border-line-strong hover:border-brand transition cursor-pointer relative group"
                                 >
                                   <CloudImage src={ph} alt={`عکس گزارش ${pIdx + 1}`} className="w-full h-full object-cover" />
                                 </button>
@@ -301,19 +321,19 @@ export const ProjectDossierModal: React.FC<Props> = ({
               </div>
 
               {/* 2. Stuck Incidents */}
-              <div className="space-y-3 pt-4 border-t border-[#212835]">
+              <div className="space-y-3 pt-4 border-t border-line">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
+                  <h3 className="text-sm font-black text-ink flex items-center gap-2">
                     <AlertOctagon className="w-4 h-4 text-rose-400" />
                     سوابق توقفات و رویدادهای اضطراری کارگاه
                   </h3>
-                  <span className="text-[11px] font-bold text-[#637184]">
+                  <span className="text-[12px] font-bold text-ink-3">
                     {toPersianDigits(allStuck.length)} مورد
                   </span>
                 </div>
 
                 {allStuck.length === 0 ? (
-                  <div className="p-4 rounded-xl bg-[#0D1117] border border-[#212835] text-center text-[#637184]">
+                  <div className="p-4 rounded-xl bg-canvas border border-line text-center text-ink-3">
                     هیچ رویداد توقفی برای این کارگاه ثبت نشده است (روال کار عادی).
                   </div>
                 ) : (
@@ -325,13 +345,13 @@ export const ProjectDossierModal: React.FC<Props> = ({
                           key={stuck.id || sIdx}
                           className={`p-4 rounded-xl border space-y-2 ${
                             isResolved
-                              ? 'bg-[#0D1117] border-emerald-500/30'
+                              ? 'bg-canvas border-emerald-500/30'
                               : 'bg-rose-950/20 border-rose-500/40'
                           }`}
                         >
-                          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-[#212835] pb-2">
+                          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-line pb-2">
                             <span
-                              className={`font-bold px-2.5 py-0.5 rounded text-[10px] ${
+                              className={`font-bold px-2.5 py-0.5 rounded text-[11px] ${
                                 isResolved
                                   ? 'bg-emerald-500/20 text-emerald-300'
                                   : 'bg-rose-500 text-white'
@@ -339,15 +359,15 @@ export const ProjectDossierModal: React.FC<Props> = ({
                             >
                               {isResolved ? 'رفع توقف شده ✅' : 'متوقف فعال ⚠️'}
                             </span>
-                            <span className="font-mono text-[#637184]">
-                              {formatJalaliDateTime(stuck.reportedAt || stuck.createdAt)}
+                            <span className="font-mono text-ink-3">
+                              {formatJalaliDateTime(stuck.stuckAt)}
                             </span>
                           </div>
 
                           <div>
-                            <span className="font-bold text-[#637184] block mb-0.5">علت توقف کار:</span>
-                            <p className="text-[#F0F4F8] font-bold leading-relaxed">
-                              {stuck.blockingReason || stuck.reason}
+                            <span className="font-bold text-ink-3 block mb-0.5">علت توقف کار:</span>
+                            <p className="text-ink font-bold leading-relaxed">
+                              {stuck.description}
                             </p>
                           </div>
 
@@ -366,30 +386,30 @@ export const ProjectDossierModal: React.FC<Props> = ({
 
               {/* 3. Work Sessions */}
               {project.workSessions && project.workSessions.length > 0 && (
-                <div className="space-y-3 pt-4 border-t border-[#212835]">
-                  <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
+                <div className="space-y-3 pt-4 border-t border-line">
+                  <h3 className="text-sm font-black text-ink flex items-center gap-2">
                     <Clock className="w-4 h-4 text-sky-400" />
                     جلسات و ساعات کاری ثبت‌شده در کارگاه
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {project.workSessions.map((ws, wsIdx) => (
                       <div
-                        key={ws.id || wsIdx}
-                        className="p-3 rounded-xl bg-[#0D1117] border border-[#212835] space-y-1"
+                        key={`${ws.startedAt}-${wsIdx}`}
+                        className="p-3 rounded-xl bg-canvas border border-line space-y-1"
                       >
-                        <div className="flex items-center justify-between text-[#F0F4F8] font-bold">
+                        <div className="flex items-center justify-between text-ink font-bold">
                           <span>{formatJalali(ws.date)}</span>
                           <span className="text-sky-400 font-mono">
-                            {formatDuration(ws.durationMinutes || 0)}
+                            {ws.endedAt ? formatDuration(ws.startedAt, ws.endedAt) : 'در حال انجام'}
                           </span>
                         </div>
-                        <div className="text-[11px] text-[#637184]">
-                          ساعت ورود: <span className="text-[#9BA7B6] font-mono">{formatTimeOnly(ws.startTime)}</span> •
-                          خروج: <span className="text-[#9BA7B6] font-mono">{formatTimeOnly(ws.endTime)}</span>
+                        <div className="text-[12px] text-ink-3">
+                          ساعت ورود: <span className="text-ink-2 font-mono">{formatTimeOnly(ws.startedAt)}</span> •
+                          خروج: <span className="text-ink-2 font-mono">{ws.endedAt ? formatTimeOnly(ws.endedAt) : '—'}</span>
                         </div>
-                        {ws.technicianNames && (
-                          <div className="text-[11px] text-[#9BA7B6] truncate">
-                            نصابان: {ws.technicianNames.join('، ')}
+                        {ws.byUserName && (
+                          <div className="text-[12px] text-ink-2 truncate">
+                            ثبت توسط: {getDisplayName(ws.byUserName)}
                           </div>
                         )}
                       </div>
@@ -405,12 +425,12 @@ export const ProjectDossierModal: React.FC<Props> = ({
             <div className="space-y-6">
               {/* Before Photos */}
               <div className="space-y-3">
-                <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
-                  <Camera className="w-4 h-4 text-[#C5A059]" />
+                <h3 className="text-sm font-black text-ink flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-brand-ink" />
                   تصاویر وضعیت محل پیش از آغاز نصب
                 </h3>
                 {beforePhotos.length === 0 ? (
-                  <div className="p-5 rounded-xl bg-[#0D1117] border border-[#212835] text-center text-[#637184]">
+                  <div className="p-5 rounded-xl bg-canvas border border-line text-center text-ink-3">
                     تصویری برای پیش از نصب ثبت نشده است.
                   </div>
                 ) : (
@@ -420,10 +440,10 @@ export const ProjectDossierModal: React.FC<Props> = ({
                         key={idx}
                         type="button"
                         onClick={() => setSelectedImage(ph)}
-                        className="h-32 rounded-xl overflow-hidden border border-[#212835] hover:border-[#C5A059] transition cursor-pointer relative group bg-[#0D1117]"
+                        className="h-32 rounded-xl overflow-hidden border border-line hover:border-brand transition cursor-pointer relative group bg-canvas"
                       >
                         <CloudImage src={ph} alt={`قبل نصب ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
-                        <span className="absolute bottom-1 right-1 bg-black/70 text-[10px] text-white px-1.5 py-0.5 rounded">
+                        <span className="absolute bottom-1 right-1 bg-black/70 text-[11px] text-white px-1.5 py-0.5 rounded">
                           قبل نصب
                         </span>
                       </button>
@@ -433,13 +453,13 @@ export const ProjectDossierModal: React.FC<Props> = ({
               </div>
 
               {/* After Photos */}
-              <div className="space-y-3 pt-4 border-t border-[#212835]">
-                <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
+              <div className="space-y-3 pt-4 border-t border-line">
+                <h3 className="text-sm font-black text-ink flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-emerald-400" />
                   تصاویر اتمام کار و اجرای نهایی
                 </h3>
                 {afterPhotos.length === 0 ? (
-                  <div className="p-5 rounded-xl bg-[#0D1117] border border-[#212835] text-center text-[#637184]">
+                  <div className="p-5 rounded-xl bg-canvas border border-line text-center text-ink-3">
                     تصویر اتمام کار هنوز ثبت نشده است.
                   </div>
                 ) : (
@@ -449,10 +469,10 @@ export const ProjectDossierModal: React.FC<Props> = ({
                         key={idx}
                         type="button"
                         onClick={() => setSelectedImage(ph)}
-                        className="h-32 rounded-xl overflow-hidden border border-[#212835] hover:border-emerald-500 transition cursor-pointer relative group bg-[#0D1117]"
+                        className="h-32 rounded-xl overflow-hidden border border-line hover:border-emerald-500 transition cursor-pointer relative group bg-canvas"
                       >
                         <CloudImage src={ph} alt={`بعد نصب ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
-                        <span className="absolute bottom-1 right-1 bg-black/70 text-[10px] text-emerald-300 px-1.5 py-0.5 rounded">
+                        <span className="absolute bottom-1 right-1 bg-black/70 text-[11px] text-emerald-300 px-1.5 py-0.5 rounded">
                           کیفیت نهایی
                         </span>
                       </button>
@@ -462,16 +482,16 @@ export const ProjectDossierModal: React.FC<Props> = ({
               </div>
 
               {/* Handover & Customer Acceptance */}
-              <div className="space-y-3 pt-4 border-t border-[#212835]">
-                <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-[#C5A059]" />
+              <div className="space-y-3 pt-4 border-t border-line">
+                <h3 className="text-sm font-black text-ink flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-brand-ink" />
                   صورتجلسه تحویل، رضایت‌سنجی و امضای کارفرما
                 </h3>
-                <div className="p-4 rounded-xl bg-[#0D1117] border border-[#212835] space-y-4">
+                <div className="p-4 rounded-xl bg-canvas border border-line space-y-4">
                   {/* Rating + Signature status */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#212835] pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3">
                     <div className="space-y-1">
-                      <span className="text-[#637184] font-bold block">امتیاز کیفیت کارفرما:</span>
+                      <span className="text-ink-3 font-bold block">امتیاز کیفیت کارفرما:</span>
                       <div className="flex items-center gap-1.5">
                         <div className="flex items-center gap-0.5">
                           {[1, 2, 3, 4, 5].map((s) => (
@@ -479,20 +499,20 @@ export const ProjectDossierModal: React.FC<Props> = ({
                               key={s}
                               className={`w-4 h-4 ${
                                 s <= (project.qcScore || 5)
-                                  ? 'text-[#C5A059] fill-[#C5A059]'
-                                  : 'text-[#2D3748]'
+                                  ? 'text-brand-ink fill-brand'
+                                  : 'text-ink-3'
                               }`}
                             />
                           ))}
                         </div>
-                        <span className="font-bold text-[#F0F4F8] font-mono">
+                        <span className="font-bold text-ink font-mono">
                           {toPersianDigits(project.qcScore || 5)} از ۵
                         </span>
                       </div>
                     </div>
 
                     <div>
-                      <span className="text-[#637184] font-bold block mb-1">وضعیت امضای کارفرما:</span>
+                      <span className="text-ink-3 font-bold block mb-1">وضعیت امضای کارفرما:</span>
                       {project.customerSignature ? (
                         <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -503,7 +523,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
                           عدم حضور کارفرما: {project.unavailabilityReason}
                         </span>
                       ) : (
-                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#1C232D] text-[#9BA7B6] border border-[#2D3748]">
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-raised text-ink-2 border border-line-strong">
                           در انتظار ثبت امضا
                         </span>
                       )}
@@ -512,7 +532,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
 
                   {/* 5-item Checklist */}
                   <div>
-                    <span className="font-bold text-[#637184] block mb-2">چک‌لیست استانداردهای تحویل:</span>
+                    <span className="font-bold text-ink-3 block mb-2">چک‌لیست استانداردهای تحویل:</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {[
                         { label: 'عملکرد صحیح موتور، ریموت و سیم‌کشی استاندارد', key: 'mechanismsChecked' },
@@ -523,10 +543,10 @@ export const ProjectDossierModal: React.FC<Props> = ({
                       ].map((item, cIdx) => (
                         <div
                           key={cIdx}
-                          className="flex items-center gap-2 p-2 rounded-lg bg-[#151B23] border border-[#212835]"
+                          className="flex items-center gap-2 p-2 rounded-lg bg-surface border border-line"
                         >
                           <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          <span className="text-[11px] text-[#F0F4F8]">{item.label}</span>
+                          <span className="text-[12px] text-ink">{item.label}</span>
                         </div>
                       ))}
                     </div>
@@ -535,33 +555,33 @@ export const ProjectDossierModal: React.FC<Props> = ({
               </div>
 
               {/* Technical Specifications */}
-              <div className="space-y-3 pt-4 border-t border-[#212835]">
-                <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-[#C5A059]" />
+              <div className="space-y-3 pt-4 border-t border-line">
+                <h3 className="text-sm font-black text-ink flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-brand-ink" />
                   مشخصات فنی و مقادیر متراژ سفارش
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-[#0D1117] p-3 rounded-xl border border-[#212835] text-center">
-                    <span className="text-[#637184] block text-[10px]">تعداد شید</span>
-                    <span className="font-black text-sm text-[#F0F4F8] font-mono">
+                  <div className="bg-canvas p-3 rounded-xl border border-line text-center">
+                    <span className="text-ink-3 block text-[11px]">تعداد شید</span>
+                    <span className="font-black text-sm text-ink font-mono">
                       {toPersianDigits(project.shadePanels || 0)} لت
                     </span>
                   </div>
-                  <div className="bg-[#0D1117] p-3 rounded-xl border border-[#212835] text-center">
-                    <span className="text-[#637184] block text-[10px]">تعداد پرده</span>
-                    <span className="font-black text-sm text-[#F0F4F8] font-mono">
+                  <div className="bg-canvas p-3 rounded-xl border border-line text-center">
+                    <span className="text-ink-3 block text-[11px]">تعداد پرده</span>
+                    <span className="font-black text-sm text-ink font-mono">
                       {toPersianDigits(project.curtainPanels || 0)} لت
                     </span>
                   </div>
-                  <div className="bg-[#0D1117] p-3 rounded-xl border border-[#212835] text-center">
-                    <span className="text-[#637184] block text-[10px]">مکانیزم و تیپ</span>
-                    <span className="font-bold text-xs text-[#C5A059] truncate block">
+                  <div className="bg-canvas p-3 rounded-xl border border-line text-center">
+                    <span className="text-ink-3 block text-[11px]">مکانیزم و تیپ</span>
+                    <span className="font-bold text-xs text-brand-ink truncate block">
                       {project.mechanismType || 'استاندارد'}
                     </span>
                   </div>
-                  <div className="bg-[#0D1117] p-3 rounded-xl border border-[#212835] text-center">
-                    <span className="text-[#637184] block text-[10px]">اکیپ مجری</span>
-                    <span className="font-bold text-xs text-[#F0F4F8] truncate block">
+                  <div className="bg-canvas p-3 rounded-xl border border-line text-center">
+                    <span className="text-ink-3 block text-[11px]">اکیپ مجری</span>
+                    <span className="font-bold text-xs text-ink truncate block">
                       {leadTech}
                     </span>
                   </div>
@@ -575,11 +595,11 @@ export const ProjectDossierModal: React.FC<Props> = ({
             <div className="space-y-6">
               {/* Milestone Timeline */}
               <div className="space-y-3">
-                <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#C5A059]" />
+                <h3 className="text-sm font-black text-ink flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-brand-ink" />
                   گاه‌شمار پیشرفت مراحل مأموریت
                 </h3>
-                <div className="p-4 rounded-xl bg-[#0D1117] border border-[#212835] space-y-4">
+                <div className="p-4 rounded-xl bg-canvas border border-line space-y-4">
                   {[
                     {
                       title: 'ثبت پرونده و اندازه‌گیری اولیه',
@@ -605,7 +625,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
                     },
                     {
                       title: 'تأییدیه کنترل کیفی (QC) و صدور شناسنامه',
-                      date: project.qcApprovedAt,
+                      date: project.qcReviewedAt,
                       done: isQcApprovedAndCompleted,
                       desc: isQcApprovedAndCompleted
                         ? `تایید رسمی کنترل کیفی با امتیاز ${toPersianDigits(project.qcScore || 5)} از ۵`
@@ -617,23 +637,23 @@ export const ProjectDossierModal: React.FC<Props> = ({
                         className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
                           step.done
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                            : 'bg-[#1C232D] text-[#637184] border border-[#2D3748]'
+                            : 'bg-raised text-ink-3 border border-line-strong'
                         }`}
                       >
                         {step.done ? <Check className="w-3.5 h-3.5" /> : toPersianDigits(sIdx + 1)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <span className={`font-bold ${step.done ? 'text-[#F0F4F8]' : 'text-[#637184]'}`}>
+                          <span className={`font-bold ${step.done ? 'text-ink' : 'text-ink-3'}`}>
                             {step.title}
                           </span>
                           {step.date && (
-                            <span className="font-mono text-[11px] text-[#C5A059]">
+                            <span className="font-mono text-[12px] text-brand-ink">
                               {formatJalali(step.date)}
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-[#637184] mt-0.5">{step.desc}</p>
+                        <p className="text-[12px] text-ink-3 mt-0.5">{step.desc}</p>
                       </div>
                     </div>
                   ))}
@@ -642,8 +662,8 @@ export const ProjectDossierModal: React.FC<Props> = ({
 
               {/* Team Transfer History */}
               {project.teamTransfers && project.teamTransfers.length > 0 && (
-                <div className="space-y-3 pt-4 border-t border-[#212835]">
-                  <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
+                <div className="space-y-3 pt-4 border-t border-line">
+                  <h3 className="text-sm font-black text-ink flex items-center gap-2">
                     <ArrowRightLeft className="w-4 h-4 text-purple-400" />
                     سوابق جابه‌جایی یا ارجاع اکیپ
                   </h3>
@@ -651,17 +671,17 @@ export const ProjectDossierModal: React.FC<Props> = ({
                     {project.teamTransfers.map((tr, trIdx) => (
                       <div
                         key={tr.id || trIdx}
-                        className="p-3 rounded-xl bg-[#0D1117] border border-[#212835] space-y-1"
+                        className="p-3 rounded-xl bg-canvas border border-line space-y-1"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-[#F0F4F8]">
+                          <span className="font-bold text-ink">
                             انتقال از {tr.fromTeamName || 'اکیپ قبلی'} به {tr.toTeamName || 'اکیپ جدید'}
                           </span>
-                          <span className="font-mono text-[10px] text-[#C5A059]">
+                          <span className="font-mono text-[11px] text-brand-ink">
                             {formatJalaliDateTime(tr.transferredAt)}
                           </span>
                         </div>
-                        {tr.reason && <p className="text-[11px] text-[#9BA7B6]">دلیل: {tr.reason}</p>}
+                        {tr.reason && <p className="text-[12px] text-ink-2">دلیل: {tr.reason}</p>}
                       </div>
                     ))}
                   </div>
@@ -670,15 +690,15 @@ export const ProjectDossierModal: React.FC<Props> = ({
 
               {/* System Audit Log */}
               {fetchAudit && (
-                <div className="space-y-3 pt-4 border-t border-[#212835]">
-                  <h3 className="text-sm font-black text-[#F0F4F8] flex items-center gap-2">
-                    <History className="w-4 h-4 text-[#9BA7B6]" />
+                <div className="space-y-3 pt-4 border-t border-line">
+                  <h3 className="text-sm font-black text-ink flex items-center gap-2">
+                    <History className="w-4 h-4 text-ink-2" />
                     سوابق لاگ تغییرات سیستمی (Audit Records)
                   </h3>
                   {loadingAudit ? (
-                    <div className="p-4 text-center text-[#637184]">در حال دریافت سوابق از سرور...</div>
+                    <div className="p-4 text-center text-ink-3">در حال دریافت سوابق از سرور...</div>
                   ) : auditRecords.length === 0 ? (
-                    <div className="p-4 rounded-xl bg-[#0D1117] border border-[#212835] text-center text-[#637184]">
+                    <div className="p-4 rounded-xl bg-canvas border border-line text-center text-ink-3">
                       سابقه لاگ تغییراتی برای این پروژه ثبت نشده است.
                     </div>
                   ) : (
@@ -686,14 +706,17 @@ export const ProjectDossierModal: React.FC<Props> = ({
                       {auditRecords.map((rec) => (
                         <div
                           key={rec.id}
-                          className="p-2.5 rounded-lg bg-[#0D1117] border border-[#212835] flex items-center justify-between text-[11px]"
+                          className="p-2.5 rounded-lg bg-canvas border border-line flex items-center justify-between text-[12px]"
                         >
                           <div>
-                            <span className="font-bold text-[#F0F4F8]">{rec.userName || 'کاربر سیستم'}</span>
-                            <span className="text-[#637184] mr-2">عملیات: {rec.action}</span>
+                            <span className="font-bold text-ink">{rec.changed_by_name ? getDisplayName(rec.changed_by_name) : 'کاربر سیستم'}</span>
+                            <span className="text-ink-3 mr-2">
+                              عملیات:{' '}
+                              {rec.action === 'INSERT' ? 'ایجاد' : rec.action === 'UPDATE' ? 'ویرایش' : rec.action === 'DELETE' ? 'حذف' : rec.action}
+                            </span>
                           </div>
-                          <span className="font-mono text-[#637184]">
-                            {formatJalaliDateTime(rec.createdAt)}
+                          <span className="font-mono text-ink-3">
+                            {formatJalaliDateTime(rec.changed_at)}
                           </span>
                         </div>
                       ))}
@@ -706,7 +729,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
         </div>
 
         {/* ================= Footer Action Bar ================= */}
-        <div className="bg-[#0D1117] p-4 sm:p-5 border-t border-[#212835] flex items-center justify-between gap-3">
+        <div className="bg-canvas p-4 sm:p-5 border-t border-line flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {/* Print Official Certificate button with Gating check */}
             <button
@@ -715,8 +738,8 @@ export const ProjectDossierModal: React.FC<Props> = ({
               aria-label={`چاپ شناسنامه رسمی پروژه ${project.title}`}
               className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 transition cursor-pointer active:scale-95 shadow-sm ${
                 isQcApprovedAndCompleted
-                  ? 'bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117]'
-                  : 'bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#2D3748]'
+                  ? 'bg-brand hover:bg-brand-hover text-on-brand'
+                  : 'bg-raised hover:bg-hover text-ink-2 hover:text-ink border border-line-strong'
               }`}
             >
               {isQcApprovedAndCompleted ? (
@@ -726,7 +749,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
               )}
               <span>چاپ شناسنامه رسمی A4</span>
               {!isQcApprovedAndCompleted && (
-                <span className="text-[10px] text-amber-400 font-bold bg-amber-400/10 px-1.5 py-0.5 rounded mr-1">
+                <span className="text-[11px] text-amber-400 font-bold bg-amber-400/10 px-1.5 py-0.5 rounded mr-1">
                   نیازمند تایید QC
                 </span>
               )}
@@ -736,7 +759,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#1C232D] transition cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-bold text-ink-2 hover:text-ink hover:bg-raised transition cursor-pointer"
           >
             بستن پرونده
           </button>
@@ -755,7 +778,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
             <CloudImage
               src={selectedImage}
               alt="بزرگنمایی تصویر"
-              className="max-w-full max-h-[85vh] object-contain rounded-xl border border-[#212835]"
+              className="max-w-full max-h-[85vh] object-contain rounded-xl border border-line"
             />
             <button
               type="button"

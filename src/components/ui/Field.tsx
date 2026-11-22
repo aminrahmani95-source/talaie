@@ -25,12 +25,12 @@ export const Field: React.FC<FieldProps> = ({
       <div className="flex items-center justify-between">
         <label
           htmlFor={htmlFor}
-          className="block text-xs font-bold text-[#F0F4F8]"
+          className="block text-xs font-bold text-ink"
         >
           {label} {required && <span className="text-rose-400 font-bold">*</span>}
         </label>
         {hint && !error && (
-          <span className="text-[11px] text-[#637184]">
+          <span className="text-[12px] text-ink-3">
             {hint}
           </span>
         )}

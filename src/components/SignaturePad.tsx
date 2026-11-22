@@ -143,18 +143,18 @@ export const SignaturePad: React.FC<Props> = ({ value, onChange, className = '' 
 
   return (
     <div className={`space-y-2 select-none ${className}`}>
-      <div className="relative border border-dashed border-[#C5A059]/50 rounded-md overflow-hidden bg-white shadow-sm">
+      <div className="relative border border-dashed border-brand/50 rounded-md overflow-hidden bg-white shadow-sm">
         {/* Placeholder hint when canvas is pristine */}
         {!hasSignature && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-slate-400">
-            <PenTool className="w-5 h-5 mb-1 text-[#C5A059]" aria-hidden="true" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-ink-2">
+            <PenTool className="w-5 h-5 mb-1 text-brand-ink" aria-hidden="true" />
             <span className="text-xs font-bold text-slate-700">با انگشت یا قلم در این کادر امضا کنید</span>
-            <span className="text-[11px] mt-0.5 text-slate-500">تاییدیه رسمی تحویل اقلام و پرده‌های گالری طلایی</span>
+            <span className="text-[12px] mt-0.5 text-ink-3">تاییدیه رسمی تحویل اقلام و پرده‌های گالری طلایی</span>
           </div>
         )}
 
         {/* Guideline line at bottom */}
-        <div className="absolute bottom-6 inset-x-6 border-b border-dashed border-slate-300 pointer-events-none flex justify-between text-[11px] text-slate-400 px-1">
+        <div className="absolute bottom-6 inset-x-6 border-b border-dashed border-slate-300 pointer-events-none flex justify-between text-[12px] text-ink-2 px-1">
           <span>خط امضای کارفرما</span>
           <span>TALAEI QC</span>
         </div>
@@ -182,7 +182,7 @@ export const SignaturePad: React.FC<Props> = ({ value, onChange, className = '' 
               <span>امضای دیجیتال دریافت شد</span>
             </>
           ) : (
-            <span className="text-slate-400 dark:text-zinc-500 font-normal">در انتظار امضا</span>
+            <span className="text-ink-3 font-normal">در انتظار امضا</span>
           )}
         </div>
 

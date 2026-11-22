@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { IconButton } from './IconButton';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export interface SheetProps {
   isOpen: boolean;
@@ -32,21 +33,13 @@ export const Sheet: React.FC<SheetProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', handleKeyDown);
-
     return () => {
       document.body.style.overflow = originalOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
+  useEscapeKey(onClose, isOpen);
 
   if (!isOpen) return null;
 
@@ -73,19 +66,19 @@ export const Sheet: React.FC<SheetProps> = ({
     >
       <div
         ref={contentRef}
-        className={`w-full ${maxWidthClasses} bg-[#151B23] rounded-t-lg sm:rounded-lg shadow-2xl border border-[#2D3748] flex flex-col max-h-[92vh] sm:max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-4 sm:zoom-in-95 duration-200 ${className}`}
+        className={`w-full ${maxWidthClasses} bg-surface rounded-t-lg sm:rounded-lg shadow-2xl border border-line-strong flex flex-col max-h-[92vh] sm:max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-4 sm:zoom-in-95 duration-200 ${className}`}
       >
         {/* Mobile Pull Handle Indicator */}
-        <div className="w-10 h-1 bg-[#2D3748] rounded mx-auto mt-2 sm:hidden shrink-0" />
+        <div className="w-10 h-1 bg-line-strong rounded mx-auto mt-2 sm:hidden shrink-0" />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-[#212835] bg-[#111620] shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-line bg-sunken shrink-0">
           <div className="min-w-0 pr-1">
-            <h2 id="sheet-title" className="font-bold text-sm sm:text-base text-[#F0F4F8] truncate">
+            <h2 id="sheet-title" className="font-bold text-sm sm:text-base text-ink truncate">
               {title}
             </h2>
             {subtitle && (
-              <p className="text-xs text-[#9BA7B6] truncate mt-0.5">
+              <p className="text-xs text-ink-2 truncate mt-0.5">
                 {subtitle}
               </p>
             )}
@@ -106,7 +99,7 @@ export const Sheet: React.FC<SheetProps> = ({
 
         {/* Sticky Footer */}
         {footer && (
-          <div className="px-4 sm:px-5 py-3 border-t border-[#212835] bg-[#111620] shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="px-4 sm:px-5 py-3 border-t border-line bg-sunken shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {footer}
           </div>
         )}

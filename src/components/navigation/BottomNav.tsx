@@ -1,419 +1,152 @@
 import React, { useState } from 'react';
-import {
-  Activity,
-  CalendarDays,
-  ShieldCheck,
-  AlertOctagon,
-  AlertTriangle,
-  MoreHorizontal,
-  Users,
-  Settings,
-  Package,
-  FileCheck2,
-  Trophy,
-} from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { Sheet } from '../ui/Sheet';
+import {
+  getNavSections,
+  getBottomBarIds,
+  BADGE_TONE_CLASS,
+  formatBadge,
+  type ManagerTab,
+  type NavCounts,
+  type NavItem,
+} from './navConfig';
 
-export type ManagerTab = 'control' | 'planner' | 'qc' | 'stuck' | 'tickets' | 'materials' | 'technicians' | 'settings' | 'registry' | 'sales';
+export type { ManagerTab } from './navConfig';
 
-interface Props {
+interface Props extends NavCounts {
   activeTab: ManagerTab;
   onSelectTab: (tab: ManagerTab) => void;
-  pendingQcCount?: number;
-  openStuckCount?: number;
-  openTicketCount?: number;
-  pendingMaterialCount?: number;
   userRole?: string;
 }
 
-export const BottomNav: React.FC<Props> = ({
-  activeTab,
-  onSelectTab,
-  pendingQcCount = 0,
-  openStuckCount = 0,
-  openTicketCount = 0,
-  pendingMaterialCount = 0,
-  userRole,
-}) => {
-  const isCeo = userRole === 'CEO';
-  const isQcManager = userRole === 'QC_MANAGER';
+/** نوار پایین موبایل + شیت «بیشتر» — ساخته‌شده از navConfig */
+export const BottomNav: React.FC<Props> = ({ activeTab, onSelectTab, userRole, ...counts }) => {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const sections = getNavSections(userRole, counts);
+  const allItems = sections.flatMap((s) => s.items);
+  const barIds = getBottomBarIds(userRole);
+  const barItems = barIds
+    .map((id) => allItems.find((i) => i.id === id))
+    .filter((i): i is NavItem => Boolean(i));
+  const moreSections = sections
+    .map((s) => ({ ...s, items: s.items.filter((i) => !barIds.includes(i.id)) }))
+    .filter((s) => s.items.length > 0);
+  const hasMore = moreSections.length > 0;
+  const moreItems = moreSections.flatMap((s) => s.items);
+  const isMoreActive = moreItems.some((i) => i.id === activeTab);
+  const moreHasAlert = moreItems.some((i) => i.badge && i.badgeTone === 'danger');
 
-  const totalUrgentCount = openStuckCount + pendingQcCount + openTicketCount;
+  const select = (id: ManagerTab) => {
+    onSelectTab(id);
+    setIsMoreOpen(false);
+  };
 
-  const isMoreActive =
-    activeTab === 'qc' ||
-    activeTab === 'stuck' ||
-    activeTab === 'tickets' ||
-    activeTab === 'materials' ||
-    activeTab === 'technicians' ||
-    activeTab === 'settings' ||
-    activeTab === 'sales';
-
-  const navItems = isCeo
-    ? [
-        {
-          id: 'registry' as const,
-          label: 'مدیر کل',
-          icon: FileCheck2,
-          badge: undefined,
-        },
-        {
-          id: 'planner' as const,
-          label: 'دیدن برنامه',
-          icon: CalendarDays,
-          badge: undefined,
-        },
-      ]
-    : isQcManager
-    ? [
-        {
-          id: 'control' as const,
-          label: 'پیشخوان',
-          icon: Activity,
-          badge: totalUrgentCount > 0 ? totalUrgentCount : undefined,
-          badgeColor: 'bg-rose-600 text-white animate-pulse',
-        },
-        {
-          id: 'planner' as const,
-          label: 'تقویم نصب',
-          icon: CalendarDays,
-          badge: undefined,
-        },
-        {
-          id: 'sales' as const,
-          label: 'میز فروش',
-          icon: Trophy,
-          badge: undefined,
-        },
-      ]
-    : [
-        {
-          id: 'control' as const,
-          label: 'میز کار',
-          icon: Activity,
-          badge: totalUrgentCount > 0 ? totalUrgentCount : undefined,
-          badgeColor: 'bg-rose-600 text-white animate-pulse',
-        },
-        {
-          id: 'planner' as const,
-          label: 'تقویم 4 روزه',
-          icon: CalendarDays,
-          badge: undefined,
-        },
-      ];
+  const cols = barItems.length + (hasMore ? 1 : 0);
 
   return (
     <>
       <nav
-        role="navigation"
         aria-label="ناوبری اصلی"
-        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0D1117]/95 backdrop-blur-lg border-t border-[#212835] pb-[env(safe-area-inset-bottom)] shadow-lg transition-colors"
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-canvas/95 backdrop-blur-lg border-t border-line pb-[env(safe-area-inset-bottom)]"
       >
-        <div className={`${isCeo ? 'grid grid-cols-2 h-14 max-w-xs mx-auto px-1' : 'grid grid-cols-4 h-14 max-w-lg mx-auto px-1'}`}>
-          {navItems.map((item) => {
+        <div className="grid h-16 max-w-lg mx-auto px-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+          {barItems.map((item) => {
             const Icon = item.icon;
             const isSelected = activeTab === item.id;
-
             return (
               <button
                 key={item.id}
                 type="button"
-                onClick={() => onSelectTab(item.id)}
-                className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] transition-all select-none cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C5A059] ${
-                  isSelected
-                    ? 'text-[#C5A059] font-bold'
-                    : 'text-[#637184] hover:text-[#F0F4F8]'
+                onClick={() => select(item.id)}
+                aria-current={isSelected ? 'page' : undefined}
+                className={`relative flex flex-col items-center justify-center gap-1 transition-colors select-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${
+                  isSelected ? 'text-brand-ink' : 'text-ink-3 hover:text-ink'
                 }`}
               >
-                <div className="relative">
-                  <Icon
-                    className={`w-4 h-4 transition-transform ${
-                      isSelected ? 'scale-110' : ''
-                    }`}
-                  />
-                  {item.badge !== undefined && (
+                <span
+                  className={`relative flex items-center justify-center w-12 h-7 rounded-full transition-colors ${
+                    isSelected ? 'bg-brand/15' : ''
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  {item.badge !== undefined && item.badgeTone && (
                     <span
-                      className={`absolute -top-1 -right-2 min-w-[15px] h-3.5 px-1 rounded-full text-[10px] font-bold flex items-center justify-center tabular-nums ${
-                        item.badgeColor || 'bg-[#C5A059] text-[#0D1117]'
-                      }`}
+                      className={`absolute -top-1 right-1 min-w-[16px] h-4 px-1 rounded-full text-[11px] font-bold flex items-center justify-center tabular-nums ${BADGE_TONE_CLASS[item.badgeTone]}`}
                     >
-                      {item.badge}
+                      {formatBadge(item.badge)}
                     </span>
                   )}
-                </div>
-                <span className="text-[11px] leading-none">{item.label}</span>
-                {isSelected && (
-                  <span className="absolute bottom-1 w-5 h-0.5 rounded-full bg-[#C5A059]" />
-                )}
+                </span>
+                <span className={`text-[12px] leading-none ${isSelected ? 'font-bold' : 'font-medium'}`}>
+                  {item.shortLabel}
+                </span>
               </button>
             );
           })}
 
-          {/* More Menu Item (Hidden for CEO) */}
-          {!isCeo && (
+          {hasMore && (
             <button
               type="button"
               onClick={() => setIsMoreOpen(true)}
-              className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] transition-all select-none cursor-pointer ${
-                isMoreActive
-                  ? 'text-[#C5A059] font-bold'
-                  : 'text-[#637184] hover:text-[#F0F4F8]'
+              aria-haspopup="dialog"
+              className={`relative flex flex-col items-center justify-center gap-1 transition-colors select-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${
+                isMoreActive ? 'text-brand-ink' : 'text-ink-3 hover:text-ink'
               }`}
             >
-              <div className="relative">
-                <MoreHorizontal
-                  className={`w-4 h-4 transition-transform ${
-                    isMoreActive ? 'scale-110' : ''
-                  }`}
-                />
-                {(pendingQcCount > 0 || openStuckCount > 0 || pendingMaterialCount > 0) && (
-                  <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                )}
-              </div>
-              <span className="text-[11px] leading-none">سایر بخش‌ها</span>
-              {isMoreActive && (
-                <span className="absolute bottom-1 w-5 h-0.5 rounded-full bg-[#C5A059]" />
-              )}
+              <span
+                className={`relative flex items-center justify-center w-12 h-7 rounded-full ${isMoreActive ? 'bg-brand/15' : ''}`}
+              >
+                <MoreHorizontal className="w-5 h-5" />
+                {moreHasAlert && <span className="absolute top-0 right-2 w-2 h-2 rounded-full bg-rose-500" />}
+              </span>
+              <span className={`text-[12px] leading-none ${isMoreActive ? 'font-bold' : 'font-medium'}`}>بیشتر</span>
             </button>
           )}
         </div>
       </nav>
 
-      {/* More Sheet for Specialized Modules (Hidden for CEO) */}
-      {!isCeo && (
-        <Sheet
-        isOpen={isMoreOpen}
-        onClose={() => setIsMoreOpen(false)}
-        title="بخش‌های تخصصی و کمکی مدیریت"
-        maxWidth="sm"
-      >
-        <div className="grid grid-cols-1 gap-2 pt-1">
-          {/* بررسی کیفی QC */}
-          <button
-            type="button"
-            onClick={() => {
-              onSelectTab('qc');
-              setIsMoreOpen(false);
-            }}
-            className={`flex items-center gap-3 p-3 rounded-md border transition text-right cursor-pointer min-h-[52px] ${
-              activeTab === 'qc'
-                ? 'border-[#C5A059]/60 bg-[#C5A059]/10 text-[#C5A059] font-bold'
-                : 'border-[#212835] bg-[#151B23] text-[#F0F4F8] hover:border-[#C5A059]/40'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#2D3748] flex items-center justify-center text-[#C5A059]">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs font-bold flex items-center justify-between">
-                <span>بررسی کیفی و تایید QC</span>
-                {pendingQcCount > 0 && (
-                  <span className="bg-[#C5A059] text-[#0D1117] text-[10px] font-black px-1.5 py-0.5 rounded">
-                    {pendingQcCount}
-                  </span>
-                )}
+      {hasMore && (
+        <Sheet isOpen={isMoreOpen} onClose={() => setIsMoreOpen(false)} title="همه بخش‌ها" maxWidth="sm">
+          <div className="space-y-4 pt-1">
+            {moreSections.map((section) => (
+              <div key={section.title}>
+                <div className="px-1 pb-1.5 text-[12px] font-bold text-ink-3">{section.title}</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const isSelected = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => select(item.id)}
+                        aria-current={isSelected ? 'page' : undefined}
+                        className={`relative flex flex-col items-start gap-2 p-3 rounded-xl border text-right transition-colors cursor-pointer min-h-[88px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                          isSelected ? 'border-brand bg-brand/10' : 'border-line bg-surface hover:border-line-strong'
+                        }`}
+                      >
+                        <span className="flex items-center justify-between w-full">
+                          <Icon className={`w-5 h-5 ${isSelected ? 'text-brand-ink' : 'text-ink-2'}`} />
+                          {item.badge !== undefined && item.badgeTone && (
+                            <span
+                              className={`min-w-[20px] h-5 px-1.5 rounded-full text-[12px] font-bold flex items-center justify-center tabular-nums ${BADGE_TONE_CLASS[item.badgeTone]}`}
+                            >
+                              {formatBadge(item.badge)}
+                            </span>
+                          )}
+                        </span>
+                        <span>
+                          <span className="block text-[13px] font-bold text-ink">{item.label}</span>
+                          <span className="block text-[12px] text-ink-3 mt-0.5 leading-snug">{item.hint}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="text-[11px] text-[#9BA7B6] mt-0.5">
-                تایید کارهای تحویل‌شده و صدور شناسنامه گارانتی
-              </div>
-            </div>
-          </button>
-
-          {/* پروژه‌های متوقف */}
-          <button
-            type="button"
-            onClick={() => {
-              onSelectTab('stuck');
-              setIsMoreOpen(false);
-            }}
-            className={`flex items-center gap-3 p-3 rounded-md border transition text-right cursor-pointer min-h-[52px] ${
-              activeTab === 'stuck'
-                ? 'border-rose-500/60 bg-rose-500/10 text-rose-300 font-bold'
-                : 'border-[#212835] bg-[#151B23] text-[#F0F4F8] hover:border-rose-500/40'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#2D3748] flex items-center justify-center text-rose-400">
-              <AlertOctagon className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs font-bold flex items-center justify-between">
-                <span>پروژه‌های متوقف (استاک)</span>
-                {openStuckCount > 0 && (
-                  <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded">
-                    {openStuckCount}
-                  </span>
-                )}
-              </div>
-              <div className="text-[11px] text-[#9BA7B6] mt-0.5">
-                رسیدگی فوری به پروژه‌های دارای مانع یا کسر یراق
-              </div>
-            </div>
-          </button>
-
-          {/* تیکت‌ها و SLA */}
-          <button
-            type="button"
-            onClick={() => {
-              onSelectTab('tickets');
-              setIsMoreOpen(false);
-            }}
-            className={`flex items-center gap-3 p-3 rounded-md border transition text-right cursor-pointer min-h-[52px] ${
-              activeTab === 'tickets'
-                ? 'border-rose-500/60 bg-rose-500/10 text-rose-300 font-bold'
-                : 'border-[#212835] bg-[#151B23] text-[#F0F4F8] hover:border-rose-500/40'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#2D3748] flex items-center justify-center text-rose-400">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs font-bold flex items-center justify-between">
-                <span>تیکت‌ها و تعهد 72 ساعته SLA</span>
-                {openTicketCount > 0 && (
-                  <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded">
-                    {openTicketCount}
-                  </span>
-                )}
-              </div>
-              <div className="text-[11px] text-[#9BA7B6] mt-0.5">
-                رهگیری شکایات و موارد اضطراری خدمات پس از فروش
-              </div>
-            </div>
-          </button>
-
-          {/* متریال و انبار */}
-          <button
-            type="button"
-            onClick={() => {
-              onSelectTab('materials');
-              setIsMoreOpen(false);
-            }}
-            className={`flex items-center gap-3 p-3 rounded-md border transition text-right cursor-pointer min-h-[52px] ${
-              activeTab === 'materials'
-                ? 'border-purple-500/60 bg-purple-500/10 text-purple-300 font-bold'
-                : 'border-[#212835] bg-[#151B23] text-[#F0F4F8] hover:border-purple-500/40'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#2D3748] flex items-center justify-center text-purple-400">
-              <Package className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs font-bold flex items-center justify-between">
-                <span>مرکز متریال و لجستیک انبار</span>
-                {pendingMaterialCount > 0 && (
-                  <span className="bg-purple-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded">
-                    {pendingMaterialCount}
-                  </span>
-                )}
-              </div>
-              <div className="text-[11px] text-[#9BA7B6] mt-0.5">
-                تامین، ارسال قطعات با پیک و وضعیت بسته‌بندی انبار
-              </div>
-            </div>
-          </button>
-
-          {/* پرسنل و اکیپ‌ها */}
-          <button
-            type="button"
-            onClick={() => {
-              onSelectTab('technicians');
-              setIsMoreOpen(false);
-            }}
-            className={`flex items-center gap-3 p-3 rounded-md border transition text-right cursor-pointer min-h-[52px] ${
-              activeTab === 'technicians'
-                ? 'border-[#C5A059]/60 bg-[#C5A059]/10 text-[#C5A059] font-bold'
-                : 'border-[#212835] bg-[#151B23] text-[#F0F4F8] hover:border-[#C5A059]/40'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#2D3748] flex items-center justify-center text-[#C5A059]">
-              <Users className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs font-bold">پرسنل و اکیپ‌ها</div>
-              <div className="text-[11px] text-[#9BA7B6] mt-0.5">
-                مدیریت نصابان، سرپرستان و ثبت اطلاعات اعضا
-              </div>
-            </div>
-          </button>
-
-          {/* تنظیمات */}
-          <button
-            type="button"
-            onClick={() => {
-              onSelectTab('settings');
-              setIsMoreOpen(false);
-            }}
-            className={`flex items-center gap-3 p-3 rounded-md border transition text-right cursor-pointer min-h-[52px] ${
-              activeTab === 'settings'
-                ? 'border-[#C5A059]/60 bg-[#C5A059]/10 text-[#C5A059] font-bold'
-                : 'border-[#212835] bg-[#151B23] text-[#F0F4F8] hover:border-[#C5A059]/40'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#2D3748] flex items-center justify-center text-[#C5A059]">
-              <Settings className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs font-bold">تنظیمات سیستم</div>
-              <div className="text-[11px] text-[#9BA7B6] mt-0.5">
-                پنجره دید تکنسین‌ها، چک‌لیست پیش‌فرض و همگام‌سازی
-              </div>
-            </div>
-          </button>
-
-          {/* میز فروش و رزرو لت */}
-          <button
-            type="button"
-            onClick={() => {
-              onSelectTab('sales');
-              setIsMoreOpen(false);
-            }}
-            className={`flex items-center gap-3 p-3 rounded-md border transition text-right cursor-pointer min-h-[52px] ${
-              activeTab === 'sales'
-                ? 'border-[#C5A059]/60 bg-[#C5A059]/10 text-[#C5A059] font-bold'
-                : 'border-[#212835] bg-[#151B23] text-[#F0F4F8] hover:border-[#C5A059]/40'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#2D3748] flex items-center justify-center text-[#C5A059]">
-              <Trophy className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs font-bold flex items-center justify-between">
-                <span>میز فروش و رزرو لت‌ها</span>
-                <span className="bg-[#C5A059]/20 text-[#E5CA8F] text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  ظرفیت ۴۰ لت
-                </span>
-              </div>
-              <div className="text-[11px] text-[#9BA7B6] mt-0.5">
-                ثبت پروژه، تقویم ۳ ماهه و لیدربورد رقابتی کارشناسان
-              </div>
-            </div>
-          </button>
-          {/* شناسنامه و سوابق جامع پروژه‌ها */}
-          <button
-            type="button"
-            onClick={() => {
-              onSelectTab('registry');
-              setIsMoreOpen(false);
-            }}
-            className={`flex items-center gap-3 p-3 rounded-md border transition text-right cursor-pointer min-h-[52px] ${
-              activeTab === 'registry'
-                ? 'border-[#C5A059]/60 bg-[#C5A059]/10 text-[#C5A059] font-bold'
-                : 'border-[#212835] bg-[#151B23] text-[#F0F4F8] hover:border-[#C5A059]/40'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-md bg-[#1C232D] border border-[#2D3748] flex items-center justify-center text-[#C5A059]">
-              <FileCheck2 className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs font-bold">شناسنامه و سوابق جامع پروژه‌ها</div>
-              <div className="text-[11px] text-[#9BA7B6] mt-0.5">
-                سوابق اجرایی، چاپ شناسنامه و بررسی لاگ‌های سیستمی
-              </div>
-            </div>
-          </button>
-        </div>
-      </Sheet>
+            ))}
+          </div>
+        </Sheet>
       )}
     </>
   );

@@ -52,7 +52,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   const colorClass = getAvatarColor(id || name);
 
   const sizeClasses = {
-    xs: 'w-6 h-6 text-[10px] rounded',
+    xs: 'w-6 h-6 text-[11px] rounded',
     sm: 'w-7 h-7 text-xs rounded',
     md: 'w-8 h-8 text-xs rounded-md',
     lg: 'w-10 h-10 text-sm rounded-md',
@@ -72,19 +72,19 @@ export const Avatar: React.FC<AvatarProps> = ({
       {/* Role indicator ring or dot */}
       {role === 'QC_MANAGER' && (
         <span
-          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#C1A056] border-2 border-white dark:border-[#121212] rounded-full"
+          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-brand border-2 border-line rounded-full"
           title="مسئول QC"
         />
       )}
       {role === 'SCHEDULING_COORDINATOR' && (
         <span
-          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-blue-500 border-2 border-white dark:border-[#121212] rounded-full"
+          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-blue-500 border-2 border-line rounded-full"
           title="مسئول هماهنگی و زمان‌بندی"
         />
       )}
       {role === 'LEAD_TECHNICIAN' && (
         <span
-          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-amber-500 border-2 border-white dark:border-[#121212] rounded-full"
+          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-amber-500 border-2 border-line rounded-full"
           title="سرپرست اکیپ"
         />
       )}

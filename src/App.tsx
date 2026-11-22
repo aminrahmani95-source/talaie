@@ -17,19 +17,35 @@ import {
   MaterialRequest,
   CustomerAcceptanceRecord,
   ProjectTechnicalHandover,
+  UserRole,
 } from './types';
 import { StorageService } from './utils/storage';
 import { TEST_USERS, DEFAULT_TEAMS, DEFAULT_TEAM_MEMBERS } from './utils/testUsers';
 import { SupabaseSyncService } from './utils/supabase';
+import { startSalesBookingSync } from './utils/salesBookingSync';
+import { setSalesCapacityConfig } from './utils/salesCapacity';
+import { mergeUsersList } from './utils/userMerge';
+import { getUserRoleLabel } from './utils/roleLabels';
+import { buildWarehouseReferralTicket } from './utils/ticketFactory';
+import { defaultTeamName, nextTeamCode } from './utils/teamNaming';
+import { getIncompleteActivitiesSummary } from './utils/planProgress';
+import { buildActionQueue } from './utils/actionQueue';
+import { useNotificationWatcher } from './hooks/useNotificationWatcher';
+import { NOTIFICATION_OPEN_TAB_EVENT, markLocalChange } from './utils/notifications';
+import { NotificationPrompt } from './components/layout/NotificationBell';
+import { useTheme } from './hooks/useTheme';
+import { useLatestRef } from './hooks/useLatestRef';
+import { OfflineBanner } from './components/layout/OfflineBanner';
+import { SplashScreen } from './components/layout/SplashScreen';
+import { ImpersonationBanner } from './components/layout/ImpersonationBanner';
+import { computeNavCounts } from './utils/navCounts';
 import { Outbox, OutboxMutation, OfflineQueue } from './utils/offlineQueue';
 import {
   validateProjectPatchRoleGuards,
   validateTicketRoleGuards,
   validateEvaluationRoleGuards,
   validateProjectDeleteRoleGuards,
-  validateCeoRegistryAccess,
   isValidStatusTransition,
-  isHandoverGatePassed,
 } from './utils/roleGuards';
 import {
   createConfirmTransferReceiptPayload,
@@ -45,179 +61,47 @@ import {
 import { createDefectResolutionPayload } from './utils/qcWorkflow';
 import { getDisplayName } from './utils/technicianName';
 import { localDateKey, toPersianDigits } from './utils/jalali';
-import { LOGO_GOLD } from './assets/logo';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
 import { TechnicianDashboard } from './components/technician/TechnicianDashboard';
 import { Toast, ToastMessage, TOAST_EVENT } from './components/Toast';
-import { isAwaitingQc } from './utils/qcWorkflow';
-import { Eye, LogOut } from 'lucide-react';
 import { Sidebar } from './components/navigation/Sidebar';
 import { BottomNav, ManagerTab } from './components/navigation/BottomNav';
 import { DashboardSkeleton } from './components/ui/DashboardSkeleton';
 import type { ProjectFormSaveData } from './components/admin/ProjectFormModal';
 
-// Code-split Manager Screens so technicians never download manager JS
-const OperationsControlCenter = React.lazy(() =>
-  import('./components/admin/OperationsControlCenter').then((m) => ({ default: m.OperationsControlCenter }))
-);
-const MonthPlanner = React.lazy(() =>
-  import('./components/admin/MonthPlanner').then((m) => ({ default: m.MonthPlanner }))
-);
-const QcDesk = React.lazy(() =>
-  import('./components/admin/QcDesk').then((m) => ({ default: m.QcDesk }))
-);
-const TicketCenter = React.lazy(() =>
-  import('./components/admin/TicketCenter').then((m) => ({ default: m.TicketCenter }))
-);
-const MaterialCenter = React.lazy(() =>
-  import('./components/admin/MaterialCenter').then((m) => ({ default: m.MaterialCenter }))
-);
-const TechniciansManager = React.lazy(() =>
-  import('./components/admin/TechniciansManager').then((m) => ({ default: m.TechniciansManager }))
-);
-const SettingsView = React.lazy(() =>
-  import('./components/admin/SettingsView').then((m) => ({ default: m.SettingsView }))
-);
-const StuckProjectsDesk = React.lazy(() =>
-  import('./components/admin/StuckProjectsDesk').then((m) => ({ default: m.StuckProjectsDesk }))
-);
-const PreInstallationModal = React.lazy(() =>
-  import('./components/admin/PreInstallationModal').then((m) => ({ default: m.PreInstallationModal }))
-);
-const PersonnelEvaluationModal = React.lazy(() =>
-  import('./components/admin/PersonnelEvaluationModal').then((m) => ({ default: m.PersonnelEvaluationModal }))
-);
-const FailedOperationsModal = React.lazy(() =>
-  import('./components/admin/FailedOperationsModal').then((m) => ({ default: m.FailedOperationsModal }))
-);
-const PendingOperationsModal = React.lazy(() =>
-  import('./components/admin/PendingOperationsModal').then((m) => ({ default: m.PendingOperationsModal }))
-);
-const CeoMasterRegistry = React.lazy(() =>
-  import('./components/ceo/CeoMasterRegistry').then((m) => ({ default: m.CeoMasterRegistry }))
-);
-const ProjectDossierModal = React.lazy(() =>
-  import('./components/ceo/ProjectDossierModal').then((m) => ({ default: m.ProjectDossierModal }))
-);
-const ProjectPassportPrint = React.lazy(() =>
-  import('./components/common/ProjectPassportPrint').then((m) => ({ default: m.ProjectPassportPrint }))
-);
-const MeasurementDashboard = React.lazy(() =>
-  import('./components/measurement/MeasurementDashboard').then((m) => ({ default: m.MeasurementDashboard }))
-);
-const WarehouseDesk = React.lazy(() =>
-  import('./components/warehouse/WarehouseDesk').then((m) => ({ default: m.WarehouseDesk }))
-);
-const SalesPortal = React.lazy(() =>
-  import('./components/sales/SalesPortal').then((m) => ({ default: m.SalesPortal }))
-);
+import {
+  OperationsControlCenter,
+  MonthPlanner,
+  QcDesk,
+  TicketCenter,
+  MaterialCenter,
+  TechniciansManager,
+  SettingsView,
+  StuckProjectsDesk,
+  PreInstallationModal,
+  PersonnelEvaluationModal,
+  FailedOperationsModal,
+  PendingOperationsModal,
+  CeoMasterRegistry,
+  ProjectDossierModal,
+  ProjectPassportPrint,
+  MeasurementDashboard,
+  SalesPortal,
+  ProjectFormModal,
+  ProposalViewerModal,
+  TicketModal,
+  MaterialRequestModal,
+  ToolChecklistDrawer,
+  ReportCompletionModal,
+  HandoverCertificateModal,
+  ReportStuckModal,
+  DailyLogModal,
+  ProjectManagerSheet,
+} from './app/lazyScreens';
 
-// Code-split Modals loaded on demand
-const ProjectFormModal = React.lazy(() =>
-  import('./components/admin/ProjectFormModal').then((m) => ({ default: m.ProjectFormModal }))
-);
-const ProposalViewerModal = React.lazy(() =>
-  import('./components/ProposalViewerModal').then((m) => ({ default: m.ProposalViewerModal }))
-);
-const TicketModal = React.lazy(() =>
-  import('./components/TicketModal').then((m) => ({ default: m.TicketModal }))
-);
-const MaterialRequestModal = React.lazy(() =>
-  import('./components/technician/MaterialRequestModal').then((m) => ({ default: m.MaterialRequestModal }))
-);
-const ToolChecklistDrawer = React.lazy(() =>
-  import('./components/technician/ToolChecklistDrawer').then((m) => ({ default: m.ToolChecklistDrawer }))
-);
-const ReportCompletionModal = React.lazy(() =>
-  import('./components/technician/ReportCompletionModal').then((m) => ({ default: m.ReportCompletionModal }))
-);
-const HandoverCertificateModal = React.lazy(() =>
-  import('./components/HandoverCertificateModal').then((m) => ({ default: m.HandoverCertificateModal }))
-);
-const ReportStuckModal = React.lazy(() =>
-  import('./components/technician/ReportStuckModal').then((m) => ({ default: m.ReportStuckModal }))
-);
-const DailyLogModal = React.lazy(() =>
-  import('./components/technician/DailyLogModal').then((m) => ({ default: m.DailyLogModal }))
-);
-const ProjectManagerSheet = React.lazy(() =>
-  import('./components/admin/ProjectManagerSheet').then((m) => ({ default: m.ProjectManagerSheet }))
-);
-
-function mergeUsersList(localUsers: User[], cloudUsers: User[]): User[] {
-  const deletedIds = StorageService.getDeletedUserIds();
-  const map = new Map<string, User>();
-  for (const u of localUsers) {
-    if (u && u.id && !deletedIds.has(u.id)) {
-      map.set(u.id, { ...u });
-    }
-  }
-
-  for (const cu of cloudUsers) {
-    if (!cu || !cu.id) continue;
-    // CRITICAL: Do NOT resurrect users from cloud if they were deleted locally
-    if (deletedIds.has(cu.id)) continue;
-
-    const existingById = map.get(cu.id);
-    const existingByPhone = Array.from(map.values()).find(
-      (u) =>
-        u.phone &&
-        cu.phone &&
-        u.phone.replace(/\D/g, '') === cu.phone.replace(/\D/g, '')
-    );
-    const target = existingById || existingByPhone;
-
-    if (target) {
-      // Local edits are authoritative unless cloud record has a strictly newer updatedAt
-      const targetHasNewerEdit = target.updatedAt && (!cu.updatedAt || target.updatedAt >= cu.updatedAt);
-
-      if (targetHasNewerEdit) {
-        map.set(target.id, {
-          ...cu,
-          ...target,
-        });
-      } else {
-        map.set(target.id, {
-          ...cu,
-          ...target,
-          name: target.name || cu.name,
-          phone: target.phone || cu.phone,
-          role: target.role || cu.role,
-          avatar: target.avatar || cu.avatar,
-          active: target.active !== undefined ? target.active : (cu.active !== undefined ? cu.active : true),
-        });
-      }
-    } else {
-      map.set(cu.id, { ...cu });
-    }
-  }
-
-  return Array.from(map.values()).filter((u) => !deletedIds.has(u.id));
-}
-
-export function getUserRoleLabel(role?: string): string {
-  switch (role) {
-    case 'CEO':
-      return 'مدیرعامل';
-    case 'QC_MANAGER':
-      return 'مدیر اپ و QC';
-    case 'MEASUREMENT_LEAD':
-      return 'مسئول متراژ و تایید بستر';
-    case 'WAREHOUSE':
-      return 'مسئول انبار و تدارکات';
-    case 'SCHEDULING_COORDINATOR':
-      return 'مسئول هماهنگی و زمان‌بندی';
-    case 'SALES_REP':
-      return 'کارشناس فروش و رزرو لت';
-    case 'LEAD_TECHNICIAN':
-      return 'سرپرست اکیپ نصب';
-    case 'TECHNICIAN':
-      return 'تکنسین نصب';
-    default:
-      return role || 'کاربر';
-  }
-}
+// Re-exported for backward compatibility (tests import it from App)
+export { getUserRoleLabel } from './utils/roleLabels';
 
 export const App: React.FC = () => {
   // Session & Authentication via Supabase Auth
@@ -337,15 +221,18 @@ export const App: React.FC = () => {
   }, [teams, teamMembers, users]);
 
   // Keep a synchronous ref of projects for predictable state updates in handlers
-  const projectsRef = useRef<Project[]>(projects);
-  useEffect(() => {
-    projectsRef.current = projects;
-  }, [projects]);
+  const projectsRef = useLatestRef(projects);
 
-  const materialRequestsRef = useRef<MaterialRequest[]>(materialRequests);
-  useEffect(() => {
-    materialRequestsRef.current = materialRequests;
-  }, [materialRequests]);
+  // Real warehouse person for auto-referred tickets (previously a hardcoded placeholder user id)
+  const warehouseAssignee = useMemo(
+    () => users.find((u) => u.role === 'WAREHOUSE' && u.active !== false) || null,
+    [users]
+  );
+
+  // Synchronous ref of tickets (used by handlers that append tickets after async commits)
+  const ticketsRef = useLatestRef(tickets);
+
+  const materialRequestsRef = useLatestRef(materialRequests);
 
   // Request sequence tracker to drop stale server responses
   const fetchSeqRef = useRef<number>(0);
@@ -514,6 +401,14 @@ export const App: React.FC = () => {
 
     loadCloudData();
 
+    // On slow/filtered connections the initial fetch can hang for a long time. Instead of showing
+    // "syncing…" forever, switch to the honest offline banner after a while; a later successful
+    // fetch flips it back automatically.
+    const slowSyncTimer = window.setTimeout(() => {
+      if (sessionEpochRef.current !== capturedEpoch) return;
+      if (!isSyncedWithServerRef.current) setIsOfflineMode(true);
+    }, 15000);
+
     // Re-try fetching cloud data on online event and trigger offline sync
     const handleOnline = () => {
       if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
@@ -554,22 +449,24 @@ export const App: React.FC = () => {
           return next;
         });
       },
-      onUpdate: (updatedProject) => {
+      onUpdate: async (cloudProject) => {
         if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
+        // Our own unsent edits are re-applied on top of the server row. The old rule
+        // ("ignore the server if my copy has a later timestamp") compared clocks of two
+        // different phones, so a phone whose clock ran ahead stopped receiving updates.
+        let updatedProject = cloudProject;
+        try {
+          const [merged] = await Outbox.applyPendingToProjects([cloudProject], undefined, capturedUserId);
+          if (merged) updatedProject = merged;
+        } catch {
+          // no outbox available: use the server row as-is
+        }
+        if (sessionEpochRef.current !== capturedEpoch) return;
         setProjects((prev) => {
-          const existing = prev.find((p) => p.id === updatedProject.id);
-          if (!existing) {
-            const next = [updatedProject, ...prev];
-            projectsRef.current = next;
-            return next;
-          }
-          // Conflict resolution: Ignore cloud update if local update is newer
-          const localTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-          const cloudTime = updatedProject.updatedAt ? new Date(updatedProject.updatedAt).getTime() : 0;
-          if (localTime > cloudTime) {
-            return prev;
-          }
-          const next = prev.map((p) => (p.id === updatedProject.id ? updatedProject : p));
+          const exists = prev.some((p) => p.id === updatedProject.id);
+          const next = exists
+            ? prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
+            : [updatedProject, ...prev];
           projectsRef.current = next;
           return next;
         });
@@ -594,7 +491,12 @@ export const App: React.FC = () => {
       },
       onUpdate: (updatedTicket) => {
         if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
-        setTickets((prev) => prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)));
+        // a ticket this device didn't have yet (e.g. created while it was offline) is added, not dropped
+        setTickets((prev) =>
+          prev.some((t) => t.id === updatedTicket.id)
+            ? prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
+            : [updatedTicket, ...prev],
+        );
       },
       onDelete: (deletedId) => {
         if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
@@ -653,7 +555,34 @@ export const App: React.FC = () => {
       }
     });
 
+    const unsubMaterials = SupabaseSyncService.subscribeMaterialRequests(async () => {
+      if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
+      try {
+        const cloud = await SupabaseSyncService.fetchMaterialRequests();
+        const merged = await Outbox.applyPendingToMaterialRequests(cloud, undefined, capturedUserId);
+        if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
+        setMaterialRequests(merged);
+      } catch (err) {
+        console.warn('Realtime material requests refresh failed:', err);
+      }
+    });
+
+    // Phones suspend the realtime connection while the app is in the background, so
+    // changes made meanwhile were missed until a manual reload. Catch up on return.
+    let lastCatchUp = Date.now();
+    const handleVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
+      if (Date.now() - lastCatchUp < 20000) return;
+      lastCatchUp = Date.now();
+      loadCloudData();
+    };
+    document.addEventListener('visibilitychange', handleVisible);
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisible);
+      unsubMaterials();
+      window.clearTimeout(slowSyncTimer);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('talaie-trigger-offline-sync', handleSyncTrigger);
       window.removeEventListener('talaie-queue-lease-released', handleLeaseReleased);
@@ -667,8 +596,62 @@ export const App: React.FC = () => {
     };
   }, [currentUser?.id, authChecking]);
 
+  // Sales capacity bookings: sync local cache <-> Supabase so every device sees the same calendar
+  useEffect(() => {
+    if (!currentUser || authChecking) return;
+    if (!['SALES_REP', 'QC_MANAGER', 'CEO', 'SCHEDULING_COORDINATOR'].includes(currentUser.role)) return;
+    return startSalesBookingSync();
+  }, [currentUser?.id, currentUser?.role, authChecking]);
+
+  // Installation capacity (teams × laths) set by the QC manager drives the sales calendar
+  useEffect(() => {
+    const teamNames: Record<string, string> = {};
+    for (const t of teamsWithMembers) {
+      // sales capacity identifies teams as TEAM_1..n, which is the team's code (server ids are uuids)
+      const key = t.code || t.id;
+      if (key && t.name) teamNames[key] = t.name;
+    }
+    setSalesCapacityConfig({
+      teamCount: settings.installationTeamCount,
+      lathsPerTeam: settings.lathsPerTeamPerDay,
+      teamNames,
+      workingDays: settings.workingDaysPerWeek,
+    });
+  }, [settings.installationTeamCount, settings.lathsPerTeamPerDay, settings.workingDaysPerWeek, teamsWithMembers]);
+
   // Navigation tab for QC Manager / Coordinator - default to Operational Command Center ('control')
   const [activeTab, setActiveTab] = useState<ManagerTab>('control');
+
+  // Each section opens at the top (otherwise the previous page's scroll position was kept)
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [activeTab]);
+
+  // Phone notifications: watch every data change for what concerns this person's role
+  const notifySnapshot = useMemo(
+    () => ({ projects, tickets, materialRequests, scheduleChangeRequests }),
+    [projects, tickets, materialRequests, scheduleChangeRequests],
+  );
+  useNotificationWatcher(notifySnapshot, currentUser, isSyncedWithServer);
+
+  // Tapping a notification (in the bell list or on the phone) opens the related section
+  useEffect(() => {
+    const open = (e: Event) => {
+      const tab = (e as CustomEvent<string>).detail;
+      if (tab && currentUser && ['QC_MANAGER', 'SCHEDULING_COORDINATOR'].includes(currentUser.role)) {
+        setActiveTab(tab as ManagerTab);
+      }
+    };
+    window.addEventListener(NOTIFICATION_OPEN_TAB_EVENT, open);
+    // the app was closed and opened from a notification: ./#tab=qc
+    const fromHash = /^#tab=([a-z]+)$/.exec(window.location.hash);
+    if (fromHash && currentUser) {
+      open(new CustomEvent(NOTIFICATION_OPEN_TAB_EVENT, { detail: fromHash[1] }));
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+    return () => window.removeEventListener(NOTIFICATION_OPEN_TAB_EVENT, open);
+  }, [currentUser]);
+
 
   // CEO navigation restriction: CEO only accesses 'registry' (داشبورد مدیر کل) and 'planner' (دیدن برنامه)
   useEffect(() => {
@@ -677,28 +660,8 @@ export const App: React.FC = () => {
     }
   }, [currentUser?.role, activeTab]);
 
-  // Dark Mode state with persistence and system detection - default to Dark Graphite foundation
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('talaie_theme');
-    if (saved) return saved === 'dark';
-    if (typeof window !== 'undefined') {
-      const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-      if (prefersLight) return false;
-    }
-    return true;
-  });
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('talaie_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('talaie_theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  const handleToggleDarkMode = () => setIsDarkMode((prev) => !prev);
+  // Theme (dark by default; light only when chosen) — see hooks/useTheme
+  const { isDarkMode, toggleTheme: handleToggleDarkMode } = useTheme();
 
   // Modals
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
@@ -808,7 +771,7 @@ export const App: React.FC = () => {
           }
         }
       } else if (mutation.type === 'CREATE_PROJECT') {
-        if (currentUser.role !== 'SCHEDULING_COORDINATOR' && currentUser.role !== 'QC_MANAGER') {
+        if (currentUser.role !== 'SCHEDULING_COORDINATOR') {
           showToast('error', 'تنها مدیر ارشد QC یا مسئول هماهنگی مجاز به ثبت پروژه است.');
           return false;
         }
@@ -885,6 +848,8 @@ export const App: React.FC = () => {
     }
 
     try {
+      // this device's own change must not come back as a notification
+      markLocalChange(mutation.orderingKey);
       await Outbox.commit(mutation, currentUser.id, onOptimisticApply);
       return true;
     } catch (err: any) {
@@ -897,8 +862,16 @@ export const App: React.FC = () => {
   // Project handlers
   const handleSaveProject = async (data: ProjectFormSaveData) => {
     if (!currentUser) return;
-    if (!isSyncedWithServer) {
-      showToast('warning', 'اطلاعات در حال دریافت از سرور است، لطفاً شکیبا باشید.');
+    // New missions can be queued offline (they have their own id, so nothing can be overwritten).
+    // Edits still wait for a server sync to avoid clobbering changes made on other devices.
+    const canQueueOffline = data.type === 'CREATE_PROJECT' && isOfflineMode;
+    if (!isSyncedWithServer && !canQueueOffline) {
+      showToast(
+        'warning',
+        isOfflineMode
+          ? 'ویرایش پروژه‌ها بدون اتصال به سرور ممکن نیست. پس از وصل شدن اینترنت دوباره تلاش کنید.'
+          : 'اطلاعات در حال دریافت از سرور است، لطفاً چند لحظه صبر کنید.'
+      );
       return;
     }
 
@@ -919,7 +892,12 @@ export const App: React.FC = () => {
           setProjectFormInitialData(null);
         }
       );
-      showToast('success', 'پروژه جدید با موفقیت ثبت شد.');
+      showToast(
+        'success',
+        canQueueOffline
+          ? 'مأموریت ذخیره شد و پس از اتصال به اینترنت به سرور ارسال می‌شود.'
+          : 'پروژه جدید با موفقیت ثبت شد.'
+      );
     } else {
       const { id, patch } = data;
       if (Object.keys(patch).length === 0) {
@@ -1003,6 +981,7 @@ export const App: React.FC = () => {
     projectId: string,
     options: { reason: string; deleteTicketsAndFiles: boolean }
   ) => {
+    if (!currentUser) return;
     try {
       validateProjectDeleteRoleGuards(currentUser);
     } catch (err: any) {
@@ -1227,6 +1206,33 @@ export const App: React.FC = () => {
       );
     }
 
+    // «همه اقلام امروز نصب شد»: the remaining units are recorded as today's work,
+    // otherwise the card and the dossier keep showing e.g. «0 / 8 لت» for a finished job.
+    const remaining = getIncompleteActivitiesSummary(completionModalProject);
+    const finalDayLogs: DailyLog[] =
+      !completionData.isExceptionalCompletion && remaining.hasIncomplete
+        ? [
+            {
+              id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `log-${Date.now()}`,
+              date: localDateKey(),
+              activityProgress: remaining.remainingItems.map((item) => ({
+                activityId: item.activityId,
+                activityTitle: item.title,
+                completedQuantity: item.remainingQuantity,
+                unit: item.unit,
+              })),
+              note: 'اتمام کار: نصب اقلام باقیمانده در روز آخر',
+              photos: [],
+              supervisorConfirmed: true,
+              supervisorConfirmedBy: currentUser.name,
+              supervisorConfirmedAt: nowIso,
+              byUserId: currentUser.id,
+              byUserName: currentUser.name,
+              createdAt: nowIso,
+            },
+          ]
+        : [];
+
     const isUnavailable = completionData.handoverSigneeType === 'UNAVAILABLE_EXEMPT';
     const customerAcceptance: CustomerAcceptanceRecord = {
       status: isUnavailable ? 'UNAVAILABLE' : 'ACCEPTED',
@@ -1261,6 +1267,9 @@ export const App: React.FC = () => {
       completedAt: nowIso,
       updatedAt: nowIso,
       workSessions: updatedSessions,
+      ...(finalDayLogs.length > 0
+        ? { dailyLogs: [...(completionModalProject.dailyLogs || []), ...finalDayLogs] }
+        : {}),
     };
 
     await commit(
@@ -1501,39 +1510,17 @@ export const App: React.FC = () => {
       const partsText = handoverPayload?.requiredParts
         ? `کسری قطعه سر پروژه: ${handoverPayload.requiredParts}`
         : incident.description;
-      const nowIso = new Date().toISOString();
-      const autoTicket: Ticket = {
-        id: `ticket-stuck-${Date.now()}`,
-        projectId: projectId,
-        projectCode: current?.code || 'بدون کد',
-        projectTitle: current?.title || 'پروژه متوقف',
-        assignedRole: 'WAREHOUSE',
-        assignedDepartment: 'انبار و تدارکات',
-        assignedTeamName: 'انبار مرکزی و لجستیک',
-        assignedUserId: 'wh-davood',
-        assignedUserName: 'داوود حسینی (مسئول انبار)',
-        category: 'HARDWARE_FAULT',
+      const autoTicket = buildWarehouseReferralTicket({
+        idPrefix: 'ticket-stuck',
+        projectId,
+        project: current,
         description: partsText,
-        isBlocking: true,
         blockingReason: `توقف کار در پروژه ${current?.code || current?.title} به علت کسری قطعات: ${partsText}`,
-        reportedByUserId: currentUser.id,
-        reportedByUserName: getDisplayName(currentUser.name),
-        status: 'OPEN',
-        createdAt: nowIso,
         referralNote: `ارجاع خودکار سیستمی ناشی از اعلام توقف کار سر پروژه: ${partsText}`,
-        referredAt: nowIso,
-        referredByUserName: getDisplayName(currentUser.name),
-        actionHistory: [
-          {
-            id: `act-${Date.now()}`,
-            timestamp: nowIso,
-            action: 'REFERRED_TO_WAREHOUSE',
-            byUserId: currentUser.id,
-            byUserName: getDisplayName(currentUser.name),
-            note: `اعلام توقف کار و ارسال مستقیم به کارتابل انبار: ${partsText}`,
-          },
-        ],
-      };
+        historyNote: `اعلام توقف کار و ارسال مستقیم به کارتابل انبار: ${partsText}`,
+        reporter: currentUser,
+        warehouseAssignee,
+      });
 
       await commit(
         {
@@ -1555,39 +1542,16 @@ export const App: React.FC = () => {
   // Refer stuck project to warehouse from StuckProjectsDesk
   const handleReferProjectToWarehouse = async (project: Project, note: string) => {
     if (!currentUser) return;
-    const nowIso = new Date().toISOString();
-    const urgentTicket: Ticket = {
-      id: `ticket-referral-${Date.now()}`,
+    const urgentTicket = buildWarehouseReferralTicket({
       projectId: project.id,
-      projectCode: project.code || 'بدون کد',
-      projectTitle: project.title,
-      assignedRole: 'WAREHOUSE',
-      assignedDepartment: 'انبار و تدارکات',
-      assignedTeamName: 'انبار مرکزی و لجستیک',
-      assignedUserId: 'wh-davood',
-      assignedUserName: 'داوود حسینی (مسئول انبار)',
-      category: 'HARDWARE_FAULT',
+      project,
       description: note,
-      isBlocking: true,
       blockingReason: `ارجاع توقف پروژه ${project.code || project.title} به انبار: ${note}`,
-      reportedByUserId: currentUser.id,
-      reportedByUserName: getDisplayName(currentUser.name),
-      status: 'OPEN',
-      createdAt: nowIso,
       referralNote: note,
-      referredAt: nowIso,
-      referredByUserName: getDisplayName(currentUser.name),
-      actionHistory: [
-        {
-          id: `act-${Date.now()}`,
-          timestamp: nowIso,
-          action: 'REFERRED_TO_WAREHOUSE',
-          byUserId: currentUser.id,
-          byUserName: getDisplayName(currentUser.name),
-          note: `دستور مدیر فنی به انبار: ${note}`,
-        },
-      ],
-    };
+      historyNote: `دستور مدیر فنی به انبار: ${note}`,
+      reporter: currentUser,
+      warehouseAssignee,
+    });
 
     await commit(
       {
@@ -2077,10 +2041,7 @@ export const App: React.FC = () => {
             ? {
                 ...t,
                 supervisorId: undefined,
-                name:
-                  t.code === 'TEAM_1'
-                    ? 'اکیپ نصب ۱'
-                    : 'اکیپ نصب ۲',
+                name: defaultTeamName(t.code),
               }
             : t
         );
@@ -2095,10 +2056,7 @@ export const App: React.FC = () => {
             ? {
                 ...t,
                 supervisorId: undefined,
-                name:
-                  t.code === 'TEAM_1'
-                    ? 'اکیپ نصب ۱'
-                    : 'اکیپ نصب ۲',
+                name: defaultTeamName(t.code),
               }
             : t
         );
@@ -2128,7 +2086,6 @@ export const App: React.FC = () => {
 
     if (currentUser && currentUser.id === effectiveUser.id) {
       setCurrentUser(effectiveUser);
-      StorageService.saveCurrentUser(effectiveUser);
     }
     showToast('success', `اطلاعات و نقش ${getDisplayName(effectiveUser.name)} با موفقیت ثبت و ذخیره شد.`);
   };
@@ -2159,7 +2116,7 @@ export const App: React.FC = () => {
     setTeams((prevTeams) => {
       const updatedTeams = prevTeams.map((t) =>
         t.supervisorId === userId
-          ? { ...t, supervisorId: undefined, name: `اکیپ نصب (${t.code})` }
+          ? { ...t, supervisorId: undefined, name: defaultTeamName(t.code) }
           : t
       );
       StorageService.saveTeams(updatedTeams);
@@ -2167,15 +2124,70 @@ export const App: React.FC = () => {
     });
   };
 
+  const handleCreateTeam = async (): Promise<{ success: boolean; error?: string }> => {
+    const code = nextTeamCode(teams);
+    let name = defaultTeamName(code);
+    if (teams.some((t) => t.name === name)) name = `${name} (${code})`;
+    let created: InstallationTeam = {
+      id: code,
+      name,
+      code,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    if (SupabaseSyncService.getClient()) {
+      const res = await SupabaseSyncService.createInstallationTeam(name, code);
+      if (!res.success || !res.data) {
+        showToast('error', `اکیپ ساخته نشد: ${res.error || 'خطای نامشخص'}`);
+        return { success: false, error: res.error };
+      }
+      created = res.data;
+    }
+    setTeams((prev) => {
+      const updated = [...prev, created].sort((a, b) =>
+        String(a.code).localeCompare(String(b.code), undefined, { numeric: true }),
+      );
+      StorageService.saveTeams(updated);
+      return updated;
+    });
+    showToast('success', `«${created.name}» ساخته شد. اعضا را از همین کارت اضافه کنید.`);
+    return { success: true };
+  };
+
+  const handleDeleteTeam = async (teamId: string): Promise<{ success: boolean; error?: string }> => {
+    if (teamMembers.some((m) => m.teamId === teamId)) {
+      const error = 'اول اعضای این اکیپ را خارج کنید.';
+      showToast('error', error);
+      return { success: false, error };
+    }
+    if (SupabaseSyncService.getClient()) {
+      const res = await SupabaseSyncService.deleteInstallationTeam(teamId);
+      if (!res.success) {
+        showToast('error', `اکیپ حذف نشد: ${res.error || 'خطای نامشخص'}`);
+        return { success: false, error: res.error };
+      }
+    }
+    setTeams((prev) => {
+      const updated = prev.filter((t) => t.id !== teamId);
+      StorageService.saveTeams(updated);
+      return updated;
+    });
+    showToast('success', 'اکیپ حذف شد.');
+    return { success: true };
+  };
+
   const handleAssignTeamMember = async (
     teamId: string,
     userId: string,
     roleInTeam: 'LEAD' | 'TECHNICIAN'
   ) => {
-    try {
-      await SupabaseSyncService.adminAssignTeamMember(teamId, userId, roleInTeam);
-    } catch (e) {
-      console.warn('Supabase adminAssignTeamMember background sync:', e);
+    if (SupabaseSyncService.getClient()) {
+      const res = await SupabaseSyncService.adminAssignTeamMember(teamId, userId, roleInTeam);
+      if (!res.success) {
+        const error = `انتساب روی سرور انجام نشد: ${res.error || 'خطای نامشخص'}`;
+        showToast('error', error);
+        return { success: false, error };
+      }
     }
 
     setTeamMembers((prev) => {
@@ -2239,10 +2251,13 @@ export const App: React.FC = () => {
   };
 
   const handleRemoveTeamMember = async (userId: string) => {
-    try {
-      await SupabaseSyncService.adminRemoveTeamMember(userId);
-    } catch (e) {
-      console.warn('Supabase adminRemoveTeamMember background sync:', e);
+    if (SupabaseSyncService.getClient()) {
+      const res = await SupabaseSyncService.adminRemoveTeamMember(userId);
+      if (!res.success) {
+        const error = `حذف از اکیپ روی سرور انجام نشد: ${res.error || 'خطای نامشخص'}`;
+        showToast('error', error);
+        return { success: false, error };
+      }
     }
 
     setTeamMembers((prev) => {
@@ -2257,7 +2272,7 @@ export const App: React.FC = () => {
         setTeams((prevTeams) => {
           const updatedTeams = prevTeams.map((t) =>
             t.id === removedMember.teamId && t.supervisorId === userId
-              ? { ...t, supervisorId: undefined, name: `اکیپ نصب (${t.code})` }
+              ? { ...t, supervisorId: undefined, name: defaultTeamName(t.code) }
               : t
           );
           StorageService.saveTeams(updatedTeams);
@@ -2414,23 +2429,7 @@ export const App: React.FC = () => {
 
   // Splash screen while checking persistent session
   if (authChecking) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-[#121212] text-[#C1A056] p-4">
-        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
-          <div className="w-16 h-16 rounded-3xl bg-[#1A1A1A] border-2 border-[#C1A056] flex items-center justify-center p-3 shadow-2xl">
-            <img
-              src={LOGO_GOLD}
-              alt="نشان گالری طلایی"
-              className="w-full h-full object-contain animate-pulse"
-            />
-          </div>
-          <div className="text-center">
-            <div className="text-base font-black text-white">سامانه گالری طلایی</div>
-            <div className="text-xs text-[#C1A056] mt-1">در حال بررسی نشست کاربری...</div>
-          </div>
-        </div>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   // If no user is authenticated, render the dedicated secure login page
@@ -2445,29 +2444,13 @@ export const App: React.FC = () => {
     );
   }
 
-  // Counters for alerts with synchronized QC status logic
-  const openTicketCount = tickets.filter((t) => t.status === 'OPEN').length;
-  const isStuckOpen = (p: Project) => {
-    if (p.status === 'STUCK') return true;
-    const latest = (p.stuckIncidents && p.stuckIncidents.length > 0)
-      ? p.stuckIncidents[p.stuckIncidents.length - 1]
-      : p.stuckIncident;
-    return Boolean(latest && latest.resolutionStatus !== 'RESOLVED');
-  };
-  const openStuckCount = projects.filter(isStuckOpen).length;
-  const pendingQcCount = projects.filter(isAwaitingQc).length;
-
-  const openWarehouseTicketCount = tickets.filter(
-    (t) => t.status === 'OPEN' && (t.assignedRole === 'WAREHOUSE' || Boolean(t.referralNote))
-  ).length;
-
-  const pendingMaterialCount =
-    materialRequests.filter(
-      (r) =>
-        r.status === 'SUBMITTED' ||
-        r.status === 'IN_PROCUREMENT' ||
-        (r.dispatches && r.dispatches.some((d) => !d.receivedAtSiteConfirmed))
-    ).length + openWarehouseTicketCount;
+  // Badge counters (single source for sidebar, bottom bar and dashboard)
+  const { openTicketCount, openStuckCount, pendingQcCount, pendingMaterialCount } = computeNavCounts(
+    projects,
+    tickets,
+    materialRequests
+  );
+  const actionQueueCount = buildActionQueue(projects, tickets).length;
 
   const isQcManager = currentUser.role === 'QC_MANAGER';
   const isCoordinator = currentUser.role === 'SCHEDULING_COORDINATOR';
@@ -2475,44 +2458,26 @@ export const App: React.FC = () => {
   const isManagerOrCoordinator = isQcManager || isCoordinator || isCeo;
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#F8F9FA] dark:bg-[#0D1117] text-[#1A1F26] dark:text-[#F0F4F8] flex flex-col font-sans selection:bg-[#C5A059] selection:text-[#0D1117] transition-colors duration-150">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-canvas text-ink flex flex-col font-sans selection:bg-brand selection:text-on-brand transition-colors duration-150">
       {/* Skip to Content for Accessibility */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:right-3 focus:z-50 focus:px-3.5 focus:py-2 focus:bg-[#C5A059] focus:text-[#0D1117] focus:font-black focus:rounded-md focus:shadow-xl focus:ring-1 focus:ring-[#C5A059]"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:right-3 focus:z-50 focus:px-3.5 focus:py-2 focus:bg-brand focus:text-on-brand focus:font-black focus:rounded-md focus:shadow-xl focus:ring-1 focus:ring-brand"
       >
         پرش به محتوای اصلی صفحه
       </a>
 
-      {/* CEO Impersonation Alert Banner */}
-      {impersonatorCeo && (
-        <aside
-          aria-label="حالت بازرسی هویت فعال است"
-          className="sticky top-0 z-50 bg-[#C5A059] text-[#0D1117] px-3 sm:px-6 py-2.5 shadow-md border-b border-[#0D1117]/20 flex items-center justify-between gap-3 text-xs font-bold transition-all"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="p-1 rounded-full bg-[#0D1117] text-[#C5A059] shrink-0">
-              <Eye className="w-3.5 h-3.5" />
-            </span>
-            <span className="truncate">
-              حالت بازرسی فعال: در حال مشاهده سامانه به عنوان <strong className="underline underline-offset-2">{getDisplayName(currentUser.name)}</strong> ({getUserRoleLabel(currentUser.role)})
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={handleExitImpersonation}
-            className="px-3 py-1.5 bg-[#0D1117] hover:bg-[#1C232D] text-[#C5A059] rounded-lg text-xs font-black transition flex items-center gap-1.5 shrink-0 shadow-xs active:scale-95 cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>بازگشت به حساب {getUserRoleLabel(impersonatorCeo.role)}</span>
-          </button>
-        </aside>
-      )}
+      <ImpersonationBanner
+        viewedUser={currentUser}
+        impersonator={impersonatorCeo}
+        onExit={handleExitImpersonation}
+      />
 
       {/* App Header */}
       <Header
         currentUser={currentUser}
         isOfflineMode={isOfflineMode}
+        isSyncing={!isSyncedWithServer && !isOfflineMode}
         pendingQueueCount={pendingQueueCount}
         failedQueueCount={failedQueueCount}
         onOpenFailedOperations={() => setIsFailedOpsModalOpen(true)}
@@ -2524,21 +2489,11 @@ export const App: React.FC = () => {
         onExitImpersonation={handleExitImpersonation}
       />
 
-      {/* Offline state or syncing banner */}
-      {isOfflineMode ? (
-        <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-300 text-xs py-2 px-4 text-center font-bold flex items-center justify-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-          <span>حالت آفلاین — اطلاعات ممکن است قدیمی باشد. تغییرات تکنسین‌ها در صف ذخیره شده و پس از برقراری اینترنت به سرور ارسال خواهد شد.</span>
-        </div>
-      ) : !isSyncedWithServer ? (
-        <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-300 text-xs py-2 px-4 text-center font-bold flex items-center justify-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-          <span>در حال دریافت و همگام‌سازی اطلاعات با سرور ابری... انجام ویرایش کلی پروژه‌ها پس از همگام‌سازی کامل فعال می‌گردد.</span>
-        </div>
-      ) : null}
+      <OfflineBanner visible={isOfflineMode} />
 
       {/* Main Body */}
       <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
+        {!impersonatorCeo && currentUser.role !== 'CEO' && <NotificationPrompt userId={currentUser.id} />}
         {currentUser.role === 'MEASUREMENT_LEAD' ? (
           // ================= 2ND MEASUREMENT & SITE READINESS DESK =================
           <React.Suspense fallback={<DashboardSkeleton />}>
@@ -2583,6 +2538,7 @@ export const App: React.FC = () => {
               openStuckCount={openStuckCount}
               openTicketCount={openTicketCount}
               pendingMaterialCount={pendingMaterialCount}
+              actionQueueCount={actionQueueCount}
             />
 
             <div className="flex-1 min-w-0">
@@ -2596,10 +2552,10 @@ export const App: React.FC = () => {
                       fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}
                     />
                   ) : (
-                    <div className="bg-[#151B23] border border-rose-500/30 rounded-2xl p-8 text-center text-rose-400 space-y-2">
+                    <div className="bg-surface border border-rose-500/30 rounded-2xl p-8 text-center text-rose-400 space-y-2">
                       <p className="font-bold text-base">دسترسی غیرمجاز</p>
-                      <p className="text-xs text-[#9BA7B6]">
-                        مشاهده شناسنامه رسمی و داشبورد جامع مدیر کل منحصراً در اختیار مدیرعامل (CEO) و مدیر اپ و QC می‌باشد.
+                      <p className="text-xs text-ink-2">
+                        مشاهده شناسنامه رسمی و داشبورد جامع مدیر کل منحصراً در اختیار مدیرعامل و مدیر QC است.
                       </p>
                     </div>
                   )
@@ -2708,6 +2664,8 @@ export const App: React.FC = () => {
                     onDeleteUser={handleDeleteUser}
                     onAssignTeamMember={handleAssignTeamMember}
                     onRemoveTeamMember={handleRemoveTeamMember}
+                    onCreateTeam={handleCreateTeam}
+                    onDeleteTeam={handleDeleteTeam}
                     onImpersonateUser={currentUser.role === 'CEO' || currentUser.role === 'QC_MANAGER' || Boolean(impersonatorCeo) ? handleImpersonateUser : undefined}
                   />
                 )}
@@ -2721,6 +2679,8 @@ export const App: React.FC = () => {
                     onToggleDarkMode={handleToggleDarkMode}
                     onUpdateSettings={handleUpdateSettings}
                     onResetData={handleResetData}
+                    canEditCapacity={isQcManager}
+                    definedTeamCount={teams.length}
                   />
                 )}
 
@@ -2738,6 +2698,7 @@ export const App: React.FC = () => {
               openStuckCount={openStuckCount}
               openTicketCount={openTicketCount}
               pendingMaterialCount={pendingMaterialCount}
+              actionQueueCount={actionQueueCount}
             />
           </div>
         ) : (

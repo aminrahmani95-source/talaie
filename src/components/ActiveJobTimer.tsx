@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Play, CheckCircle2 } from 'lucide-react';
+import { Play, CheckCircle2 } from 'lucide-react';
 import { toPersianDigits, formatDuration, formatTimeOnly } from '../utils/jalali';
 import { ProjectStatus, WorkSession } from '../types';
 import { calculateWorkSessionsSummary } from '../utils/multiDay';
@@ -66,7 +66,7 @@ export const ActiveJobTimer: React.FC<Props> = ({
     }
 
     return (
-      <div className="bg-[#111620] border border-emerald-500/30 rounded-lg p-3 flex items-center justify-between">
+      <div className="bg-sunken border border-emerald-500/30 rounded-lg p-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -75,20 +75,20 @@ export const ActiveJobTimer: React.FC<Props> = ({
           <div>
             <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
               <Play className="w-3 h-3 fill-emerald-500 text-emerald-500" />
-              <span>{isRework ? 'زمان‌سنج کار در محل (بازکاری / رفع نقص QC):' : 'زمان‌سنج کار در محل (فعال):'}</span>
+              <span>{isRework ? 'در حال رفع نقص QC' : 'در حال کار'}</span>
             </div>
-            <div className="text-xs text-[#9BA7B6] mt-0.5">
+            <div className="text-xs text-ink-2 mt-0.5">
               {isRework ? 'شروع بازکاری:' : 'شروع کار:'} ساعت {formatTimeOnly(effectiveStartedAt)}
             </div>
           </div>
         </div>
 
         <div className="text-left">
-          <div className="font-mono font-bold text-sm text-emerald-400 bg-[#0D1117] px-3 py-1 rounded-md border border-emerald-500/30">
+          <div className="font-mono font-bold text-sm text-emerald-400 bg-canvas px-3 py-1 rounded-md border border-emerald-500/30">
             {toPersianDigits(timeString)}
           </div>
           {multiDaySummary && (
-            <div className="text-xs text-[#9BA7B6] mt-1 font-bold text-right">
+            <div className="text-xs text-ink-2 mt-1 font-bold text-right">
               مجموع: {toPersianDigits(Math.floor(multiDaySummary.totalSeconds / 3600))} ساعت در {toPersianDigits(multiDaySummary.uniqueDaysCount)} روز
             </div>
           )}
@@ -99,19 +99,19 @@ export const ActiveJobTimer: React.FC<Props> = ({
 
   if (status === 'COMPLETED' && effectiveStartedAt) {
     return (
-      <div className="bg-[#111620] border border-[#212835] rounded-lg p-3 flex items-center justify-between text-xs">
+      <div className="bg-sunken border border-line rounded-lg p-3 flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <div>
-            <span className="font-bold text-[#F0F4F8]">مدت زمان کل اجرای پروژه:</span>
+            <span className="font-bold text-ink">مدت زمان کل اجرای پروژه:</span>
             {multiDaySummary && (
-              <span className="text-[#9BA7B6] mr-1">
+              <span className="text-ink-2 mr-1">
                 ({toPersianDigits(multiDaySummary.uniqueDaysCount)} روز کاری)
               </span>
             )}
           </div>
         </div>
-        <div className="font-mono font-bold text-[#F0F4F8] bg-[#0D1117] px-2.5 py-1 rounded-md border border-[#212835]">
+        <div className="font-mono font-bold text-ink bg-canvas px-2.5 py-1 rounded-md border border-line">
           {multiDaySummary ? multiDaySummary.text : formatDuration(effectiveStartedAt, completedAt)}
         </div>
       </div>

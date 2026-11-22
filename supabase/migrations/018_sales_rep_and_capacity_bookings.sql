@@ -82,7 +82,7 @@ create policy "sales_bookings_update_policy"
       where id = auth.uid()
         and (
           role in ('QC_MANAGER', 'CEO', 'SCHEDULING_COORDINATOR')
-          or (role in ('SALES_REP', 'SALES') and id = sales_bookings.sales_rep_id)
+          or (role in ('SALES_REP', 'SALES') and id::text = sales_bookings.sales_rep_id)
         )
         and active = true
     )

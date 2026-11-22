@@ -55,22 +55,22 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
     success: {
       icon: <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />,
       classes:
-        'bg-[#151B23]/95 text-[#F0F4F8] border border-emerald-500/40 shadow-xl backdrop-blur-md',
+        'bg-surface/95 text-ink border border-emerald-500/40 shadow-xl backdrop-blur-md',
     },
     error: {
       icon: <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />,
       classes:
-        'bg-[#1F1315]/95 text-rose-100 border border-rose-500/40 shadow-xl backdrop-blur-md',
+        'bg-surface/95 text-rose-100 border border-rose-500/40 shadow-xl backdrop-blur-md',
     },
     warning: {
       icon: <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />,
       classes:
-        'bg-[#221B10]/95 text-amber-100 border border-amber-500/40 shadow-xl backdrop-blur-md',
+        'bg-surface/95 text-amber-100 border border-amber-500/40 shadow-xl backdrop-blur-md',
     },
     info: {
       icon: <Info className="w-4 h-4 text-sky-400 shrink-0" />,
       classes:
-        'bg-[#151B23]/95 text-[#F0F4F8] border border-sky-500/40 shadow-xl backdrop-blur-md',
+        'bg-surface/95 text-ink border border-sky-500/40 shadow-xl backdrop-blur-md',
     },
   }[toast.type];
 
@@ -89,7 +89,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
         type="button"
         onClick={() => onDismiss(toast.id)}
         aria-label="بستن پیام"
-        className="w-7 h-7 flex items-center justify-center rounded hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition shrink-0 cursor-pointer"
+        className="w-7 h-7 flex items-center justify-center rounded hover:bg-raised text-ink-2 hover:text-ink transition shrink-0 cursor-pointer"
       >
         <X className="w-3.5 h-3.5" />
       </button>

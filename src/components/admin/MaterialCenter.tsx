@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '../ui/PageHeader';
 import { Button } from '../ui/Button';
-import { toPersianDigits, formatJalaliDateTime } from '../../utils/jalali';
+import { toPersianDigits, formatJalaliDateTime, localDateKey } from '../../utils/jalali';
 import { triggerToast } from '../Toast';
 import { WarehouseDesk } from '../warehouse/WarehouseDesk';
 import {
@@ -46,6 +46,8 @@ import {
   MATERIAL_URGENCY_LABELS,
   MATERIAL_REASON_LABELS,
 } from '../../utils/materialRequests';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { getUpcomingDispatchProjects } from '../../utils/warehouseLists';
 
 interface Props {
   materialRequests: MaterialRequest[];
@@ -134,9 +136,7 @@ export const MaterialCenter: React.FC<Props> = ({
 
   const upcomingDispatchCount = useMemo(() => {
     if (!projects) return 0;
-    return projects.filter(
-      (p) => p.status === 'SCHEDULED' || (p.status === 'IN_PROGRESS' && p.scheduledDate)
-    ).length;
+    return getUpcomingDispatchProjects(projects, localDateKey()).length;
   }, [projects]);
 
   const [filterTab, setFilterTab] = useState<FilterTab>('ALL');
@@ -427,199 +427,56 @@ export const MaterialCenter: React.FC<Props> = ({
     }
   };
 
+  // Escape closes the open window (top-most first)
+  useEscapeKey(() => setDispatchModalRequest(null), Boolean(dispatchModalRequest));
+  useEscapeKey(() => setStatusModalRequest(null), Boolean(statusModalRequest));
+  useEscapeKey(() => setManifestText(null), Boolean(manifestText));
+  useEscapeKey(() => setResolvingTicket(null), Boolean(resolvingTicket));
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="مرکز متریال و لجستیک انبار"
-        subtitle="مدیریت ورود کالای کارخانه، بسته‌بندی اعزام، ارجاعات فوری و تامین متریال سر کارگاه"
-      />
+    <div className="space-y-4 sm:space-y-5">
+      <PageHeader title="انبار و متریال" />
 
-      {/* KPI Cards & Direct Section Switchers */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <button
-          type="button"
-          onClick={() => setHubTab('REFERRALS')}
-          className={`p-4 rounded-xl border text-right transition cursor-pointer select-none active:scale-[0.98] ${
-            hubTab === 'REFERRALS'
-              ? 'bg-[#1C232D] border-purple-500 shadow-md ring-1 ring-purple-500/40'
-              : 'bg-[#151B23] border-[#212835] hover:border-purple-500/40'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-purple-400">ارجاعات فوری به انبار</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-950/60 border border-purple-500/30 flex items-center justify-center text-purple-400">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-purple-400 tabular-nums">
-            {toPersianDigits(warehouseTickets.length)}
-          </div>
-          <span className="text-[11px] text-[#9BA7B6] mt-1 block">تیکت‌های ارجاع‌شده توسط مدیر</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setHubTab('REQUESTS')}
-          className={`p-4 rounded-xl border text-right transition cursor-pointer select-none active:scale-[0.98] ${
-            hubTab === 'REQUESTS'
-              ? 'bg-[#1C232D] border-[#C5A059] shadow-md ring-1 ring-[#C5A059]/40'
-              : 'bg-[#151B23] border-[#212835] hover:border-[#C5A059]/40'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-[#C5A059]">درخواست‌های متریال سر کارگاه</span>
-            <div className="w-8 h-8 rounded-lg bg-[#111620] border border-[#212835] flex items-center justify-center text-[#C5A059]">
-              <Package className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-[#F0F4F8] tabular-nums">
-            {toPersianDigits(metrics.total)}
-          </div>
-          <span className="text-[11px] text-[#9BA7B6] mt-1 block">اقلام درخواستی تکنسین‌ها</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setHubTab('GOODS_RECEIPT')}
-          className={`p-4 rounded-xl border text-right transition cursor-pointer select-none active:scale-[0.98] ${
-            hubTab === 'GOODS_RECEIPT'
-              ? 'bg-[#1C232D] border-amber-500 shadow-md ring-1 ring-amber-500/40'
-              : 'bg-[#151B23] border-[#212835] hover:border-amber-500/40'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-amber-400">ورود کالا به انبار</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-950/60 border border-amber-500/30 flex items-center justify-center text-amber-400">
-              <ArrowDownToLine className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-amber-400 tabular-nums">
-            {toPersianDigits(pendingReceiptCount)}
-          </div>
-          <span className="text-[11px] text-[#9BA7B6] mt-1 block">محموله‌های کارخانه و گیت هندوور</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setHubTab('PACKING')}
-          className={`p-4 rounded-xl border text-right transition cursor-pointer select-none active:scale-[0.98] ${
-            hubTab === 'PACKING'
-              ? 'bg-[#1C232D] border-emerald-500 shadow-md ring-1 ring-emerald-500/40'
-              : 'bg-[#151B23] border-[#212835] hover:border-emerald-500/40'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-emerald-400">بسته‌بندی بارهای فردا</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <Truck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-emerald-400 tabular-nums">
-            {toPersianDigits(upcomingDispatchCount)}
-          </div>
-          <span className="text-[11px] text-[#9BA7B6] mt-1 block">چک‌لیست بارگیری خودروها</span>
-        </button>
-      </div>
-
-      {/* Primary Sub-tab Switcher Bar */}
-      <div className="flex items-center gap-1.5 bg-[#111620] p-1.5 rounded-xl border border-[#212835] overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setHubTab('REFERRALS')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-            hubTab === 'REFERRALS'
-              ? 'bg-purple-600 text-white shadow-md'
-              : 'text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#151B23]'
-          }`}
-        >
-          <AlertTriangle className="w-4 h-4" />
-          <span>کارتابل ارجاعات انبار و تیکت‌های کسری</span>
-          {warehouseTickets.length > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-rose-500 text-white font-mono font-bold animate-pulse">
-              {toPersianDigits(warehouseTickets.length)}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setHubTab('REQUESTS')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-            hubTab === 'REQUESTS'
-              ? 'bg-[#C5A059] text-[#0D1117] shadow-md'
-              : 'text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#151B23]'
-          }`}
-        >
-          <Package className="w-4 h-4" />
-          <span>درخواست‌های متریال سر کارگاه</span>
-          {materialRequests.length > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#212835] text-[#9BA7B6] font-mono font-bold">
-              {toPersianDigits(materialRequests.length)}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setHubTab('GOODS_RECEIPT')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-            hubTab === 'GOODS_RECEIPT'
-              ? 'bg-amber-600 text-white shadow-md'
-              : 'text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#151B23]'
-          }`}
-        >
-          <ArrowDownToLine className="w-4 h-4" />
-          <span>ورود کالا به انبار (محموله‌های کارخانه)</span>
-          {pendingReceiptCount > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500 text-[#0D1117] font-mono font-bold">
-              {toPersianDigits(pendingReceiptCount)}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setHubTab('PACKING')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-            hubTab === 'PACKING'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#151B23]'
-          }`}
-        >
-          <Truck className="w-4 h-4" />
-          <span>بسته‌بندی بارهای فردا</span>
-          {upcomingDispatchCount > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500 text-[#0D1117] font-mono font-bold">
-              {toPersianDigits(upcomingDispatchCount)}
-            </span>
-          )}
-        </button>
+      {/* بخش‌های انبار: هر کاشی هم آمار است و هم تب (قبلاً کارت‌ها و نوار تب تکراری بودند) */}
+      <div role="tablist" className="grid grid-cols-4 gap-2 sm:gap-3">
+        {(
+          [
+            { key: 'REFERRALS' as const, label: 'ارجاعات فوری', count: warehouseTickets.length, icon: AlertTriangle, tone: 'text-purple-400', ring: 'ring-purple-500' },
+            { key: 'REQUESTS' as const, label: 'درخواست‌ها', count: metrics.total, icon: Package, tone: 'text-brand-ink', ring: 'ring-brand' },
+            { key: 'GOODS_RECEIPT' as const, label: 'ورود کالا', count: pendingReceiptCount, icon: ArrowDownToLine, tone: 'text-amber-400', ring: 'ring-amber-500' },
+            { key: 'PACKING' as const, label: 'بار فردا', count: upcomingDispatchCount, icon: Truck, tone: 'text-emerald-400', ring: 'ring-emerald-500' },
+          ]
+        ).map((t) => {
+          const Icon = t.icon;
+          const selected = hubTab === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => setHubTab(t.key)}
+              className={`text-right p-2.5 sm:p-3.5 rounded-xl border bg-surface transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                selected ? `border-transparent ring-2 ${t.ring}` : 'border-line hover:border-line-strong'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-1">
+                <span className={`text-xl sm:text-2xl font-black tabular-nums leading-none ${t.count > 0 ? t.tone : 'text-ink-3'}`}>
+                  {toPersianDigits(t.count)}
+                </span>
+                <Icon className={`w-4 h-4 shrink-0 ${selected ? t.tone : 'text-ink-3'}`} />
+              </div>
+              <div className="text-[12px] sm:text-xs font-bold text-ink-2 mt-1.5 leading-tight">{t.label}</div>
+            </button>
+          );
+        })}
       </div>
 
       {/* ===================== TAB 1: LOGISTICS REFERRALS & TICKETS ===================== */}
       {hubTab === 'REFERRALS' && (
         <div className="space-y-4">
-          <div className="bg-[#111620] p-4 rounded-xl border border-purple-500/30 text-xs text-purple-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-purple-400 shrink-0" />
-              <div>
-                <span className="font-bold block text-sm text-[#F0F4F8]">
-                  کارتابل پیگیری ارجاعات به انبار و لجستیک
-                </span>
-                <span className="text-[#9BA7B6] text-xs">
-                  پروژه‌ها و تیکت‌هایی که دارای کسری قطعه، ریل، پارچه یا موتور بوده و مستقیماً به انبار جهت تامین و ارسال پیک ارجاع شده‌اند.
-                </span>
-              </div>
-            </div>
-            {warehouseTickets.length > 0 && (
-              <span className="px-3 py-1 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold shrink-0 text-xs">
-                {toPersianDigits(warehouseTickets.length)} ارجاع فعال
-              </span>
-            )}
-          </div>
-
           {/* Filters & Search */}
-          <div className="bg-[#151B23] p-4 rounded-xl border border-[#212835] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="bg-surface p-4 rounded-xl border border-line flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 overflow-x-auto">
               <button
                 type="button"
@@ -627,7 +484,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                   referralFilter === 'OPEN'
                     ? 'bg-purple-600 text-white'
-                    : 'text-[#9BA7B6] hover:bg-[#111620]'
+                    : 'text-ink-2 hover:bg-sunken'
                 }`}
               >
                 ارجاعات باز ({toPersianDigits(warehouseTickets.length)})
@@ -638,7 +495,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                   referralFilter === 'BLOCKING'
                     ? 'bg-rose-600 text-white'
-                    : 'text-[#9BA7B6] hover:bg-[#111620]'
+                    : 'text-ink-2 hover:bg-sunken'
                 }`}
               >
                 متوقف‌کننده کار ({toPersianDigits(warehouseTickets.filter((t) => t.isBlocking).length)})
@@ -649,7 +506,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                   referralFilter === 'RESOLVED'
                     ? 'bg-emerald-600 text-white'
-                    : 'text-[#9BA7B6] hover:bg-[#111620]'
+                    : 'text-ink-2 hover:bg-sunken'
                 }`}
               >
                 حل‌شده و ارسال‌شده
@@ -662,18 +519,18 @@ export const MaterialCenter: React.FC<Props> = ({
                 value={referralSearchQuery}
                 onChange={(e) => setReferralSearchQuery(e.target.value)}
                 placeholder="جستجو در ارجاعات..."
-                className="w-full text-xs pl-8 pr-3 py-2 rounded-lg bg-[#0D1117] border border-[#212835] text-[#F0F4F8] placeholder-[#637184] focus:outline-none focus:border-[#C5A059]"
+                className="w-full text-xs pl-8 pr-3 py-2 rounded-lg bg-canvas border border-line text-ink placeholder-ink-3 focus:outline-none focus:border-brand"
               />
-              <Search className="w-3.5 h-3.5 text-[#637184] absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-ink-3 absolute left-2.5 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
           {/* Cards Grid */}
           {filteredReferrals.length === 0 ? (
-            <div className="bg-[#151B23] rounded-2xl p-10 text-center border border-[#212835] text-xs text-[#9BA7B6] space-y-2">
+            <div className="bg-surface rounded-2xl p-10 text-center border border-line text-xs text-ink-2 space-y-2">
               <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-              <p className="font-bold text-[#F0F4F8]">هیچ تیکت ارجاعی با این فیلتر یافت نشد.</p>
-              <p className="text-[11px] text-[#637184]">
+              <p className="font-bold text-ink">هیچ تیکت ارجاعی با این فیلتر یافت نشد.</p>
+              <p className="text-[12px] text-ink-3">
                 ارجاعات ثبت‌شده توسط مدیر در مرکز تیکت فوراً در این بخش برای اقدام انبار قرار می‌گیرند.
               </p>
             </div>
@@ -688,10 +545,10 @@ export const MaterialCenter: React.FC<Props> = ({
                     key={t.id}
                     className={`rounded-2xl p-5 border transition flex flex-col justify-between space-y-4 shadow-sm ${
                       isResolved
-                        ? 'bg-[#151B23] border-[#212835]'
+                        ? 'bg-surface border-line'
                         : t.isBlocking
-                        ? 'bg-[#161214] border-rose-500/50 ring-1 ring-rose-500/20'
-                        : 'bg-[#151B23] border-purple-500/50 ring-1 ring-purple-500/20'
+                        ? 'bg-surface border-rose-500/50 ring-1 ring-rose-500/20'
+                        : 'bg-surface border-purple-500/50 ring-1 ring-purple-500/20'
                     }`}
                   >
                     <div className="space-y-3">
@@ -699,27 +556,27 @@ export const MaterialCenter: React.FC<Props> = ({
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-black bg-[#0D1117] text-[#C5A059] border border-[#2D3748] px-2.5 py-0.5 rounded">
+                            <span className="font-mono text-xs font-black bg-canvas text-brand-ink border border-line-strong px-2.5 py-0.5 rounded">
                               {t.projectCode || 'عمومی'}
                             </span>
-                            <span className="text-xs text-[#9BA7B6] font-bold">{t.projectTitle}</span>
+                            <span className="text-xs text-ink-2 font-bold">{t.projectTitle}</span>
                           </div>
-                          <h4 className="font-black text-sm text-[#F0F4F8] mt-1.5">{t.description}</h4>
+                          <h4 className="font-black text-sm text-ink mt-1.5">{t.description}</h4>
                         </div>
 
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           {isResolved ? (
-                            <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full">
+                            <span className="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full">
                               حل‌شده / تامین‌شده ✅
                             </span>
                           ) : (
                             <>
                               {t.isBlocking && (
-                                <span className="text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full animate-pulse">
+                                <span className="text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full animate-pulse">
                                   متوقف‌کننده کار
                                 </span>
                               )}
-                              <span className="text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full">
+                              <span className="text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full">
                                 ارجاع به انبار
                               </span>
                             </>
@@ -729,13 +586,13 @@ export const MaterialCenter: React.FC<Props> = ({
 
                       {/* Customer & Address Details */}
                       {proj && (
-                        <div className="bg-[#0D1117] p-2.5 rounded-xl border border-[#212835] text-xs space-y-1">
-                          <div className="flex items-center justify-between text-[#9BA7B6]">
-                            <span>کارفرما: <strong className="text-[#F0F4F8]">{proj.customerName}</strong></span>
+                        <div className="bg-canvas p-2.5 rounded-xl border border-line text-xs space-y-1">
+                          <div className="flex items-center justify-between text-ink-2">
+                            <span>کارفرما: <strong className="text-ink">{proj.customerName}</strong></span>
                             {proj.customerPhone && (
                               <a
                                 href={`tel:${proj.customerPhone}`}
-                                className="flex items-center gap-1 text-[#C5A059] hover:underline dir-ltr font-mono"
+                                className="flex items-center gap-1 text-brand-ink hover:underline dir-ltr font-mono"
                               >
                                 <Phone className="w-3 h-3" />
                                 <span>{proj.customerPhone}</span>
@@ -743,8 +600,8 @@ export const MaterialCenter: React.FC<Props> = ({
                             )}
                           </div>
                           {proj.address && (
-                            <div className="flex items-start gap-1 text-[11px] text-[#637184] pt-1 border-t border-[#212835]">
-                              <MapPin className="w-3 h-3 text-[#637184] shrink-0 mt-0.5" />
+                            <div className="flex items-start gap-1 text-[12px] text-ink-3 pt-1 border-t border-line">
+                              <MapPin className="w-3 h-3 text-ink-3 shrink-0 mt-0.5" />
                               <span className="line-clamp-1">{proj.address}</span>
                             </div>
                           )}
@@ -767,14 +624,14 @@ export const MaterialCenter: React.FC<Props> = ({
                               <Package className="w-3.5 h-3.5 text-purple-400" />
                               دستور اقدام مدیر به انبار و لجستیک:
                             </span>
-                            <span className="text-[10px] text-purple-400 font-mono">
+                            <span className="text-[11px] text-purple-400 font-mono">
                               {formatJalaliDateTime(t.referredAt || t.createdAt)}
                             </span>
                           </div>
-                          <p className="text-xs font-bold text-[#F0F4F8] bg-[#0D1117] p-2 rounded-lg border border-purple-500/20">
+                          <p className="text-xs font-bold text-ink bg-canvas p-2 rounded-lg border border-purple-500/20">
                             {t.referralNote}
                           </p>
-                          <div className="flex items-center justify-between text-[10px] text-purple-300/80 pt-1">
+                          <div className="flex items-center justify-between text-[11px] text-purple-300/80 pt-1">
                             <span>ارجاع‌دهنده: {t.referredByUserName || 'کاربر سیستم'}</span>
                             <span>مسئول اقدام: {t.assignedUserName || 'انبار و لجستیک'}</span>
                           </div>
@@ -787,7 +644,7 @@ export const MaterialCenter: React.FC<Props> = ({
                           <span className="font-bold text-emerald-300 block">اقدام انجام‌شده:</span>
                           <p>{t.resolutionNote}</p>
                           {t.resolvedAt && (
-                            <span className="text-[10px] text-emerald-400 block pt-0.5">
+                            <span className="text-[11px] text-emerald-400 block pt-0.5">
                               زمان اقدام: {formatJalaliDateTime(t.resolvedAt)}
                             </span>
                           )}
@@ -795,14 +652,14 @@ export const MaterialCenter: React.FC<Props> = ({
                       )}
 
                       {/* Reporter Info */}
-                      <div className="flex items-center justify-between text-[11px] text-[#637184] pt-2 border-t border-[#212835]">
+                      <div className="flex items-center justify-between text-[12px] text-ink-3 pt-2 border-t border-line">
                         <span>ثبت‌کننده: {t.authorName || 'همکاران فنی'}</span>
                         <span>{formatJalaliDateTime(t.createdAt)}</span>
                       </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="pt-2 border-t border-[#212835] space-y-2">
+                    <div className="pt-2 border-t border-line space-y-2">
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
@@ -848,7 +705,7 @@ export const MaterialCenter: React.FC<Props> = ({
                             setTicketDelayReason('');
                             setTicketEstimatedDate('');
                           }}
-                          className="grow py-1.5 px-3 rounded-lg font-medium text-xs bg-[#1C232D] hover:bg-[#212835] text-[#9BA7B6] hover:text-[#F0F4F8] flex items-center justify-center gap-1.5 transition cursor-pointer"
+                          className="grow py-1.5 px-3 rounded-lg font-medium text-xs bg-raised hover:bg-line text-ink-2 hover:text-ink flex items-center justify-center gap-1.5 transition cursor-pointer"
                         >
                           <Clock className="w-3.5 h-3.5 text-amber-400" />
                           <span>اعلام تاخیر در تامین</span>
@@ -858,7 +715,7 @@ export const MaterialCenter: React.FC<Props> = ({
                           <button
                             type="button"
                             onClick={() => onViewProposal(proj)}
-                            className="py-1.5 px-3 rounded-lg font-medium text-xs bg-[#1C232D] hover:bg-[#212835] text-[#C5A059] flex items-center gap-1 transition cursor-pointer"
+                            className="py-1.5 px-3 rounded-lg font-medium text-xs bg-raised hover:bg-line text-brand-ink flex items-center gap-1 transition cursor-pointer"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             <span>تصاویر سفارش</span>
@@ -927,9 +784,9 @@ export const MaterialCenter: React.FC<Props> = ({
       )}
 
       {/* Filter Tabs & Search */}
-      <div className="bg-[#151B23] p-4 rounded-lg border border-[#212835] space-y-4">
+      <div className="bg-surface p-4 rounded-lg border border-line space-y-4">
         {/* Main Status Tabs */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#212835] pb-3">
+        <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3">
           {[
             { id: 'ALL' as const, label: 'همه درخواست‌ها', count: metrics.total },
             { id: 'PENDING' as const, label: 'در انتظار تامین', count: metrics.pending },
@@ -945,12 +802,12 @@ export const MaterialCenter: React.FC<Props> = ({
                 onClick={() => handleSetFilterTab(tab.id)}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-bold transition cursor-pointer min-h-[40px] ${
                   isSelected
-                    ? 'bg-[#212121] text-[#C5A059] dark:bg-[#C1A056] dark:text-[#181818] '
-                    : 'text-[#637184] hover:bg-[#F2EDE4] dark:hover:bg-[#25231F]'
+                    ? 'text-brand-ink bg-brand dark:text-[#181818] '
+                    : 'text-ink-3 hover:bg-raised'
                 }`}
               >
                 <span>{tab.label}</span>
-                <span className="px-1.5 py-0.5 rounded-md text-[11px] bg-black/10 dark:bg-white/10">
+                <span className="px-1.5 py-0.5 rounded-md text-[12px] bg-black/10 dark:bg-white/10">
                   {toPersianDigits(tab.count)}
                 </span>
               </button>
@@ -961,13 +818,13 @@ export const MaterialCenter: React.FC<Props> = ({
         {/* Sub-filters (Category, Urgency, Search) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="relative">
-            <Search className="w-4 h-4 text-[#A8A29E] absolute right-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-ink-3 absolute right-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="جستجو بر اساس نام پروژه، مشتری، تکنسین، یا قطعه..."
               value={searchQuery}
               onChange={(e) => handleSetSearchQuery(e.target.value)}
-              className="w-full text-xs pr-9 pl-3 py-2.5 rounded-md bg-[#FAF7F2] dark:bg-[#25231F] border border-[#212835] text-[#212121] dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C1A056] min-h-[44px]"
+              className="w-full text-xs pr-9 pl-3 py-2.5 rounded-md bg-raised border border-line text-ink focus:outline-none focus:ring-1 focus:ring-brand min-h-[44px]"
             />
           </div>
 
@@ -975,7 +832,7 @@ export const MaterialCenter: React.FC<Props> = ({
             <select
               value={categoryFilter}
               onChange={(e) => handleSetCategoryFilter(e.target.value)}
-              className="w-full text-xs p-2.5 rounded-md bg-[#FAF7F2] dark:bg-[#25231F] border border-[#212835] text-[#212121] dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-[#C1A056] min-h-[44px]"
+              className="w-full text-xs p-2.5 rounded-md bg-raised border border-line text-ink font-medium focus:outline-none focus:ring-1 focus:ring-brand min-h-[44px]"
             >
               <option value="ALL">همه دسته‌بندی‌های متریال</option>
               {(Object.keys(MATERIAL_CATEGORY_LABELS) as MaterialCategory[]).map((c) => (
@@ -990,7 +847,7 @@ export const MaterialCenter: React.FC<Props> = ({
             <select
               value={urgencyFilter}
               onChange={(e) => handleSetUrgencyFilter(e.target.value)}
-              className="w-full text-xs p-2.5 rounded-md bg-[#FAF7F2] dark:bg-[#25231F] border border-[#212835] text-[#212121] dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-[#C1A056] min-h-[44px]"
+              className="w-full text-xs p-2.5 rounded-md bg-raised border border-line text-ink font-medium focus:outline-none focus:ring-1 focus:ring-brand min-h-[44px]"
             >
               <option value="ALL">همه اولویت‌ها</option>
               {(Object.keys(MATERIAL_URGENCY_LABELS) as MaterialUrgency[]).map((u) => (
@@ -1006,10 +863,10 @@ export const MaterialCenter: React.FC<Props> = ({
       {/* Requests List */}
       <div className="space-y-3">
         {filteredRequests.length === 0 ? (
-          <div className="bg-[#151B23] p-8 rounded-lg border border-[#212835] text-center space-y-2">
-            <Package className="w-10 h-10 text-[#A8A29E] mx-auto opacity-50" />
-            <h4 className="text-sm font-bold text-[#212121] dark:text-white">هیچ درخواست متریالی با این فیلتر یافت نشد</h4>
-            <p className="text-xs text-[#637184]">
+          <div className="bg-surface p-8 rounded-lg border border-line text-center space-y-2">
+            <Package className="w-10 h-10 text-ink-3 mx-auto opacity-50" />
+            <h4 className="text-sm font-bold text-ink">هیچ درخواست متریالی با این فیلتر یافت نشد</h4>
+            <p className="text-xs text-ink-3">
               درخواست‌های ثبت‌شده توسط تکنسین‌ها سر پروژه در این بخش قابل بررسی و ارسال خواهند بود.
             </p>
           </div>
@@ -1023,24 +880,24 @@ export const MaterialCenter: React.FC<Props> = ({
             return (
               <div
                 key={req.id}
-                className="bg-[#151B23] rounded-lg border border-[#212835] overflow-hidden  transition hover:border-[#C5A059]/50"
+                className="bg-surface rounded-lg border border-line overflow-hidden  transition hover:border-brand/50"
               >
                 {/* Header row */}
                 <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2DDD4]/60 dark:border-[#2E2B26]/60">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-black bg-[#212121] text-[#E5CA8F] px-2 py-0.5 rounded-md">
+                      <span className="font-mono text-xs font-black bg-[#212121] text-brand-soft px-2 py-0.5 rounded-md">
                         {req.projectCode}
                       </span>
-                      <h3 className="font-bold text-sm sm:text-base text-[#212121] dark:text-white">
+                      <h3 className="font-bold text-sm sm:text-base text-ink">
                         {req.projectTitle}
                       </h3>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-md ${urgencyConfig.badgeClass}`}>
+                      <span className={`text-[12px] px-2 py-0.5 rounded-md ${urgencyConfig.badgeClass}`}>
                         {urgencyConfig.label}
                       </span>
                     </div>
 
-                    <div className="text-xs text-[#637184] flex items-center gap-2 flex-wrap">
+                    <div className="text-xs text-ink-3 flex items-center gap-2 flex-wrap">
                       <span>کارفرما: {req.customerName || '—'}</span>
                       <span>•</span>
                       <span>درخواست‌کننده: {req.requestedByUserName}</span>
@@ -1062,7 +919,7 @@ export const MaterialCenter: React.FC<Props> = ({
                         size="sm"
                         variant="secondary"
                         onClick={() => handleOpenDispatchModal(req)}
-                        className="bg-[#212121] text-[#C5A059] hover:bg-[#C1A056] hover:text-[#212121] text-xs font-bold gap-1 min-h-[38px]"
+                        className="bg-[#212121] text-brand-ink hover:bg-brand hover:text-[#212121] text-xs font-bold gap-1 min-h-[38px]"
                       >
                         <Truck className="w-3.5 h-3.5" />
                         <span>ارسال با پیک</span>
@@ -1072,7 +929,7 @@ export const MaterialCenter: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenStatusModal(req)}
-                      className="text-xs text-[#637184] hover:text-[#212121] dark:hover:text-white p-2 rounded-lg border border-[#212835] min-h-[38px] cursor-pointer"
+                      className="text-xs text-ink-3 hover:text-ink p-2 rounded-lg border border-line min-h-[38px] cursor-pointer"
                       title="تغییر وضعیت یا مسئول پیگیری"
                     >
                       وضعیت
@@ -1081,7 +938,7 @@ export const MaterialCenter: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => setExpandedId(isExpanded ? null : req.id)}
-                      className="text-[#637184] hover:text-[#212121] dark:hover:text-white p-2 rounded-lg min-h-[38px] cursor-pointer"
+                      className="text-ink-3 hover:text-ink p-2 rounded-lg min-h-[38px] cursor-pointer"
                       aria-label="نمایش جزئیات"
                     >
                       {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -1091,9 +948,9 @@ export const MaterialCenter: React.FC<Props> = ({
 
                 {/* Items Balance Summary Table */}
                 <div className="p-4 sm:p-5 bg-[#FAF7F2]/40 dark:bg-[#181714]/40 space-y-3">
-                  <div className="text-xs font-black text-[#4A4742] dark:text-[#D5D0C7] flex items-center justify-between">
+                  <div className="text-xs font-black text-ink-2 flex items-center justify-between">
                     <span>اقلام درخواستی و وضعیت ارسال/تحویل:</span>
-                    <span className="text-[11px] text-[#C5A059]">
+                    <span className="text-[12px] text-brand-ink">
                       تعداد کل: {toPersianDigits(summary.totalItems)} قلم
                     </span>
                   </div>
@@ -1106,17 +963,17 @@ export const MaterialCenter: React.FC<Props> = ({
                       return (
                         <div
                           key={b.itemId}
-                          className="bg-white dark:bg-[#1E1D1A] p-3 rounded-md border border-[#212835] space-y-1.5 text-xs"
+                          className="bg-raised p-3 rounded-md border border-line space-y-1.5 text-xs"
                         >
                           <div className="flex items-center justify-between font-bold">
-                            <span className="text-[#212121] dark:text-white">{b.title}</span>
-                            <span className="font-mono text-[#C5A059]">
+                            <span className="text-ink">{b.title}</span>
+                            <span className="font-mono text-brand-ink">
                               نیاز: {toPersianDigits(b.requestedQty)} {b.unit} • ارسال‌شده: {toPersianDigits(b.totalDispatchedQty)} • دریافت‌شده: {toPersianDigits(b.totalReceivedQty)}
                             </span>
                           </div>
 
                           {/* Dual progress bar: Dispatched vs Received */}
-                          <div className="w-full bg-[#E2DDD4] dark:bg-[#282828] h-2 rounded-full overflow-hidden relative">
+                          <div className="w-full bg-raised h-2 rounded-full overflow-hidden relative">
                             {/* Dispatched bar (purple) */}
                             <div
                               className="h-full bg-purple-400 dark:bg-purple-600 transition-all duration-300 absolute right-0 top-0"
@@ -1129,7 +986,7 @@ export const MaterialCenter: React.FC<Props> = ({
                             />
                           </div>
 
-                          <div className="flex items-center justify-between text-[11px] text-[#637184]">
+                          <div className="flex items-center justify-between text-[12px] text-ink-3">
                             <span>
                               {b.remainingToDispatch > 0 ? (
                                 <span className="text-amber-600 dark:text-amber-400 font-bold">
@@ -1156,15 +1013,15 @@ export const MaterialCenter: React.FC<Props> = ({
 
                 {/* Expanded Details (Dispatches history, Logs, Notes) */}
                 {isExpanded && (
-                  <div className="p-4 sm:p-5 border-t border-[#212835] space-y-4 bg-[#151B23]">
+                  <div className="p-4 sm:p-5 border-t border-line space-y-4 bg-surface">
                     {/* Dispatches history */}
                     <div>
-                      <h4 className="text-xs font-black text-[#4A4742] dark:text-[#D5D0C7] mb-2">
+                      <h4 className="text-xs font-black text-ink-2 mb-2">
                         سوابق ارسال با پیک / ناوگان:
                       </h4>
 
                       {(!req.dispatches || req.dispatches.length === 0) ? (
-                        <p className="text-xs text-[#A8A29E] bg-[#FAF7F2] dark:bg-[#25231F] p-3 rounded-md border border-dashed border-[#212835]">
+                        <p className="text-xs text-ink-3 bg-raised p-3 rounded-md border border-dashed border-line">
                           هنوز هیچ ارسالی برای این درخواست ثبت نشده است.
                         </p>
                       ) : (
@@ -1172,31 +1029,31 @@ export const MaterialCenter: React.FC<Props> = ({
                           {req.dispatches.map((disp, dIdx) => (
                             <div
                               key={disp.id}
-                              className="bg-[#FAF7F2] dark:bg-[#25231F] p-3 rounded-md border border-[#212835] space-y-2 text-xs"
+                              className="bg-raised p-3 rounded-md border border-line space-y-2 text-xs"
                             >
                               <div className="flex items-center justify-between flex-wrap gap-2">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-bold text-[#212121] dark:text-white">
+                                  <span className="font-bold text-ink">
                                     ارسال {toPersianDigits(dIdx + 1)}: {disp.courierInfo}
                                   </span>
                                   {disp.trackingCode && (
-                                    <span className="font-mono text-[11px] text-[#A8A29E]">
+                                    <span className="font-mono text-[12px] text-ink-3">
                                       کد رهگیری: {disp.trackingCode}
                                     </span>
                                   )}
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[11px] text-[#637184]">
+                                  <span className="text-[12px] text-ink-3">
                                     {formatJalaliDateTime(disp.dispatchedAt)}
                                   </span>
                                   {disp.receivedAtSiteConfirmed ? (
-                                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                    <span className="text-[12px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-md flex items-center gap-1">
                                       <CheckCircle2 className="w-3 h-3" />
                                       <span>تحویل تایید شد</span>
                                     </span>
                                   ) : (
-                                    <span className="text-[11px] font-bold text-amber-700 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-400 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                    <span className="text-[12px] font-bold text-amber-700 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-400 px-2 py-0.5 rounded-md flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
                                       <span>در مسیر کارگاه</span>
                                     </span>
@@ -1205,7 +1062,7 @@ export const MaterialCenter: React.FC<Props> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleShowManifest(req, disp.id)}
-                                    className="text-xs text-[#C5A059] hover:underline flex items-center gap-1 font-bold cursor-pointer py-1 px-2"
+                                    className="text-xs text-brand-ink hover:underline flex items-center gap-1 font-bold cursor-pointer py-1 px-2"
                                   >
                                     <Printer className="w-3 h-3" />
                                     <span>برگه حواله</span>
@@ -1213,12 +1070,12 @@ export const MaterialCenter: React.FC<Props> = ({
                                 </div>
                               </div>
 
-                              <div className="text-[11px] text-[#555] dark:text-[#AAA]">
+                              <div className="text-[12px] text-[#555] dark:text-[#AAA]">
                                 اقلام ارسالی: {disp.items.map((i) => `${i.title} (${toPersianDigits(i.dispatchedQty)} ${i.unit || ''})`).join('، ')}
                               </div>
 
                               {disp.notes && (
-                                <p className="text-[11px] text-[#637184] bg-white dark:bg-[#1E1D1A] p-2 rounded-lg">
+                                <p className="text-[12px] text-ink-3 bg-raised p-2 rounded-lg">
                                   توضیحات ارسال: {disp.notes}
                                 </p>
                               )}
@@ -1229,22 +1086,22 @@ export const MaterialCenter: React.FC<Props> = ({
                     </div>
 
                     {/* Follow-up officer & Action history */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#212835] text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-line text-xs">
                       <div>
-                        <span className="font-bold text-[#4A4742] dark:text-[#D5D0C7] block mb-1">
+                        <span className="font-bold text-ink-2 block mb-1">
                           مسئول پیگیری دفتر:
                         </span>
-                        <div className="flex items-center gap-2 text-[#637184]">
-                          <UserIcon className="w-4 h-4 text-[#C5A059]" />
+                        <div className="flex items-center gap-2 text-ink-3">
+                          <UserIcon className="w-4 h-4 text-brand-ink" />
                           <span>{req.assignedFollowUpUserName || 'تعیین نشده (ارجاع به همه)'}</span>
                         </div>
                       </div>
 
                       <div>
-                        <span className="font-bold text-[#4A4742] dark:text-[#D5D0C7] block mb-1">
+                        <span className="font-bold text-ink-2 block mb-1">
                           یادداشت تکنسین سر کارگاه:
                         </span>
-                        <p className="text-[#637184]">
+                        <p className="text-ink-3">
                           {req.notes || 'توضیحی ثبت نشده است.'}
                         </p>
                       </div>
@@ -1258,8 +1115,8 @@ export const MaterialCenter: React.FC<Props> = ({
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#212835]">
-            <span className="text-xs text-[#637184]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-line">
+            <span className="text-xs text-ink-3">
               نمایش {toPersianDigits((currentPage - 1) * ITEMS_PER_PAGE + 1)} تا{' '}
               {toPersianDigits(Math.min(currentPage * ITEMS_PER_PAGE, filteredRequests.length))} از{' '}
               {toPersianDigits(filteredRequests.length)} درخواست
@@ -1270,7 +1127,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-[#212835] text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F2EDE4] dark:hover:bg-[#25231F] min-h-[36px] transition cursor-pointer"
+                className="px-3 py-1.5 rounded-lg border border-line text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-raised min-h-[36px] transition cursor-pointer"
               >
                 قبلی
               </button>
@@ -1283,8 +1140,8 @@ export const MaterialCenter: React.FC<Props> = ({
                     onClick={() => setCurrentPage(pageNum)}
                     className={`w-8 h-8 rounded-lg text-xs font-bold transition flex items-center justify-center cursor-pointer ${
                       currentPage === pageNum
-                        ? 'bg-[#212121] text-[#C5A059] dark:bg-[#C1A056] dark:text-[#181818]'
-                        : 'border border-[#212835] hover:bg-[#F2EDE4] dark:hover:bg-[#25231F] text-[#4A4742] dark:text-[#D5D0C7]'
+                        ? 'text-brand-ink bg-brand dark:text-[#181818]'
+                        : 'border border-line hover:bg-raised text-ink-2'
                     }`}
                   >
                     {toPersianDigits(pageNum)}
@@ -1296,7 +1153,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-[#212835] text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F2EDE4] dark:hover:bg-[#25231F] min-h-[36px] transition cursor-pointer"
+                className="px-3 py-1.5 rounded-lg border border-line text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-raised min-h-[36px] transition cursor-pointer"
               >
                 بعدی
               </button>
@@ -1314,7 +1171,7 @@ export const MaterialCenter: React.FC<Props> = ({
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
         >
-          <div className="bg-[#FAF7F2] dark:bg-[#1C1B18] w-full max-w-xl rounded-lg shadow-2xl border border-[#212835] overflow-hidden my-6">
+          <div className="bg-sunken w-full max-w-xl rounded-lg shadow-2xl border border-line overflow-hidden my-6">
             <div className="bg-[#212121] text-white p-4 sm:p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-md bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
@@ -1322,7 +1179,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 </div>
                 <div>
                   <h3 className="text-base font-black text-[#F5EFEB]">ثبت ارسال محموله با پیک</h3>
-                  <p className="text-xs text-[#A8A29E]">
+                  <p className="text-xs text-ink-3">
                     پروژه: {dispatchModalRequest.projectTitle} ({dispatchModalRequest.projectCode})
                   </p>
                 </div>
@@ -1330,7 +1187,7 @@ export const MaterialCenter: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setDispatchModalRequest(null)}
-                className="text-stone-400 hover:text-white p-2 rounded-lg cursor-pointer min-h-[44px]"
+                className="text-stone-400 hover:text-ink p-2 rounded-lg cursor-pointer min-h-[44px]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1339,7 +1196,7 @@ export const MaterialCenter: React.FC<Props> = ({
             <form onSubmit={handleSubmitDispatch} className="p-4 sm:p-6 space-y-4">
               {/* Courier info */}
               <div>
-                <label className="block text-xs font-black text-[#4A4742] dark:text-[#D5D0C7] mb-1.5">
+                <label className="block text-xs font-black text-ink-2 mb-1.5">
                   اطلاعات پیک / راننده / ناوگان (الزامی):
                 </label>
                 <input
@@ -1347,13 +1204,13 @@ export const MaterialCenter: React.FC<Props> = ({
                   placeholder="مثال: اسنپ‌باکس آقای رضوانی (09121234567) یا وانت شرکت"
                   value={courierInfo}
                   onChange={(e) => setCourierInfo(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-md bg-white dark:bg-[#25231F] border border-[#212835] text-[#212121] dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C1A056] min-h-[44px]"
+                  className="w-full text-xs p-2.5 rounded-md bg-raised border border-line text-ink focus:outline-none focus:ring-1 focus:ring-brand min-h-[44px]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-[#4A4742] dark:text-[#D5D0C7] mb-1.5">
+                <label className="block text-xs font-black text-ink-2 mb-1.5">
                   کد رهگیری یا شماره بارنامه (اختیاری):
                 </label>
                 <input
@@ -1361,32 +1218,32 @@ export const MaterialCenter: React.FC<Props> = ({
                   placeholder="مثال: SNP-449102"
                   value={trackingCode}
                   onChange={(e) => setTrackingCode(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-md bg-white dark:bg-[#25231F] border border-[#212835] text-[#212121] dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#C1A056] min-h-[44px]"
+                  className="w-full text-xs p-2.5 rounded-md bg-raised border border-line text-ink font-mono focus:outline-none focus:ring-1 focus:ring-brand min-h-[44px]"
                 />
               </div>
 
               {/* Items to dispatch */}
               <div>
-                <label className="block text-xs font-black text-[#4A4742] dark:text-[#D5D0C7] mb-2">
+                <label className="block text-xs font-black text-ink-2 mb-2">
                   تعداد اقلام تحویلی به پیک در این مرحله (ارسال مرحله‌ای):
                 </label>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {calculateItemBalances(dispatchModalRequest).map((b) => (
                     <div
                       key={b.itemId}
-                      className="flex items-center justify-between gap-3 p-2.5 bg-white dark:bg-[#25231F] rounded-md border border-[#212835] text-xs"
+                      className="flex items-center justify-between gap-3 p-2.5 bg-raised rounded-md border border-line text-xs"
                     >
                       <div className="min-w-0">
-                        <span className="font-bold text-[#212121] dark:text-white block truncate">
+                        <span className="font-bold text-ink block truncate">
                           {b.title}
                         </span>
-                        <span className="text-[11px] text-[#A8A29E]">
+                        <span className="text-[12px] text-ink-3">
                           کل نیاز: {toPersianDigits(b.requestedQty)} • مانده: {toPersianDigits(b.remainingToDispatch)} {b.unit}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[11px] text-[#69655F]">ارسال:</span>
+                        <span className="text-[12px] text-ink-3">ارسال:</span>
                         <input
                           type="number"
                           inputMode="decimal"
@@ -1398,9 +1255,9 @@ export const MaterialCenter: React.FC<Props> = ({
                             const val = parseFloat(e.target.value) || 0;
                             setDispatchQuantities((prev) => ({ ...prev, [b.itemId]: val }));
                           }}
-                          className="w-16 p-1.5 rounded-lg text-center font-bold bg-[#FAF7F2] dark:bg-[#1C1B18] border border-[#212835] text-[#212121] dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C1A056]"
+                          className="w-16 p-1.5 rounded-lg text-center font-bold bg-sunken border border-line text-ink focus:outline-none focus:ring-1 focus:ring-brand"
                         />
-                        <span className="text-[11px] text-[#69655F] w-8">{b.unit}</span>
+                        <span className="text-[12px] text-ink-3 w-8">{b.unit}</span>
                       </div>
                     </div>
                   ))}
@@ -1408,7 +1265,7 @@ export const MaterialCenter: React.FC<Props> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-black text-[#4A4742] dark:text-[#D5D0C7] mb-1.5">
+                <label className="block text-xs font-black text-ink-2 mb-1.5">
                   یادداشت هماهنگی با راننده (اختیاری):
                 </label>
                 <textarea
@@ -1416,15 +1273,15 @@ export const MaterialCenter: React.FC<Props> = ({
                   placeholder="مثال: هزینه پیک سر پروژه توسط شرکت پرداخت شده..."
                   value={dispatchNotes}
                   onChange={(e) => setDispatchNotes(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-md bg-white dark:bg-[#25231F] border border-[#212835] text-[#212121] dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C1A056] resize-none"
+                  className="w-full text-xs p-2.5 rounded-md bg-raised border border-line text-ink focus:outline-none focus:ring-1 focus:ring-brand resize-none"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#212835]">
+              <div className="pt-2 flex items-center justify-end gap-3 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setDispatchModalRequest(null)}
-                  className="px-4 py-2.5 rounded-md border border-[#212835] text-xs font-bold hover:bg-[#F2EDE4] dark:hover:bg-[#25231F] min-h-[44px] cursor-pointer"
+                  className="px-4 py-2.5 rounded-md border border-line text-xs font-bold hover:bg-raised min-h-[44px] cursor-pointer"
                 >
                   انصراف
                 </button>
@@ -1448,13 +1305,13 @@ export const MaterialCenter: React.FC<Props> = ({
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
         >
-          <div className="bg-[#FAF7F2] dark:bg-[#1C1B18] w-full max-w-md rounded-lg shadow-2xl border border-[#212835] overflow-hidden my-6">
+          <div className="bg-sunken w-full max-w-md rounded-lg shadow-2xl border border-line overflow-hidden my-6">
             <div className="bg-[#212121] text-white p-4 flex items-center justify-between">
               <h3 className="text-sm font-black text-[#F5EFEB]">تغییر وضعیت و مسئول پیگیری</h3>
               <button
                 type="button"
                 onClick={() => setStatusModalRequest(null)}
-                className="text-stone-400 hover:text-white p-2 min-h-[44px] cursor-pointer"
+                className="text-stone-400 hover:text-ink p-2 min-h-[44px] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1462,13 +1319,13 @@ export const MaterialCenter: React.FC<Props> = ({
 
             <form onSubmit={handleSubmitStatus} className="p-4 sm:p-6 space-y-4">
               <div>
-                <label className="block text-xs font-black text-[#4A4742] dark:text-[#D5D0C7] mb-1.5">
+                <label className="block text-xs font-black text-ink-2 mb-1.5">
                   وضعیت فرآیند تامین:
                 </label>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value as MaterialRequestStatus)}
-                  className="w-full text-xs p-2.5 rounded-md bg-white dark:bg-[#25231F] border border-[#212835] text-[#212121] dark:text-white font-bold focus:outline-none focus:ring-1 focus:ring-[#C1A056] min-h-[44px]"
+                  className="w-full text-xs p-2.5 rounded-md bg-raised border border-line text-ink font-bold focus:outline-none focus:ring-1 focus:ring-brand min-h-[44px]"
                 >
                   <option value="SUBMITTED">{MATERIAL_STATUS_LABELS['SUBMITTED']}</option>
                   <option value="IN_PROCUREMENT">{MATERIAL_STATUS_LABELS['IN_PROCUREMENT']}</option>
@@ -1481,20 +1338,20 @@ export const MaterialCenter: React.FC<Props> = ({
                   <option value="CANCELLED">{MATERIAL_STATUS_LABELS['CANCELLED']}</option>
                 </select>
                 {statusModalRequest && !getMaterialRequestSummary(statusModalRequest).isAllReceived && (
-                  <p className="mt-1 text-[11px] text-[#A8A29E]">
+                  <p className="mt-1 text-[12px] text-ink-3">
                     وضعیت «تحویل قطعی» صرفاً پس از تایید فیزیکی دریافت تمامی اقلام توسط تکنسین در کارگاه فعال می‌شود.
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-black text-[#4A4742] dark:text-[#D5D0C7] mb-1.5">
+                <label className="block text-xs font-black text-ink-2 mb-1.5">
                   ارجاع به مسئول پیگیری دفتر:
                 </label>
                 <select
                   value={assignedUserId}
                   onChange={(e) => setAssignedUserId(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-md bg-white dark:bg-[#25231F] border border-[#212835] text-[#212121] dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-[#C1A056] min-h-[44px]"
+                  className="w-full text-xs p-2.5 rounded-md bg-raised border border-line text-ink font-medium focus:outline-none focus:ring-1 focus:ring-brand min-h-[44px]"
                 >
                   <option value="">بدون انتساب اختصاصی (عمومی)</option>
                   {users.map((u) => (
@@ -1506,7 +1363,7 @@ export const MaterialCenter: React.FC<Props> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-black text-[#4A4742] dark:text-[#D5D0C7] mb-1.5">
+                <label className="block text-xs font-black text-ink-2 mb-1.5">
                   یادداشت تغییر وضعیت (در تاریخچه ثبت می‌شود):
                 </label>
                 <textarea
@@ -1514,21 +1371,21 @@ export const MaterialCenter: React.FC<Props> = ({
                   placeholder="علت تغییر وضعیت یا دستور به انبار..."
                   value={statusNote}
                   onChange={(e) => setStatusNote(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-md bg-white dark:bg-[#25231F] border border-[#212835] text-[#212121] dark:text-white focus:outline-none focus:ring-1 focus:ring-[#C1A056] resize-none"
+                  className="w-full text-xs p-2.5 rounded-md bg-raised border border-line text-ink focus:outline-none focus:ring-1 focus:ring-brand resize-none"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#212835]">
+              <div className="pt-2 flex items-center justify-end gap-3 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setStatusModalRequest(null)}
-                  className="px-4 py-2 rounded-md border border-[#212835] text-xs font-bold hover:bg-[#F2EDE4] dark:hover:bg-[#25231F] min-h-[44px] cursor-pointer"
+                  className="px-4 py-2 rounded-md border border-line text-xs font-bold hover:bg-raised min-h-[44px] cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-md bg-[#212121] text-[#C5A059] hover:bg-[#C1A056] hover:text-[#212121] text-xs font-black transition min-h-[44px] cursor-pointer"
+                  className="px-5 py-2 rounded-md bg-[#212121] text-brand-ink hover:bg-brand hover:text-[#212121] text-xs font-black transition min-h-[44px] cursor-pointer"
                 >
                   ذخیره تغییرات
                 </button>
@@ -1545,23 +1402,23 @@ export const MaterialCenter: React.FC<Props> = ({
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
         >
-          <div className="bg-[#151B23] w-full max-w-lg rounded-lg shadow-2xl border border-[#212835] overflow-hidden my-6">
+          <div className="bg-surface w-full max-w-lg rounded-lg shadow-2xl border border-line overflow-hidden my-6">
             <div className="bg-[#212121] text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Printer className="w-5 h-5 text-[#C5A059]" />
+                <Printer className="w-5 h-5 text-brand-ink" />
                 <h3 className="text-sm font-black text-[#F5EFEB]">حواله تحویل و پیک متریال</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setManifestText(null)}
-                className="text-stone-400 hover:text-white p-2 min-h-[44px] cursor-pointer"
+                className="text-stone-400 hover:text-ink p-2 min-h-[44px] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-4 sm:p-6 space-y-4">
-              <pre className="bg-[#FAF7F2] dark:bg-[#121212] p-4 rounded-md border border-[#212835] text-xs font-mono text-[#212121] dark:text-[#E2DDD4] whitespace-pre-wrap leading-relaxed select-all">
+              <pre className="bg-canvas p-4 rounded-md border border-line text-xs font-mono text-[#212121] dark:text-[#E2DDD4] whitespace-pre-wrap leading-relaxed select-all">
                 {manifestText}
               </pre>
 
@@ -1569,7 +1426,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={handleCopyManifest}
-                  className="px-4 py-2.5 rounded-md border border-[#212835] text-xs font-bold hover:bg-[#FAF7F2] dark:hover:bg-[#25231F] transition flex items-center gap-1.5 cursor-pointer min-h-[44px]"
+                  className="px-4 py-2.5 rounded-md border border-line text-xs font-bold hover:bg-raised transition flex items-center gap-1.5 cursor-pointer min-h-[44px]"
                 >
                   {copiedManifest ? (
                     <>
@@ -1587,7 +1444,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-5 py-2.5 rounded-md bg-[#212121] text-[#C5A059] hover:bg-[#C1A056] hover:text-[#212121] text-xs font-black transition flex items-center gap-1.5 cursor-pointer min-h-[44px]"
+                  className="px-5 py-2.5 rounded-md bg-[#212121] text-brand-ink hover:bg-brand hover:text-[#212121] text-xs font-black transition flex items-center gap-1.5 cursor-pointer min-h-[44px]"
                 >
                   <Printer className="w-4 h-4" />
                   <span>چاپ حواله</span>
@@ -1600,26 +1457,26 @@ export const MaterialCenter: React.FC<Props> = ({
 
       {/* ===================== MODAL: LOGISTICS TICKET RESOLUTION ===================== */}
       {resolvingTicket && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#151B23] border border-purple-500/40 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-[#212835] pb-3">
-              <h3 className="font-black text-base text-[#F0F4F8] flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="bg-surface border border-purple-500/40 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="font-black text-base text-ink flex items-center gap-2">
                 <Truck className="w-5 h-5 text-purple-400" />
                 <span>رسیدگی و تعیین وضعیت ارسال قطعه / کسری</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setResolvingTicket(null)}
-                className="text-[#9BA7B6] hover:text-[#F0F4F8] cursor-pointer"
+                className="text-ink-2 hover:text-ink cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Ticket Subject */}
-            <div className="bg-[#0D1117] p-3 rounded-xl border border-[#212835] text-xs space-y-1">
-              <span className="font-mono text-[#C5A059] font-bold">{resolvingTicket.projectCode || 'عمومی'}</span>
-              <p className="font-bold text-[#F0F4F8]">{resolvingTicket.description}</p>
+            <div className="bg-canvas p-3 rounded-xl border border-line text-xs space-y-1">
+              <span className="font-mono text-brand-ink font-bold">{resolvingTicket.projectCode || 'عمومی'}</span>
+              <p className="font-bold text-ink">{resolvingTicket.description}</p>
               {resolvingTicket.referralNote && (
                 <p className="text-purple-300 font-medium">دستور مدیر: {resolvingTicket.referralNote}</p>
               )}
@@ -1633,7 +1490,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 className={`p-2.5 rounded-xl text-xs font-bold border transition text-center cursor-pointer ${
                   ticketActionType === 'DISPATCHED_COURIER'
                     ? 'bg-purple-500/20 border-purple-500 text-purple-300'
-                    : 'bg-[#0D1117] border-[#212835] text-[#9BA7B6]'
+                    : 'bg-canvas border-line text-ink-2'
                 }`}
               >
                 ۱. ارسال با پیک / اسنپ
@@ -1644,7 +1501,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 className={`p-2.5 rounded-xl text-xs font-bold border transition text-center cursor-pointer ${
                   ticketActionType === 'SUPPLIED'
                     ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                    : 'bg-[#0D1117] border-[#212835] text-[#9BA7B6]'
+                    : 'bg-canvas border-line text-ink-2'
                 }`}
               >
                 ۲. تامین از انبار
@@ -1655,7 +1512,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 className={`p-2.5 rounded-xl text-xs font-bold border transition text-center cursor-pointer ${
                   ticketActionType === 'DELAYED'
                     ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                    : 'bg-[#0D1117] border-[#212835] text-[#9BA7B6]'
+                    : 'bg-canvas border-line text-ink-2'
                 }`}
               >
                 ۳. اعلام تاخیر در تامین
@@ -1672,7 +1529,7 @@ export const MaterialCenter: React.FC<Props> = ({
               {ticketActionType === 'DISPATCHED_COURIER' && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-bold text-[#9BA7B6] mb-1">
+                    <label className="block text-xs font-bold text-ink-2 mb-1">
                       مشخصات پیک یا راننده: *
                     </label>
                     <input
@@ -1680,11 +1537,11 @@ export const MaterialCenter: React.FC<Props> = ({
                       value={ticketCourierInfo}
                       onChange={(e) => setTicketCourierInfo(e.target.value)}
                       placeholder="مثال: اسنپ باکس / آقای احمدی (0912...)"
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-purple-500 focus:outline-none"
+                      className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink focus:border-purple-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#9BA7B6] mb-1">
+                    <label className="block text-xs font-bold text-ink-2 mb-1">
                       کد رهگیری یا لینک پیگیری پیک (اختیاری):
                     </label>
                     <input
@@ -1692,7 +1549,7 @@ export const MaterialCenter: React.FC<Props> = ({
                       value={ticketTrackingCode}
                       onChange={(e) => setTicketTrackingCode(e.target.value)}
                       placeholder="مثال: SNP-9812..."
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] font-mono focus:border-purple-500 focus:outline-none"
+                      className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink font-mono focus:border-purple-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -1701,7 +1558,7 @@ export const MaterialCenter: React.FC<Props> = ({
               {ticketActionType === 'DELAYED' && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-bold text-[#9BA7B6] mb-1">
+                    <label className="block text-xs font-bold text-ink-2 mb-1">
                       علت عدم امکان تامین فوری: *
                     </label>
                     <textarea
@@ -1709,11 +1566,11 @@ export const MaterialCenter: React.FC<Props> = ({
                       value={ticketDelayReason}
                       onChange={(e) => setTicketDelayReason(e.target.value)}
                       placeholder="مثال: عدم موجودی در انبار مرکزی، سفارش پارچه به کارخانه نساجی ارسال گردید..."
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] resize-none focus:border-amber-500 focus:outline-none"
+                      className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink resize-none focus:border-amber-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#9BA7B6] mb-1">
+                    <label className="block text-xs font-bold text-ink-2 mb-1">
                       زمان یا تاریخ تقریبی آماده‌سازی و تامین: *
                     </label>
                     <input
@@ -1721,17 +1578,17 @@ export const MaterialCenter: React.FC<Props> = ({
                       value={ticketEstimatedDate}
                       onChange={(e) => setTicketEstimatedDate(e.target.value)}
                       placeholder="مثال: فردا ساعت ۱۱ صبح / پس‌فردا"
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] focus:border-amber-500 focus:outline-none"
+                      className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink focus:border-amber-500 focus:outline-none"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#212835]">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setResolvingTicket(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-raised text-ink-2 hover:text-ink cursor-pointer"
                 >
                   انصراف
                 </button>

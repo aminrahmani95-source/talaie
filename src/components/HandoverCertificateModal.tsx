@@ -6,10 +6,8 @@ import {
   X,
   ShieldCheck,
   Star,
-  CheckCircle2,
   Clock,
   MapPin,
-  Phone,
   FileCheck2,
   Sparkles,
   AlertTriangle,
@@ -19,6 +17,7 @@ import { CloudImage } from './common/CloudImage';
 import { getDisplayName } from '../utils/technicianName';
 import { calculateWorkSessionsSummary } from '../utils/multiDay';
 import { LOGO_GOLD } from '../assets/logo';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface Props {
   project: Project;
@@ -27,6 +26,7 @@ interface Props {
 }
 
 export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onClose }) => {
+  useEscapeKey(onClose);
   const handlePrint = () => {
     window.print();
   };

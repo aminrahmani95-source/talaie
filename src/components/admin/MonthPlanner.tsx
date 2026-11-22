@@ -7,15 +7,11 @@ import {
   ScheduleChangeRequest,
 } from '../../types';
 import {
-  Calendar,
-  Clock,
   Plus,
   Edit2,
   Settings2,
   ChevronRight,
   ChevronLeft,
-  FileText,
-  Ruler,
   AlertTriangle,
   ChevronDown,
   ChevronUp,
@@ -26,10 +22,7 @@ import {
   ArrowRightLeft,
   Wrench,
   Trophy,
-  Sparkles,
-  User as UserIcon,
   Phone,
-  MapPin,
   ShieldCheck,
 } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits, localDateKey, formatJalali } from '../../utils/jalali';
@@ -49,6 +42,7 @@ import { getStoredBookings, linkBookingToInstallationProject } from '../../utils
 import { AssignSalesBookingModal } from './AssignSalesBookingModal';
 import { triggerToast } from '../Toast';
 import { SalesProjectBooking } from '../../types';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   projects: Project[];
@@ -58,8 +52,8 @@ interface Props {
   settings: SystemSettings;
   scheduleChangeRequests?: ScheduleChangeRequest[];
   onUpdateSettings?: (settings: SystemSettings) => void;
-  onNewProject: (dateKey?: string, initialData?: Partial<Project>) => void;
-  onEditProject: (project: Project) => void;
+  onNewProject?: (dateKey?: string, initialData?: Partial<Project>) => void;
+  onEditProject?: (project: Project) => void;
   onManageProject: (project: Project) => void;
   onMoveProjectDate?: (projectId: string, newDateKey: string) => void;
   onViewProposal: (project: Project) => void;
@@ -101,7 +95,7 @@ export const MonthPlanner: React.FC<Props> = ({
   // View modes: '4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'
   const [viewMode, setViewMode] = useState<'4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'>('4DAYS');
   const [startIndex, setStartIndex] = useState(0);
-  const [isAlertsOpen, setIsAlertsOpen] = useState(true);
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
 
   // Modal states for schedule change proposal and review
   const [proposingProject, setProposingProject] = useState<Project | null>(null);
@@ -116,8 +110,14 @@ export const MonthPlanner: React.FC<Props> = ({
   const [reviewNotes, setReviewNotes] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
+  // Escape closes the planner's dialogs (they previously trapped the page until clicked)
+  useEscapeKey(() => {
+    setProposingProject(null);
+    setReviewingRequest(null);
+  }, Boolean(proposingProject || reviewingRequest));
+
   // استخر رزروهای فروش برای تخصیص به نصاب‌ها
-  const [isSalesTrayOpen, setIsSalesTrayOpen] = useState(true);
+  const [isSalesTrayOpen, setIsSalesTrayOpen] = useState(false);
   const [assigningBooking, setAssigningBooking] = useState<SalesProjectBooking | null>(null);
 
   // استخراج رزروهای فعال فروش که هنوز به پروژه اجرایی متصل نشده‌اند
@@ -202,8 +202,7 @@ export const MonthPlanner: React.FC<Props> = ({
     <div className="space-y-5 animate-in fade-in duration-200">
       {/* Page Header */}
       <PageHeader
-        title="برنامه‌ریزی و ظرفیت ۲ اکیپ"
-        subtitle="مدیریت بار کاری، خطوط زمانی و تخصیص ماموریت‌ها"
+        title="تقویم نصب"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <SegmentedControl
@@ -225,18 +224,18 @@ export const MonthPlanner: React.FC<Props> = ({
               const pageSize = viewMode === '4DAYS' ? 4 : viewMode === '7DAYS' ? 7 : viewMode === 'TIMELINE' ? 5 : 30;
               const step = viewMode === 'FULL_MONTH' ? 30 : 1;
               return (
-                <div className="flex items-center gap-1 bg-[#111620] rounded-md p-1 border border-[#212835]">
+                <div className="flex items-center gap-1 bg-sunken rounded-md p-1 border border-line">
                   <button
                     type="button"
                     disabled={startIndex === 0}
                     onClick={() => setStartIndex((i) => Math.max(0, i - step))}
-                    className="p-1.5 hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] rounded disabled:opacity-30 transition cursor-pointer"
+                    className="p-1.5 hover:bg-raised text-ink-2 hover:text-ink rounded disabled:opacity-30 transition cursor-pointer"
                     title="روزهای قبلی"
                     aria-label="روزهای قبلی"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
-                  <span className="text-xs px-2 text-[#C5A059] font-bold tabular-nums">
+                  <span className="text-xs px-2 text-brand-ink font-bold tabular-nums">
                     {toPersianDigits(startIndex + 1)} تا{' '}
                     {toPersianDigits(Math.min(days.length, startIndex + pageSize))}
                   </span>
@@ -246,7 +245,7 @@ export const MonthPlanner: React.FC<Props> = ({
                     onClick={() =>
                       setStartIndex((i) => Math.min(days.length - pageSize, i + step))
                     }
-                    className="p-1.5 hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] rounded disabled:opacity-30 transition cursor-pointer"
+                    className="p-1.5 hover:bg-raised text-ink-2 hover:text-ink rounded disabled:opacity-30 transition cursor-pointer"
                     title="روزهای بعدی"
                     aria-label="روزهای بعدی"
                   >
@@ -259,7 +258,7 @@ export const MonthPlanner: React.FC<Props> = ({
             {isCeo && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold">
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>نمای نظارتی برنامه (فقط‌خواندنی — تنظیم برنامه با مدیر اپ و QC)</span>
+                <span>نمای نظارتی برنامه (فقط‌خواندنی — تنظیم برنامه با مدیر QC)</span>
               </div>
             )}
 
@@ -279,63 +278,59 @@ export const MonthPlanner: React.FC<Props> = ({
 
       {/* استخر رزروهای فروش منتظر تخصیص به نصاب‌ها (Sales Intake Tray) */}
       {unassignedSalesBookings.length > 0 && (
-        <div className="rounded-xl border border-[#C5A059]/40 bg-[#151B23] p-4 shadow-sm text-[#F0F4F8]">
+        <div className="rounded-xl border border-brand/40 bg-surface p-3 sm:p-4 text-ink">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#C5A059]/15 border border-[#C5A059]/30 text-[#C5A059] flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-brand/15 border border-brand/30 text-brand-ink flex items-center justify-center shrink-0">
                 <Trophy className="w-4 h-4" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-black text-xs sm:text-sm text-[#F0F4F8]">
-                    استخر رزروهای فروش منتظر تخصیص به نصاب‌ها
-                  </h3>
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#C5A059] text-[#0D1117] tabular-nums">
+                  <h3 className="font-black text-xs sm:text-sm text-ink">رزروهای فروش منتظر تخصیص</h3>
+                  <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-brand text-on-brand tabular-nums">
                     {toPersianDigits(unassignedSalesBookings.length)} رزرو فروش
                   </span>
                 </div>
-                <p className="text-[11px] text-[#9BA7B6] mt-0.5">
-                  تاریخ‌های فروش تخمینی اولیه هستند؛ مدیر اپ و QC می‌تواند به صورت کاملاً آزادانه تاریخ و اکیپ قطعی را ست کند.
-                </p>
+
               </div>
             </div>
             <button
               type="button"
               onClick={() => setIsSalesTrayOpen((prev) => !prev)}
-              className="text-xs font-bold text-[#C5A059] hover:underline flex items-center gap-1 cursor-pointer shrink-0"
+              className="text-xs font-bold text-brand-ink hover:underline flex items-center gap-1 cursor-pointer shrink-0"
             >
-              {isSalesTrayOpen ? 'بستن نوار فروش' : 'مشاهده رزروها'}
+              {isSalesTrayOpen ? 'بستن' : 'مشاهده'}
               {isSalesTrayOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
           </div>
 
           {isSalesTrayOpen && (
-            <div className="mt-3 pt-3 border-t border-[#212835] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="mt-3 pt-3 border-t border-line grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {unassignedSalesBookings.map((b) => (
                 <div
                   key={b.id}
-                  className="p-3 rounded-xl bg-[#0D1117] border border-[#212835] hover:border-[#C5A059]/60 transition flex flex-col justify-between gap-2.5"
+                  className="p-3 rounded-xl bg-canvas border border-line hover:border-brand/60 transition flex flex-col justify-between gap-2.5"
                 >
                   <div>
                     <div className="flex items-center justify-between gap-1">
-                      <span className="font-bold text-xs text-[#F0F4F8] truncate">{b.customerName}</span>
-                      <span className="font-mono text-[11px] font-bold text-[#C5A059] bg-[#C5A059]/10 px-1.5 py-0.5 rounded shrink-0">
+                      <span className="font-bold text-xs text-ink truncate">{b.customerName}</span>
+                      <span className="font-mono text-[12px] font-bold text-brand-ink bg-brand/10 px-1.5 py-0.5 rounded shrink-0">
                         {toPersianDigits(b.lathsCount)} لت
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px] text-[#9BA7B6] mt-1.5">
+                    <div className="flex items-center gap-2 text-[12px] text-ink-2 mt-1.5">
                       <span className="flex items-center gap-1">
-                        <Phone className="w-3 h-3 text-[#637184]" />
+                        <Phone className="w-3 h-3 text-ink-3" />
                         <span className="font-mono">{b.customerPhone}</span>
                       </span>
                       <span>•</span>
                       <span className="truncate">{b.salesRepName}</span>
                     </div>
 
-                    <div className="mt-2 text-[10px] bg-[#161B22] p-1.5 rounded border border-[#212835] flex items-center justify-between text-[#9BA7B6]">
+                    <div className="mt-2 text-[11px] bg-surface p-1.5 rounded border border-line flex items-center justify-between text-ink-2">
                       <span>پیشنهاد اولیه فروش:</span>
-                      <span className="font-mono font-bold text-[#E5CA8F]">{b.jalaliDate}</span>
+                      <span className="font-mono font-bold text-brand-soft">{b.jalaliDate}</span>
                     </div>
                   </div>
 
@@ -343,14 +338,14 @@ export const MonthPlanner: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => setAssigningBooking(b)}
-                      className="w-full py-1.5 rounded-lg bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-black text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                      className="w-full py-1.5 rounded-lg bg-brand hover:bg-brand-hover text-on-brand font-black text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
                     >
                       <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                       <span>تخصیص به برنامه نصب</span>
                     </button>
                   ) : (
-                    <div className="w-full py-1.5 rounded-lg bg-[#161B22] border border-[#212835] text-[#9BA7B6] text-[11px] font-medium text-center">
-                      در انتظار تخصیص توسط مدیر اپ و QC
+                    <div className="w-full py-1.5 rounded-lg bg-surface border border-line text-ink-2 text-[12px] font-medium text-center">
+                      در انتظار تخصیص توسط مدیر QC
                     </div>
                   )}
                 </div>
@@ -362,7 +357,7 @@ export const MonthPlanner: React.FC<Props> = ({
 
       {/* بنر تداخلات و هشدارهای برنامه‌ریزی (Conflict & Alerts Banner) */}
       {(conflicts.length > 0 || pendingRequests.length > 0) && (
-        <div className="rounded-lg border border-amber-500/30 bg-[#241A0E] p-4 transition-all">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 sm:p-4 transition-all">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-md bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
@@ -370,20 +365,18 @@ export const MonthPlanner: React.FC<Props> = ({
               </div>
               <div>
                 <h3 className="font-bold text-xs sm:text-sm text-amber-300">
-                  {conflicts.length > 0 && `${toPersianDigits(conflicts.length)} مورد تداخل و خطای ظرفیت`}
+                  {conflicts.length > 0 && `${toPersianDigits(conflicts.length)} هشدار برنامه`}
                   {conflicts.length > 0 && pendingRequests.length > 0 && ' | '}
                   {pendingRequests.length > 0 && `${toPersianDigits(pendingRequests.length)} درخواست تغییر زمان‌بندی`}
                 </h3>
-                <p className="text-[11px] text-amber-400/80">
-                  تخصیص‌های متداخل یا بیش از ظرفیت اکیپ‌ها شناسایی شده است.
-                </p>
+
               </div>
             </div>
             <button
               onClick={() => setIsAlertsOpen((prev) => !prev)}
               className="text-xs font-semibold text-amber-300 hover:underline flex items-center gap-1 cursor-pointer"
             >
-              {isAlertsOpen ? 'بستن لیست' : 'مشاهده جزئیات'}
+              {isAlertsOpen ? 'بستن' : 'مشاهده'}
               {isAlertsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
           </div>
@@ -404,7 +397,7 @@ export const MonthPlanner: React.FC<Props> = ({
                     <span className="font-bold shrink-0">{c.projectTitle}:</span>
                     <span className="truncate">{c.message}</span>
                   </div>
-                  <span className="text-[10px] font-mono shrink-0 opacity-75">{formatJalali(c.dateKey)}</span>
+                  <span className="text-[11px] font-mono shrink-0 opacity-75">{formatJalali(c.dateKey)}</span>
                 </div>
               ))}
 
@@ -424,7 +417,7 @@ export const MonthPlanner: React.FC<Props> = ({
                   {isQcManager && (
                     <button
                       onClick={() => setReviewingRequest(req)}
-                      className="px-2.5 py-1 rounded-md bg-blue-600 text-white font-bold text-[11px] hover:bg-blue-700 transition shrink-0 cursor-pointer"
+                      className="px-2.5 py-1 rounded-md bg-blue-600 text-white font-bold text-[12px] hover:bg-blue-700 transition shrink-0 cursor-pointer"
                     >
                       بررسی و تصمیم
                     </button>
@@ -439,28 +432,28 @@ export const MonthPlanner: React.FC<Props> = ({
       {/* ===================== VIEW A: TEAM-BASED TIMELINE LANES ===================== */}
       {viewMode === 'TIMELINE' ? (
         <div className="space-y-4">
-          <div className="rounded-lg border border-[#212835] bg-[#151B23] overflow-hidden shadow-none">
+          <div className="rounded-lg border border-line bg-surface overflow-hidden shadow-none">
             {/* سرستون روزهای خط سیر */}
-            <div className="grid grid-cols-6 border-b border-[#212835] bg-[#0D1117] text-xs font-semibold">
-              <div className="p-3 text-[#9BA7B6] flex items-center justify-center border-l border-[#212835]">
+            <div className="grid grid-cols-6 border-b border-line bg-canvas text-xs font-semibold">
+              <div className="p-3 text-ink-2 flex items-center justify-center border-l border-line">
                 اکیپ‌های ۲ گانه نصب
               </div>
               {displayedDays.map((d) => (
                 <div
                   key={d.dateKey}
-                  className={`p-3 text-center border-l last:border-l-0 border-[#212835] ${
-                    d.isToday ? 'bg-[#1C232D] text-[#C5A059] font-bold' : 'text-[#9BA7B6]'
+                  className={`p-3 text-center border-l last:border-l-0 border-line ${
+                    d.isToday ? 'bg-raised text-brand-ink font-bold' : 'text-ink-2'
                   }`}
                 >
-                  <div className="text-[11px] text-[#637184]">{d.persianDayName}</div>
-                  <div className="font-bold text-sm text-[#F0F4F8] tabular-nums">{d.persianDayNum}</div>
-                  <div className="text-[10px] text-[#C5A059] font-medium">{d.persianMonthName}</div>
+                  <div className="text-[12px] text-ink-3">{d.persianDayName}</div>
+                  <div className="font-bold text-sm text-ink tabular-nums">{d.persianDayNum}</div>
+                  <div className="text-[11px] text-brand-ink font-medium">{d.persianMonthName}</div>
                 </div>
               ))}
             </div>
 
             {/* سطرهای مربوط به هر اکیپ */}
-            <div className="divide-y divide-[#212835]">
+            <div className="divide-y divide-line">
               {teams.map((team) => {
                 const supUser = users.find((u) => u.id === team.supervisorId);
                 const supDisplayName = team.supervisorName
@@ -475,20 +468,20 @@ export const MonthPlanner: React.FC<Props> = ({
                 return (
                   <div key={team.id} className="grid grid-cols-6 min-h-[140px] items-stretch">
                     {/* ستون عنوان اکیپ */}
-                    <div className="p-3 border-l border-[#212835] bg-[#111620] flex flex-col justify-between">
+                    <div className="p-3 border-l border-line bg-sunken flex flex-col justify-between">
                       <div>
-                        <div className="font-bold text-sm text-[#F0F4F8] flex items-center gap-1.5">
-                          <Users className="w-4 h-4 text-[#C5A059]" />
+                        <div className="font-bold text-sm text-ink flex items-center gap-1.5">
+                          <Users className="w-4 h-4 text-brand-ink" />
                           <span>{dynamicTeamName}</span>
                         </div>
-                        <span className="text-[10px] font-mono text-[#9BA7B6] px-1.5 py-0.5 rounded bg-[#1C232D] inline-block mt-1">
+                        <span className="text-[11px] font-mono text-ink-2 px-1.5 py-0.5 rounded bg-raised inline-block mt-1">
                           {team.code}
                         </span>
                       </div>
                       {(() => {
                         const cap = getTeamDailyCapacity(team, settings);
                         return (
-                          <div className={`text-[11px] ${cap.configured ? 'text-[#637184]' : 'text-amber-400 font-bold'}`}>
+                          <div className={`text-[12px] ${cap.configured ? 'text-ink-3' : 'text-amber-400 font-bold'}`}>
                             {cap.configured && cap.capacityHours !== null
                               ? `سقف: ${toPersianDigits(cap.capacityHours)} س/روز`
                               : 'ظرفیت نامشخص ⚠️'}
@@ -504,12 +497,12 @@ export const MonthPlanner: React.FC<Props> = ({
                       return (
                         <div
                           key={day.dateKey}
-                          className={`p-2 border-l last:border-l-0 border-[#212835] flex flex-col justify-between ${
+                          className={`p-2 border-l last:border-l-0 border-line flex flex-col justify-between ${
                             load.isOverloaded
                               ? 'bg-rose-500/10'
                               : day.isToday
-                              ? 'bg-[#1C232D]/40'
-                              : 'bg-[#151B23]'
+                              ? 'bg-raised/40'
+                              : 'bg-surface'
                           }`}
                         >
                           {/* لیست پروژه‌های منتسب به این اکیپ در این روز */}
@@ -522,19 +515,19 @@ export const MonthPlanner: React.FC<Props> = ({
                                 <div
                                   key={p.id}
                                   onClick={() => onManageProject(p)}
-                                  className="p-2 rounded-md border border-[#212835] bg-[#111620] hover:border-[#C5A059] transition cursor-pointer text-xs space-y-1 shadow-none group"
+                                  className="p-2 rounded-md border border-line bg-sunken hover:border-brand transition cursor-pointer text-xs space-y-1 shadow-none group"
                                 >
-                                  <div className="flex items-center justify-between text-[11px]">
-                                    <span className="font-mono font-bold text-[#C5A059]">
+                                  <div className="flex items-center justify-between text-[12px]">
+                                    <span className="font-mono font-bold text-brand-ink">
                                       {p.code}
                                     </span>
                                     <StatusPill status={p.status} qcStatus={p.qcStatus} size="sm" />
                                   </div>
-                                  <div className="font-semibold text-[#F0F4F8] truncate">
+                                  <div className="font-semibold text-ink truncate">
                                     {p.title}
                                   </div>
 
-                                  <div className="flex items-center justify-between text-[10px] text-[#9BA7B6] pt-1 border-t border-dashed border-[#212835]">
+                                  <div className="flex items-center justify-between text-[11px] text-ink-2 pt-1 border-t border-dashed border-line">
                                     {dailyHours > 0 ? (
                                       <span className="font-semibold text-amber-400 tabular-nums">
                                         {toPersianDigits(dailyHours)} ساعت
@@ -546,7 +539,7 @@ export const MonthPlanner: React.FC<Props> = ({
                                     )}
 
                                     {multiProg ? (
-                                      <span className="bg-[#1C232D] text-[#C5A059] px-1 rounded font-semibold">
+                                      <span className="bg-raised text-brand-ink px-1 rounded font-semibold">
                                         {multiProg.badgeText}
                                       </span>
                                     ) : (
@@ -557,26 +550,33 @@ export const MonthPlanner: React.FC<Props> = ({
                               );
                             })}
 
-                            {canEditSchedule && onNewProject && load.assignedProjects.length === 0 && (
+                            {/* دکمه افزودن همیشه هست؛ قبلاً فقط وقتی روز خالی بود دیده می‌شد و مأموریت دوم ثبت نمی‌شد */}
+                            {canEditSchedule && onNewProject && (
                               <button
-                                onClick={() => onNewProject(day.dateKey)}
-                                className="w-full h-12 border border-dashed border-[#212835] hover:border-[#C5A059] rounded-md flex items-center justify-center text-[#637184] hover:text-[#C5A059] text-xs transition cursor-pointer"
+                                type="button"
+                                onClick={() =>
+                                  onNewProject(day.dateKey, { assignedTeamId: team.id, assignedTeamName: dynamicTeamName })
+                                }
+                                aria-label={`افزودن مأموریت برای ${dynamicTeamName} در ${day.persianDayName}`}
+                                className={`w-full border border-dashed border-line hover:border-brand rounded-md flex items-center justify-center text-ink-3 hover:text-brand-ink text-xs transition cursor-pointer ${
+                                  load.assignedProjects.length === 0 ? 'h-12' : 'h-8'
+                                }`}
                               >
-                                + تخصیص
+                                {load.assignedProjects.length === 0 ? '+ تخصیص' : '+ مأموریت دیگر'}
                               </button>
                             )}
                           </div>
 
                           {/* خلاصه بار کاری این اکیپ در این روز */}
-                          <div className="pt-1.5 border-t border-[#212835] flex items-center justify-between text-[10px]">
-                            <span className="text-[#637184]">بار کاری:</span>
+                          <div className="pt-1.5 border-t border-line flex items-center justify-between text-[11px]">
+                            <span className="text-ink-3">بار کاری:</span>
                             <span
                               className={`font-mono font-bold tabular-nums ${
                                 load.isOverloaded
                                   ? 'text-rose-400 font-bold'
                                   : load.totalWorkloadHours > 0
-                                  ? 'text-[#F0F4F8]'
-                                  : 'text-[#637184]'
+                                  ? 'text-ink'
+                                  : 'text-ink-3'
                               }`}
                             >
                               {load.capacityHours !== null
@@ -616,29 +616,29 @@ export const MonthPlanner: React.FC<Props> = ({
                 key={day.dateKey}
                 className={`rounded-lg border flex flex-col min-h-[300px] transition-all duration-150 ${
                   day.isToday
-                    ? 'border-[#C5A059] bg-[#151B23] shadow-none ring-1 ring-[#C5A059]/40'
-                    : 'border-[#212835] bg-[#151B23]'
+                    ? 'border-brand bg-surface shadow-none ring-1 ring-brand/40'
+                    : 'border-line bg-surface'
                 }`}
               >
                 {/* Day Header */}
                 <div
                   className={`p-3 border-b flex items-center justify-between text-xs ${
                     day.isToday
-                      ? 'border-[#212835] bg-[#1C232D] text-[#C5A059]'
-                      : 'border-[#212835] bg-[#0D1117] text-[#9BA7B6]'
+                      ? 'border-line bg-raised text-brand-ink'
+                      : 'border-line bg-canvas text-ink-2'
                   }`}
                 >
                   <div>
-                    <div className="font-medium text-[11px] text-[#637184]">{day.persianDayName}</div>
-                    <div className="font-bold text-sm text-[#F0F4F8] tabular-nums">
+                    <div className="font-medium text-[12px] text-ink-3">{day.persianDayName}</div>
+                    <div className="font-bold text-sm text-ink tabular-nums">
                       {day.persianDayNum}
                     </div>
                   </div>
 
                   <div className="text-left tabular-nums">
-                    <span className="text-[11px] text-[#C5A059] font-medium block">{day.persianMonthName}</span>
+                    <span className="text-[12px] text-brand-ink font-medium block">{day.persianMonthName}</span>
                     {totalWorkload > 0 && (
-                      <span className="text-[10px] text-amber-400 font-semibold">
+                      <span className="text-[11px] text-amber-400 font-semibold">
                         {toPersianDigits(totalWorkload.toFixed(1))} س کار
                       </span>
                     )}
@@ -654,10 +654,10 @@ export const MonthPlanner: React.FC<Props> = ({
                     return (
                       <div
                         key={proj.id}
-                        className="p-3 space-y-2 rounded-md border border-[#212835] bg-[#111620] hover:border-[#C5A059] shadow-none transition"
+                        className="p-3 space-y-2 rounded-md border border-line bg-sunken hover:border-brand shadow-none transition"
                       >
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-mono font-bold text-xs bg-[#1C232D] text-[#E5CA8F] px-2 py-0.5 rounded">
+                          <span className="font-mono font-bold text-xs bg-raised text-brand-soft px-2 py-0.5 rounded">
                             {proj.code}
                           </span>
                           <StatusPill status={proj.status} qcStatus={proj.qcStatus} size="sm" />
@@ -666,23 +666,23 @@ export const MonthPlanner: React.FC<Props> = ({
                         {/* Special Badges: Force Majeure, Warehouse Ready, Special Tools */}
                         <div className="flex items-center gap-1 flex-wrap">
                           {proj.isForceMajeure && (
-                            <span className="text-[10px] bg-rose-500/20 text-rose-300 font-bold px-1.5 py-0.5 rounded border border-rose-500/30 flex items-center gap-0.5">
+                            <span className="text-[11px] bg-rose-500/20 text-rose-300 font-bold px-1.5 py-0.5 rounded border border-rose-500/30 flex items-center gap-0.5">
                               <span>🔥 فورس‌ماژور</span>
                             </span>
                           )}
                           {proj.warehousePrep?.isPackedAndReady ? (
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+                            <span className="text-[11px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
                               <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                               <span>بار انبار آماده ✅</span>
                             </span>
                           ) : (
-                            <span className="text-[10px] bg-zinc-800 text-[#9BA7B6] font-medium px-1.5 py-0.5 rounded border border-zinc-700/50 flex items-center gap-1">
+                            <span className="text-[11px] bg-raised text-ink-2 font-medium px-1.5 py-0.5 rounded border border-line-strong/50 flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                               <span>در انتظار بارگیری انبار</span>
                             </span>
                           )}
                           {proj.specialTools && proj.specialTools.length > 0 && (
-                            <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                            <span className="text-[11px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
                               <Wrench className="w-3 h-3 text-amber-400" />
                               <span>{proj.specialTools.join('، ')}</span>
                             </span>
@@ -690,41 +690,43 @@ export const MonthPlanner: React.FC<Props> = ({
                         </div>
 
                         <div>
-                          <h4 className="font-semibold text-xs text-[#F0F4F8] leading-snug line-clamp-1">
+                          <h4 className="font-semibold text-xs text-ink leading-snug line-clamp-1">
                             {proj.title}
                           </h4>
-                          <p className="text-xs text-[#9BA7B6] line-clamp-1">{proj.customerName}</p>
+                          {proj.customerName && proj.customerName !== proj.title && (
+                            <p className="text-xs text-ink-2 line-clamp-1">{proj.customerName}</p>
+                          )}
                         </div>
 
                         {/* اکیپ و بار کاری */}
-                        <div className="flex items-center justify-between text-xs text-[#9BA7B6] bg-[#0D1117] p-1.5 rounded-md border border-[#212835]">
-                          <span className="font-medium text-[#F0F4F8]">
+                        <div className="flex items-center justify-between text-xs text-ink-2 bg-canvas p-1.5 rounded-md border border-line">
+                          <span className="font-medium text-ink">
                             {proj.assignedTeamName || 'بدون اکیپ'}
                           </span>
                           {durationHours > 0 ? (
-                            <span className="font-semibold text-[#C5A059] tabular-nums">
+                            <span className="font-semibold text-brand-ink tabular-nums">
                               {toPersianDigits(durationHours)} ساعت
                             </span>
                           ) : (
-                            <span className="text-[10px] text-rose-400 font-bold bg-rose-500/10 px-1 rounded">
+                            <span className="text-[11px] text-rose-400 font-bold bg-rose-500/10 px-1 rounded">
                               بدون تخمین
                             </span>
                           )}
                         </div>
 
                         {/* اکشن‌ها */}
-                        <div className="flex items-center justify-between pt-1 border-t border-[#212835] text-xs">
+                        <div className="flex items-center justify-between pt-1 border-t border-line text-xs">
                           {canEditSchedule && onProposeScheduleChange ? (
                             <button
                               type="button"
                               onClick={() => handleOpenProposeModal(proj)}
-                              className="text-[#C5A059] hover:underline font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
+                              className="text-brand-ink hover:underline font-semibold text-[12px] flex items-center gap-1 cursor-pointer"
                             >
                               <ArrowRightLeft className="w-3 h-3" />
                               تغییر برنامه
                             </button>
                           ) : (
-                            <span className="text-[10px] text-[#637184] font-mono">
+                            <span className="text-[11px] text-ink-3 font-mono">
                               {proj.status === 'COMPLETED' ? 'تکمیل‌شده' : 'مأموریت مصوب'}
                             </span>
                           )}
@@ -734,7 +736,7 @@ export const MonthPlanner: React.FC<Props> = ({
                               <button
                                 type="button"
                                 onClick={() => onEditProject(proj)}
-                                className="p-1.5 text-[#9BA7B6] hover:text-[#F0F4F8] rounded cursor-pointer"
+                                className="p-1.5 text-ink-2 hover:text-ink rounded cursor-pointer"
                                 title="ویرایش"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
@@ -743,7 +745,7 @@ export const MonthPlanner: React.FC<Props> = ({
                             <button
                               type="button"
                               onClick={() => onManageProject(proj)}
-                              className="p-1.5 text-[#9BA7B6] hover:text-[#C5A059] rounded cursor-pointer"
+                              className="p-1.5 text-ink-2 hover:text-brand-ink rounded cursor-pointer"
                               title="مدیریت کامل"
                             >
                               <Settings2 className="w-3.5 h-3.5" />
@@ -754,12 +756,17 @@ export const MonthPlanner: React.FC<Props> = ({
                     );
                   })}
 
-                  {canEditSchedule && onNewProject && dayProjects.length === 0 && (
+                  {/* دکمه افزودن همیشه هست (قبلاً بعد از اولین مأموریت روز ناپدید می‌شد) */}
+                  {canEditSchedule && onNewProject && (
                     <button
+                      type="button"
                       onClick={() => onNewProject(day.dateKey)}
-                      className="w-full py-5 border border-dashed border-[#212835] hover:border-[#C5A059] rounded-md flex items-center justify-center text-[#637184] hover:text-[#C5A059] text-xs transition cursor-pointer"
+                      aria-label={`افزودن مأموریت برای ${day.persianDayName}`}
+                      className={`w-full border border-dashed border-line hover:border-brand rounded-md flex items-center justify-center text-ink-3 hover:text-brand-ink text-xs transition cursor-pointer ${
+                        dayProjects.length === 0 ? 'py-5' : 'py-2.5'
+                      }`}
                     >
-                      + افزودن مأموریت
+                      {dayProjects.length === 0 ? '+ افزودن مأموریت' : '+ مأموریت دیگر'}
                     </button>
                   )}
                 </div>
@@ -776,16 +783,17 @@ export const MonthPlanner: React.FC<Props> = ({
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
         >
-          <div className="bg-[#151B23] rounded-lg max-w-md w-full shadow-2xl border border-[#212835] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="bg-[#0D1117] px-5 py-4 text-[#F0F4F8] flex items-center justify-between border-b border-[#212835]">
+          <div className="bg-surface rounded-lg max-w-md w-full shadow-2xl border border-line overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-canvas px-5 py-4 text-ink flex items-center justify-between border-b border-line">
               <div className="flex items-center gap-2">
-                <ArrowRightLeft className="w-5 h-5 text-[#C5A059]" />
-                <h3 className="font-bold text-sm text-[#F0F4F8]">پیشنهاد تغییر تاریخ و زمان‌بندی</h3>
+                <ArrowRightLeft className="w-5 h-5 text-brand-ink" />
+                <h3 className="font-bold text-sm text-ink">پیشنهاد تغییر تاریخ و زمان‌بندی</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setProposingProject(null)}
-                className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
+                aria-label="بستن"
+                className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-raised text-ink-2 hover:text-ink transition cursor-pointer"
               >
                 ✕
               </button>
@@ -798,19 +806,19 @@ export const MonthPlanner: React.FC<Props> = ({
                 </div>
               )}
 
-              <div className="text-xs text-[#9BA7B6]">
-                پروژه: <span className="font-bold text-[#F0F4F8]">{proposingProject.title}</span> (
+              <div className="text-xs text-ink-2">
+                پروژه: <span className="font-bold text-ink">{proposingProject.title}</span> (
                 <span className="font-mono">{proposingProject.code}</span>)
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#F0F4F8] mb-1">
+                <label className="block text-xs font-semibold text-ink mb-1">
                   تاریخ شروع پیشنهادی:
                 </label>
                 <select
                   value={proposedDate}
                   onChange={(e) => setProposedDate(e.target.value)}
-                  className="w-full rounded-md border border-[#212835] bg-[#0D1117] px-3 py-2 text-xs text-[#F0F4F8] focus:border-[#C5A059]"
+                  className="w-full rounded-md border border-line bg-canvas px-3 py-2 text-xs text-ink focus:border-brand"
                   required
                 >
                   {days.map((d) => (
@@ -823,13 +831,13 @@ export const MonthPlanner: React.FC<Props> = ({
 
               {isProjectMultiDay(proposingProject) && (
                 <div>
-                  <label className="block text-xs font-semibold text-[#F0F4F8] mb-1">
+                  <label className="block text-xs font-semibold text-ink mb-1">
                     تاریخ پایان پیشنهادی (پروژه چندروزه):
                   </label>
                   <select
                     value={proposedEndDate}
                     onChange={(e) => setProposedEndDate(e.target.value)}
-                    className="w-full rounded-md border border-[#212835] bg-[#0D1117] px-3 py-2 text-xs text-[#F0F4F8] focus:border-[#C5A059]"
+                    className="w-full rounded-md border border-line bg-canvas px-3 py-2 text-xs text-ink focus:border-brand"
                   >
                     <option value="">همان روز (تک روزه)</option>
                     {days
@@ -844,13 +852,13 @@ export const MonthPlanner: React.FC<Props> = ({
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-[#F0F4F8] mb-1">
+                <label className="block text-xs font-semibold text-ink mb-1">
                   اکیپ نصب پیشنهادی:
                 </label>
                 <select
                   value={proposedTeamId}
                   onChange={(e) => setProposedTeamId(e.target.value)}
-                  className="w-full rounded-md border border-[#212835] bg-[#0D1117] px-3 py-2 text-xs text-[#F0F4F8] focus:border-[#C5A059]"
+                  className="w-full rounded-md border border-line bg-canvas px-3 py-2 text-xs text-ink focus:border-brand"
                 >
                   <option value="">بدون تغییر اکیپ</option>
                   {teams.map((t) => {
@@ -871,7 +879,7 @@ export const MonthPlanner: React.FC<Props> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#F0F4F8] mb-1">
+                <label className="block text-xs font-semibold text-ink mb-1">
                   علت تغییر برنامه (الزامی جهت تایید مدیر QC):
                 </label>
                 <textarea
@@ -879,12 +887,12 @@ export const MonthPlanner: React.FC<Props> = ({
                   onChange={(e) => setChangeReason(e.target.value)}
                   placeholder="علت ضرورت جابه‌جایی تاریخ یا اکیپ را شرح دهید..."
                   rows={3}
-                  className="w-full rounded-md border border-[#212835] bg-[#0D1117] px-3 py-2 text-xs text-[#F0F4F8] focus:outline-none focus:border-[#C5A059]"
+                  className="w-full rounded-md border border-line bg-canvas px-3 py-2 text-xs text-ink focus:outline-none focus:border-brand"
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#212835]">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
                 <Button variant="ghost" size="sm" onClick={() => setProposingProject(null)}>
                   انصراف
                 </Button>
@@ -910,46 +918,47 @@ export const MonthPlanner: React.FC<Props> = ({
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
         >
-          <div className="bg-[#151B23] rounded-lg max-w-md w-full shadow-2xl border border-[#212835] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="bg-[#0D1117] px-5 py-4 text-[#F0F4F8] flex items-center justify-between border-b border-[#212835]">
+          <div className="bg-surface rounded-lg max-w-md w-full shadow-2xl border border-line overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-canvas px-5 py-4 text-ink flex items-center justify-between border-b border-line">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-[#C5A059]" />
-                <h3 className="font-bold text-sm text-[#F0F4F8]">بررسی درخواست تغییر برنامه زمان‌بندی</h3>
+                <CheckCircle2 className="w-5 h-5 text-brand-ink" />
+                <h3 className="font-bold text-sm text-ink">بررسی درخواست تغییر برنامه زمان‌بندی</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setReviewingRequest(null)}
-                className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
+                aria-label="بستن"
+                className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-raised text-ink-2 hover:text-ink transition cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             <div className="p-5 space-y-4 text-xs">
-              <div className="p-3 rounded-md bg-[#111620] border border-[#212835] space-y-1.5">
+              <div className="p-3 rounded-md bg-sunken border border-line space-y-1.5">
                 <div>
-                  پروژه: <span className="font-bold text-[#F0F4F8]">{reviewingRequest.projectTitle}</span> (
-                  <span className="font-mono text-[#C5A059]">{reviewingRequest.projectCode}</span>)
+                  پروژه: <span className="font-bold text-ink">{reviewingRequest.projectTitle}</span> (
+                  <span className="font-mono text-brand-ink">{reviewingRequest.projectCode}</span>)
                 </div>
                 <div>
-                  درخواست‌دهنده: <span className="font-semibold text-[#F0F4F8]">{reviewingRequest.requestedByUserName}</span>
+                  درخواست‌دهنده: <span className="font-semibold text-ink">{reviewingRequest.requestedByUserName}</span>
                 </div>
                 <div>
-                  تغییر تاریخ: از <span className="font-mono text-[#9BA7B6]">{reviewingRequest.previousScheduledDate}</span> به{' '}
-                  <span className="font-mono font-bold text-[#C5A059]">{reviewingRequest.proposedScheduledDate}</span>
+                  تغییر تاریخ: از <span className="font-mono text-ink-2">{reviewingRequest.previousScheduledDate}</span> به{' '}
+                  <span className="font-mono font-bold text-brand-ink">{reviewingRequest.proposedScheduledDate}</span>
                 </div>
                 {reviewingRequest.proposedTeamName && (
                   <div>
-                    تغییر اکیپ: به <span className="font-semibold text-[#F0F4F8]">{reviewingRequest.proposedTeamName}</span>
+                    تغییر اکیپ: به <span className="font-semibold text-ink">{reviewingRequest.proposedTeamName}</span>
                   </div>
                 )}
-                <div className="pt-1.5 border-t border-dashed border-[#212835] text-[#9BA7B6]">
+                <div className="pt-1.5 border-t border-dashed border-line text-ink-2">
                   علت ثبت‌شده: «{reviewingRequest.reason}»
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#F0F4F8] mb-1">
+                <label className="block text-xs font-semibold text-ink mb-1">
                   یادداشت بررسی مدیر QC:
                 </label>
                 <textarea
@@ -957,11 +966,11 @@ export const MonthPlanner: React.FC<Props> = ({
                   onChange={(e) => setReviewNotes(e.target.value)}
                   placeholder="توضیحات تایید یا علت رد درخواست..."
                   rows={2}
-                  className="w-full rounded-md border border-[#212835] bg-[#0D1117] px-3 py-2 text-xs text-[#F0F4F8] focus:border-[#C5A059]"
+                  className="w-full rounded-md border border-line bg-canvas px-3 py-2 text-xs text-ink focus:border-brand"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#212835]">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
                 <Button
                   variant="danger"
                   size="sm"
@@ -987,7 +996,7 @@ export const MonthPlanner: React.FC<Props> = ({
       )}
 
       {/* مودال تخصیص رزرو فروش به تقویم قطعی نصب */}
-      {assigningBooking && (
+      {assigningBooking && onNewProject && (
         <AssignSalesBookingModal
           booking={assigningBooking}
           teams={teams}

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getStoredBookings, SALES_REPS_SEED, INSTALLATION_TEAMS } from '../salesCapacity';
 import { StorageService } from '../storage';
 import { TEST_USERS, DEFAULT_TEAMS, DEFAULT_TEAM_MEMBERS } from '../testUsers';
-import { Project, Ticket, MaterialRequest, User } from '../../types';
+import { User } from '../../types';
 
 const createLocalStorageMock = () => {
   let store: Record<string, string> = {};

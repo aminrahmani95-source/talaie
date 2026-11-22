@@ -187,7 +187,8 @@ describe('Sales & 40-Lath Capacity Engine Tests', () => {
     const days = getThreeMonthCapacities(90);
     expect(days).toHaveLength(90);
     days.forEach((day) => {
-      expect(day.maxLaths).toBe(40);
+      // Fridays are closed (same rule as the installation planner)
+      expect(day.maxLaths).toBe(new Date(`${day.date}T12:00:00`).getDay() === 5 ? 0 : 40);
       expect(day.remainingLaths).toBeLessThanOrEqual(40);
       expect(day.remainingLaths).toBeGreaterThanOrEqual(0);
     });
@@ -258,7 +259,7 @@ describe('Sales & 40-Lath Capacity Engine Tests', () => {
       lathsCount: 30,
       isSmart: true,
       notes: 'کنسلی به دلیل تاخیر کارفرما',
-      requestedDate: '2026-12-25',
+      requestedDate: '2026-12-24',
       jalaliDate: '۱۴۰۵/۱۰/۰۴',
       allocationMode: 'SPREAD_DAILY',
       allocatedTeams: ['TEAM_1', 'TEAM_2'],
@@ -267,20 +268,20 @@ describe('Sales & 40-Lath Capacity Engine Tests', () => {
       salesRepName: 'نیلوفر صبوری',
     });
 
-    const capBefore = getDailyCapacity('2026-12-25');
+    const capBefore = getDailyCapacity('2026-12-24');
     expect(capBefore.bookedLaths).toBe(30);
 
     const deleted = deleteSalesBooking(bookingToDelete.id);
     expect(deleted).toBe(true);
 
-    const capAfter = getDailyCapacity('2026-12-25');
+    const capAfter = getDailyCapacity('2026-12-24');
     expect(capAfter.bookedLaths).toBe(0);
     expect(capAfter.remainingLaths).toBe(40);
   });
 
   it('11. enables consecutive option for 50 laths on empty days without bug', () => {
     // 50 laths on an arbitrary future date
-    const options = calculateBookingOptions(50, '2026-12-18');
+    const options = calculateBookingOptions(50, '2026-12-19');
     expect(options.consecutiveOption.isAvailable).toBe(true);
     expect(options.consecutiveOption.requiredDays).toBe(3); // 50 / 20 = 3 days
     expect(options.consecutiveOption.daysDetails).toHaveLength(3);
@@ -301,5 +302,50 @@ describe('Sales & 40-Lath Capacity Engine Tests', () => {
     expect(options.consecutiveOption.isAvailable).toBe(true);
     expect(options.consecutiveOption.requiredDays).toBe(6);
     expect(options.consecutiveOption.daysDetails).toHaveLength(6);
+  });
+});
+
+describe('Configurable installation capacity (set by QC manager)', () => {
+  it('uses team count × laths per team for daily totals and team list', async () => {
+    const mod = await import('../salesCapacity');
+    mod.setSalesCapacityConfig({ teamCount: 3, lathsPerTeam: 15 });
+    const cap = mod.getSalesCapacity();
+    expect(cap.dailyTotal).toBe(45);
+    expect(cap.teams.map((t) => t.id)).toEqual(['TEAM_1', 'TEAM_2', 'TEAM_3']);
+    const day = mod.getDailyCapacity('2027-01-10', []);
+    expect(day.maxLaths).toBe(45);
+    expect(day.teams).toHaveLength(3);
+    expect(day.teams[0].maxLaths).toBe(15);
+    // restore defaults for other tests
+    mod.setSalesCapacityConfig({ teamCount: 2, lathsPerTeam: 20 });
+    expect(mod.getSalesCapacity().dailyTotal).toBe(40);
+  });
+
+  it('clamps invalid values to safe limits and falls back to defaults', async () => {
+    const { normalizeSalesCapacityConfig } = await import('../salesCapacity');
+    expect(normalizeSalesCapacityConfig({ teamCount: 0, lathsPerTeam: 9999 })).toMatchObject({ teamCount: 1, lathsPerTeam: 200 });
+    expect(normalizeSalesCapacityConfig({})).toMatchObject({ teamCount: 2, lathsPerTeam: 20 });
+    expect(normalizeSalesCapacityConfig({ teamCount: Number.NaN as any })).toMatchObject({ teamCount: 2 });
+  });
+
+  it('splits a large order over days using the configured daily total', async () => {
+    const mod = await import('../salesCapacity');
+    mod.setSalesCapacityConfig({ teamCount: 3, lathsPerTeam: 20 }); // 60 laths/day
+    const { spreadOption } = mod.calculateBookingOptions(115, '2027-02-01');
+    expect(spreadOption.requiredDays).toBe(2);
+    mod.setSalesCapacityConfig({ teamCount: 2, lathsPerTeam: 20 });
+  });
+
+  it('12. Fridays are closed and multi-day bookings skip them', () => {
+    // 2026-12-25 is a Friday
+    const friday = getDailyCapacity('2026-12-25', []);
+    expect(friday.isClosed).toBe(true);
+    expect(friday.maxLaths).toBe(0);
+    expect(calculateBookingOptions(10, '2026-12-25').spreadOption.isAvailable).toBe(false);
+
+    // 3 working days starting Thursday 2026-12-24 → Thu, Sat, Sun
+    const { consecutiveOption } = calculateBookingOptions(50, '2026-12-24');
+    expect(consecutiveOption.isAvailable).toBe(true);
+    expect(consecutiveOption.daysDetails.map((d) => d.date)).toEqual(['2026-12-24', '2026-12-26', '2026-12-27']);
   });
 });

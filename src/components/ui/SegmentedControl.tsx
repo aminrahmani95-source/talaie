@@ -33,7 +33,7 @@ export function SegmentedControl<T extends string = string>({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`inline-flex items-center bg-[#111620] rounded-md border border-[#212835] select-none max-w-full overflow-x-auto scrollbar-none ${sizeClasses} ${className}`}
+      className={`inline-flex items-center bg-sunken rounded-md border border-line select-none max-w-full overflow-x-auto scrollbar-none ${sizeClasses} ${className}`}
     >
       {options.map((opt) => {
         const optVal = (opt.value ?? opt.id) as T;
@@ -48,18 +48,18 @@ export function SegmentedControl<T extends string = string>({
             onClick={() => onChange(optVal)}
             className={`relative flex items-center justify-center gap-1.5 rounded font-bold transition-all duration-150 shrink-0 cursor-pointer ${itemPadding} ${
               isSelected
-                ? 'bg-[#1C232D] text-[#C5A059] border border-[#C5A059]/40 shadow-xs'
-                : 'text-[#9BA7B6] hover:text-[#F0F4F8] hover:bg-[#151B23] border border-transparent'
+                ? 'bg-raised text-brand-ink border border-brand/40 shadow-xs'
+                : 'text-ink-2 hover:text-ink hover:bg-surface border border-transparent'
             }`}
           >
             {opt.icon && <span className="shrink-0">{opt.icon}</span>}
             <span>{opt.label}</span>
             {countVal !== undefined && (
               <span
-                className={`text-[11px] px-1.5 py-0.5 rounded font-bold leading-none ${
+                className={`text-[12px] px-1.5 py-0.5 rounded font-bold leading-none ${
                   isSelected
-                    ? 'bg-[#C5A059] text-[#0D1117]'
-                    : 'bg-[#1C232D] text-[#9BA7B6] border border-[#2D3748]'
+                    ? 'bg-brand text-on-brand'
+                    : 'bg-raised text-ink-2 border border-line-strong'
                 }`}
               >
                 {countVal}

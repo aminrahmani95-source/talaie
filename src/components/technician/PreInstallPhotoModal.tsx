@@ -4,6 +4,7 @@ import { compressImageFile } from '../../utils/imageCompressor';
 import { Project } from '../../types';
 import { CloudImage } from '../common/CloudImage';
 import { toPersianDigits } from '../../utils/jalali';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   project: Project;
@@ -18,6 +19,7 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
   onClose,
   onSubmit,
 }) => {
+  useEscapeKey(onClose, isOpen);
   const [photos, setPhotos] = useState<string[]>(project.beforePhotos || []);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,44 +83,44 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
       aria-labelledby="pre-install-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-[#151B23] rounded-xl max-w-lg w-full shadow-2xl border border-[#C5A059]/40 overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-surface rounded-xl max-w-lg w-full shadow-2xl border border-brand/40 overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-[#0D1117] px-5 py-4 border-b border-[#212835] flex items-center justify-between text-[#F0F4F8]">
+        <div className="bg-canvas px-5 py-4 border-b border-line flex items-center justify-between text-ink">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/30 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-brand/15 text-brand-ink border border-brand/30 flex items-center justify-center shrink-0">
               <Camera className="w-5 h-5" />
             </div>
             <div>
-              <h3 id="pre-install-title" className="font-black text-sm sm:text-base text-[#F0F4F8]">
+              <h3 id="pre-install-title" className="font-black text-sm sm:text-base text-ink">
                 گیت الزامی: عکس‌های قبل از نصب
               </h3>
-              <p className="text-xs text-[#9BA7B6] mt-0.5">
-                <span className="font-mono text-[#C5A059]">{project.code}</span> • {project.title}
+              <p className="text-xs text-ink-2 mt-0.5">
+                <span className="font-mono text-brand-ink">{project.code}</span> • {project.title}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9BA7B6] hover:text-white hover:bg-[#1C232D] transition"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-2 hover:text-ink hover:bg-raised transition"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Instructions Banner */}
-        <div className="bg-[#C5A059]/10 border-b border-[#C5A059]/20 p-3.5 flex items-start gap-2.5 text-xs text-[#E5CA8F]">
-          <AlertTriangle className="w-4 h-4 text-[#C5A059] shrink-0 mt-0.5" />
+        <div className="bg-brand/10 border-b border-brand/20 p-3.5 flex items-start gap-2.5 text-xs text-brand-soft">
+          <AlertTriangle className="w-4 h-4 text-brand-ink shrink-0 mt-0.5" />
           <p className="leading-relaxed">
             لطفاً پیش از دست زدن به ابزار یا باز کردن بسته‌بندی‌ها، چند عکس شفاف از محل نصب (قاب پنجره، سقف کاذب، قرنیزها و کلید/پریزها) بارگذاری کنید. 
-            <span className="font-bold text-white block mt-0.5">تا پیش از بارگذاری عکس، دکمه «شروع نصب» قفل خواهد بود.</span>
+            <span className="font-bold text-ink block mt-0.5">تا پیش از بارگذاری عکس، دکمه «شروع نصب» قفل خواهد بود.</span>
           </p>
         </div>
 
         {/* Content Body */}
         <div className="p-5 space-y-4">
           {/* Upload Button */}
-          <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-[#2D3748] hover:border-[#C5A059] rounded-xl p-6 bg-[#0D1117] cursor-pointer transition text-center group">
+          <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line-strong hover:border-brand rounded-xl p-6 bg-canvas cursor-pointer transition text-center group">
             <input
               type="file"
               accept="image/*"
@@ -129,17 +131,17 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
               className="hidden"
             />
             {isProcessing ? (
-              <Loader2 className="w-8 h-8 text-[#C5A059] animate-spin" />
+              <Loader2 className="w-8 h-8 text-brand-ink animate-spin" />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-[#1C232D] text-[#C5A059] group-hover:bg-[#C5A059]/20 flex items-center justify-center transition">
+              <div className="w-12 h-12 rounded-full bg-raised text-brand-ink group-hover:bg-brand/20 flex items-center justify-center transition">
                 <Upload className="w-6 h-6" />
               </div>
             )}
             <div>
-              <p className="text-xs sm:text-sm font-bold text-[#F0F4F8] group-hover:text-[#C5A059] transition">
+              <p className="text-xs sm:text-sm font-bold text-ink group-hover:text-brand-ink transition">
                 عکاسی با دوربین یا انتخاب از گالری
               </p>
-              <p className="text-[11px] text-[#637184] mt-0.5">
+              <p className="text-[12px] text-ink-3 mt-0.5">
                 تصاویر به صورت هوشمند و بدون افت کیفیت فشرده می‌شوند
               </p>
             </div>
@@ -148,12 +150,12 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
           {/* Photo Thumbnails */}
           {photos.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-[#9BA7B6]">
+              <div className="flex items-center justify-between text-xs font-bold text-ink-2">
                 <span>تصاویر ثبت‌شده ({toPersianDigits(photos.length)} مورد):</span>
               </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-48 overflow-y-auto p-1 bg-[#0D1117] rounded-lg border border-[#212835]">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-48 overflow-y-auto p-1 bg-canvas rounded-lg border border-line">
                 {photos.map((url, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-md overflow-hidden border border-[#212835] group">
+                  <div key={idx} className="relative aspect-square rounded-md overflow-hidden border border-line group">
                     <CloudImage src={url} alt={`پیش‌نصب ${idx + 1}`} className="w-full h-full object-cover" />
                     <button
                       type="button"
@@ -176,12 +178,12 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
           )}
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#212835]">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-line">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2.5 rounded-lg text-xs font-bold bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
+              className="px-4 py-2.5 rounded-lg text-xs font-bold bg-raised hover:bg-hover text-ink-2 hover:text-ink transition cursor-pointer"
             >
               انصراف
             </button>
@@ -189,7 +191,7 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
               type="button"
               disabled={photos.length === 0 || isSubmitting || isProcessing}
               onClick={handleSubmit}
-              className="px-5 py-2.5 rounded-lg text-xs font-black bg-[#C5A059] hover:bg-[#D4AF37] disabled:opacity-40 disabled:hover:bg-[#C5A059] text-[#0D1117] flex items-center gap-2 transition shadow-lg shadow-[#C5A059]/20 cursor-pointer"
+              className="px-5 py-2.5 rounded-lg text-xs font-black bg-brand hover:bg-brand-hover disabled:opacity-40 disabled:hover:bg-brand text-on-brand flex items-center gap-2 transition shadow-lg shadow-brand/20 cursor-pointer"
             >
               {isSubmitting ? (
                 <>

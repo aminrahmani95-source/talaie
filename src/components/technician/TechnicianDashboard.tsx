@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Project, User, SystemSettings, ProjectStatus, MaterialRequest, Ticket } from '../../types';
 import { ProjectCard } from './ProjectCard';
-import { Calendar, Users, WifiOff, AlertOctagon } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { getUpcomingDays, toPersianDigits, getTodayPersianString } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
 import { isProjectScheduledOnDate } from '../../utils/multiDay';
@@ -122,6 +122,8 @@ export const TechnicianDashboard: React.FC<Props> = ({
 
   // OPEN PROJECT IDS for deduplication so no job ever appears twice!
   const openProjectIds = new Set(openProjects.map((p) => p.id));
+  // a job this person is already driving to / working on (used to warn before starting another one)
+  const busyProjects = projects.filter((p) => p.status === 'IN_PROGRESS' || p.status === 'EN_ROUTE');
 
   // TODAY'S JOBS (for greeting summary)
   const todayKey = visibleDays.find((d) => d.isToday)?.dateKey;
@@ -145,17 +147,17 @@ export const TechnicianDashboard: React.FC<Props> = ({
   return (
     <div className="space-y-4 max-w-xl mx-auto pb-12">
       {/* Technician Greeting Header (Industrial dark surface, clean hierarchy) */}
-      <div className="bg-[#151B23] rounded-lg p-4 sm:p-5 text-[#F0F4F8] border border-[#212835] flex items-center justify-between">
+      <div className="bg-surface rounded-lg p-4 sm:p-5 text-ink border border-line flex items-center justify-between">
         <div>
-          <div className="text-xs text-[#C5A059] font-medium tracking-wide">
+          <div className="text-xs text-brand-ink font-medium tracking-wide">
             {getTodayPersianString()}
           </div>
-          <h2 className="font-bold text-base sm:text-lg text-[#F0F4F8] mt-0.5">
+          <h2 className="font-bold text-base sm:text-lg text-ink mt-0.5">
             سلام، {getDisplayName(currentUser.name)}
           </h2>
-          <div className="text-xs text-[#9BA7B6] mt-0.5">
+          <div className="text-xs text-ink-2 mt-0.5">
             {todayProjectsCount > 0 ? (
-              <span className="text-[#E5CA8F] font-semibold">
+              <span className="text-brand-soft font-semibold">
                 {toPersianDigits(todayProjectsCount)} مأموریت برای امروز دارید
               </span>
             ) : (
@@ -167,15 +169,15 @@ export const TechnicianDashboard: React.FC<Props> = ({
         {/* Lead Scope Toggle */}
         {isLead && (
           <div className="flex flex-col items-end gap-1 shrink-0">
-            <span className="text-[11px] text-[#637184]">نمایش:</span>
-            <div className="flex items-center gap-1 bg-[#0D1117] p-1 rounded-md border border-[#212835] text-xs">
+            <span className="text-[12px] text-ink-3">نمایش:</span>
+            <div className="flex items-center gap-1 bg-canvas p-1 rounded-md border border-line text-xs">
               <button
                 type="button"
                 onClick={() => setViewScope('MY_JOBS')}
-                className={`min-h-[36px] min-w-[36px] px-3 py-1.5 rounded font-semibold transition cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] active:scale-95 ${
+                className={`min-h-[36px] min-w-[36px] px-3 py-1.5 rounded font-semibold transition cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-95 ${
                   viewScope === 'MY_JOBS'
-                    ? 'bg-[#C5A059] text-[#0D1117]'
-                    : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
+                    ? 'bg-brand text-on-brand'
+                    : 'text-ink-2 hover:text-ink'
                 }`}
               >
                 اکیپ من
@@ -183,10 +185,10 @@ export const TechnicianDashboard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setViewScope('ALL_DAY_JOBS')}
-                className={`min-h-[36px] min-w-[36px] px-3 py-1.5 rounded font-semibold transition cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] active:scale-95 ${
+                className={`min-h-[36px] min-w-[36px] px-3 py-1.5 rounded font-semibold transition cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-95 ${
                   viewScope === 'ALL_DAY_JOBS'
-                    ? 'bg-[#C5A059] text-[#0D1117]'
-                    : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
+                    ? 'bg-brand text-on-brand'
+                    : 'text-ink-2 hover:text-ink'
                 }`}
               >
                 همه
@@ -198,7 +200,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
 
       {/* PRIORITY JOBS: Open, in-flight, stuck, or QC-rejected jobs (Show FIRST) */}
       {openProjects.length > 0 && (
-        <div className="space-y-3 bg-[#1F1315] p-3.5 sm:p-4 rounded-lg border border-rose-500/30">
+        <div className="space-y-3 bg-surface p-3.5 sm:p-4 rounded-lg border border-rose-500/30">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2 text-xs font-bold text-rose-300">
               <span className="relative flex h-2 w-2">
@@ -234,6 +236,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 onResolveDefect={onResolveDefect}
                 tickets={tickets}
                 isTransitioning={inFlightTransitions?.has(proj.id)}
+                busyWith={busyProjects.find((b) => b.id !== proj.id)}
               />
             ))}
           </div>
@@ -242,12 +245,12 @@ export const TechnicianDashboard: React.FC<Props> = ({
 
       {/* Horizontal Day Tabs */}
       <div>
-        <div className="text-xs font-semibold text-[#F0F4F8] mb-2 px-1 flex items-center justify-between">
+        <div className="text-xs font-semibold text-ink mb-2 px-1 flex items-center justify-between">
           <span className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-[#C5A059]" />
+            <Calendar className="w-3.5 h-3.5 text-brand-ink" />
             <span>برنامه روزهای کاری:</span>
           </span>
-          <span className="text-xs text-[#9BA7B6] tabular-nums">
+          <span className="text-xs text-ink-2 tabular-nums">
             (پنجره دید {toPersianDigits(settings.visibilityWindowDays)} روز آینده)
           </span>
         </div>
@@ -271,10 +274,10 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setSelectedDateKey(day.dateKey)}
-                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[72px] min-h-[64px] py-2 px-2.5 rounded-md border transition text-center active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] ${
+                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[72px] min-h-[64px] py-2 px-2.5 rounded-md border transition text-center active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                   isSelected
-                    ? 'bg-[#1C232D] text-[#E5CA8F] border-[#C5A059] ring-1 ring-[#C5A059]/40 font-bold'
-                    : 'bg-[#151B23] text-[#9BA7B6] border-[#212835] hover:border-[#2D3748] hover:text-[#F0F4F8]'
+                    ? 'bg-raised text-brand-soft border-brand ring-1 ring-brand/40 font-bold'
+                    : 'bg-surface text-ink-2 border-line hover:border-line-strong hover:text-ink'
                 }`}
               >
                 <span className="text-xs font-medium">
@@ -283,14 +286,14 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 <span className="text-sm font-bold my-0.5 tabular-nums">
                   {toPersianDigits(day.persianDayNum)}
                 </span>
-                <span className="text-[11px] opacity-75">{day.persianMonthName}</span>
+                <span className="text-[12px] opacity-75">{day.persianMonthName}</span>
 
                 {count > 0 && (
                   <span
-                    className={`mt-1 text-[11px] px-1.5 py-0.2 rounded font-bold tabular-nums ${
+                    className={`mt-1 text-[12px] px-1.5 py-0.2 rounded font-bold tabular-nums ${
                       isSelected
-                        ? 'bg-[#C5A059] text-[#0D1117]'
-                        : 'bg-[#1C232D] text-[#C5A059] border border-[#C5A059]/30'
+                        ? 'bg-brand text-on-brand'
+                        : 'bg-raised text-brand-ink border border-brand/30'
                     }`}
                   >
                     {toPersianDigits(count)}
@@ -305,23 +308,20 @@ export const TechnicianDashboard: React.FC<Props> = ({
       {/* Selected Day Scheduled Jobs */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <div className="text-xs font-semibold text-[#F0F4F8]">
+          <div className="text-xs font-semibold text-ink">
             مأموریت‌های {selectedDayInfo?.persianDayName} {selectedDayInfo?.persianDayNum ? toPersianDigits(selectedDayInfo.persianDayNum) : ''}{' '}
             {selectedDayInfo?.persianMonthName}:
           </div>
-          <span className="text-xs text-[#9BA7B6] font-medium tabular-nums">
+          <span className="text-xs text-ink-2 font-medium tabular-nums">
             {toPersianDigits(filteredScheduledProjects.length)} مأموریت
           </span>
         </div>
 
         {filteredScheduledProjects.length === 0 ? (
-          <div className="bg-[#151B23] rounded-lg p-6 text-center border border-[#212835] space-y-1">
-            <h4 className="font-semibold text-xs sm:text-sm text-[#F0F4F8]">
-              مأموریتی برای این روز برنامه‌ریزی نشده است
-            </h4>
-            <p className="text-xs text-[#9BA7B6]">
-              پروژه‌های باز و در حال اجرای شما در بالای صفحه نمایش داده شده‌اند.
-            </p>
+          <div className="rounded-lg px-4 py-3 text-center border border-dashed border-line text-xs text-ink-2">
+            {openProjects.length > 0 && selectedDateKey === todayKey
+              ? 'کار امروز شما در بخش بالا نمایش داده شده است.'
+              : 'برای این روز مأموریتی ثبت نشده است.'}
           </div>
         ) : (
           filteredScheduledProjects.map((proj) => (
@@ -345,6 +345,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               onResolveDefect={onResolveDefect}
               tickets={tickets}
               isTransitioning={inFlightTransitions?.has(proj.id)}
+              busyWith={busyProjects.find((b) => b.id !== proj.id)}
             />
           ))
         )}

@@ -21,7 +21,7 @@ import {
   Camera,
   Flame,
 } from 'lucide-react';
-import { toPersianDigits, localDateKey } from '../../utils/jalali';
+import { toPersianDigits, localDateKey, getDayInfoFromDateKey } from '../../utils/jalali';
 import { ActiveJobTimer } from '../ActiveJobTimer';
 import { StatusPill } from '../ui/StatusPill';
 import { getMultiDayProgress } from '../../utils/multiDay';
@@ -49,6 +49,8 @@ interface Props {
   onResolveDefect?: (projectId: string, defectId: string, resolutionNotes: string, photos?: string[]) => void;
   tickets?: Ticket[];
   isTransitioning?: boolean;
+  /** another job of this person that is already en route / in progress */
+  busyWith?: Project;
 }
 
 export const ProjectCard: React.FC<Props> = ({
@@ -70,6 +72,7 @@ export const ProjectCard: React.FC<Props> = ({
   onResolveDefect,
   tickets = [],
   isTransitioning = false,
+  busyWith,
 }) => {
   const activeTicket = useMemo(() => {
     return (tickets || []).find(
@@ -97,6 +100,23 @@ export const ProjectCard: React.FC<Props> = ({
 
   const multiDayProgress = getMultiDayProgress(project);
   const todayYmd = localDateKey();
+
+  // One tap used to start a mission planned for another day, or a second job while
+  // the first was still open. Ask first in those two cases; a normal start is still one tap.
+  const handleStartTravel = () => {
+    const warnings: string[] = [];
+    if (isScheduled && project.scheduledDate && project.scheduledDate > todayYmd) {
+      const day = getDayInfoFromDateKey(project.scheduledDate);
+      warnings.push(
+        `این مأموریت برای ${day ? `${day.persianDayName} ${toPersianDigits(day.persianDayNum)} ${day.persianMonthName}` : 'روز دیگری'} برنامه‌ریزی شده، نه امروز.`,
+      );
+    }
+    if (busyWith) {
+      warnings.push(`کار «${busyWith.customerName || busyWith.id}» هنوز باز است (${busyWith.status === 'EN_ROUTE' ? 'در مسیر' : 'در حال نصب'}).`);
+    }
+    if (warnings.length > 0 && !confirm(`${warnings.join('\n')}\n\nبا این حال حرکت به محل ثبت شود؟`)) return;
+    onUpdateStatus(project.id, isPaused ? 'PAUSED' : 'SCHEDULED', 'EN_ROUTE');
+  };
   const isBeforeEndDate = Boolean(project.endDate && todayYmd < project.endDate);
   const progressList = useMemo(() => calculateActivityProgress(project), [project]);
   const latestTransfer = getLatestTeamTransfer(project);
@@ -123,40 +143,40 @@ export const ProjectCard: React.FC<Props> = ({
 
   return (
     <div
-      className={`bg-[#151B23] rounded-lg p-4 sm:p-5 relative transition-all duration-150 space-y-3.5 border shadow-xs ${
+      className={`bg-surface rounded-lg p-4 sm:p-5 relative transition-all duration-150 space-y-3.5 border shadow-xs ${
         isInProgress
-          ? 'border-[#C5A059] ring-1 ring-[#C5A059]/30'
+          ? 'border-brand ring-1 ring-brand/30'
           : isStuck
           ? 'border-rose-500/60 ring-1 ring-rose-500/20'
-          : 'border-[#212835] hover:border-[#2D3748]'
+          : 'border-line hover:border-line-strong'
       }`}
     >
       {/* Top Bar: Code, Scheduled Time, and Status Pill */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-mono text-xs font-bold bg-[#0D1117] text-[#C5A059] border border-[#2D3748] px-2 py-0.5 rounded">
+          <span className="font-mono text-xs font-bold bg-canvas text-brand-ink border border-line-strong px-2 py-0.5 rounded">
             {project.code}
           </span>
           {multiDayProgress && (
-            <span className="text-xs bg-[#C5A059]/15 text-[#E5CA8F] border border-[#C5A059]/30 font-bold px-2 py-0.5 rounded">
+            <span className="text-xs bg-brand/15 text-brand-soft border border-brand/30 font-bold px-2 py-0.5 rounded">
               {multiDayProgress.badgeText}
             </span>
           )}
           {project.isForceMajeure && (
-            <span className="flex items-center gap-1 text-[11px] bg-rose-600/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded font-black animate-pulse">
+            <span className="flex items-center gap-1 text-[12px] bg-rose-600/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded font-black animate-pulse">
               <Flame className="w-3.5 h-3.5 text-rose-400" />
               <span>فورس‌ماژور</span>
             </span>
           )}
-          <div className="flex items-center gap-1 text-xs font-bold text-[#9BA7B6]">
-            <Clock className="w-3.5 h-3.5 text-[#C5A059]" />
+          <div className="flex items-center gap-1 text-xs font-bold text-ink-2">
+            <Clock className="w-3.5 h-3.5 text-brand-ink" />
             <span className="font-mono">{toPersianDigits(project.scheduledTime)}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isTransitioning && (
-            <span className="text-[11px] bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-bold animate-pulse">
+            <span className="text-[12px] bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-bold animate-pulse">
               در صف ارسال
             </span>
           )}
@@ -179,7 +199,7 @@ export const ProjectCard: React.FC<Props> = ({
             </span>
           </div>
           {project.qcNotes && (
-            <div className="bg-[#0D1117] p-2 rounded border border-rose-500/30 text-[#F0F4F8] text-xs leading-relaxed">
+            <div className="bg-canvas p-2 rounded border border-rose-500/30 text-ink text-xs leading-relaxed">
               <span className="font-bold text-rose-400 block mb-0.5">نکات QC:</span>
               «{project.qcNotes}»
             </div>
@@ -189,12 +209,12 @@ export const ProjectCard: React.FC<Props> = ({
 
       {/* Special Tools Assigned Banner */}
       {project.specialTools && project.specialTools.length > 0 && (
-        <div className="bg-[#1C232D] border border-[#C5A059]/40 rounded-md p-2.5 text-xs flex items-center justify-between text-[#E5CA8F]">
+        <div className="bg-raised border border-brand/40 rounded-md p-2.5 text-xs flex items-center justify-between text-brand-soft">
           <div className="flex items-center gap-2 font-bold">
-            <Wrench className="w-4 h-4 text-[#C5A059] shrink-0" />
+            <Wrench className="w-4 h-4 text-brand-ink shrink-0" />
             <span>ابزار ویژه تحویلی این مأموریت: {project.specialTools.join('، ')}</span>
           </div>
-          <span className="text-[10px] bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded font-bold shrink-0">
+          <span className="text-[11px] bg-brand/20 text-brand-ink px-2 py-0.5 rounded font-bold shrink-0">
             همراه خودرو
           </span>
         </div>
@@ -208,15 +228,15 @@ export const ProjectCard: React.FC<Props> = ({
               <Package className="w-4 h-4 text-purple-400 shrink-0" />
               <span>وضعیت ارجاع و تامین از انبار:</span>
             </span>
-            <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 font-bold">
+            <span className="text-[11px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 font-bold">
               {activeTicket.resolutionNote?.includes('پیک') ? 'ارسال با پیک 🚚' : 'در دست اقدام انبار ⏳'}
             </span>
           </div>
-          <p className="text-[11px] text-purple-200/90 leading-relaxed">
+          <p className="text-[12px] text-purple-200/90 leading-relaxed">
             {activeTicket.referralNote || activeTicket.description}
           </p>
           {activeTicket.resolutionNote && (
-            <p className="text-[11px] font-mono bg-purple-950/60 p-2 rounded border border-purple-500/30 text-[#E5CA8F]">
+            <p className="text-[12px] font-mono bg-purple-950/60 p-2 rounded border border-purple-500/30 text-brand-soft">
               پاسخ انبار: {activeTicket.resolutionNote}
             </p>
           )}
@@ -231,11 +251,11 @@ export const ProjectCard: React.FC<Props> = ({
               <Layers className="w-4 h-4 text-sky-400 shrink-0" />
               <span>صورت‌جلسه کارگاه تحویلی از «{project.interTeamHandover.fromTeamName}»</span>
             </span>
-            <span className="text-[10px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded font-bold">
+            <span className="text-[11px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded font-bold">
               ادامه مأموریت
             </span>
           </div>
-          <div className="text-[11px] text-[#F0F4F8] space-y-1.5 bg-[#0D1117] p-2.5 rounded border border-sky-500/20 leading-relaxed">
+          <div className="text-[12px] text-ink space-y-1.5 bg-canvas p-2.5 rounded border border-sky-500/20 leading-relaxed">
             <p>
               <strong className="text-emerald-400">اقدامات انجام‌شده: </strong>
               {project.interTeamHandover.completedWork}
@@ -254,7 +274,7 @@ export const ProjectCard: React.FC<Props> = ({
           {project.interTeamHandover.photos && project.interTeamHandover.photos.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-x-auto pt-1">
               {project.interTeamHandover.photos.map((ph, i) => (
-                <div key={i} className="w-12 h-12 rounded overflow-hidden shrink-0 border border-[#212835]">
+                <div key={i} className="w-12 h-12 rounded overflow-hidden shrink-0 border border-line">
                   <CloudImage
                     src={ph}
                     alt={`عکس تحویل ${i + 1}`}
@@ -269,13 +289,13 @@ export const ProjectCard: React.FC<Props> = ({
 
       {/* QC Defects Section (Phase P3) */}
       {project.qcDefects && project.qcDefects.length > 0 && (
-        <div className="bg-[#111620] border border-[#212835] rounded-md p-3 text-xs space-y-2">
-          <div className="flex items-center justify-between font-bold text-[#F0F4F8]">
+        <div className="bg-sunken border border-line rounded-md p-3 text-xs space-y-2">
+          <div className="flex items-center justify-between font-bold text-ink">
             <span className="flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
               <span>عدم‌انطباق‌ها و ایرادات اعلامی QC ({toPersianDigits(project.qcDefects.length)})</span>
             </span>
-            <span className="text-[11px] text-[#9BA7B6]">
+            <span className="text-[12px] text-ink-2">
               {toPersianDigits(project.qcDefects.filter((d) => d.status === 'RESOLVED' || d.status === 'VERIFIED').length)} از {toPersianDigits(project.qcDefects.length)} رفع‌شده
             </span>
           </div>
@@ -312,24 +332,24 @@ export const ProjectCard: React.FC<Props> = ({
                       ? 'bg-sky-500/10 border-sky-500/30 text-sky-300'
                       : isCritical
                       ? 'bg-rose-500/10 border-rose-500/40 text-rose-300'
-                      : 'bg-[#151B23] border-[#2D3748] text-[#F0F4F8]'
+                      : 'bg-surface border-line-strong text-ink'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-1 flex-wrap">
                     <div className="flex items-center gap-1.5">
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${severityBadge.bg}`}>
+                      <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border ${severityBadge.bg}`}>
                         {severityBadge.label}
                       </span>
-                      <span className="text-[11px] font-medium text-[#9BA7B6]">
+                      <span className="text-[12px] font-medium text-ink-2">
                         [{categoryLabel}]
                       </span>
                       {defect.location && (
-                        <span className="text-[11px] text-[#9BA7B6]">
+                        <span className="text-[12px] text-ink-2">
                           ({defect.location})
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] font-bold">
+                    <span className="text-[11px] font-bold">
                       {isVerified ? (
                         <span className="text-emerald-400 flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" />
@@ -347,12 +367,12 @@ export const ProjectCard: React.FC<Props> = ({
                     </span>
                   </div>
 
-                  <p className="font-medium text-xs leading-relaxed text-[#F0F4F8]">
+                  <p className="font-medium text-xs leading-relaxed text-ink">
                     {defect.description}
                   </p>
 
                   {defect.resolutionNotes && (
-                    <div className="text-[11px] bg-stone-100 dark:bg-stone-900/60 p-1.5 rounded text-stone-600 dark:text-stone-300">
+                    <div className="text-[12px] bg-stone-100 dark:bg-stone-900/60 p-1.5 rounded text-stone-600 dark:text-stone-300">
                       <span className="font-bold">اقدام انجام‌شده: </span>
                       {defect.resolutionNotes}
                     </div>
@@ -365,7 +385,7 @@ export const ProjectCard: React.FC<Props> = ({
                           value={resolvingNotes}
                           onChange={(e) => setResolvingNotes(e.target.value)}
                           placeholder="توضیحات اقدام انجام‌شده برای رفع نقص (مثلاً: رگلاژ مجدد پایه، تعویض بست، تمیزکاری با اسپری)..."
-                          className="w-full text-xs p-2 rounded-lg border border-stone-300 dark:border-stone-700 bg-white dark:bg-[#1C1B18] text-stone-900 dark:text-white resize-none"
+                          className="w-full text-xs p-2 rounded-lg border border-stone-300 dark:border-stone-700 bg-sunken text-stone-900 text-ink resize-none"
                           rows={2}
                         />
                         <div className="flex items-center justify-end gap-2">
@@ -424,15 +444,15 @@ export const ProjectCard: React.FC<Props> = ({
               <ArrowRightLeft className="w-4 h-4 text-sky-400 shrink-0" />
               <span>انتقال‌یافته از «{latestTransfer.fromTeamName}»</span>
             </span>
-            <span className="text-[11px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded font-bold">
+            <span className="text-[12px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded font-bold">
               در انتظار تایید تحویل
             </span>
           </div>
-          <p className="text-[11px] text-[#9BA7B6]">
+          <p className="text-[12px] text-ink-2">
             علت انتقال: {latestTransfer.reason}
           </p>
           {latestTransfer.handoverInventory && latestTransfer.handoverInventory.length > 0 && (
-            <div className="text-[11px] text-[#9BA7B6] pt-1 border-t border-dashed border-sky-500/30">
+            <div className="text-[12px] text-ink-2 pt-1 border-t border-dashed border-sky-500/30">
               اقلام باقیمانده کار: {latestTransfer.handoverInventory.map((i) => `${i.activityTitle} (${toPersianDigits(i.remainingQuantity)} ${i.unit})`).join('، ')}
             </div>
           )}
@@ -457,11 +477,11 @@ export const ProjectCard: React.FC<Props> = ({
               <ArrowRightLeft className="w-4 h-4 text-purple-400 shrink-0" />
               <span>انتقال به اکیپ با تایید استثنایی مدیر QC</span>
             </span>
-            <span className="text-[11px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-bold">
+            <span className="text-[12px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-bold">
               رفع انسداد مدیریتی
             </span>
           </div>
-          <p className="text-[11px] text-[#9BA7B6]">
+          <p className="text-[12px] text-ink-2">
             دلیل رفع انسداد: {latestTransfer.managerOverrideReason} (توسط {latestTransfer.managerOverrideByUserName})
           </p>
         </div>
@@ -475,26 +495,26 @@ export const ProjectCard: React.FC<Props> = ({
               <Package className="w-4 h-4 text-purple-400 shrink-0" />
               <span>محموله متریال ارسالی در مسیر کارگاه</span>
             </span>
-            <span className="text-[11px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-bold">
+            <span className="text-[12px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-bold">
               ارسال با پیک
             </span>
           </div>
           {pendingMaterialDispatches.map(({ request, dispatch }) => (
             <div
               key={dispatch.id}
-              className="bg-[#111620] p-2.5 rounded border border-purple-500/30 space-y-1.5"
+              className="bg-sunken p-2.5 rounded border border-purple-500/30 space-y-1.5"
             >
               <div className="flex items-center justify-between">
                 <span className="font-bold text-purple-300">
                   پیک / راننده: {dispatch.courierInfo}
                 </span>
                 {dispatch.trackingCode && (
-                  <span className="text-[11px] text-[#C5A059] font-mono">
+                  <span className="text-[12px] text-brand-ink font-mono">
                     کد: {dispatch.trackingCode}
                   </span>
                 )}
               </div>
-              <div className="text-[11px] text-[#9BA7B6]">
+              <div className="text-[12px] text-ink-2">
                 اقلام: {dispatch.items.map((i: any) => `${i.title} (${toPersianDigits(i.dispatchedQty)} ${i.unit || ''})`).join('، ')}
               </div>
               {onConfirmMaterialReceipt && (
@@ -520,11 +540,11 @@ export const ProjectCard: React.FC<Props> = ({
               <Moon className="w-4 h-4 text-amber-400 shrink-0" />
               <span>پروژه نیمه‌کاره (آماده ادامه در شیفت یا روز کاری بعدی)</span>
             </span>
-            <span className="text-[11px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">
+            <span className="text-[12px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">
               ادامه با همان اکیپ
             </span>
           </div>
-          <p className="text-[11px] text-[#9BA7B6]">
+          <p className="text-[12px] text-ink-2">
             گزارش‌های روزهای قبل ثبت و محفوظ است. با اعلام حرکت، پروژه به حالت فعال بازمی‌گردد.
           </p>
         </div>
@@ -541,63 +561,62 @@ export const ProjectCard: React.FC<Props> = ({
 
       {/* Title, Customer, and Address */}
       <div className="space-y-1">
-        <h3 className="font-black text-sm sm:text-base text-[#F0F4F8] leading-tight">
+        <h3 className="font-black text-sm sm:text-base text-ink leading-tight">
           {project.title}
         </h3>
-        <div className="text-xs text-[#9BA7B6] flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-[#F0F4F8]">
-            {project.customerName}
-          </span>
-          <span>•</span>
+        <div className="text-xs text-ink-2 flex items-center gap-2 flex-wrap">
+          {project.customerName && project.customerName !== project.title && (
+            <span className="font-bold text-ink">{project.customerName}</span>
+          )}
           <span className="flex items-center gap-1 truncate max-w-xs">
-            <MapPin className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+            <MapPin className="w-3.5 h-3.5 text-brand-ink shrink-0" />
             <span className="truncate">{project.address}</span>
           </span>
         </div>
       </div>
 
       {/* Technical Summary & Itemized Plan Progress */}
-      <div className="bg-[#111620] rounded-md p-3 border border-[#212835] space-y-2">
+      <div className="bg-sunken rounded-md p-3 border border-line space-y-2">
         <div className="flex items-center justify-between text-xs font-semibold gap-2 flex-wrap">
-          <div className="flex items-center gap-2 text-[#9BA7B6]">
-            <Layers className="w-4 h-4 text-[#C5A059] shrink-0" />
-            <span className="font-bold text-[#F0F4F8]">برنامه و پیشرفت نصب</span>
+          <div className="flex items-center gap-2 text-ink-2">
+            <Layers className="w-4 h-4 text-brand-ink shrink-0" />
+            <span className="font-bold text-ink">برنامه و پیشرفت نصب</span>
           </div>
 
           {project.mechanismType && (
-            <span className="text-xs text-[#C5A059] font-bold truncate max-w-[170px]">
+            <span className="text-xs text-brand-ink font-bold truncate max-w-[170px]">
               {project.mechanismType}
             </span>
           )}
         </div>
 
         {progressList.length > 0 ? (
-          <div className="space-y-2 pt-1 border-t border-[#212835]">
+          <div className="space-y-2 pt-1 border-t border-line">
             {progressList.map((item) => {
               const pct = Math.min(100, Math.round(item.progressPercent));
               return (
                 <div key={item.activityId} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#9BA7B6] font-medium truncate">
+                    <span className="text-ink-2 font-medium truncate">
                       {item.title}
                     </span>
-                    <span className="font-mono text-xs font-bold text-[#F0F4F8]">
+                    <span className="font-mono text-xs font-bold text-ink">
                       {toPersianDigits(item.totalCompletedQuantity)} / {toPersianDigits(item.effectivePlannedQuantity)} {item.unit}
                       {item.isOverCompleted && (
-                        <span className="mr-1 text-[11px] text-amber-400 font-bold">
+                        <span className="mr-1 text-[12px] text-amber-400 font-bold">
                           (+{toPersianDigits(item.overCompletedQuantity)} مازاد)
                         </span>
                       )}
                     </span>
                   </div>
-                  <div className="w-full bg-[#1C232D] h-1.5 rounded overflow-hidden">
+                  <div className="w-full bg-raised h-1.5 rounded overflow-hidden">
                     <div
                       className={`h-full transition-all duration-300 ${
                         item.isOverCompleted
                           ? 'bg-amber-500'
                           : pct === 100
                           ? 'bg-emerald-500'
-                          : 'bg-[#C5A059]'
+                          : 'bg-brand'
                       }`}
                       style={{ width: `${pct}%` }}
                     />
@@ -607,7 +626,7 @@ export const ProjectCard: React.FC<Props> = ({
             })}
           </div>
         ) : (
-          <div className="text-xs text-[#9BA7B6]">
+          <div className="text-xs text-ink-2">
             {project.shadePanels > 0 && `${toPersianDigits(project.shadePanels)} لت شید`}
             {project.shadePanels > 0 && project.curtainPanels > 0 && ' • '}
             {project.curtainPanels > 0 && `${toPersianDigits(project.curtainPanels)} لت پرده`}
@@ -621,14 +640,14 @@ export const ProjectCard: React.FC<Props> = ({
           <a
             href={`tel:${project.customerPhone}`}
             aria-label={`تماس تلفنی با مشتری ${project.customerName || ''}`}
-            className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
+            className="flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[44px] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             title={`تماس با ${project.customerPhone}`}
           >
-            <Phone className="w-4 h-4 text-[#C5A059] mb-0.5" />
+            <Phone className="w-4 h-4 text-brand-ink mb-0.5" />
             <span className="text-xs font-bold">تماس</span>
           </a>
         ) : (
-          <div className="flex flex-col items-center justify-center p-2 rounded-md bg-[#111620] text-[#637184] border border-[#212835] opacity-60 min-h-[44px]">
+          <div className="flex flex-col items-center justify-center p-2 rounded-md bg-sunken text-ink-3 border border-line opacity-60 min-h-[44px]">
             <Phone className="w-4 h-4 mb-0.5" />
             <span className="text-xs">بدون تلفن</span>
           </div>
@@ -642,10 +661,10 @@ export const ProjectCard: React.FC<Props> = ({
           target="_blank"
           rel="noreferrer"
           aria-label={`مسیریابی آدرس ${project.address}`}
-          className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
+          className="flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[44px] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           title="مسیریابی هوشمند نشان / بلد"
         >
-          <Navigation className="w-4 h-4 text-[#C5A059] mb-0.5" />
+          <Navigation className="w-4 h-4 text-brand-ink mb-0.5" />
           <span className="text-xs font-bold">مسیریابی</span>
         </a>
 
@@ -653,9 +672,9 @@ export const ProjectCard: React.FC<Props> = ({
           type="button"
           onClick={() => onViewProposal(project)}
           aria-label="مشاهده پروپوزال و جزئیات فنی"
-          className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
+          className="flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[44px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          <FileText className="w-4 h-4 text-[#C5A059] mb-0.5" />
+          <FileText className="w-4 h-4 text-brand-ink mb-0.5" />
           <span className="text-xs font-bold">پروپوزال</span>
         </button>
 
@@ -663,9 +682,9 @@ export const ProjectCard: React.FC<Props> = ({
           type="button"
           onClick={() => onOpenToolChecklist(project)}
           aria-label="چک‌لیست ابزار مورد نیاز"
-          className="flex flex-col items-center justify-center p-2 rounded-md bg-[#1C232D] hover:bg-[#27313F] border border-[#2D3748] text-[#F0F4F8] transition min-h-[44px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
+          className="flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[44px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          <Wrench className="w-4 h-4 text-[#C5A059] mb-0.5" />
+          <Wrench className="w-4 h-4 text-brand-ink mb-0.5" />
           <span className="text-xs font-bold">ابزار</span>
         </button>
       </div>
@@ -682,7 +701,7 @@ export const ProjectCard: React.FC<Props> = ({
                   : 'پروژه در انتظار تایید رسمی تحویل‌گیری توسط سرپرست اکیپ است'}
               </span>
             </div>
-            <p className="text-[11px] text-[#9BA7B6] leading-relaxed">
+            <p className="text-[12px] text-ink-2 leading-relaxed">
               {isLead
                 ? 'تا زمان ثبت تایید صورت‌جلسه اقلام تحویلی در کادر بالا، دکمه‌های اعزام و شروع کار مسدود می‌باشند.'
                 : 'شروع یا ادامه کار نصب تا زمان ثبت تایید رسمی توسط سرپرست اکیپ مجاز نمی‌باشد.'}
@@ -695,8 +714,8 @@ export const ProjectCard: React.FC<Props> = ({
                 <button
                   type="button"
                   disabled={isTransitioning}
-                  onClick={() => onUpdateStatus(project.id, isPaused ? 'PAUSED' : 'SCHEDULED', 'EN_ROUTE')}
-                  className="w-full py-3.5 px-4 bg-[#151B23] hover:bg-[#1C232D] disabled:opacity-50 text-[#C5A059] rounded-md text-sm font-bold shadow-xs transition flex items-center justify-center gap-2.5 border border-[#C5A059] active:scale-[0.99] min-h-[48px] cursor-pointer"
+                  onClick={handleStartTravel}
+                  className="w-full py-3.5 px-4 bg-surface hover:bg-raised disabled:opacity-50 text-brand-ink rounded-md text-sm font-bold shadow-xs transition flex items-center justify-center gap-2.5 border border-brand active:scale-[0.99] min-h-[48px] cursor-pointer"
                 >
                   {isTransitioning ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -731,12 +750,12 @@ export const ProjectCard: React.FC<Props> = ({
                   type="button"
                   disabled={isTransitioning}
                   onClick={() => setIsPreInstallModalOpen(true)}
-                  className="w-full py-3.5 px-4 bg-[#C5A059] hover:bg-[#D4AF37] disabled:opacity-50 text-[#0D1117] rounded-md text-sm font-black shadow-lg shadow-[#C5A059]/20 transition flex items-center justify-center gap-2.5 active:scale-[0.99] min-h-[48px] cursor-pointer border border-[#C5A059]"
+                  className="w-full py-3.5 px-4 bg-brand hover:bg-brand-hover disabled:opacity-50 text-on-brand rounded-md text-sm font-black shadow-lg shadow-brand/20 transition flex items-center justify-center gap-2.5 active:scale-[0.99] min-h-[48px] cursor-pointer border border-brand"
                 >
                   {isTransitioning ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <Camera className="w-5 h-5 text-[#0D1117]" />
+                    <Camera className="w-5 h-5 text-on-brand" />
                   )}
                   <span>
                     {isTransitioning ? 'در حال ثبت...' : 'رسیدم سر کارگاه (ثبت الزامی عکس‌های قبل نصب)'}
@@ -752,19 +771,19 @@ export const ProjectCard: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => onOpenTicketModal(project)}
-                    className="py-2.5 px-3 bg-[#111620] hover:bg-[#1C232D] text-amber-300 border border-amber-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
+                    className="py-2.5 px-3 bg-sunken hover:bg-raised text-amber-300 border border-amber-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                   >
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                    <span>ثبت کسری / مشکل</span>
+                    <span>ثبت کسری</span>
                   </button>
                   {onReportStuck && (
                     <button
                       type="button"
                       onClick={() => onReportStuck(project)}
-                      className="py-2.5 px-3 bg-[#111620] hover:bg-[#1C232D] text-rose-300 border border-rose-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
+                      className="py-2.5 px-3 bg-sunken hover:bg-raised text-rose-300 border border-rose-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                     >
                       <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
-                      <span>اعلام توقف (نیمه‌کاره)</span>
+                      <span>اعلام توقف</span>
                     </button>
                   )}
                 </div>
@@ -774,29 +793,42 @@ export const ProjectCard: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => onOpenDailyLogModal?.(project)}
-                      className="w-full py-2.5 px-4 bg-[#151B23] hover:bg-[#1C232D] text-[#C5A059] border border-[#C5A059] rounded-md text-xs sm:text-sm font-bold shadow-xs transition flex items-center justify-center gap-2 active:scale-[0.99] min-h-[44px] cursor-pointer"
+                      className="w-full py-2.5 px-4 bg-surface hover:bg-raised text-brand-ink border border-brand rounded-md text-xs sm:text-sm font-bold shadow-xs transition flex items-center justify-center gap-2 active:scale-[0.99] min-h-[44px] cursor-pointer"
                     >
-                      <Moon className="w-4 h-4 text-[#C5A059]" />
+                      <Moon className="w-4 h-4 text-brand-ink" />
                       <span>پایان شیفت امروز (ثبت پیشرفت و ادامه در روز بعد)</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => onOpenCompletionModal(project)}
-                      className="w-full py-3 px-4 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-md text-xs sm:text-sm font-black shadow-xs transition flex items-center justify-center gap-2 active:scale-[0.99] min-h-[46px] cursor-pointer border border-[#C5A059]"
+                      className="w-full py-3 px-4 bg-brand hover:bg-brand-hover text-on-brand rounded-md text-xs sm:text-sm font-black shadow-xs transition flex items-center justify-center gap-2 active:scale-[0.99] min-h-[46px] cursor-pointer border border-brand"
                     >
-                      <CheckCircle2 className="w-4 h-4 text-[#0D1117]" />
+                      <CheckCircle2 className="w-4 h-4 text-on-brand" />
                       <span>نصب کل پروژه امروز تمام شد؟ ثبت اتمام کامل و ارسال به QC</span>
                     </button>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => onOpenCompletionModal(project)}
-                    className="w-full py-3.5 px-4 bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] rounded-md text-sm font-black shadow-lg shadow-[#C5A059]/20 transition flex items-center justify-center gap-2.5 active:scale-[0.99] min-h-[48px] cursor-pointer border border-[#C5A059]"
-                  >
-                    <CheckCircle2 className="w-5 h-5 text-[#0D1117]" />
-                    <span>ثبت اتمام کار و ارسال به QC</span>
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => onOpenCompletionModal(project)}
+                      className="w-full py-3.5 px-4 bg-brand hover:bg-brand-hover text-on-brand rounded-md text-sm font-black shadow-lg shadow-brand/20 transition flex items-center justify-center gap-2.5 active:scale-[0.99] min-h-[48px] cursor-pointer border border-brand"
+                    >
+                      <CheckCircle2 className="w-5 h-5 text-on-brand" />
+                      <span>ثبت اتمام کار و ارسال به QC</span>
+                    </button>
+                    {/* a one-day job that runs over had no way to log today's work and continue tomorrow */}
+                    {onOpenDailyLogModal && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenDailyLogModal(project)}
+                        className="w-full py-2.5 px-4 text-ink-2 hover:text-ink hover:bg-raised rounded-md text-xs font-bold transition flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
+                      >
+                        <Moon className="w-4 h-4" aria-hidden="true" />
+                        <span>کار امروز تمام نشد؟ ثبت پیشرفت و ادامه در روز بعد</span>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -810,7 +842,7 @@ export const ProjectCard: React.FC<Props> = ({
               <span>پروژه متوقف است — در حال پیگیری توسط مسئولین فنی</span>
             </div>
             {(project.stuckIncident?.description || (project.stuckIncidents && project.stuckIncidents[project.stuckIncidents.length - 1]?.description)) && (
-              <p className="mt-1 text-xs text-[#9BA7B6]">
+              <p className="mt-1 text-xs text-ink-2">
                 علت: {project.stuckIncident?.description || project.stuckIncidents?.[project.stuckIncidents.length - 1]?.description}
               </p>
             )}
@@ -845,7 +877,7 @@ export const ProjectCard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => onOpenCertificate(project)}
-                className="px-3 py-1.5 min-h-[38px] bg-[#1C232D] border border-[#C5A059]/40 text-[#C5A059] rounded-md text-xs font-bold hover:bg-[#27313F] transition cursor-pointer flex items-center justify-center shrink-0"
+                className="px-3 py-1.5 min-h-[38px] bg-raised border border-brand/40 text-brand-ink rounded-md text-xs font-bold hover:bg-hover transition cursor-pointer flex items-center justify-center shrink-0"
               >
                 شناسنامه تحویل
               </button>
@@ -855,14 +887,14 @@ export const ProjectCard: React.FC<Props> = ({
       </div>
 
       {/* Secondary Actions Menu (...) */}
-      <div className="pt-1 flex items-center justify-between border-t border-[#212835] text-xs">
+      <div className="pt-1 flex items-center justify-between border-t border-line text-xs">
         <button
           type="button"
           onClick={() => setIsMenuOpen((prev) => !prev)}
-          className="flex items-center gap-1 text-[#9BA7B6] hover:text-[#F0F4F8] py-1.5 px-2 rounded transition cursor-pointer min-h-[40px]"
+          className="flex items-center gap-1 text-ink-2 hover:text-ink py-1.5 px-2 rounded transition cursor-pointer min-h-[40px]"
         >
           <MoreVertical className="w-3.5 h-3.5" />
-          <span>سایر اقدامات و گزارش‌ها</span>
+          <span>اقدامات بیشتر</span>
         </button>
 
         {isMenuOpen && (
@@ -880,7 +912,7 @@ export const ProjectCard: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => onOpenTicketModal(project)}
-              className="text-xs text-[#C5A059] font-bold hover:underline cursor-pointer min-h-[40px] px-2 flex items-center"
+              className="text-xs text-brand-ink font-bold hover:underline cursor-pointer min-h-[40px] px-2 flex items-center"
             >
               ثبت تیکت فوری
             </button>
@@ -889,7 +921,7 @@ export const ProjectCard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => onOpenMaterialModal(project)}
-                className="text-xs text-purple-400 hover:text-purple-300 font-bold hover:underline cursor-pointer min-h-[44px] px-2 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
+                className="text-xs text-purple-400 hover:text-purple-300 font-bold hover:underline cursor-pointer min-h-[44px] px-2 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 <Package className="w-3.5 h-3.5" />
                 <span>درخواست متریال</span>
@@ -906,32 +938,32 @@ export const ProjectCard: React.FC<Props> = ({
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm"
         >
-          <div className="bg-[#151B23] w-full max-w-sm rounded-2xl shadow-2xl border border-purple-500/40 p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-[#F0F4F8]">
+          <div className="bg-surface w-full max-w-sm rounded-2xl shadow-2xl border border-purple-500/40 p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-ink">
             <div className="flex items-center gap-2.5 text-purple-400">
               <Package className="w-6 h-6 shrink-0" />
-              <h4 className="font-black text-sm text-[#F0F4F8]">
+              <h4 className="font-black text-sm text-ink">
                 تایید دریافت فیزیکی بسته سر کارگاه
               </h4>
             </div>
 
-            <p className="text-xs text-[#9BA7B6] leading-relaxed">
+            <p className="text-xs text-ink-2 leading-relaxed">
               آیا اقلام زیر را به طور کامل از پیک تحویل گرفته و تطابق فیزیکی آن‌ها با کارگاه را تایید می‌نمایید؟
             </p>
 
-            <div className="bg-[#0D1117] p-3 rounded-xl border border-[#212835] text-xs space-y-1.5">
+            <div className="bg-canvas p-3 rounded-xl border border-line text-xs space-y-1.5">
               <div className="font-bold text-purple-300">
                 پیک / راننده: {confirmingReceiptTarget.dispatch.courierInfo}
               </div>
               {confirmingReceiptTarget.dispatch.trackingCode && (
-                <div className="text-[11px] text-[#C5A059] font-mono">
+                <div className="text-[12px] text-brand-ink font-mono">
                   کد رهگیری: {confirmingReceiptTarget.dispatch.trackingCode}
                 </div>
               )}
-              <div className="pt-1.5 border-t border-[#212835] space-y-1">
+              <div className="pt-1.5 border-t border-line space-y-1">
                 {confirmingReceiptTarget.dispatch.items.map((i: any, idx: number) => (
-                  <div key={idx} className="flex justify-between text-[11px] text-[#9BA7B6]">
+                  <div key={idx} className="flex justify-between text-[12px] text-ink-2">
                     <span>• {i.title}</span>
-                    <span className="font-bold text-[#F0F4F8]">
+                    <span className="font-bold text-ink">
                       {toPersianDigits(i.dispatchedQty)} {i.unit || ''}
                     </span>
                   </div>
@@ -943,7 +975,7 @@ export const ProjectCard: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setConfirmingReceiptTarget(null)}
-                className="px-3.5 py-2 rounded-xl border border-[#212835] bg-[#1C232D] text-xs font-bold hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] min-h-[44px] cursor-pointer transition"
+                className="px-3.5 py-2 rounded-xl border border-line bg-raised text-xs font-bold hover:bg-hover text-ink-2 hover:text-ink min-h-[44px] cursor-pointer transition"
               >
                 انصراف
               </button>

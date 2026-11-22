@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
 import { Project, StuckIncident, FmeaRootCause, User, ProjectStatus } from '../../types';
 import {
-  AlertOctagon,
   Clock,
   CheckCircle2,
-  AlertTriangle,
   Flame,
   Search,
-  Calendar,
   Settings2,
   Package,
 } from 'lucide-react';
 import { toPersianDigits, getUpcomingDays, formatJalaliDateTime } from '../../utils/jalali';
 import { PageHeader } from '../ui/PageHeader';
 import { SegmentedControl } from '../ui/SegmentedControl';
-import { StatusPill } from '../ui/StatusPill';
+import { triggerToast } from '../Toast';
 import { Button } from '../ui/Button';
 import { getDisplayName } from '../../utils/technicianName';
 
@@ -155,6 +152,8 @@ export const StuckProjectsDesk: React.FC<Props> = ({
       await onPatchProject(project.id, patch);
       setResolutionNote('');
       setNewScheduledDate('');
+      // the card simply vanished from the list before; say what happened
+      triggerToast('success', `توقف ${project.code} رفع شد و پروژه به چرخه‌ی نصب برگشت.`);
     } catch (err: any) {
       setResolutionError(err.message || 'خطا در رفع استاک پروژه.');
     } finally {
@@ -222,7 +221,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({
       {/* Page Header */}
       <PageHeader
         title="پروژه‌های متوقف"
-        subtitle="مدیریت رفع موانع فنی در حداکثر مهلت 72 ساعت"
+        subtitle={`مهلت رفع هر توقف: ۷۲ ساعت${allIncidents.length > 0 ? ` · ${toPersianDigits(complianceRate)}٪ در مهلت حل شده` : ''}`}
         actions={
           <SegmentedControl
             options={[
@@ -237,60 +236,26 @@ export const StuckProjectsDesk: React.FC<Props> = ({
         }
       />
 
-      {/* KPI Stats Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
-          <div className="text-xs text-[#637184]">توقف‌های باز</div>
-          <div className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1.5">
-            <span>{toPersianDigits(openIncidentsCount)}</span>
-            {openIncidentsCount > 0 && (
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-            )}
-          </div>
-        </div>
-
-        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
-          <div className="text-xs text-[#637184]">حل در مهلت 72 ساعت</div>
-          <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-            {toPersianDigits(complianceRate)}٪
-          </div>
-        </div>
-
-        <div className="bg-[#151B23] rounded-lg p-3.5 border border-[#212835] ">
-          <div className="text-xs text-[#637184]">کل توقف‌ها</div>
-          <div className="text-xl font-black text-[#F0F4F8] mt-1">
-            {toPersianDigits(allIncidents.length)} مورد
-          </div>
-        </div>
-
-        <div className="bg-[#111620] rounded-lg p-3.5 border border-[#C5A059]/30 ">
-          <div className="text-xs text-[#C5A059] font-bold">مهلت رفع توقف</div>
-          <div className="text-xs text-[#F0F4F8] mt-2 font-bold">
-            حداکثر 72 ساعت
-          </div>
-        </div>
-      </div>
-
       {/* Main Grid: List + Detail */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left Column: Project List */}
         <div className="lg:col-span-5 space-y-3">
           {/* Search */}
           <div className="relative">
-            <Search className="w-4 h-4 text-[#8A857B] absolute right-3 top-3" />
+            <Search className="w-4 h-4 text-ink-3 absolute right-3 top-3" />
             <input
               type="text"
               placeholder="جستجو بر اساس عنوان یا کد پروژه..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-xs pr-9 pl-3 py-2.5 rounded-md border border-[#212835] bg-[#151B23] text-[#F0F4F8]"
+              className="w-full text-xs pr-9 pl-3 py-2.5 rounded-md border border-line bg-surface text-ink"
             />
           </div>
 
           {filteredProjects.length === 0 ? (
-            <div className="bg-[#151B23] rounded-lg p-8 text-center border border-[#212835] ">
+            <div className="bg-surface rounded-lg p-8 text-center border border-line ">
               <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2 opacity-80" />
-              <h4 className="font-bold text-sm text-[#F0F4F8]">
+              <h4 className="font-bold text-sm text-ink">
                 پروژه‌ای در این بخش متوقف نیست
               </h4>
             </div>
@@ -307,12 +272,12 @@ export const StuckProjectsDesk: React.FC<Props> = ({
                   onClick={() => setSelectedProjectId(p.id)}
                   className={`p-3.5 rounded-lg border transition cursor-pointer text-right space-y-2 select-none ${
                     isSelected
-                      ? 'border-[#C5A059] bg-[#1C232D] ring-2 ring-[#C1A056]/30 '
-                      : 'border-[#212835] bg-[#151B23] hover:border-[#C5A059]/50'
+                      ? 'border-brand bg-raised ring-2 ring-brand/30 '
+                      : 'border-line bg-surface hover:border-brand/50'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-black text-[#C5A059]">
+                    <span className="font-mono text-xs font-black text-brand-ink">
                       {p.code}
                     </span>
                     {isResolved ? (
@@ -326,7 +291,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({
                             ? 'bg-rose-600 text-white animate-pulse'
                             : timing.hours < 24
                             ? 'bg-amber-500 text-white'
-                            : 'bg-[#0D1117] text-[#C5A059] border border-[#212835]'
+                            : 'bg-canvas text-brand-ink border border-line'
                         }`}
                       >
                         <Clock className="w-3 h-3" />
@@ -340,16 +305,16 @@ export const StuckProjectsDesk: React.FC<Props> = ({
                   </div>
 
                   <div>
-                    <h4 className="font-bold text-xs sm:text-sm text-[#F0F4F8] line-clamp-1">
+                    <h4 className="font-bold text-xs sm:text-sm text-ink line-clamp-1">
                       {p.title}
                     </h4>
-                    <p className="text-xs text-[#637184] mt-0.5 line-clamp-1">
+                    <p className="text-xs text-ink-3 mt-0.5 line-clamp-1">
                       {p.customerName} | {getCategoryTitle(latestInc?.category)}
                     </p>
                   </div>
 
                   {!isResolved && (
-                    <div className="w-full h-1.5 rounded-full bg-[#212835] overflow-hidden">
+                    <div className="w-full h-1.5 rounded-full bg-line overflow-hidden">
                       <div
                         className={`h-full transition-all ${
                           timing.isOverdue ? 'bg-rose-600' : timing.hours < 24 ? 'bg-amber-500' : 'bg-emerald-500'
@@ -367,26 +332,29 @@ export const StuckProjectsDesk: React.FC<Props> = ({
         {/* Right Column: Detail and Resolution Form */}
         <div className="lg:col-span-7">
           {selectedProject ? (
-            <div className="bg-[#151B23] rounded-lg p-5 border border-[#212835]  space-y-4">
-              <div className="flex items-start justify-between border-b border-[#212835] pb-3">
+            <div className="bg-surface rounded-lg p-5 border border-line  space-y-4">
+              <div className="flex items-start justify-between border-b border-line pb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-black px-2 py-0.5 rounded-md bg-[#0D1117] text-[#C5A059] border border-[#212835]">
+                    <span className="font-mono text-xs font-black px-2 py-0.5 rounded-md bg-canvas text-brand-ink border border-line whitespace-nowrap">
                       {selectedProject.code}
                     </span>
-                    <h3 className="font-black text-base text-[#F0F4F8]">
+                    <h3 className="font-black text-base text-ink">
                       {selectedProject.title}
                     </h3>
                   </div>
-                  <p className="text-xs text-[#637184] mt-1">
-                    کارفرما: {selectedProject.customerName} | نشانی: {selectedProject.address}
+                  <p className="text-xs text-ink-3 mt-1">
+                    {selectedProject.customerName && selectedProject.customerName !== selectedProject.title
+                      ? `کارفرما: ${selectedProject.customerName} · `
+                      : ''}
+                    {selectedProject.address}
                   </p>
                 </div>
                 {onManageProject && (
                   <button
                     type="button"
                     onClick={() => onManageProject(selectedProject)}
-                    className="shrink-0 px-3 min-h-[44px] text-xs font-bold rounded-md bg-[#FAF7F2] dark:bg-[#252525] text-[#C5A059] hover:bg-[#EFEBE4] flex items-center gap-1.5 cursor-pointer"
+                    className="shrink-0 px-3 min-h-[44px] text-xs font-bold rounded-md bg-raised text-brand-ink hover:bg-[#EFEBE4] flex items-center gap-1.5 cursor-pointer"
                   >
                     <Settings2 className="w-4 h-4" />
                     مدیریت کامل
@@ -406,7 +374,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({
                   </span>
                 </div>
 
-                <div className="text-xs text-[#F0F4F8] bg-[#111620] p-3 rounded-md border border-rose-200 dark:border-rose-900/30 leading-relaxed">
+                <div className="text-xs text-ink bg-sunken p-3 rounded-md border border-rose-200 dark:border-rose-900/30 leading-relaxed">
                   {activeIncident?.description || 'کسری یراق یا مغایرت فنی در محل پروژه.'}
                 </div>
               </div>
@@ -414,7 +382,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({
               {/* Action Form if open */}
               {activeIncident?.resolutionStatus !== 'RESOLVED' ? (
                 <div className="space-y-3 pt-2">
-                  <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     <span>ثبت اقدام و رفع توقف پروژه:</span>
                   </h4>
@@ -426,13 +394,13 @@ export const StuckProjectsDesk: React.FC<Props> = ({
                   )}
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#9BA7B6] mb-1">
+                    <label className="block text-xs font-semibold text-ink-2 mb-1">
                       ریشه‌یابی خطا:
                     </label>
                     <select
                       value={fmeaRootCause}
                       onChange={(e) => setFmeaRootCause(e.target.value as FmeaRootCause)}
-                      className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#111620] dark:text-white"
+                      className="w-full text-xs p-2.5 rounded-md border border-line bg-sunken text-ink"
                     >
                       <option value="SUPPLIER_DEFECT">خطای تامین‌کننده یراق یا موتور</option>
                       <option value="SALES_ORDER_ERROR">اشتباه در سفارش‌گذاری فروش</option>
@@ -444,7 +412,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#9BA7B6] mb-1">
+                    <label className="block text-xs font-semibold text-ink-2 mb-1">
                       شرح اقدام اصلاحی انجام‌شده:
                     </label>
                     <textarea
@@ -452,18 +420,18 @@ export const StuckProjectsDesk: React.FC<Props> = ({
                       placeholder="مثال: قطعه کسری از انبار مرکزی تامین و به نصاب تحویل شد..."
                       value={resolutionNote}
                       onChange={(e) => setResolutionNote(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#111620] dark:text-white"
+                      className="w-full text-xs p-2.5 rounded-md border border-line bg-sunken text-ink"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#9BA7B6] mb-1">
+                    <label className="block text-xs font-semibold text-ink-2 mb-1">
                       تاریخ اعزام مجدد (اختیاری):
                     </label>
                     <select
                       value={newScheduledDate}
                       onChange={(e) => setNewScheduledDate(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-md border border-[#212835] bg-[#111620] dark:text-white"
+                      className="w-full text-xs p-2.5 rounded-md border border-line bg-sunken text-ink"
                     >
                       <option value="">همان روز قبلی باقی بماند</option>
                       {upcomingDays.map((d) => (
@@ -509,11 +477,11 @@ export const StuckProjectsDesk: React.FC<Props> = ({
                     <span>توقف این پروژه رفع شده است</span>
                   </div>
                   {activeIncident?.resolutionNote && (
-                    <p className="text-xs text-[#9BA7B6]">
+                    <p className="text-xs text-ink-2">
                       اقدام انجام‌شده: «{activeIncident.resolutionNote}»
                     </p>
                   )}
-                  <div className="text-xs text-[#637184]">
+                  <div className="text-xs text-ink-3">
                     ثبت توسط {getDisplayName(activeIncident?.resolvedBy)} در تاریخ {formatJalaliDateTime(activeIncident?.resolvedAt)}
                   </div>
                 </div>

@@ -3,7 +3,7 @@
 // معماری تک‌مسیره: commit(op) -> ذخیره اتمیک در IndexedDB -> اعمال محلی -> ارسال به سرور
 // ==============================================================================
 
-import { Project, Ticket, SystemSettings, PersonnelEvaluation, MaterialRequest } from '../types';
+import { Project, Ticket, SystemSettings, MaterialRequest } from '../types';
 
 export type OutboxMutationType =
   | 'CREATE_PROJECT'

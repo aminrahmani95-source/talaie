@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Project, StuckIncident, StuckCategory } from '../../types';
-import { AlertOctagon, X, ShieldAlert, Send, Camera, Upload, Loader2, CheckCircle2 } from 'lucide-react';
+import { AlertOctagon, X, ShieldAlert, Send, Camera } from 'lucide-react';
 import { getDisplayName } from '../../utils/technicianName';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { CloudImage } from '../common/CloudImage';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   project: Project;
@@ -30,6 +31,7 @@ export const ReportStuckModal: React.FC<Props> = ({
   onClose,
   onSubmit,
 }) => {
+  useEscapeKey(onClose, isOpen);
   const [category, setCategory] = useState<StuckCategory>('HARDWARE_SHORTAGE');
   const [description, setDescription] = useState('');
   const [completedWork, setCompletedWork] = useState('');
@@ -127,15 +129,15 @@ export const ReportStuckModal: React.FC<Props> = ({
       aria-labelledby="report-stuck-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-[#151B23] rounded-xl max-w-xl w-full shadow-2xl border border-rose-500/30 overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-surface rounded-xl max-w-xl w-full shadow-2xl border border-rose-500/30 overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
         {/* Header in Rose & Graphite */}
-        <div className="bg-[#0D1117] px-6 py-4 text-[#F0F4F8] flex items-center justify-between border-b border-[#212835]">
+        <div className="bg-canvas px-6 py-4 text-ink flex items-center justify-between border-b border-line">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center shrink-0">
               <AlertOctagon className="w-4 h-4" aria-hidden="true" />
             </div>
             <div>
-              <h3 id="report-stuck-title" className="font-bold text-base text-[#F0F4F8]">
+              <h3 id="report-stuck-title" className="font-bold text-base text-ink">
                 اعلام توقف کار و صورت‌جلسه تحویل به اکیپ بعدی
               </h3>
               <p className="text-xs text-rose-400 mt-0.5">
@@ -146,7 +148,7 @@ export const ReportStuckModal: React.FC<Props> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-raised text-ink-2 hover:text-ink transition cursor-pointer"
             aria-label="بستن پنجره"
           >
             <X className="w-4 h-4" />
@@ -165,7 +167,7 @@ export const ReportStuckModal: React.FC<Props> = ({
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
           {/* Category */}
           <div>
-            <label className="block text-xs font-semibold text-[#F0F4F8] mb-2">
+            <label className="block text-xs font-semibold text-ink mb-2">
               علت توقف پروژه: *
             </label>
             <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
@@ -182,7 +184,7 @@ export const ReportStuckModal: React.FC<Props> = ({
                     className={`w-full text-right p-2 rounded-md text-xs font-medium flex items-center justify-between transition cursor-pointer border ${
                       isSelected
                         ? 'bg-rose-500/15 border-rose-500/50 text-rose-300 font-bold'
-                        : 'bg-[#111620] border-[#212835] text-[#9BA7B6] hover:border-[#2D3748] hover:text-[#F0F4F8]'
+                        : 'bg-sunken border-line text-ink-2 hover:border-line-strong hover:text-ink'
                     }`}
                   >
                     <span className="flex items-center gap-2">
@@ -198,7 +200,7 @@ export const ReportStuckModal: React.FC<Props> = ({
 
           {/* Description */}
           <div>
-            <label htmlFor="stuck-description" className="block text-xs font-semibold text-[#F0F4F8] mb-1">
+            <label htmlFor="stuck-description" className="block text-xs font-semibold text-ink mb-1">
               شرح دقیق مانع / علت توقف: *
             </label>
             <textarea
@@ -210,18 +212,18 @@ export const ReportStuckModal: React.FC<Props> = ({
                 setError('');
               }}
               placeholder="مثلاً: ابعاد 2 عدد شید سالن مغایرت داشت و باید مجدداً اصلاح شود..."
-              className="w-full text-xs p-2.5 rounded-md border border-[#212835] focus:ring-1 focus:ring-rose-500 focus:border-rose-500 bg-[#0D1117] text-[#F0F4F8] resize-none"
+              className="w-full text-xs p-2.5 rounded-md border border-line focus:ring-1 focus:ring-rose-500 focus:border-rose-500 bg-canvas text-ink resize-none"
             />
           </div>
 
           {/* Handover Details for next team */}
-          <div className="p-3.5 bg-[#111620] rounded-xl border border-sky-500/30 space-y-3">
+          <div className="p-3.5 bg-sunken rounded-xl border border-sky-500/30 space-y-3">
             <h4 className="text-xs font-bold text-sky-300 flex items-center gap-1.5">
               <span>📋 اطلاعات تحویل کارگاه به اکیپ بعدی (رفع نیاز به تماس تلفنی)</span>
             </h4>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#9BA7B6] mb-1">
+              <label className="block text-[12px] font-semibold text-ink-2 mb-1">
                 1. اقدامات انجام‌شده تا این لحظه: *
               </label>
               <textarea
@@ -229,12 +231,12 @@ export const ReportStuckModal: React.FC<Props> = ({
                 value={completedWork}
                 onChange={(e) => setCompletedWork(e.target.value)}
                 placeholder="مثال: تمام ریل‌ها و براکت‌های سقفی نصب شد. سیم‌کشی برق 220 ولت انجام و تست شد."
-                className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] resize-none"
+                className="w-full text-xs p-2 rounded-md border border-line bg-canvas text-ink resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#9BA7B6] mb-1">
+              <label className="block text-[12px] font-semibold text-ink-2 mb-1">
                 2. کارهای باقیمانده برای اکیپ بعدی: *
               </label>
               <textarea
@@ -242,12 +244,12 @@ export const ReportStuckModal: React.FC<Props> = ({
                 value={remainingWork}
                 onChange={(e) => setRemainingWork(e.target.value)}
                 placeholder="مثال: فقط آویزان کردن 2 عدد شید اصلاح‌شده، کالیبره کردن لیمیت موتور و کد ریموت."
-                className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8] resize-none"
+                className="w-full text-xs p-2 rounded-md border border-line bg-canvas text-ink resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#9BA7B6] mb-1">
+              <label className="block text-[12px] font-semibold text-ink-2 mb-1">
                 3. قطعات یا متریال مورد نیاز (جهت تامین انبار):
               </label>
               <input
@@ -255,17 +257,17 @@ export const ReportStuckModal: React.FC<Props> = ({
                 value={requiredParts}
                 onChange={(e) => setRequiredParts(e.target.value)}
                 placeholder="مثال: 2 عدد شید اصلاحی با عرض 2.45 متر + 2 عدد ریموت تک‌کانال"
-                className="w-full text-xs p-2 rounded-md border border-[#212835] bg-[#0D1117] text-[#F0F4F8]"
+                className="w-full text-xs p-2 rounded-md border border-line bg-canvas text-ink"
               />
             </div>
 
             {/* Photos */}
             <div>
-              <label className="block text-[11px] font-semibold text-[#9BA7B6] mb-1">
+              <label className="block text-[12px] font-semibold text-ink-2 mb-1">
                 عکس‌های وضعیت فعلی کارگاه و علت توقف:
               </label>
               <div className="flex items-center gap-2">
-                <label className="px-3 py-1.5 bg-[#1C232D] hover:bg-[#2D3748] text-[#C5A059] rounded-md text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-[#C5A059]/30">
+                <label className="px-3 py-1.5 bg-raised hover:bg-line-strong text-brand-ink rounded-md text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-brand/30">
                   <input
                     type="file"
                     accept="image/*"
@@ -278,14 +280,14 @@ export const ReportStuckModal: React.FC<Props> = ({
                   <Camera className="w-3.5 h-3.5" />
                   <span>{isProcessingPhotos ? 'در حال بهینه‌سازی...' : '+ افزودن عکس کارگاه'}</span>
                 </label>
-                <span className="text-[11px] text-[#637184]">
+                <span className="text-[12px] text-ink-3">
                   {photos.length > 0 ? `${photos.length} عکس ثبت شد` : 'اختیاری اما توصیه می‌شود'}
                 </span>
               </div>
               {photos.length > 0 && (
                 <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1">
                   {photos.map((p, i) => (
-                    <div key={i} className="relative w-14 h-14 rounded overflow-hidden border border-[#212835] shrink-0">
+                    <div key={i} className="relative w-14 h-14 rounded overflow-hidden border border-line shrink-0">
                       <CloudImage src={p} alt="وضعیت توقف" className="w-full h-full object-cover" />
                       <button
                         type="button"
@@ -304,12 +306,12 @@ export const ReportStuckModal: React.FC<Props> = ({
           {error && <p className="text-rose-400 text-xs font-semibold">{error}</p>}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#212835]">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2 rounded-md text-xs font-semibold bg-[#1C232D] hover:bg-[#252F3D] text-[#9BA7B6] hover:text-[#F0F4F8] transition cursor-pointer"
+              className="px-4 py-2 rounded-md text-xs font-semibold bg-raised hover:bg-hover text-ink-2 hover:text-ink transition cursor-pointer"
             >
               انصراف
             </button>

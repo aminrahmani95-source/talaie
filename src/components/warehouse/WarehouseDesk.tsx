@@ -9,36 +9,29 @@ import {
   Layers,
   Wrench,
   Search,
-  Calendar,
   Phone,
   MapPin,
   Loader2,
-  ChevronDown,
-  ChevronUp,
   X,
   Truck,
   ArrowDownToLine,
   CheckSquare,
   ShieldCheck,
-  FileText,
   Eye,
-  Archive,
-  Sparkles,
   RotateCcw,
   Pencil,
-  Info,
   Inbox,
-  AlertCircle,
   Warehouse,
 } from 'lucide-react';
 import {
   toPersianDigits,
   getUpcomingDays,
-  getTodayPersianString,
   formatJalali,
   formatJalaliDateTime,
 } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { getUpcomingDispatchProjects } from '../../utils/warehouseLists';
 
 interface Props {
   currentUser: User;
@@ -179,11 +172,7 @@ export const WarehouseDesk: React.FC<Props> = ({
 
   // 2. Pre-dispatch packing projects
   const upcomingDispatchProjects = useMemo(() => {
-    return projects.filter(
-      (p) =>
-        p.status === 'SCHEDULED' ||
-        (p.status === 'IN_PROGRESS' && p.endDate && p.endDate >= todayKey)
-    );
+    return getUpcomingDispatchProjects(projects, todayKey);
   }, [projects, todayKey]);
 
   // 3. Urgent warehouse tickets
@@ -307,37 +296,41 @@ export const WarehouseDesk: React.FC<Props> = ({
     }
   };
 
+  useEscapeKey(() => setReceiptModalProject(null), Boolean(receiptModalProject));
+  useEscapeKey(() => setRevokeModalProject(null), Boolean(revokeModalProject));
+  useEscapeKey(() => setSelectedTicket(null), Boolean(selectedTicket));
+
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-[#151B23] rounded-2xl p-5 border border-[#212835] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-sm">
+      <div className="bg-surface rounded-2xl p-5 border border-line flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-sm">
         <div>
-          <h2 className="text-lg sm:text-xl font-black text-[#F0F4F8] flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-black text-ink flex items-center gap-2">
             <span>میز کار انبار مرکزی و لجستیک گالری طلایی</span>
-            <span className="text-xs font-bold bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/30 px-2.5 py-0.5 rounded-full">
+            <span className="text-xs font-bold bg-brand/15 text-brand-ink border border-brand/30 px-2.5 py-0.5 rounded-full">
               مسئول انبار: {getDisplayName(currentUser.name)}
             </span>
           </h2>
-          <p className="text-xs text-[#9BA7B6] mt-1.5 leading-relaxed">
+          <p className="text-xs text-ink-2 mt-1.5 leading-relaxed">
             مدیریت ورود فیزیکی کالا به انبار (مرجع انحصاری گیت تحویل فنی)، بسته‌بندی بارهای مأموریت‌های آتی و پاسخ فوری به تیکت‌های کسری کارگاه
           </p>
         </div>
 
         {/* Tab Toggle Navigation */}
-        <div className="flex items-center gap-1.5 bg-[#0D1117] p-1.5 rounded-xl border border-[#212835] w-full lg:w-auto overflow-x-auto">
+        <div className="flex items-center gap-1.5 bg-canvas p-1.5 rounded-xl border border-line w-full lg:w-auto overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab('GOODS_RECEIPT')}
             className={`flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer whitespace-nowrap ${
               activeTab === 'GOODS_RECEIPT'
-                ? 'bg-[#C5A059] text-[#0D1117] shadow-md'
-                : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
+                ? 'bg-brand text-on-brand shadow-md'
+                : 'text-ink-2 hover:text-ink'
             }`}
           >
             <ArrowDownToLine className="w-4 h-4" />
             <span>پیگیری ورود کالا و گیت انبار ({toPersianDigits(incomingGoodsProjects.length)})</span>
             {pendingReceiptCount > 0 && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500 text-[#0D1117] font-mono font-bold animate-pulse">
+              <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-amber-500 text-on-brand font-mono font-bold animate-pulse">
                 {pendingReceiptCount}
               </span>
             )}
@@ -348,8 +341,8 @@ export const WarehouseDesk: React.FC<Props> = ({
             onClick={() => setActiveTab('PACKING')}
             className={`flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer whitespace-nowrap ${
               activeTab === 'PACKING'
-                ? 'bg-[#C5A059] text-[#0D1117] shadow-md'
-                : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
+                ? 'bg-brand text-on-brand shadow-md'
+                : 'text-ink-2 hover:text-ink'
             }`}
           >
             <Package className="w-4 h-4" />
@@ -361,8 +354,8 @@ export const WarehouseDesk: React.FC<Props> = ({
             onClick={() => setActiveTab('TICKETS')}
             className={`flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer whitespace-nowrap ${
               activeTab === 'TICKETS'
-                ? 'bg-[#C5A059] text-[#0D1117] shadow-md'
-                : 'text-[#9BA7B6] hover:text-[#F0F4F8]'
+                ? 'bg-brand text-on-brand shadow-md'
+                : 'text-ink-2 hover:text-ink'
             }`}
           >
             <AlertTriangle className="w-4 h-4" />
@@ -375,21 +368,21 @@ export const WarehouseDesk: React.FC<Props> = ({
       {activeTab === 'GOODS_RECEIPT' && (
         <div className="space-y-5">
           {/* Information Callout */}
-          <div className="bg-[#111620] p-4 rounded-xl border border-[#C5A059]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-sunken p-4 rounded-xl border border-brand/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#C5A059]/10 border border-[#C5A059]/30 flex items-center justify-center text-[#C5A059] shrink-0 mt-0.5">
+              <div className="w-8 h-8 rounded-lg bg-brand/10 border border-brand/30 flex items-center justify-center text-brand-ink shrink-0 mt-0.5">
                 <ShieldCheck className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-[#F0F4F8] flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
                   <span>گیت تحویل رسمی به واحد فنی (مرجع انحصاری: تاییدیه ورود کالا به انبار)</span>
-                  <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.2 rounded-full">
+                  <span className="text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.2 rounded-full">
                     پیش‌نیاز زمان‌بندی و اعزام اکیپ
                   </span>
                 </h4>
-                <p className="text-xs text-[#9BA7B6] mt-1 leading-relaxed">
+                <p className="text-xs text-ink-2 mt-1 leading-relaxed">
                   طبق فرآیند سیستم، به دلیل عدم دسترسی به کارگاه تولید، گیت تحویل فنی منحصراً بر اساس
-                  <strong className="text-[#C5A059] mx-1">ورود فیزیکی و تحویل کالا به انبار مرکزی</strong> عمل می‌کند.
+                  <strong className="text-brand-ink mx-1">ورود فیزیکی و تحویل کالا به انبار مرکزی</strong> عمل می‌کند.
                   به محض تحویل محموله پرده، شید، ریل و یراق‌آلات، ورود آن را تایید و شماره قفسه را ثبت نمایید تا گیت فنی پروژه ۱۰۰٪ باز شده و در کارتابل هماهنگی مجاز به زمان‌بندی و اعزام اکیپ گردد.
                 </p>
               </div>
@@ -398,36 +391,36 @@ export const WarehouseDesk: React.FC<Props> = ({
 
           {/* 3 KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-[#151B23] p-4 rounded-xl border border-[#212835] flex items-center justify-between">
+            <div className="bg-surface p-4 rounded-xl border border-line flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-bold text-[#9BA7B6]">کل سفارشات در گردش ورود کالا</span>
-                <div className="text-xl font-black text-[#F0F4F8] tabular-nums mt-0.5">
+                <span className="text-[12px] font-bold text-ink-2">کل سفارشات در گردش ورود کالا</span>
+                <div className="text-xl font-black text-ink tabular-nums mt-0.5">
                   {toPersianDigits(incomingGoodsProjects.length)}
                 </div>
-                <span className="text-[10px] text-[#637184]">پروژه‌های در حال پیگیری بار</span>
+                <span className="text-[11px] text-ink-3">پروژه‌های در حال پیگیری بار</span>
               </div>
-              <div className="w-9 h-9 rounded-lg bg-[#0D1117] border border-[#212835] flex items-center justify-center text-[#9BA7B6]">
+              <div className="w-9 h-9 rounded-lg bg-canvas border border-line flex items-center justify-center text-ink-2">
                 <Inbox className="w-4 h-4" />
               </div>
             </div>
 
             <div
               onClick={() => setReceiptFilterStatus('PENDING')}
-              className={`bg-[#151B23] p-4 rounded-xl border cursor-pointer transition hover:border-amber-500/40 flex items-center justify-between ${
+              className={`bg-surface p-4 rounded-xl border cursor-pointer transition hover:border-amber-500/40 flex items-center justify-between ${
                 receiptFilterStatus === 'PENDING'
                   ? 'border-amber-500 ring-1 ring-amber-500/30'
-                  : 'border-[#212835]'
+                  : 'border-line'
               }`}
             >
               <div>
-                <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
+                <span className="text-[12px] font-bold text-amber-400 flex items-center gap-1">
                   <span>در انتظار تحویل و ورود به انبار</span>
                   {pendingReceiptCount > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />}
                 </span>
                 <div className="text-xl font-black text-amber-300 tabular-nums mt-0.5">
                   {toPersianDigits(pendingReceiptCount)}
                 </div>
-                <span className="text-[10px] text-[#637184]">گیت قفل • نیازمند وصول فیزیکی کالا</span>
+                <span className="text-[11px] text-ink-3">گیت قفل • نیازمند وصول فیزیکی کالا</span>
               </div>
               <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                 <ArrowDownToLine className="w-4 h-4" />
@@ -436,18 +429,18 @@ export const WarehouseDesk: React.FC<Props> = ({
 
             <div
               onClick={() => setReceiptFilterStatus('RECEIVED')}
-              className={`bg-[#151B23] p-4 rounded-xl border cursor-pointer transition hover:border-emerald-500/40 flex items-center justify-between ${
+              className={`bg-surface p-4 rounded-xl border cursor-pointer transition hover:border-emerald-500/40 flex items-center justify-between ${
                 receiptFilterStatus === 'RECEIVED'
                   ? 'border-emerald-500 ring-1 ring-emerald-500/30'
-                  : 'border-[#212835]'
+                  : 'border-line'
               }`}
             >
               <div>
-                <span className="text-[11px] font-bold text-emerald-400">تحویل‌شده در انبار (گیت باز)</span>
+                <span className="text-[12px] font-bold text-emerald-400">تحویل‌شده در انبار (گیت باز)</span>
                 <div className="text-xl font-black text-emerald-300 tabular-nums mt-0.5">
                   {toPersianDigits(receivedCount)}
                 </div>
-                <span className="text-[10px] text-[#637184]">چیدمان‌شده در قفسه • آماده زمان‌بندی</span>
+                <span className="text-[11px] text-ink-3">چیدمان‌شده در قفسه • آماده زمان‌بندی</span>
               </div>
               <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <CheckCircle2 className="w-4 h-4" />
@@ -456,15 +449,15 @@ export const WarehouseDesk: React.FC<Props> = ({
           </div>
 
           {/* Search & Sub-Filter Bar */}
-          <div className="bg-[#151B23] p-3 rounded-xl border border-[#212835] flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="bg-surface p-3 rounded-xl border border-line flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-[#9BA7B6] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-ink-2 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={receiptSearchQuery}
                 onChange={(e) => setReceiptSearchQuery(e.target.value)}
                 placeholder="جستجو با کد، نام مشتری، تلفن، آدرس یا فروشنده..."
-                className="w-full text-xs pr-9 pl-3 py-2 rounded-lg border border-[#212835] bg-[#0D1117] text-[#F0F4F8] placeholder-[#637184] focus:border-[#C5A059] focus:outline-none"
+                className="w-full text-xs pr-9 pl-3 py-2 rounded-lg border border-line bg-canvas text-ink placeholder-ink-3 focus:border-brand focus:outline-none"
               />
             </div>
 
@@ -474,8 +467,8 @@ export const WarehouseDesk: React.FC<Props> = ({
                 onClick={() => setReceiptFilterStatus('ALL')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
                   receiptFilterStatus === 'ALL'
-                    ? 'bg-[#C5A059] text-[#0D1117]'
-                    : 'bg-[#0D1117] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#212835]'
+                    ? 'bg-brand text-on-brand'
+                    : 'bg-canvas text-ink-2 hover:text-ink border border-line'
                 }`}
               >
                 همه ({toPersianDigits(incomingGoodsProjects.length)})
@@ -485,8 +478,8 @@ export const WarehouseDesk: React.FC<Props> = ({
                 onClick={() => setReceiptFilterStatus('PENDING')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
                   receiptFilterStatus === 'PENDING'
-                    ? 'bg-amber-500 text-[#0D1117]'
-                    : 'bg-[#0D1117] text-amber-400 hover:text-amber-300 border border-amber-500/30'
+                    ? 'bg-amber-500 text-on-brand'
+                    : 'bg-canvas text-amber-400 hover:text-amber-300 border border-amber-500/30'
                 }`}
               >
                 در انتظار تحویل به انبار ⏳ ({toPersianDigits(pendingReceiptCount)})
@@ -497,7 +490,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
                   receiptFilterStatus === 'RECEIVED'
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-[#0D1117] text-emerald-400 hover:text-emerald-300 border border-emerald-500/30'
+                    : 'bg-canvas text-emerald-400 hover:text-emerald-300 border border-emerald-500/30'
                 }`}
               >
                 تحویل‌شده در انبار ✅ ({toPersianDigits(receivedCount)})
@@ -507,10 +500,10 @@ export const WarehouseDesk: React.FC<Props> = ({
 
           {/* Projects Pipeline Cards */}
           {filteredIncomingProjects.length === 0 ? (
-            <div className="bg-[#151B23] rounded-2xl p-12 text-center border border-[#212835] text-xs text-[#9BA7B6] space-y-2">
-              <Inbox className="w-8 h-8 text-[#637184] mx-auto" />
+            <div className="bg-surface rounded-2xl p-12 text-center border border-line text-xs text-ink-2 space-y-2">
+              <Inbox className="w-8 h-8 text-ink-3 mx-auto" />
               <p className="font-bold">هیچ پروژه‌ای مطابق فیلتر جاری یافت نشد.</p>
-              <p className="text-[11px] text-[#637184]">
+              <p className="text-[12px] text-ink-3">
                 با تغییر عبارت جستجو یا انتخاب تب «همه»، پروژه‌های در گردش را بررسی نمایید.
               </p>
             </div>
@@ -528,7 +521,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                 return (
                   <div
                     key={p.id}
-                    className={`bg-[#151B23] rounded-2xl p-5 border transition flex flex-col justify-between gap-4 ${
+                    className={`bg-surface rounded-2xl p-5 border transition flex flex-col justify-between gap-4 ${
                       whConfirmed
                         ? 'border-emerald-500/40 ring-1 ring-emerald-500/20'
                         : 'border-amber-500/50 ring-1 ring-amber-500/20'
@@ -536,20 +529,20 @@ export const WarehouseDesk: React.FC<Props> = ({
                   >
                     <div className="space-y-3.5">
                       {/* Card Header */}
-                      <div className="flex items-start justify-between gap-2 border-b border-[#212835] pb-3">
+                      <div className="flex items-start justify-between gap-2 border-b border-line pb-3">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-black bg-[#0D1117] text-[#C5A059] border border-[#2D3748] px-2 py-0.5 rounded">
+                            <span className="font-mono text-xs font-black bg-canvas text-brand-ink border border-line-strong px-2 py-0.5 rounded">
                               {p.code || 'بدون کد'}
                             </span>
-                            <h3 className="font-black text-sm text-[#F0F4F8]">{p.title}</h3>
+                            <h3 className="font-black text-sm text-ink">{p.title}</h3>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-[#9BA7B6] mt-1.5">
-                            <span className="font-bold text-[#F0F4F8]">{p.customerName || 'کارفرما نامشخص'}</span>
+                          <div className="flex items-center gap-2 text-xs text-ink-2 mt-1.5">
+                            <span className="font-bold text-ink">{p.customerName || 'کارفرما نامشخص'}</span>
                             {p.customerPhone && (
                               <a
                                 href={`tel:${p.customerPhone}`}
-                                className="text-[#C5A059] hover:underline flex items-center gap-1 tabular-nums font-mono text-[11px]"
+                                className="text-brand-ink hover:underline flex items-center gap-1 tabular-nums font-mono text-[12px]"
                                 dir="ltr"
                               >
                                 <Phone className="w-3 h-3" />
@@ -562,22 +555,22 @@ export const WarehouseDesk: React.FC<Props> = ({
                         {/* Status Pills */}
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
                           {whConfirmed ? (
-                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                            <span className="text-[12px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               <span>کالا در انبار تحویل شد</span>
                             </span>
                           ) : (
-                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse">
+                            <span className="text-[12px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse">
                               <ArrowDownToLine className="w-3.5 h-3.5" />
                               <span>در انتظار ورود به انبار</span>
                             </span>
                           )}
 
                           <span
-                            className={`text-[10px] px-2 py-0.2 rounded-full border ${
+                            className={`text-[11px] px-2 py-0.2 rounded-full border ${
                               isGateOpen
-                                ? 'bg-[#C5A059]/15 text-[#C5A059] border-[#C5A059]/30'
-                                : 'bg-zinc-500/10 text-zinc-400 border-zinc-700/50'
+                                ? 'bg-brand/15 text-brand-ink border-brand/30'
+                                : 'bg-zinc-500/10 text-ink-2 border-line-strong/50'
                             }`}
                           >
                             {isGateOpen ? '✓ گیت فنی باز است' : '🔒 گیت فنی قفل است'}
@@ -586,48 +579,48 @@ export const WarehouseDesk: React.FC<Props> = ({
                       </div>
 
                       {/* Address & Sales Rep */}
-                      <div className="text-xs text-[#9BA7B6] space-y-1 bg-[#111620] p-2.5 rounded-xl border border-[#212835]">
+                      <div className="text-xs text-ink-2 space-y-1 bg-sunken p-2.5 rounded-xl border border-line">
                         <div className="flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-brand-ink shrink-0" />
                           <span className="truncate">{p.address || 'آدرس ثبت نشده'}</span>
                         </div>
-                        <div className="flex items-center justify-between text-[11px] text-[#637184] pt-1 border-t border-[#212835]/50">
-                          <span>کارشناس فروش: <strong className="text-[#9BA7B6]">{p.salesRepName || 'واحد فروش'}</strong></span>
-                          <span>تاریخ ثبت: <strong className="text-[#9BA7B6]">{formatJalali(p.createdAt)}</strong></span>
+                        <div className="flex items-center justify-between text-[12px] text-ink-3 pt-1 border-t border-line/50">
+                          <span>کارشناس فروش: <strong className="text-ink-2">{p.salesRepName || 'واحد فروش'}</strong></span>
+                          <span>تاریخ ثبت: <strong className="text-ink-2">{formatJalali(p.createdAt)}</strong></span>
                         </div>
                       </div>
 
                       {/* Technical Specifications (Panels, Mechanism, Area) */}
                       <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                        <div className="bg-[#0D1117] p-2 rounded-lg border border-[#212835]">
-                          <span className="text-[10px] text-[#637184] block">لت‌های پرده</span>
-                          <span className="font-bold text-[#F0F4F8] tabular-nums mt-0.5 block">
+                        <div className="bg-canvas p-2 rounded-lg border border-line">
+                          <span className="text-[11px] text-ink-3 block">لت‌های پرده</span>
+                          <span className="font-bold text-ink tabular-nums mt-0.5 block">
                             {toPersianDigits(p.curtainPanels ?? 0)} لت
                           </span>
                         </div>
-                        <div className="bg-[#0D1117] p-2 rounded-lg border border-[#212835]">
-                          <span className="text-[10px] text-[#637184] block">لت‌های شید</span>
-                          <span className="font-bold text-[#F0F4F8] tabular-nums mt-0.5 block">
+                        <div className="bg-canvas p-2 rounded-lg border border-line">
+                          <span className="text-[11px] text-ink-3 block">لت‌های شید</span>
+                          <span className="font-bold text-ink tabular-nums mt-0.5 block">
                             {toPersianDigits(p.shadePanels ?? 0)} لت
                           </span>
                         </div>
-                        <div className="bg-[#0D1117] p-2 rounded-lg border border-[#212835]">
-                          <span className="text-[10px] text-[#637184] block">مکانیزم و متراژ</span>
-                          <span className="font-bold text-[#C5A059] text-[11px] truncate block mt-0.5">
+                        <div className="bg-canvas p-2 rounded-lg border border-line">
+                          <span className="text-[11px] text-ink-3 block">مکانیزم و متراژ</span>
+                          <span className="font-bold text-brand-ink text-[12px] truncate block mt-0.5">
                             {p.mechanismType || 'استاندارد'}
                           </span>
                         </div>
                       </div>
 
                       {/* Official Handover Gate Checklist Status (Single Warehouse Authority) */}
-                      <div className="bg-[#0D1117] p-3 rounded-xl border border-[#212835] space-y-2">
+                      <div className="bg-canvas p-3 rounded-xl border border-line space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-[#C5A059] flex items-center gap-1.5">
+                          <span className="text-[12px] font-bold text-brand-ink flex items-center gap-1.5">
                             <CheckSquare className="w-3.5 h-3.5" />
                             <span>گیت تحویل رسمی به واحد فنی (صرفاً تاییدیه انبار):</span>
                           </span>
                           <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                               whConfirmed
                                 ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
                                 : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
@@ -637,7 +630,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                           </span>
                         </div>
 
-                        <div className="p-2.5 rounded-lg bg-[#151B23] text-xs">
+                        <div className="p-2.5 rounded-lg bg-surface text-xs">
                           {whConfirmed ? (
                             <div className="space-y-1">
                               <div className="text-emerald-400 font-bold flex items-center gap-1.5">
@@ -649,15 +642,15 @@ export const WarehouseDesk: React.FC<Props> = ({
                                 </span>
                               </div>
                               {handover.warehouseConfirmation?.shelfLocation && (
-                                <p className="text-[11px] text-[#F0F4F8] mr-5">
+                                <p className="text-[12px] text-ink mr-5">
                                   موقعیت چیدمان:{' '}
-                                  <strong className="text-[#C5A059]">
+                                  <strong className="text-brand-ink">
                                     {handover.warehouseConfirmation.shelfLocation}
                                   </strong>
                                 </p>
                               )}
                               {handover.warehouseConfirmation?.notes && (
-                                <p className="text-[11px] text-[#9BA7B6] mr-5 italic">
+                                <p className="text-[12px] text-ink-2 mr-5 italic">
                                   یادداشت انبار: {handover.warehouseConfirmation.notes}
                                 </p>
                               )}
@@ -675,13 +668,13 @@ export const WarehouseDesk: React.FC<Props> = ({
                     </div>
 
                     {/* Card Actions */}
-                    <div className="pt-2 border-t border-[#212835] flex flex-wrap items-center justify-between gap-2">
+                    <div className="pt-2 border-t border-line flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
                         {p.proposalImages && p.proposalImages.length > 0 && onViewProposal && (
                           <button
                             type="button"
                             onClick={() => onViewProposal(p)}
-                            className="px-2.5 py-1.5 rounded-lg bg-[#0D1117] hover:bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] border border-[#212835] text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg bg-canvas hover:bg-raised text-ink-2 hover:text-ink border border-line text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             <span>تصاویر سفارش ({toPersianDigits(p.proposalImages.length)})</span>
@@ -692,7 +685,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                           <button
                             type="button"
                             onClick={() => onOpenTicketModal(p)}
-                            className="px-2.5 py-1.5 rounded-lg bg-[#0D1117] hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 border border-rose-500/30 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg bg-canvas hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 border border-rose-500/30 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                             title="در صورت مشاهده نقص در پارچه، مغایرت یا کسری قطعات، تیکت فوری ثبت کنید"
                           >
                             <AlertTriangle className="w-3.5 h-3.5" />
@@ -707,7 +700,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                           <button
                             type="button"
                             onClick={() => handleOpenReceiptModal(p)}
-                            className="px-4 py-2 rounded-xl bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] font-black text-xs transition flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+                            className="px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-on-brand font-black text-xs transition flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
                           >
                             <ArrowDownToLine className="w-4 h-4" />
                             <span>تأیید ورود و تحویل کالا به انبار</span>
@@ -717,7 +710,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                             <button
                               type="button"
                               onClick={() => handleOpenReceiptModal(p)}
-                              className="px-3 py-1.5 rounded-lg bg-[#0D1117] hover:bg-[#1C232D] text-[#C5A059] border border-[#C5A059]/40 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                              className="px-3 py-1.5 rounded-lg bg-canvas hover:bg-raised text-brand-ink border border-brand/40 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                               <span>ویرایش رسید</span>
@@ -725,7 +718,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                             <button
                               type="button"
                               onClick={() => setRevokeModalProject(p)}
-                              className="px-2.5 py-1.5 rounded-lg bg-[#0D1117] hover:bg-rose-500/20 text-rose-400 border border-[#212835] text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1.5 rounded-lg bg-canvas hover:bg-rose-500/20 text-rose-400 border border-line text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                               title="لغو تاییدیه در صورت ثبت اشتباهی"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
@@ -746,15 +739,15 @@ export const WarehouseDesk: React.FC<Props> = ({
       {/* ===================== TAB 2: PRE-DISPATCH PACKING ===================== */}
       {activeTab === 'PACKING' && (
         <div className="space-y-4">
-          <div className="bg-[#111620] p-4 rounded-xl border border-[#C5A059]/20 text-xs text-[#9BA7B6] flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-[#C5A059] shrink-0" />
+          <div className="bg-sunken p-4 rounded-xl border border-brand/20 text-xs text-ink-2 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-brand-ink shrink-0" />
             <span>
               با زدن دکمه «تایید بسته‌بندی»، در تقویم مدیر فنی چراغ سبز «بار آماده ✅» روشن می‌شود و مسئول هماهنگی از تکمیل بار مأموریت فردا اطمینان خواهد یافت.
             </span>
           </div>
 
           {upcomingDispatchProjects.length === 0 ? (
-            <div className="bg-[#151B23] rounded-2xl p-10 text-center border border-[#212835] text-xs text-[#9BA7B6]">
+            <div className="bg-surface rounded-2xl p-10 text-center border border-line text-xs text-ink-2">
               هیچ پروژه‌ای در صف آماده‌سازی بار قرار ندارد.
             </div>
           ) : (
@@ -766,47 +759,47 @@ export const WarehouseDesk: React.FC<Props> = ({
                 return (
                   <div
                     key={p.id}
-                    className={`bg-[#151B23] rounded-2xl p-5 border transition space-y-4 ${
+                    className={`bg-surface rounded-2xl p-5 border transition space-y-4 ${
                       isPacked
                         ? 'border-emerald-500/40 ring-1 ring-emerald-500/20'
                         : p.isForceMajeure
                         ? 'border-rose-500/40 ring-1 ring-rose-500/20'
-                        : 'border-[#212835]'
+                        : 'border-line'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-black bg-[#0D1117] text-[#C5A059] border border-[#2D3748] px-2 py-0.5 rounded">
+                          <span className="font-mono text-xs font-black bg-canvas text-brand-ink border border-line-strong px-2 py-0.5 rounded">
                             {p.code}
                           </span>
-                          <h3 className="font-black text-sm text-[#F0F4F8]">{p.title}</h3>
+                          <h3 className="font-black text-sm text-ink">{p.title}</h3>
                         </div>
-                        <p className="text-xs text-[#9BA7B6] mt-1">{p.customerName}</p>
+                        <p className="text-xs text-ink-2 mt-1">{p.customerName}</p>
                       </div>
 
                       <div className="flex flex-col items-end gap-1">
-                        <span className="text-xs font-bold text-[#C5A059] bg-[#0D1117] px-2.5 py-1 rounded-md border border-[#212835]">
+                        <span className="text-xs font-bold text-brand-ink bg-canvas px-2.5 py-1 rounded-md border border-line">
                           اعزام: {formatJalali(p.scheduledDate)}
                         </span>
                         {p.isForceMajeure && (
-                          <span className="text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded">
+                          <span className="text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded">
                             فورس ماژور
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="text-xs text-[#9BA7B6] space-y-1 bg-[#111620] p-3 rounded-xl border border-[#212835]">
+                    <div className="text-xs text-ink-2 space-y-1 bg-sunken p-3 rounded-xl border border-line">
                       <div className="flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                        <MapPin className="w-3.5 h-3.5 text-brand-ink shrink-0" />
                         <span className="truncate">{p.address}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Phone className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                        <Phone className="w-3.5 h-3.5 text-brand-ink shrink-0" />
                         <span className="tabular-nums font-mono">{p.customerPhone}</span>
                       </div>
-                      <div className="flex items-center gap-2 pt-1 border-t border-[#212835] text-[11px] text-[#C5A059]">
+                      <div className="flex items-center gap-2 pt-1 border-t border-line text-[12px] text-brand-ink">
                         <Layers className="w-3.5 h-3.5 shrink-0" />
                         <span>
                           {toPersianDigits(p.shadePanels ?? 0)} شید • {toPersianDigits(p.curtainPanels ?? 0)} پرده
@@ -818,21 +811,21 @@ export const WarehouseDesk: React.FC<Props> = ({
                     {/* Tools required */}
                     {p.toolsRequired && p.toolsRequired.length > 0 && (
                       <div className="space-y-1.5">
-                        <span className="text-[11px] font-bold text-[#9BA7B6] flex items-center gap-1">
-                          <Wrench className="w-3 h-3 text-[#C5A059]" />
+                        <span className="text-[12px] font-bold text-ink-2 flex items-center gap-1">
+                          <Wrench className="w-3 h-3 text-brand-ink" />
                           <span>ابزارهای الزامی این مأموریت:</span>
                         </span>
                         <div className="flex flex-wrap gap-1">
                           {p.toolsRequired.slice(0, 4).map((t, i) => (
                             <span
                               key={i}
-                              className="text-[10px] px-2 py-0.5 rounded bg-[#0D1117] text-[#9BA7B6] border border-[#212835]"
+                              className="text-[11px] px-2 py-0.5 rounded bg-canvas text-ink-2 border border-line"
                             >
                               {t}
                             </span>
                           ))}
                           {p.toolsRequired.length > 4 && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#0D1117] text-[#637184]">
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-canvas text-ink-3">
                               +{toPersianDigits(p.toolsRequired.length - 4)} ابزار دیگر
                             </span>
                           )}
@@ -841,7 +834,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                     )}
 
                     {/* Packing Status & Note Input */}
-                    <div className="pt-2 border-t border-[#212835] space-y-3">
+                    <div className="pt-2 border-t border-line space-y-3">
                       {isPacked ? (
                         <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1">
                           <div className="flex items-center justify-between text-xs">
@@ -849,19 +842,19 @@ export const WarehouseDesk: React.FC<Props> = ({
                               <CheckCircle2 className="w-4 h-4" />
                               <span>بار آماده و بسته‌بندی شد ✅</span>
                             </span>
-                            <span className="text-[11px] text-emerald-300 tabular-nums">
+                            <span className="text-[12px] text-emerald-300 tabular-nums">
                               {p.warehousePrep?.packedAt
                                 ? formatJalaliDateTime(p.warehousePrep.packedAt)
                                 : 'ثبت شده'}
                             </span>
                           </div>
                           {(p.warehousePrep?.packedByUserName || (p.warehousePrep as any)?.packedBy) && (
-                            <p className="text-[11px] text-emerald-300/80">
+                            <p className="text-[12px] text-emerald-300/80">
                               توسط: {p.warehousePrep?.packedByUserName || (p.warehousePrep as any)?.packedBy}
                             </p>
                           )}
                           {(p.warehousePrep?.notes || (p.warehousePrep as any)?.packingNotes) && (
-                            <p className="text-[11px] text-[#F0F4F8] mt-1 bg-[#0D1117]/60 p-2 rounded border border-emerald-500/20">
+                            <p className="text-[12px] text-ink mt-1 bg-canvas/60 p-2 rounded border border-emerald-500/20">
                               یادداشت انبار: {p.warehousePrep?.notes || (p.warehousePrep as any)?.packingNotes}
                             </p>
                           )}
@@ -875,13 +868,13 @@ export const WarehouseDesk: React.FC<Props> = ({
                               setPackingNotes({ ...packingNotes, [p.id]: e.target.value })
                             }
                             placeholder="یادداشت بسته‌بندی یا شماره قفسه (اختیاری)..."
-                            className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] placeholder-[#637184] focus:border-[#C5A059] focus:outline-none"
+                            className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink placeholder-ink-3 focus:border-brand focus:outline-none"
                           />
                           <button
                             type="button"
                             disabled={isBusy}
                             onClick={() => handlePackingSubmit(p.id)}
-                            className="w-full py-2.5 rounded-xl font-black text-xs bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition cursor-pointer"
+                            className="w-full py-2.5 rounded-xl font-black text-xs bg-brand hover:bg-brand-hover text-on-brand flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition cursor-pointer"
                           >
                             {isBusy ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -904,7 +897,7 @@ export const WarehouseDesk: React.FC<Props> = ({
       {/* ===================== TAB 3: URGENT SITE SHORTAGE TICKETS ===================== */}
       {activeTab === 'TICKETS' && (
         <div className="space-y-4">
-          <div className="bg-[#111620] p-4 rounded-xl border border-rose-500/20 text-xs text-rose-200 flex items-center gap-2">
+          <div className="bg-sunken p-4 rounded-xl border border-rose-500/20 text-xs text-rose-200 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
             <span>
               تیکت‌های زیر مربوط به نصابان سر پروژه است که با کسری قطعه، ریل یا پیچ و یراق مواجه شده‌اند. لطفاً سریعاً پاسخ مناسب را انتخاب فرمایید.
@@ -912,7 +905,7 @@ export const WarehouseDesk: React.FC<Props> = ({
           </div>
 
           {warehouseTickets.length === 0 ? (
-            <div className="bg-[#151B23] rounded-2xl p-10 text-center border border-[#212835] text-xs text-[#9BA7B6]">
+            <div className="bg-surface rounded-2xl p-10 text-center border border-line text-xs text-ink-2">
               هیچ تیکت بازی در کارتابل انبار وجود ندارد. تمام پروژه‌ها در وضعیت تامین پایدار هستند.
             </div>
           ) : (
@@ -923,34 +916,34 @@ export const WarehouseDesk: React.FC<Props> = ({
                 return (
                   <div
                     key={t.id}
-                    className={`bg-[#151B23] rounded-2xl p-5 border transition space-y-3 flex flex-col justify-between ${
+                    className={`bg-surface rounded-2xl p-5 border transition space-y-3 flex flex-col justify-between ${
                       t.isBlocking
                         ? 'border-rose-500/60 ring-1 ring-rose-500/30'
                         : isDirectReferral
                         ? 'border-purple-500/60 ring-1 ring-purple-500/30'
-                        : 'border-[#212835]'
+                        : 'border-line'
                     }`}
                   >
                     <div className="space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-black bg-[#0D1117] text-[#C5A059] border border-[#2D3748] px-2 py-0.5 rounded">
+                            <span className="font-mono text-xs font-black bg-canvas text-brand-ink border border-line-strong px-2 py-0.5 rounded">
                               {t.projectCode || 'عمومی'}
                             </span>
-                            <span className="text-xs text-[#9BA7B6] font-bold">{t.projectTitle}</span>
+                            <span className="text-xs text-ink-2 font-bold">{t.projectTitle}</span>
                           </div>
-                          <h4 className="font-black text-sm text-[#F0F4F8] mt-1">{t.description}</h4>
+                          <h4 className="font-black text-sm text-ink mt-1">{t.description}</h4>
                         </div>
 
                         <div className="flex flex-col items-end gap-1">
                           {t.isBlocking && (
-                            <span className="text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded">
+                            <span className="text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded">
                               متوقف‌کننده کار
                             </span>
                           )}
                           {isDirectReferral && (
-                            <span className="text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded">
+                            <span className="text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded">
                               ارجاع به انبار
                             </span>
                           )}
@@ -958,14 +951,14 @@ export const WarehouseDesk: React.FC<Props> = ({
                       </div>
 
                       {/* Ticket Description */}
-                      <p className="text-xs text-[#9BA7B6] bg-[#111620] p-3 rounded-xl border border-[#212835] leading-relaxed">
+                      <p className="text-xs text-ink-2 bg-sunken p-3 rounded-xl border border-line leading-relaxed">
                         {t.blockingReason || t.resolutionNote || 'نیازمند تامین فوری قطعه'}
                       </p>
 
                       {/* Referral note if any */}
                       {t.referralNote && (
                         <div className="p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-xs text-purple-200">
-                          <p className="font-bold text-[11px] text-purple-300 mb-0.5">
+                          <p className="font-bold text-[12px] text-purple-300 mb-0.5">
                             دستور مدیر فنی به انبار:
                           </p>
                           <p>{t.referralNote}</p>
@@ -973,7 +966,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                       )}
 
                       {/* Ticket Reporter info */}
-                      <div className="flex items-center justify-between text-[11px] text-[#637184] pt-2 border-t border-[#212835]">
+                      <div className="flex items-center justify-between text-[12px] text-ink-3 pt-2 border-t border-line">
                         <span>ثبت‌کننده: {t.authorName || 'همکاران فنی'}</span>
                         <span>{formatJalali(t.createdAt)}</span>
                       </div>
@@ -1005,33 +998,33 @@ export const WarehouseDesk: React.FC<Props> = ({
 
       {/* ===================== MODAL: GOODS RECEIPT CONFIRMATION ===================== */}
       {receiptModalProject && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#151B23] border border-[#C5A059]/40 rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-[#212835] pb-3">
-              <h3 className="font-black text-base text-[#F0F4F8] flex items-center gap-2">
-                <ArrowDownToLine className="w-5 h-5 text-[#C5A059]" />
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="bg-surface border border-brand/40 rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="font-black text-base text-ink flex items-center gap-2">
+                <ArrowDownToLine className="w-5 h-5 text-brand-ink" />
                 <span>تأیید ورود و تحویل فیزیکی کالا به انبار</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setReceiptModalProject(null)}
-                className="text-[#9BA7B6] hover:text-[#F0F4F8] cursor-pointer"
+                className="text-ink-2 hover:text-ink cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Project Summary */}
-            <div className="bg-[#0D1117] p-3.5 rounded-xl border border-[#212835] text-xs space-y-2">
+            <div className="bg-canvas p-3.5 rounded-xl border border-line text-xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-mono font-bold text-[#C5A059]">{receiptModalProject.code}</span>
-                <span className="font-bold text-[#F0F4F8]">{receiptModalProject.title}</span>
+                <span className="font-mono font-bold text-brand-ink">{receiptModalProject.code}</span>
+                <span className="font-bold text-ink">{receiptModalProject.title}</span>
               </div>
-              <div className="flex items-center justify-between text-[#9BA7B6] pt-1 border-t border-[#212835]">
+              <div className="flex items-center justify-between text-ink-2 pt-1 border-t border-line">
                 <span>کارفرما: {receiptModalProject.customerName}</span>
                 <span>
                   حجم اقلام:{' '}
-                  <strong className="text-[#F0F4F8] tabular-nums">
+                  <strong className="text-ink tabular-nums">
                     {toPersianDigits(
                       (receiptModalProject.shadePanels ?? 0) + (receiptModalProject.curtainPanels ?? 0)
                     )}{' '}
@@ -1043,25 +1036,25 @@ export const WarehouseDesk: React.FC<Props> = ({
 
             <form onSubmit={handleGoodsReceiptSubmit} className="space-y-4">
               {/* Verification Checklist */}
-              <div className="bg-[#111620] p-3.5 rounded-xl border border-[#212835] space-y-2.5">
-                <span className="text-xs font-bold text-[#C5A059] block">چک‌لیست بازرسی فیزیکی ورود کالا:</span>
+              <div className="bg-sunken p-3.5 rounded-xl border border-line space-y-2.5">
+                <span className="text-xs font-bold text-brand-ink block">چک‌لیست بازرسی فیزیکی ورود کالا:</span>
 
-                <label className="flex items-center gap-2 text-xs text-[#F0F4F8] cursor-pointer">
+                <label className="flex items-center gap-2 text-xs text-ink cursor-pointer">
                   <input
                     type="checkbox"
                     checked={receiptCheckItemsMatch}
                     onChange={(e) => setReceiptCheckItemsMatch(e.target.checked)}
-                    className="w-4 h-4 rounded text-[#C5A059] accent-[#C5A059] bg-[#0D1117] border-[#212835]"
+                    className="w-4 h-4 rounded text-brand-ink accent-brand bg-canvas border-line"
                   />
                   <span>تطابق تعداد و مشخصات اقلام دریافتی با برگه سفارش / فاکتور</span>
                 </label>
 
-                <label className="flex items-center gap-2 text-xs text-[#F0F4F8] cursor-pointer">
+                <label className="flex items-center gap-2 text-xs text-ink cursor-pointer">
                   <input
                     type="checkbox"
                     checked={receiptCheckQuality}
                     onChange={(e) => setReceiptCheckQuality(e.target.checked)}
-                    className="w-4 h-4 rounded text-[#C5A059] accent-[#C5A059] bg-[#0D1117] border-[#212835]"
+                    className="w-4 h-4 rounded text-brand-ink accent-brand bg-canvas border-line"
                   />
                   <span>سلامت فیزیکی بسته‌بندی، پارچه‌ها، پروفیل ریل و موتورها (عدم پارگی یا خط و خش)</span>
                 </label>
@@ -1069,7 +1062,7 @@ export const WarehouseDesk: React.FC<Props> = ({
 
               {/* Shelf Location */}
               <div>
-                <label className="block text-xs font-bold text-[#9BA7B6] mb-1">
+                <label className="block text-xs font-bold text-ink-2 mb-1">
                   شماره قفسه یا موقعیت چیدمان در انبار (جهت بارگیری سریع اکیپ): *
                 </label>
                 <input
@@ -1077,14 +1070,14 @@ export const WarehouseDesk: React.FC<Props> = ({
                   value={receiptShelfLocation}
                   onChange={(e) => setReceiptShelfLocation(e.target.value)}
                   placeholder="مثال: ردیف B، قفسه ۴ / انبار شید غربی"
-                  className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] placeholder-[#637184] focus:border-[#C5A059] focus:outline-none font-bold"
+                  className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink placeholder-ink-3 focus:border-brand focus:outline-none font-bold"
                   required
                 />
               </div>
 
               {/* Warehouse Notes */}
               <div>
-                <label className="block text-xs font-bold text-[#9BA7B6] mb-1">
+                <label className="block text-xs font-bold text-ink-2 mb-1">
                   یادداشت‌ها و توضیحات تحویل‌گیرنده انبار (اختیاری):
                 </label>
                 <textarea
@@ -1092,7 +1085,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                   value={receiptNotes}
                   onChange={(e) => setReceiptNotes(e.target.value)}
                   placeholder="مثال: اقلام با ۲ کارتن ریل و ۳ بسته پارچه تحویل گرفته شد، بسته‌بندی سالم و تست اولیه انجام شد..."
-                  className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] placeholder-[#637184] focus:border-[#C5A059] focus:outline-none resize-none"
+                  className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink placeholder-ink-3 focus:border-brand focus:outline-none resize-none"
                 />
               </div>
 
@@ -1106,18 +1099,18 @@ export const WarehouseDesk: React.FC<Props> = ({
 
               {receiptError && <p className="text-xs text-rose-400 font-bold">{receiptError}</p>}
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#212835]">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setReceiptModalProject(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1C232D] text-[#9BA7B6] hover:text-[#F0F4F8] cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-raised text-ink-2 hover:text-ink cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingReceipt}
-                  className="px-5 py-2 rounded-xl text-xs font-black bg-[#C5A059] hover:bg-[#D4AF37] text-[#0D1117] flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl text-xs font-black bg-brand hover:bg-brand-hover text-on-brand flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {isSubmittingReceipt ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1134,9 +1127,9 @@ export const WarehouseDesk: React.FC<Props> = ({
 
       {/* ===================== MODAL: REVOKE RECEIPT CONFIRMATION ===================== */}
       {revokeModalProject && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#151B23] border border-rose-500/40 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-[#212835] pb-3">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="bg-surface border border-rose-500/40 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="font-black text-sm text-rose-300 flex items-center gap-2">
                 <RotateCcw className="w-4 h-4 text-rose-400" />
                 <span>لغو تاییدیه ورود کالا به انبار</span>
@@ -1144,26 +1137,26 @@ export const WarehouseDesk: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setRevokeModalProject(null)}
-                className="text-[#9BA7B6] hover:text-[#F0F4F8] cursor-pointer"
+                className="text-ink-2 hover:text-ink cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-[#F0F4F8] leading-relaxed">
+            <p className="text-xs text-ink leading-relaxed">
               آیا از لغو تاییدیه ورود فیزیکی کالا برای پروژه{' '}
-              <strong className="text-[#C5A059]">{revokeModalProject.code || revokeModalProject.title}</strong> اطمینان
+              <strong className="text-brand-ink">{revokeModalProject.code || revokeModalProject.title}</strong> اطمینان
               دارید؟
             </p>
-            <p className="text-[11px] text-rose-300/80 bg-rose-500/10 p-2.5 rounded-lg border border-rose-500/20">
+            <p className="text-[12px] text-rose-300/80 bg-rose-500/10 p-2.5 rounded-lg border border-rose-500/20">
               ⚠️ با لغو این تاییدیه، وضعیت گیت تحویل فنی مجدداً به حالت «قفل / در انتظار انبار» بازمی‌گردد و زمان‌بندی نصب تا زمان تایید مجدد مسدود خواهد شد.
             </p>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#212835]">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
               <button
                 type="button"
                 onClick={() => setRevokeModalProject(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1C232D] text-[#9BA7B6] cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-raised text-ink-2 cursor-pointer"
               >
                 انصراف
               </button>
@@ -1187,28 +1180,28 @@ export const WarehouseDesk: React.FC<Props> = ({
 
       {/* ===================== MODAL: TICKET RESOLUTION ===================== */}
       {selectedTicket && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#151B23] border border-purple-500/40 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-[#212835] pb-3">
-              <h3 className="font-black text-base text-[#F0F4F8] flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="bg-surface border border-purple-500/40 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="font-black text-base text-ink flex items-center gap-2">
                 <Truck className="w-5 h-5 text-purple-400" />
                 <span>تعیین تکلیف و تامین قطعه سر پروژه</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setSelectedTicket(null)}
-                className="text-[#9BA7B6] hover:text-[#F0F4F8] cursor-pointer"
+                className="text-ink-2 hover:text-ink cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Ticket Subject */}
-            <div className="bg-[#0D1117] p-3 rounded-xl border border-[#212835] text-xs space-y-1">
-              <span className="font-mono text-[#C5A059]">{selectedTicket.projectCode || 'عمومی'}</span>
-              <p className="font-bold text-[#F0F4F8]">{selectedTicket.description}</p>
+            <div className="bg-canvas p-3 rounded-xl border border-line text-xs space-y-1">
+              <span className="font-mono text-brand-ink">{selectedTicket.projectCode || 'عمومی'}</span>
+              <p className="font-bold text-ink">{selectedTicket.description}</p>
               {selectedTicket.blockingReason && (
-                <p className="text-[#9BA7B6]">{selectedTicket.blockingReason}</p>
+                <p className="text-ink-2">{selectedTicket.blockingReason}</p>
               )}
             </div>
 
@@ -1220,7 +1213,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                 className={`p-2.5 rounded-xl text-xs font-bold border transition text-center cursor-pointer ${
                   actionType === 'SUPPLIED'
                     ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                    : 'bg-[#0D1117] border-[#212835] text-[#9BA7B6]'
+                    : 'bg-canvas border-line text-ink-2'
                 }`}
               >
                 1. تحویل حضوری
@@ -1231,7 +1224,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                 className={`p-2.5 rounded-xl text-xs font-bold border transition text-center cursor-pointer ${
                   actionType === 'DISPATCHED_COURIER'
                     ? 'bg-purple-500/20 border-purple-500 text-purple-300'
-                    : 'bg-[#0D1117] border-[#212835] text-[#9BA7B6]'
+                    : 'bg-canvas border-line text-ink-2'
                 }`}
               >
                 2. ارسال با پیک / اسنپ
@@ -1242,7 +1235,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                 className={`p-2.5 rounded-xl text-xs font-bold border transition text-center cursor-pointer ${
                   actionType === 'DELAYED'
                     ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                    : 'bg-[#0D1117] border-[#212835] text-[#9BA7B6]'
+                    : 'bg-canvas border-line text-ink-2'
                 }`}
               >
                 3. عدم امکان فوری
@@ -1259,7 +1252,7 @@ export const WarehouseDesk: React.FC<Props> = ({
               {actionType === 'DISPATCHED_COURIER' && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-bold text-[#9BA7B6] mb-1">
+                    <label className="block text-xs font-bold text-ink-2 mb-1">
                       مشخصات پیک یا راننده: *
                     </label>
                     <input
@@ -1267,12 +1260,12 @@ export const WarehouseDesk: React.FC<Props> = ({
                       value={courierInfo}
                       onChange={(e) => setCourierInfo(e.target.value)}
                       placeholder="مثال: پیک اسنپ / آقای رضایی (0912...)"
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8]"
+                      className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#9BA7B6] mb-1">
+                    <label className="block text-xs font-bold text-ink-2 mb-1">
                       کد رهگیری یا لینک پیگیری پیک (اختیاری):
                     </label>
                     <input
@@ -1280,7 +1273,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                       value={trackingCode}
                       onChange={(e) => setTrackingCode(e.target.value)}
                       placeholder="مثال: TRK-9812..."
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] font-mono"
+                      className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink font-mono"
                     />
                   </div>
                 </div>
@@ -1289,7 +1282,7 @@ export const WarehouseDesk: React.FC<Props> = ({
               {actionType === 'DELAYED' && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-bold text-[#9BA7B6] mb-1">
+                    <label className="block text-xs font-bold text-ink-2 mb-1">
                       علت عدم امکان تامین فوری: *
                     </label>
                     <textarea
@@ -1297,12 +1290,12 @@ export const WarehouseDesk: React.FC<Props> = ({
                       value={delayReason}
                       onChange={(e) => setDelayReason(e.target.value)}
                       placeholder="مثال: قطعه در انبار موجود نیست و از شرکت واردکننده در حال ارسال است..."
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8] resize-none"
+                      className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink resize-none"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#9BA7B6] mb-1">
+                    <label className="block text-xs font-bold text-ink-2 mb-1">
                       زمان یا تاریخ تقریبی آماده‌سازی و تامین: *
                     </label>
                     <input
@@ -1310,7 +1303,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                       value={estimatedDate}
                       onChange={(e) => setEstimatedDate(e.target.value)}
                       placeholder="مثال: فردا ساعت 12 ظهر یا تاریخ 28 آبان"
-                      className="w-full text-xs p-2.5 rounded-xl border border-[#212835] bg-[#0D1117] text-[#F0F4F8]"
+                      className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink"
                       required
                     />
                   </div>
@@ -1319,11 +1312,11 @@ export const WarehouseDesk: React.FC<Props> = ({
 
               {ticketError && <p className="text-xs text-rose-400 font-bold">{ticketError}</p>}
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#212835]">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setSelectedTicket(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1C232D] text-[#9BA7B6]"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-raised text-ink-2"
                 >
                   انصراف
                 </button>
