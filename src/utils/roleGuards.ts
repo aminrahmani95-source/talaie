@@ -694,8 +694,8 @@ export function validateTicketRoleGuards(
  * گارد امنیتی حذف پروژه: منحصراً در اختیار مدیرعامل (CEO)
  */
 export function validateProjectDeleteRoleGuards(user: User): void {
-  if (!user || user.role !== 'CEO' || !user.active) {
-    throw new PermanentError('دسترسی غیرمجاز: منحصراً مدیرعامل (CEO) مجاز به حذف کامل پروژه است.');
+  if (!user || (user.role !== 'CEO' && user.role !== 'QC_MANAGER') || !user.active) {
+    throw new PermanentError('دسترسی غیرمجاز: منحصراً مدیریت (مدیرعامل یا مدیر اپ و QC) مجاز به حذف کامل پروژه است.');
   }
 }
 

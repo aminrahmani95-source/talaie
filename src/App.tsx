@@ -2877,7 +2877,7 @@ export const App: React.FC = () => {
               onClose={() => setManagedProjectId(null)}
               onEditInfo={(p) => handleOpenEditProject(p)}
               onApplyPatch={handleManagerPatch}
-              onDeleteProject={isCeo ? handleManagerDelete : undefined}
+              onDeleteProject={isCeo || isQcManager ? handleManagerDelete : undefined}
               onOpenCertificate={(p) => setCertificateModalProject(p)}
               onViewProposal={(p) => setProposalModalProject(p)}
               fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}

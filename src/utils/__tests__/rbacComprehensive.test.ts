@@ -159,13 +159,13 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
   // ۱. مدیرعامل (CEO) - تنها فرد دارای اختیار حذف و مشاهده شناسنامه رسمی
   // ============================================================================
   describe('1. CEO: Exclusive Deletion & Official Registry Authority', () => {
-    it('authorizes CEO to delete projects', () => {
+    it('authorizes CEO and QC Manager to delete projects', () => {
       expect(() => validateProjectDeleteRoleGuards(ceoUser)).not.toThrow();
+      expect(() => validateProjectDeleteRoleGuards(qcManagerUser)).not.toThrow();
     });
 
-    it('denies ALL other roles from deleting projects', () => {
-      const nonCeoRoles = [
-        qcManagerUser,
+    it('denies non-management roles from deleting projects', () => {
+      const nonAdminRoles = [
         coordinatorUser,
         salesRepUser1,
         warehouseUser,
@@ -174,10 +174,10 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
         measurementLeadUser,
       ];
 
-      for (const nonCeo of nonCeoRoles) {
-        expect(() => validateProjectDeleteRoleGuards(nonCeo)).toThrow(PermanentError);
-        expect(() => validateProjectDeleteRoleGuards(nonCeo)).toThrowError(
-          /منحصراً مدیرعامل \(CEO\) مجاز به حذف کامل پروژه است/
+      for (const nonAdmin of nonAdminRoles) {
+        expect(() => validateProjectDeleteRoleGuards(nonAdmin)).toThrow(PermanentError);
+        expect(() => validateProjectDeleteRoleGuards(nonAdmin)).toThrowError(
+          /منحصراً مدیریت/
         );
       }
     });
@@ -336,8 +336,8 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
       ).not.toThrow();
     });
 
-    it('authorizes QC Manager to delete sales bookings while denying deletion of installation projects', () => {
-      expect(() => validateProjectDeleteRoleGuards(qcManagerUser)).toThrow(PermanentError);
+    it('authorizes QC Manager to delete sales bookings and installation projects', () => {
+      expect(() => validateProjectDeleteRoleGuards(qcManagerUser)).not.toThrow();
       expect(canDeleteSalesBooking(qcManagerUser)).toBe(true);
     });
   });
