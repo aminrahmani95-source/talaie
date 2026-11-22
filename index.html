@@ -20,12 +20,9 @@
     <meta name="apple-mobile-web-app-title" content="گالری طلایی" />
     <meta name="application-name" content="گالری طلایی" />
 
-    <!-- Unified Official Persian Typeface: Vazirmatn -->
-    <link rel="preload" href="./fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="./fonts/Vazirmatn-Bold.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <!-- Persian typeface (Vazirmatn) is bundled locally via src/index.css.
+         No Google Fonts request: it is frequently filtered/throttled in Iran and a
+         render-blocking stylesheet from it could stall the first paint. -->
 
     <!-- Cache-Busting Headers to prevent PWA and browsers from serving stale cache -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -34,38 +31,25 @@
 
     <script>
       try {
+        // Dark graphite is the primary design; light mode only when the user explicitly picks it.
         var savedTheme = localStorage.getItem('talaie_theme');
         if (savedTheme === 'light') {
           document.documentElement.classList.remove('dark');
-        } else if (savedTheme === 'dark') {
+        } else {
           document.documentElement.classList.add('dark');
-        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-          document.documentElement.classList.remove('dark');
         }
       } catch (e) {}
 
-      // Clear any cached assets or registered service workers from previous builds
-      if ('caches' in window) {
-        caches.keys().then(function(names) {
-          for (var name of names) {
-            caches.delete(name);
-          }
-        });
-      }
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (var reg of registrations) {
-            reg.unregister();
-          }
-        });
-      }
     </script>
-    <script type="module" crossorigin src="./assets/index-B6ohOwE7.js"></script>
-    <link rel="modulepreload" crossorigin href="./assets/jsx-runtime-DzPUWKLJ.js">
+    <script type="module" crossorigin src="./assets/index-DrbsGEJr.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/jalali-B7fyrsId.js">
+    <link rel="modulepreload" crossorigin href="./assets/vendor-react-lPhd8y74.js">
     <link rel="modulepreload" crossorigin href="./assets/offlineQueue-W577M2FM.js">
-    <link rel="stylesheet" crossorigin href="./assets/index-DyouRmzA.css">
+    <link rel="modulepreload" crossorigin href="./assets/vendor-supabase-DtuMx0jC.js">
+    <link rel="modulepreload" crossorigin href="./assets/vendor-icons-CGMb6xlX.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-wNcqCjm7.css">
   </head>
-  <body class="bg-[#F8F9FA] dark:bg-[#0D1117] text-[#1A1F26] dark:text-[#F0F4F8] antialiased selection:bg-[#C5A059] selection:text-[#0D1117]">
-    <div id="root"></div>
+  <body class="bg-canvas text-ink antialiased selection:bg-brand selection:text-on-brand">
+    <div id="root"></div>
   </body>
 </html>
