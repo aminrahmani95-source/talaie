@@ -9,15 +9,13 @@ import {
 import { getUpcomingDays, formatToPersianDateString } from './jalali';
 import { PermanentError } from './offlineQueue';
 
-export const MAX_LATHS_PER_TEAM = 15;
-export const TOTAL_INSTALLATION_TEAMS = 4;
-export const MAX_DAILY_COMPANY_LATHS = 60; // ۴ اکیپ × ۱۵ لت
+export const MAX_LATHS_PER_TEAM = 20;
+export const TOTAL_INSTALLATION_TEAMS = 2;
+export const MAX_DAILY_COMPANY_LATHS = 40; // ۲ اکیپ × ۲۰ لت
 
 export const INSTALLATION_TEAMS = [
   { id: 'TEAM_1', name: 'اکیپ نصب ۱', lead: '' },
   { id: 'TEAM_2', name: 'اکیپ نصب ۲', lead: '' },
-  { id: 'TEAM_3', name: 'اکیپ نصب ۳', lead: '' },
-  { id: 'TEAM_4', name: 'اکیپ نصب ۴', lead: '' },
 ];
 
 export const SALES_REPS_SEED: SalesRepProfile[] = [];
@@ -90,7 +88,7 @@ export function getDailyCapacity(
     return b.requestedDate === dateKey;
   });
 
-  // محاسبه پیش‌فرض برای ۴ اکیپ
+  // محاسبه پیش‌فرض برای ۲ اکیپ
   const teamAllocations: TeamDayAllocation[] = INSTALLATION_TEAMS.map((t) => ({
     teamId: t.id,
     teamName: t.name,
@@ -185,8 +183,8 @@ export function calculateBookingOptions(
 
   // --------------------------------------------------------------------------
   // حالت اول: پخش بین چند اکیپ (SPREAD_DAILY)
-  // اگر تعداد لت <= ۶۰ باشد: در ۱ روز انجام می‌شود.
-  // اگر تعداد لت > ۶۰ باشد (مانند ۱۱۵ لت): بین اکیپ‌ها با سقف ۶۰ لت در روز پخش می‌شود.
+  // اگر تعداد لت <= ۴۰ باشد: در ۱ روز انجام می‌شود.
+  // اگر تعداد لت > ۴۰ باشد (مانند ۱۱۵ لت): بین اکیپ‌ها با سقف ۴۰ لت در روز پخش می‌شود.
   // --------------------------------------------------------------------------
   let spreadOption: BookingOption;
 
@@ -230,7 +228,7 @@ export function calculateBookingOptions(
       ],
     };
   } else {
-    // سناریوی لت‌های بالا (> ۶۰ لت، مانند ۱۱۵ لت) با بسیج اکیپ‌ها و سقف روزانه ۶۰ لت
+    // سناریوی لت‌های بالا (> ۴۰ لت، مانند ۱۱۵ لت) با بسیج اکیپ‌ها و سقف روزانه ۴۰ لت
     const spreadDaysNeeded = Math.ceil(lathsCount / MAX_DAILY_COMPANY_LATHS);
     let remLaths = lathsCount;
     let spreadMultiFit = true;
@@ -278,9 +276,9 @@ export function calculateBookingOptions(
 
     spreadOption = {
       mode: 'SPREAD_DAILY',
-      title: `بسیج همزمان اکیپ‌ها (سقف ۶۰ لت/روز) در ${spreadDaysNeeded} روز`,
+      title: `بسیج همزمان اکیپ‌ها (سقف ۴۰ لت/روز) در ${spreadDaysNeeded} روز`,
       description: spreadMultiFit
-        ? `تحویل سریع ${lathsCount} لت ظرف ${spreadDaysNeeded} روز با حداکثر توان روزانه ۶۰ لت`
+        ? `تحویل سریع ${lathsCount} لت ظرف ${spreadDaysNeeded} روز با حداکثر توان روزانه ۴۰ لت`
         : `ظرفیت روزانه اکیپ‌ها در بازه ${spreadDaysNeeded} روزه پاسخگوی ${lathsCount} لت نیست.`,
       isAvailable: spreadMultiFit,
       requiredDays: spreadDaysNeeded,
@@ -341,7 +339,7 @@ export function calculateBookingOptions(
     mode: 'CONSECUTIVE_DAYS',
     title: `رزرو اختصاصی یک اکیپ در ${consecutiveDaysNeeded} روز متوالی`,
     description: consecutiveAvailable
-      ? `اختصاص ${chosenTeamName} به مدت ${consecutiveDaysNeeded} روز متوالی (روزانه تا ۱۵ لت)`
+      ? `اختصاص ${chosenTeamName} به مدت ${consecutiveDaysNeeded} روز متوالی (روزانه تا ۲۰ لت)`
       : `امکان رزرو ${consecutiveDaysNeeded} روز متوالی با یک اکیپ در این تاریخ وجود ندارد.`,
     isAvailable: consecutiveAvailable,
     requiredDays: consecutiveDaysNeeded,

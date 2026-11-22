@@ -381,7 +381,7 @@ export const BottomNav: React.FC<Props> = ({
               <div className="text-xs font-bold flex items-center justify-between">
                 <span>میز فروش و رزرو لت‌ها</span>
                 <span className="bg-[#C5A059]/20 text-[#E5CA8F] text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  ظرفیت ۶۰ لت
+                  ظرفیت ۴۰ لت
                 </span>
               </div>
               <div className="text-[11px] text-[#9BA7B6] mt-0.5">

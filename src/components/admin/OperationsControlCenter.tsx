@@ -173,16 +173,14 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   const totalUrgentCount =
     stuckProjects.length + urgentTickets.length + incomingProjects.length + pendingQcProjects.length;
 
-  // ================= 2. وضعیت زنده 4 اکیپ نصب در امروز =================
+  // ================= 2. وضعیت زنده ۲ اکیپ نصب در امروز =================
   const liveTeams = useMemo(() => {
-    // اطمینان از وجود 4 اکیپ
+    // اطمینان از وجود ۲ اکیپ
     const targetTeams: InstallationTeamWithMembers[] = teamsWithMembers && teamsWithMembers.length > 0
       ? teamsWithMembers
       : [
           { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
           { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
-          { id: 'TEAM_3', name: 'اکیپ نصب ۳', code: 'TEAM_3', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
-          { id: 'TEAM_4', name: 'اکیپ نصب ۴', code: 'TEAM_4', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
         ];
 
     return targetTeams.map((team) => {
@@ -733,7 +731,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               <div>
                 <h2 className="text-sm font-black text-slate-900 dark:text-[#F0F4F8] flex items-center gap-2">
                   <Users className="w-4 h-4 text-[#C5A059]" />
-                  وضعیت زنده 4 اکیپ نصب در امروز
+                  وضعیت زنده ۲ اکیپ نصب در امروز
                 </h2>
                 <p className="text-xs text-slate-600 dark:text-[#9BA7B6] mt-0.5">
                   پروژه جاری هر اکیپ، سرپرست، و وضعیت تحویل متریال از انبار

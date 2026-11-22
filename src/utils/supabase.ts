@@ -576,7 +576,7 @@ export const SupabaseSyncService = {
   },
 
   // =========================================================================
-  // INSTALLATION TEAMS (۴ اکیپ نصب و اعضای آن‌ها)
+  // INSTALLATION TEAMS (۲ اکیپ نصب و اعضای آن‌ها)
   // =========================================================================
 
   async fetchInstallationTeams(): Promise<InstallationTeam[]> {

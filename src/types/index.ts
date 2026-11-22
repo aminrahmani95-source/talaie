@@ -15,7 +15,7 @@ export interface User {
   role: UserRole;
   avatar?: string;
   active: boolean;
-  teamId?: string; // شناسه اکیپ منتسب (در صورت عضویت در یکی از 4 اکیپ)
+  teamId?: string; // شناسه اکیپ منتسب (در صورت عضویت در یکی از ۲ اکیپ)
   updatedAt?: string;
 }
 
@@ -118,7 +118,7 @@ export interface QCInspectionRecord {
   createdAt: string;
 }
 
-// ساختار 4 اکیپ نصب (هر اکیپ: 1 سرپرست + 2 تکنسین = 12 نفر)
+// ساختار ۲ اکیپ نصب (هر اکیپ: ۱ سرپرست + ۲ تکنسین = ۶ نفر)
 export interface InstallationTeam {
   id: string;
   name: string; // نام اکیپ (مثلاً «اکیپ نصب 1»)
@@ -487,7 +487,7 @@ export interface Project {
   scheduledTime: string; // مثلاً 09:30 یا 14:00
   
   // اکیپ نصب
-  assignedTeamId?: string; // شناسه یکی از 4 اکیپ نصب
+  assignedTeamId?: string; // شناسه یکی از ۲ اکیپ نصب
   assignedTeamName?: string; // نام اکیپ منتسب
   leadTechnicianId?: string; // شناسه سرپرست اکیپ نصب
   assignedTechnicianIds: string[]; // تمام اعضای اکیپ
@@ -877,14 +877,14 @@ export interface TeamDayAllocation {
   teamId: string;
   teamName: string;
   bookedLaths: number;
-  maxLaths: number; // معمولاً ۱۵ لت برای هر اکیپ در روز
+  maxLaths: number; // معمولاً ۲۰ لت برای هر اکیپ در روز
 }
 
 export interface DailyLathCapacity {
   date: string; // YYYY-MM-DD
   jalaliDate: string;
   dayName: string; // شنبه، یکشنبه، ...
-  maxLaths: number; // ۶۰ لت (۴ اکیپ × ۱۵)
+  maxLaths: number; // ۴۰ لت (۲ اکیپ × ۲۰)
   bookedLaths: number;
   remainingLaths: number;
   teams: TeamDayAllocation[];

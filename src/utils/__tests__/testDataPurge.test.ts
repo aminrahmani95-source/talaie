@@ -88,7 +88,7 @@ describe('Clean Production Slate & Test Data Purge Verification', () => {
   });
 
   it('5. installation teams are clean standard teams without fake supervisors', () => {
-    expect(DEFAULT_TEAMS).toHaveLength(4);
+    expect(DEFAULT_TEAMS).toHaveLength(2);
     DEFAULT_TEAMS.forEach((t) => {
       expect(t.supervisorId).toBeUndefined();
       expect(t.supervisorName).toBeUndefined();
@@ -97,7 +97,7 @@ describe('Clean Production Slate & Test Data Purge Verification', () => {
 
     INSTALLATION_TEAMS.forEach((t) => {
       expect(t.lead).toBe('');
-      expect(t.name).toMatch(/^اکیپ نصب [۱-۴]/);
+      expect(t.name).toMatch(/^اکیپ نصب [۱-۲]/);
     });
   });
 

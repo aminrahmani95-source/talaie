@@ -202,7 +202,7 @@ export const MonthPlanner: React.FC<Props> = ({
     <div className="space-y-5 animate-in fade-in duration-200">
       {/* Page Header */}
       <PageHeader
-        title="برنامه‌ریزی و ظرفیت 4 اکیپ"
+        title="برنامه‌ریزی و ظرفیت ۲ اکیپ"
         subtitle="مدیریت بار کاری، خطوط زمانی و تخصیص ماموریت‌ها"
         actions={
           <div className="flex flex-wrap items-center gap-2">

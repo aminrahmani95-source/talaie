@@ -34,7 +34,7 @@ const createLocalStorageMock = () => {
   };
 };
 
-describe('Sales & 60-Lath Capacity Engine Tests', () => {
+describe('Sales & 40-Lath Capacity Engine Tests', () => {
   let storageMock: ReturnType<typeof createLocalStorageMock>;
 
   beforeEach(() => {
@@ -45,32 +45,32 @@ describe('Sales & 60-Lath Capacity Engine Tests', () => {
     });
   });
 
-  it('1. enforces company cap of 60 laths across 4 installation teams', () => {
-    expect(MAX_DAILY_COMPANY_LATHS).toBe(60);
-    expect(MAX_LATHS_PER_TEAM).toBe(15);
-    expect(INSTALLATION_TEAMS).toHaveLength(4);
+  it('1. enforces company cap of 40 laths across 2 installation teams', () => {
+    expect(MAX_DAILY_COMPANY_LATHS).toBe(40);
+    expect(MAX_LATHS_PER_TEAM).toBe(20);
+    expect(INSTALLATION_TEAMS).toHaveLength(2);
   });
 
   it('2. correctly calculates daily capacity with zero bookings', () => {
     const capacity = getDailyCapacity('2026-12-01', []);
-    expect(capacity.maxLaths).toBe(60);
+    expect(capacity.maxLaths).toBe(40);
     expect(capacity.bookedLaths).toBe(0);
-    expect(capacity.remainingLaths).toBe(60);
-    expect(capacity.teams).toHaveLength(4);
+    expect(capacity.remainingLaths).toBe(40);
+    expect(capacity.teams).toHaveLength(2);
     capacity.teams.forEach((team) => {
       expect(team.bookedLaths).toBe(0);
-      expect(team.maxLaths).toBe(15);
+      expect(team.maxLaths).toBe(20);
     });
   });
 
-  it('3. deducts capacity and caps team capacity at 15 laths per team', () => {
+  it('3. deducts capacity and caps team capacity at 20 laths per team', () => {
     const mockBookings: SalesProjectBooking[] = [
       {
         id: 'b-1',
         customerName: 'تست ۱',
         customerPhone: '09121111111',
         address: 'تهران',
-        lathsCount: 15,
+        lathsCount: 20,
         isSmart: true,
         notes: '',
         requestedDate: '2026-12-01',
@@ -87,13 +87,13 @@ describe('Sales & 60-Lath Capacity Engine Tests', () => {
         customerName: 'تست ۲',
         customerPhone: '09122222222',
         address: 'تهران',
-        lathsCount: 30,
+        lathsCount: 10,
         isSmart: false,
         notes: '',
         requestedDate: '2026-12-01',
         jalaliDate: '۱۴۰۵/۰۹/۱۰',
         allocationMode: 'SPREAD_DAILY',
-        allocatedTeams: ['TEAM_2', 'TEAM_3'],
+        allocatedTeams: ['TEAM_2'],
         allocatedDaysCount: 1,
         salesRepId: 'u-sales-2',
         salesRepName: 'نیلوفر صبوری',
@@ -102,13 +102,13 @@ describe('Sales & 60-Lath Capacity Engine Tests', () => {
     ];
 
     const capacity = getDailyCapacity('2026-12-01', mockBookings);
-    expect(capacity.bookedLaths).toBe(45); // 15 + 15 + 15
-    expect(capacity.remainingLaths).toBe(15);
+    expect(capacity.bookedLaths).toBe(30); // 20 + 10
+    expect(capacity.remainingLaths).toBe(10);
 
     const team1 = capacity.teams.find((t) => t.teamId === 'TEAM_1');
-    const team4 = capacity.teams.find((t) => t.teamId === 'TEAM_4');
-    expect(team1?.bookedLaths).toBe(15);
-    expect(team4?.bookedLaths).toBe(0);
+    const team2 = capacity.teams.find((t) => t.teamId === 'TEAM_2');
+    expect(team1?.bookedLaths).toBe(20);
+    expect(team2?.bookedLaths).toBe(10);
   });
 
   it('4. offers both multi-team spread and consecutive days options', () => {
@@ -116,7 +116,7 @@ describe('Sales & 60-Lath Capacity Engine Tests', () => {
     expect(options.spreadOption).toBeDefined();
     expect(options.consecutiveOption).toBeDefined();
     expect(options.spreadOption.requiredDays).toBe(1);
-    expect(options.consecutiveOption.requiredDays).toBe(2); // 30 laths / 15 per day = 2 days
+    expect(options.consecutiveOption.requiredDays).toBe(2); // 30 laths / 20 per day = 2 days
   });
 
   it('5. creates and persists a sales booking successfully', () => {
@@ -162,8 +162,8 @@ describe('Sales & 60-Lath Capacity Engine Tests', () => {
     const days = getThreeMonthCapacities(90);
     expect(days).toHaveLength(90);
     days.forEach((day) => {
-      expect(day.maxLaths).toBe(60);
-      expect(day.remainingLaths).toBeLessThanOrEqual(60);
+      expect(day.maxLaths).toBe(40);
+      expect(day.remainingLaths).toBeLessThanOrEqual(40);
       expect(day.remainingLaths).toBeGreaterThanOrEqual(0);
     });
   });
@@ -199,18 +199,18 @@ describe('Sales & 60-Lath Capacity Engine Tests', () => {
   });
 
   it('9. prevents self-capacity collision when recalculating options for existing booking via excludeBookingId', () => {
-    // Fill 60 laths on 2026-12-20
+    // Fill 40 laths on 2026-12-20
     const booking = createSalesBooking({
       customerName: 'پروژه فول ظرفیت',
       customerPhone: '09120000000',
       address: 'تهران',
-      lathsCount: 60,
+      lathsCount: 40,
       isSmart: true,
       notes: '',
       requestedDate: '2026-12-20',
       jalaliDate: '۱۴۰۵/۰۹/۲۹',
       allocationMode: 'SPREAD_DAILY',
-      allocatedTeams: ['TEAM_1', 'TEAM_2', 'TEAM_3', 'TEAM_4'],
+      allocatedTeams: ['TEAM_1', 'TEAM_2'],
       allocatedDaysCount: 1,
       salesRepId: 'u-sales-1',
       salesRepName: 'سپهر رادمنش',
@@ -220,7 +220,7 @@ describe('Sales & 60-Lath Capacity Engine Tests', () => {
     const optionsFull = calculateBookingOptions(15, '2026-12-20');
     expect(optionsFull.spreadOption.isAvailable).toBe(false);
 
-    // With excludeBookingId, booking's own 60 laths are excluded, freeing up capacity for edit
+    // With excludeBookingId, booking's own 40 laths are excluded, freeing up capacity for edit
     const optionsWithExclusion = calculateBookingOptions(30, '2026-12-20', booking.id);
     expect(optionsWithExclusion.spreadOption.isAvailable).toBe(true);
   });
@@ -250,31 +250,31 @@ describe('Sales & 60-Lath Capacity Engine Tests', () => {
 
     const capAfter = getDailyCapacity('2026-12-25');
     expect(capAfter.bookedLaths).toBe(0);
-    expect(capAfter.remainingLaths).toBe(60);
+    expect(capAfter.remainingLaths).toBe(40);
   });
 
   it('11. enables consecutive option for 50 laths on empty days without bug', () => {
     // 50 laths on an arbitrary future date
     const options = calculateBookingOptions(50, '2026-12-18');
     expect(options.consecutiveOption.isAvailable).toBe(true);
-    expect(options.consecutiveOption.requiredDays).toBe(4); // 50 / 15 = 4 days
-    expect(options.consecutiveOption.daysDetails).toHaveLength(4);
+    expect(options.consecutiveOption.requiredDays).toBe(3); // 50 / 20 = 3 days
+    expect(options.consecutiveOption.daysDetails).toHaveLength(3);
 
-    // Spread option in 1 day is also available (50 <= 60 across 4 teams)
-    expect(options.spreadOption.isAvailable).toBe(true);
-    expect(options.spreadOption.requiredDays).toBe(1);
-  });
-
-  it('12. allows large projects (>60 laths, e.g. 115 laths) across multi-day spread and consecutive days', () => {
-    const options = calculateBookingOptions(115, '2026-12-28');
-    // Spread option mobilizes teams at 60 laths/day cap: Math.ceil(115 / 60) = 2 days
+    // Spread option across days (50 > 40, so Math.ceil(50 / 40) = 2 days)
     expect(options.spreadOption.isAvailable).toBe(true);
     expect(options.spreadOption.requiredDays).toBe(2);
-    expect(options.spreadOption.daysDetails).toHaveLength(2);
+  });
 
-    // Consecutive option: 1 team over Math.ceil(115 / 15) = 8 days
+  it('12. allows large projects (>40 laths, e.g. 115 laths) across multi-day spread and consecutive days', () => {
+    const options = calculateBookingOptions(115, '2026-12-28');
+    // Spread option mobilizes teams at 40 laths/day cap: Math.ceil(115 / 40) = 3 days
+    expect(options.spreadOption.isAvailable).toBe(true);
+    expect(options.spreadOption.requiredDays).toBe(3);
+    expect(options.spreadOption.daysDetails).toHaveLength(3);
+
+    // Consecutive option: 1 team over Math.ceil(115 / 20) = 6 days
     expect(options.consecutiveOption.isAvailable).toBe(true);
-    expect(options.consecutiveOption.requiredDays).toBe(8);
-    expect(options.consecutiveOption.daysDetails).toHaveLength(8);
+    expect(options.consecutiveOption.requiredDays).toBe(6);
+    expect(options.consecutiveOption.daysDetails).toHaveLength(6);
   });
 });

@@ -2080,12 +2080,8 @@ export const App: React.FC = () => {
                 supervisorId: undefined,
                 name:
                   t.code === 'TEAM_1'
-                    ? 'اکیپ نصب 1'
-                    : t.code === 'TEAM_2'
-                    ? 'اکیپ نصب 2'
-                    : t.code === 'TEAM_3'
-                    ? 'اکیپ نصب 3'
-                    : 'اکیپ نصب 4',
+                    ? 'اکیپ نصب ۱'
+                    : 'اکیپ نصب ۲',
               }
             : t
         );
@@ -2102,12 +2098,8 @@ export const App: React.FC = () => {
                 supervisorId: undefined,
                 name:
                   t.code === 'TEAM_1'
-                    ? 'اکیپ نصب 1'
-                    : t.code === 'TEAM_2'
-                    ? 'اکیپ نصب 2'
-                    : t.code === 'TEAM_3'
-                    ? 'اکیپ نصب 3'
-                    : 'اکیپ نصب 4',
+                    ? 'اکیپ نصب ۱'
+                    : 'اکیپ نصب ۲',
               }
             : t
         );

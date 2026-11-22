@@ -471,7 +471,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               میز کارشناس فروش و برنامه‌ریزی نصب
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              ثبت پروژه جدید بدون محاسبات مالی، تخصیص هوشمند بین ۴ اکیپ (سقف روزانه ۶۰ لت) و تقویم ۳ ماهه
+              ثبت پروژه جدید بدون محاسبات مالی، تخصیص هوشمند بین ۲ اکیپ (سقف روزانه ۴۰ لت) و تقویم ۳ ماهه
             </p>
           </div>
 
@@ -488,7 +488,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                 </span>
               </div>
               <div className="text-xs text-slate-400">
-                سقف هر اکیپ: ۱۵ لت | کل ظرفیت روز: ۶۰ لت
+                سقف هر اکیپ: ۲۰ لت | کل ظرفیت روز: ۴۰ لت
               </div>
             </div>
           </div>
@@ -1002,11 +1002,11 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#C5A059] shrink-0" />
               <span>
-                <strong>برنامه‌ریزی سریع:</strong> برای مشاهده وضعیت تفکیکی ۴ اکیپ و ثبت پروژه برای هر روز، روی کارت همان روز در تقویم کلیک کنید.
+                <strong>برنامه‌ریزی سریع:</strong> برای مشاهده وضعیت تفکیکی ۲ اکیپ و ثبت پروژه برای هر روز، روی کارت همان روز در تقویم کلیک کنید.
               </span>
             </div>
             <span className="hidden sm:inline-block bg-[#C5A059]/15 text-[#E5CA8F] px-2.5 py-0.5 rounded-full text-[11px] font-bold shrink-0">
-              سقف روزانه: ۶۰ لت
+              سقف روزانه: ۴۰ لت
             </span>
           </div>
 
@@ -1016,7 +1016,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-5 h-5 text-[#C5A059]" />
                 <span className="font-bold text-white text-sm">
-                  مشاهده ظرفیت خالی روزانه به تفکیک ۴ اکیپ (سقف روزانه ۶۰ لت)
+                  مشاهده ظرفیت خالی روزانه به تفکیک ۲ اکیپ (سقف روزانه ۴۰ لت)
                 </span>
               </div>
 
@@ -1099,11 +1099,11 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               <div className="flex items-center gap-3 text-[11px] text-slate-400">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-rose-500 inline-block shadow-xs" />
-                  قرمز: پر (۶۰/۶۰)
+                  قرمز: پر (۴۰/۴۰)
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-amber-400 inline-block shadow-xs" />
-                  زرد: کمتر از ۲۰ لت
+                  زرد: کمتر از ۱۵ لت
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-xs" />
@@ -1117,7 +1117,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {filteredCalendarDays.map((dayCap) => {
               const isFull = dayCap.remainingLaths <= 0;
-              const isNearFull = dayCap.remainingLaths > 0 && dayCap.remainingLaths <= 20;
+              const isNearFull = dayCap.remainingLaths > 0 && dayCap.remainingLaths <= 15;
               const isSelected = inspectDayKey === dayCap.date;
 
               return (
@@ -1234,7 +1234,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      تخصیص هوشمند بین ۴ اکیپ نصب طلایی | سقف روزانه ۶۰ لت
+                      تخصیص هوشمند بین ۲ اکیپ نصب طلایی | سقف روزانه ۴۰ لت
                     </p>
                   </div>
                 </div>
@@ -1247,7 +1247,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                 </button>
               </div>
 
-              {/* وضعیت ظرفیت ۴ اکیپ در این روز */}
+              {/* وضعیت ظرفیت ۲ اکیپ در این روز */}
               <div className="bg-[#0D1117] border border-slate-800 rounded-xl p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-300">
@@ -1260,11 +1260,11 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                         : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                     }`}
                   >
-                    {modalDayCap.remainingLaths} لت آزاد از ۶۰ لت
+                    {modalDayCap.remainingLaths} لت آزاد از ۴۰ لت
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {modalDayCap.teams.map((t) => {
                     const free = t.maxLaths - t.bookedLaths;
                     return (

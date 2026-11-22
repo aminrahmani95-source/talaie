@@ -768,7 +768,7 @@ export const ProjectFormModal: React.FC<Props> = ({
               {/* Assigned Installation Team */}
               <div className="sm:col-span-2">
                 <label htmlFor="assigned-team" className="block text-xs font-semibold text-[#9BA7B6] mb-1">
-                  اکیپ تخصیص‌یافته (از 4 اکیپ رسمی نصب):
+                  اکیپ تخصیص‌یافته (از ۲ اکیپ رسمی نصب):
                 </label>
                 <select
                   id="assigned-team"

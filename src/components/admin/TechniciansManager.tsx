@@ -464,7 +464,7 @@ export const TechniciansManager: React.FC<Props> = ({
         <SegmentedControl
           options={[
             { id: 'PERSONNEL', label: 'حساب‌های پرسنل و دسترسی‌ها', badge: users.length },
-            { id: 'TEAMS', label: '4 اکیپ نصب فنی (12 نفر)', badge: effectiveTeams.length },
+            { id: 'TEAMS', label: '۲ اکیپ نصب فنی (۶ نفر)', badge: effectiveTeams.length },
           ]}
           value={mainSection}
           onChange={(val) => setMainSection(val as MainSection)}
@@ -477,10 +477,10 @@ export const TechniciansManager: React.FC<Props> = ({
             <div>
               <h4 className="text-sm font-bold text-[#F0F4F8] flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-[#C5A059]" />
-                <span>سازماندهی 4 اکیپ نصب فنی شرکت گالری طلایی</span>
+                <span>سازماندهی ۲ اکیپ نصب فنی شرکت گالری طلایی</span>
               </h4>
               <p className="text-xs text-[#637184] mt-1 leading-relaxed">
-                دپارتمان فنی دارای 4 اکیپ رسمی نصب است. هر اکیپ حداکثر متشکل از 1 سرپرست و 2 تکنسین (مجموعاً 3 نفر) است که کل کادر 12 نفره را پوشش می‌دهد. هر کاربر در یک زمان فقط عضو یک اکیپ می‌تواند باشد.
+                دپارتمان فنی دارای ۲ اکیپ رسمی نصب است. هر اکیپ متشکل از ۱ سرپرست و ۲ تکنسین (مجموعاً ۳ نفر) است که کل کادر ۶ نفره را پوشش می‌دهد. هر کاربر در یک زمان فقط عضو یک اکیپ می‌تواند باشد.
               </p>
             </div>
           </div>

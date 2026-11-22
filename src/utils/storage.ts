@@ -475,7 +475,10 @@ export const StorageService = {
     try {
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
-      const cleaned = parsed.map((t: any) => {
+      const validTeams = parsed.filter(
+        (t: any) => t && t.id !== 'TEAM_3' && t.id !== 'TEAM_4' && t.code !== 'TEAM_3' && t.code !== 'TEAM_4'
+      );
+      const cleaned = validTeams.map((t: any) => {
         if (t && t.supervisorId && TEST_PERSONNEL_IDS.has(t.supervisorId)) {
           const { supervisorId, supervisorName, ...rest } = t;
           return {
