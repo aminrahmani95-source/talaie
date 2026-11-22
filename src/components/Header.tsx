@@ -109,13 +109,16 @@ export const Header: React.FC<Props> = ({
                 <span>{pendingQueueCount} در صف</span>
               </button>
             ) : (
-              <div
-                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold"
-                title="سامانه همگام با سرور ابری است"
+              <button
+                type="button"
+                onClick={onOpenPendingOperations}
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 min-h-[34px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold hover:bg-emerald-500/20 transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400"
+                title="سامانه همگام با سرور ابری است — کلیک جهت بررسی وضعیت همگام‌سازی و لاگ‌های صف"
+                aria-label="سامانه همگام با سرور ابری است"
               >
                 <Check className="w-3.5 h-3.5 text-emerald-400" />
                 <span>همگام</span>
-              </div>
+              </button>
             )}
 
             {/* Dark Mode Toggle */}

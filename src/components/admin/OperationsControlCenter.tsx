@@ -725,7 +725,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             </div>
           </section>
 
-          {/* ================= بخش 2: تخته زنده 4 اکیپ نصب در امروز ================= */}
+          {/* ================= بخش 2: تخته زنده ۲ اکیپ نصب در امروز ================= */}
           <section className="space-y-4 pt-4 border-t border-[#212835]">
             <div className="flex items-center justify-between">
               <div>

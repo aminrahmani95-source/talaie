@@ -443,7 +443,7 @@ export const MonthPlanner: React.FC<Props> = ({
             {/* سرستون روزهای خط سیر */}
             <div className="grid grid-cols-6 border-b border-[#212835] bg-[#0D1117] text-xs font-semibold">
               <div className="p-3 text-[#9BA7B6] flex items-center justify-center border-l border-[#212835]">
-                اکیپ‌های 4 گانه نصب
+                اکیپ‌های ۲ گانه نصب
               </div>
               {displayedDays.map((d) => (
                 <div
