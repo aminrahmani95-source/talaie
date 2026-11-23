@@ -3188,6 +3188,24 @@ end $$;
 -- و از نو می‌سازد، و کاربران موجود را ترمیم می‌کند. در Supabase → SQL Editor اجرا کنید.
 -- ==============================================================================
 
+-- ۰. پیش‌بررسی: اگر جدول اکیپ‌ها با شناسه‌ی متنی (مثل 'TEAM_1') ساخته شده باشد، این فایل
+--    نباید نیمه‌کاره اجرا شود. در آن صورت با یک پیام روشن متوقف می‌شود و هیچ چیزی تغییر نمی‌کند.
+do $check$
+declare
+  bad text;
+begin
+  select string_agg(table_name || '.' || column_name || ' = ' || data_type, '، ') into bad
+  from information_schema.columns
+  where table_schema = 'public'
+    and ((table_name = 'installation_teams' and column_name = 'id')
+      or (table_name = 'team_members' and column_name in ('team_id', 'user_id')))
+    and data_type <> 'uuid';
+  if bad is not null then
+    raise exception 'توقف ۰۲۴: نوع ستون‌های اکیپ uuid نیست (%). این را به Claude گزارش بده؛ چیزی تغییر نکرد.', bad;
+  end if;
+end;
+$check$;
+
 -- ۱. توابع کمکی دسترسی ----------------------------------------------------------
 create or replace function public.is_active_user()
 returns boolean language sql stable security definer set search_path = public as $$
@@ -3521,6 +3539,11 @@ drop policy if exists "Managers modify teams" on public.installation_teams;
 create policy "Managers modify teams" on public.installation_teams
   for all to authenticated using (public.is_qc_or_ceo()) with check (public.is_qc_or_ceo());
 
+-- سیاست‌هایی که یک تلاش قبلی (فایل 024_teams_and_roles_sync) ساخته بود و به «هر» کاربر
+-- واردشده اجازه‌ی تغییر اکیپ‌ها و اعضا را می‌داد
+drop policy if exists "Managers modify members" on public.team_members;
+drop policy if exists "Anyone authenticated read members" on public.team_members;
+drop policy if exists "Anyone authenticated read teams" on public.installation_teams;
 drop policy if exists "Active users read team members" on public.team_members;
 create policy "Active users read team members" on public.team_members
   for select to authenticated using (public.is_active_user());
