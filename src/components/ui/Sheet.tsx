@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { IconButton } from './IconButton';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -52,7 +53,9 @@ export const Sheet: React.FC<SheetProps> = ({
     full: 'sm:max-w-6xl',
   }[effectiveMaxWidth];
 
-  return (
+  // Rendered at the end of <body>: inside a blurred/transformed parent (like the sticky header)
+  // a fixed overlay is trapped in that parent's box and covered only the header.
+  const sheet = (
     <div
       role="dialog"
       aria-modal="true"
@@ -106,4 +109,6 @@ export const Sheet: React.FC<SheetProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(sheet, document.body) : sheet;
 };

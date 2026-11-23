@@ -11,6 +11,8 @@
     { id: 'usr-tech-b', name: 'علی صادقی', phone: '09120000004', role: 'TECHNICIAN', teamId: 'TEAM_2', active: true },
     { id: 'usr-wh', name: 'سعید احمدی', phone: '09120000005', role: 'WAREHOUSE', active: true },
     { id: 'usr-sales', name: 'نگار رستمی', phone: '09120000006', role: 'SALES_REP', active: true },
+    { id: 'usr-coord', name: 'سارا هماهنگ', phone: '09120000007', role: 'SCHEDULING_COORDINATOR', active: true },
+    { id: 'usr-meas', name: 'کاوه متراژ', phone: '09120000008', role: 'MEASUREMENT_LEAD', active: true },
   ];
   const members = [
     { id: 'tm-1', teamId: 'TEAM_1', userId: 'usr-lead-a', userName: 'رضا کریمی', roleInTeam: 'LEAD', joinedAt: now },

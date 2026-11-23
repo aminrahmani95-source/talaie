@@ -7,6 +7,7 @@ import {
   ScheduleChangeRequest,
   SystemSettings,
   MaterialRequest,
+  SalesProjectBooking,
 } from '../../types';
 import { ManagerTab } from '../navigation/BottomNav';
 import {
@@ -25,6 +26,7 @@ import {
   Lock,
   Printer,
   FileCheck2,
+  CalendarClock,
 } from 'lucide-react';
 import { toPersianDigits, getTodayPersianString, localDateKey, formatJalali } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
@@ -41,6 +43,7 @@ const ACTION_META: Record<ActionKind, { label: string; chip: string; stripe: str
   TICKET: { label: 'تیکت باز', chip: 'bg-amber-500/20 text-amber-600 dark:text-amber-300', stripe: 'border-r-amber-500', button: 'bg-raised hover:bg-hover text-ink border border-line-strong' },
   QC: { label: 'منتظر QC', chip: 'bg-purple-600 text-white', stripe: 'border-r-purple-500', button: 'bg-purple-600 hover:bg-purple-500 text-white' },
   INCOMING: { label: 'کار جدید', chip: 'bg-amber-500 text-on-brand', stripe: 'border-r-brand', button: 'bg-brand hover:bg-brand-hover text-on-brand' },
+  BOOKING: { label: 'رزرو فروش', chip: 'bg-sky-600 text-white', stripe: 'border-r-sky-500', button: 'bg-brand hover:bg-brand-hover text-on-brand' },
 };
 
 const TEAM_STATUS = {
@@ -58,6 +61,8 @@ export interface OperationsControlCenterProps {
   teamsWithMembers: InstallationTeamWithMembers[];
   scheduleChangeRequests: ScheduleChangeRequest[];
   materialRequests?: MaterialRequest[];
+  /** sales bookings (so bookings waiting for a team show up in the action queue) */
+  salesBookings?: SalesProjectBooking[];
   settings?: SystemSettings | null;
   onNavigateTab: (tab: ManagerTab) => void;
   onOpenProject: (project: Project) => void;
@@ -73,13 +78,14 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   users: _users,
   tickets,
   teamsWithMembers,
-  scheduleChangeRequests: _scheduleChangeRequests,
+  scheduleChangeRequests = [],
   materialRequests = [],
+  salesBookings = [],
   settings: _settings,
   onNavigateTab,
   onOpenProject,
   onOpenQcProject,
-  onOpenScheduleRequests: _onOpenScheduleRequests,
+  onOpenScheduleRequests,
   onReviewScheduleRequest: _onReviewScheduleRequest,
   onNewProject,
 }) => {
@@ -144,9 +150,13 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   // ================= 1. صف نیازمند اقدام فوری (ACTION INBOX) =================
 
   // یک صف واحد، هر پروژه یک ردیف (همان منبعی که نشان منوی «پیشخوان» را می‌شمارد)
-  const actionQueue = useMemo(() => buildActionQueue(projects, tickets), [projects, tickets]);
+  const actionQueue = useMemo(
+    () => buildActionQueue(projects, tickets, salesBookings),
+    [projects, tickets, salesBookings],
+  );
+  const pendingScheduleRequests = scheduleChangeRequests.filter((r) => r.status === 'PENDING').length;
   const queueCounts = useMemo(() => {
-    const c: Record<ActionKind, number> = { STUCK: 0, TICKET: 0, QC: 0, INCOMING: 0 };
+    const c: Record<ActionKind, number> = { STUCK: 0, TICKET: 0, QC: 0, INCOMING: 0, BOOKING: 0 };
     for (const i of actionQueue) c[i.kind]++;
     return c;
   }, [actionQueue]);
@@ -157,6 +167,8 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           ? true
           : activeUrgentCategory === 'STUCK'
           ? i.kind === 'STUCK' || i.kind === 'TICKET'
+          : activeUrgentCategory === 'INCOMING'
+          ? i.kind === 'INCOMING' || i.kind === 'BOOKING'
           : i.kind === activeUrgentCategory,
       ),
     [actionQueue, activeUrgentCategory],
@@ -261,7 +273,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           { key: 'ALL' as const, label: 'نیازمند اقدام', value: actionQueue.length, tone: actionQueue.length > 0 ? 'text-rose-400' : 'text-emerald-400', ring: 'ring-brand' },
           { key: 'STUCK' as const, label: 'توقف و تیکت', value: queueCounts.STUCK + queueCounts.TICKET, tone: 'text-rose-400', ring: 'ring-rose-500' },
           { key: 'QC' as const, label: 'منتظر QC', value: queueCounts.QC, tone: 'text-purple-400', ring: 'ring-purple-500' },
-          { key: 'INCOMING' as const, label: 'کار جدید', value: queueCounts.INCOMING, tone: 'text-amber-400', ring: 'ring-amber-500' },
+          { key: 'INCOMING' as const, label: 'کار جدید', value: queueCounts.INCOMING + queueCounts.BOOKING, tone: 'text-amber-400', ring: 'ring-amber-500' },
         ].map((tile) => {
           const isActive = activeSubTab === 'ACTIONS' && activeUrgentCategory === tile.key;
           return (
@@ -321,13 +333,35 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
         <>
           {/* ================= صف اقدام: هر پروژه یک ردیف، یک دکمه‌ی اصلی ================= */}
           <section className="space-y-2" aria-label="صف اقدام">
+            {pendingScheduleRequests > 0 && onOpenScheduleRequests && currentUser.role === 'QC_MANAGER' && (
+              <button
+                type="button"
+                onClick={onOpenScheduleRequests}
+                className="w-full rounded-xl bg-surface border border-line border-r-4 border-r-sky-500 p-3 flex items-center justify-between gap-3 text-right cursor-pointer hover:bg-raised"
+              >
+                <span className="flex items-center gap-2 text-sm font-bold text-ink">
+                  <CalendarClock className="w-4 h-4 text-sky-500" aria-hidden="true" />
+                  {toPersianDigits(pendingScheduleRequests)} درخواست تغییر برنامه منتظر بررسی شما
+                </span>
+                <span className="text-xs font-bold text-brand-ink flex items-center gap-1">
+                  بررسی در تقویم
+                  <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
+                </span>
+              </button>
+            )}
             {visibleQueue.map((item) => {
               const p = item.project;
               const meta = ACTION_META[item.kind];
               const isWarehouse = item.tickets.some((t) => t.assignedRole === 'WAREHOUSE' || Boolean(t.referralNote));
+              const b = item.booking;
               const code = p?.code || item.tickets[0]?.projectCode || '';
-              const title = p?.title || item.tickets[0]?.projectTitle || '';
-              const phone = item.kind === 'STUCK' || item.kind === 'INCOMING' ? p?.customerPhone : undefined;
+              const title = p?.title || item.tickets[0]?.projectTitle || b?.customerName || '';
+              const phone =
+                item.kind === 'STUCK' || item.kind === 'INCOMING'
+                  ? p?.customerPhone
+                  : item.kind === 'BOOKING'
+                  ? b?.customerPhone
+                  : undefined;
 
               const stuckReason = (
                 p?.stuckIncident?.description ||
@@ -373,11 +407,23 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                   label: 'بررسی QC',
                   onClick: () => (onOpenQcProject ? onOpenQcProject(p) : onNavigateTab('qc')),
                 };
+              } else if (item.kind === 'BOOKING' && b) {
+                detail = (
+                  <>
+                    {toPersianDigits(b.lathsCount)} لت{b.isSmart ? ' هوشمند' : ''}
+                    {(b.jalaliDate || b.requestedDate) &&
+                      ` · درخواست برای ${b.jalaliDate ? toPersianDigits(b.jalaliDate) : formatJalali(b.requestedDate)}`}
+                    {b.salesRepName ? ` · فروش: ${b.salesRepName}` : ''}
+                  </>
+                );
+                primary = { label: 'تخصیص در تقویم', onClick: () => onNavigateTab('planner') };
               } else if (item.kind === 'INCOMING' && p) {
+                // what still stands between this job and a team on site
                 const missing = [
+                  p.status === 'MEASUREMENT_PENDING' && !p.secondMeasurementDetails?.isReadinessApproved && 'اندازه‌گیری دوم',
+                  p.technicalHandover && !p.technicalHandover.warehouseConfirmation?.confirmed && 'ورود کالا به انبار',
                   !p.assignedTeamId && 'اکیپ',
                   !p.scheduledDate && 'تاریخ',
-                  !p.technicalHandover?.isHandoverComplete && 'اندازه‌گیری دوم',
                 ].filter(Boolean);
                 detail = (
                   <>
@@ -660,7 +706,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                     </div>
 
                     {/* مشخصات کارفرما و اقلام */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    <div className="grid grid-cols-1 @min-[700px]:grid-cols-3 gap-3 text-xs">
                       <div className="bg-canvas p-2.5 rounded-xl border border-line space-y-1">
                         <span className="text-ink-3 font-bold block">کارفرما و نشانی:</span>
                         <p className="font-bold text-ink">{p.customerName}</p>

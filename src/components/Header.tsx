@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { User } from '../types';
 import { Moon, Sun, LogOut, X, Cloud, CloudOff, AlertOctagon, Check, Eye } from 'lucide-react';
 import { Avatar } from './ui/Avatar';
@@ -162,11 +163,15 @@ export const Header: React.FC<Props> = ({
               {/* Profile Popover / Dropdown */}
               {isMenuOpen && (
                 <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsMenuOpen(false)}
-                    aria-hidden="true"
-                  />
+                  {/* outside the header: its blur would otherwise shrink this to the header's size */}
+                  {createPortal(
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setIsMenuOpen(false)}
+                      aria-hidden="true"
+                    />,
+                    document.body
+                  )}
                   <div className="absolute left-0 top-11 mt-2 w-64 bg-surface rounded-xl shadow-2xl border border-line-strong p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
                     <div className="flex items-start justify-between pb-3 border-b border-line">
                       <div className="flex items-center gap-2.5 min-w-0">

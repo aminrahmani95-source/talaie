@@ -1,4 +1,4 @@
-import type { MaterialRequest, Project, ScheduleChangeRequest, Ticket, User } from '../types';
+import type { MaterialRequest, Project, SalesProjectBooking, ScheduleChangeRequest, Ticket, User } from '../types';
 import { isAwaitingQc } from './qcWorkflow';
 import { formatJalali } from './jalali';
 
@@ -13,7 +13,12 @@ export interface NotifySnapshot {
   tickets: Ticket[];
   materialRequests: MaterialRequest[];
   scheduleChangeRequests: ScheduleChangeRequest[];
+  /** optional: only devices that sync sales bookings pass them */
+  salesBookings?: SalesProjectBooking[];
 }
+
+/** bookings older than this are not announced as new (they arrive late, after login) */
+const NEW_BOOKING_WINDOW_MS = 12 * 60 * 60 * 1000;
 
 export interface NotificationEvent {
   /** stable id: the same change never notifies twice */
@@ -118,6 +123,29 @@ export function computeNotificationEvents(
           urgent: true,
         });
       }
+      // warehouse confirmed the goods: the job can now be given a team and a date
+      if (
+        p.technicalHandover?.warehouseConfirmation?.confirmed &&
+        !before.technicalHandover?.warehouseConfirmation?.confirmed &&
+        p.status !== 'CANCELLED'
+      ) {
+        events.push({
+          id: `goods-in:${p.id}`,
+          entityKey: key,
+          title: 'کالا به انبار رسید',
+          body: `${label(p)}${!p.assignedTeamId || !p.scheduledDate ? ' — آماده‌ی زمان‌بندی' : ''}`,
+          tab: 'planner',
+        });
+      }
+      if (p.secondMeasurementDetails?.isReadinessApproved && !before.secondMeasurementDetails?.isReadinessApproved) {
+        events.push({
+          id: `measured:${p.id}`,
+          entityKey: key,
+          title: 'اندازه‌گیری دوم انجام شد',
+          body: label(p),
+          tab: 'control',
+        });
+      }
       if (isAwaitingQc(p) && !isAwaitingQc(before)) {
         events.push({
           id: `await-qc:${p.id}:${p.completedAt || ''}`,
@@ -127,6 +155,24 @@ export function computeNotificationEvents(
           tab: 'qc',
         });
       }
+    }
+
+    if (role === 'MEASUREMENT_LEAD' && !before && p.status === 'MEASUREMENT_PENDING') {
+      events.push({
+        id: `measure-visit:${p.id}`,
+        entityKey: key,
+        title: 'بازدید اندازه‌گیری جدید',
+        body: `${label(p)}${p.address ? ` — ${p.address}` : ''}`,
+      });
+    }
+
+    if (role === 'WAREHOUSE' && !before && p.technicalHandover && !p.technicalHandover.warehouseConfirmation?.confirmed) {
+      events.push({
+        id: `goods-expected:${p.id}`,
+        entityKey: key,
+        title: 'پروژه‌ی جدید — منتظر ورود کالا',
+        body: label(p),
+      });
     }
 
     if (role === 'WAREHOUSE' && before && p.status === 'SCHEDULED' && before.status !== 'SCHEDULED' && p.scheduledDate) {
@@ -207,7 +253,47 @@ export function computeNotificationEvents(
     }
   }
 
+  // ---------------- sales bookings ----------------
+  if (next.salesBookings && prev.salesBookings) {
+    const prevBookings = new Map(prev.salesBookings.map((b) => [b.id, b]));
+    const now = Date.now();
+    for (const b of next.salesBookings) {
+      const before = prevBookings.get(b.id);
+      const key = `booking:${b.id}`;
+      const isFresh = now - new Date(b.createdAt).getTime() < NEW_BOOKING_WINDOW_MS;
+      if (MANAGER_ROLES.has(role) && !before && !b.convertedToProjectId && isFresh && b.salesRepId !== user.id) {
+        events.push({
+          id: `booking:${b.id}`,
+          entityKey: key,
+          title: 'رزرو فروش جدید',
+          body: `${b.customerName} — ${b.lathsCount} لت، ${b.jalaliDate || formatJalali(b.requestedDate)}${b.salesRepName ? ` (${b.salesRepName})` : ''}`,
+          tab: 'planner',
+        });
+      }
+      if (role === 'SALES_REP' && b.salesRepId === user.id && before && !before.convertedToProjectId && b.convertedToProjectId) {
+        events.push({
+          id: `booking-scheduled:${b.id}`,
+          entityKey: key,
+          title: 'رزرو شما وارد برنامه‌ی نصب شد',
+          body: `${b.customerName}${b.scheduledInstallationDate ? ` — نصب ${formatJalali(b.scheduledInstallationDate)}` : ''}`,
+        });
+      }
+    }
+  }
+
   // ---------------- schedule change requests ----------------
+  for (const r of next.scheduleChangeRequests) {
+    const before = prevSchedule.get(r.id);
+    if (r.requestedByUserId === user.id && before && before.status === 'PENDING' && r.status !== 'PENDING') {
+      events.push({
+        id: `sched-answer:${r.id}`,
+        entityKey: `schedule:${r.id}`,
+        title: r.status === 'APPROVED' ? 'درخواست تغییر برنامه تایید شد' : 'درخواست تغییر برنامه رد شد',
+        body: `${r.projectCode || ''} — ${r.customerName || r.projectTitle || ''}`,
+        tab: 'planner',
+      });
+    }
+  }
   if (MANAGER_ROLES.has(role)) {
     for (const r of next.scheduleChangeRequests) {
       if (!prevSchedule.has(r.id) && r.status === 'PENDING') {

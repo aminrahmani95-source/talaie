@@ -158,7 +158,7 @@ export const SupabaseSyncService = {
    * Uses @talaie.ir to comply with standard ICANN TLD validation in Supabase GoTrue.
    */
   phoneToEmail(phone: string): string {
-    const digits = toEnglishDigits(phone.replace(/\D/g, ''));
+    const digits = toEnglishDigits(phone).replace(/\D/g, '');
     return `${digits}@talaie.ir`;
   },
 
@@ -171,18 +171,20 @@ export const SupabaseSyncService = {
       throw new Error('تنظیمات اتصال به سرور Supabase یافت نشد.');
     }
 
-    const digits = toEnglishDigits(phone.replace(/\D/g, ''));
+    // Persian digits first, then strip: /\D/ also removes «۰۹۱۲…», which emptied the
+    // number for anyone typing on a Persian keyboard and always failed the login.
+    const digits = toEnglishDigits(phone).replace(/\D/g, '');
     const cleanPassword = toEnglishDigits(password);
 
-    // Try @talaie.ir first, fallback to legacy @talaie.local
+    // @talaie.ir is current; .local and .app were used by older server versions
     let authRes = await client.auth.signInWithPassword({
       email: `${digits}@talaie.ir`,
       password: cleanPassword,
     });
-
-    if (authRes.error && authRes.error.message.toLowerCase().includes('invalid login credentials')) {
+    for (const legacyDomain of ['talaie.local', 'talaie.app']) {
+      if (!authRes.error || !authRes.error.message.toLowerCase().includes('invalid login credentials')) break;
       const fallbackRes = await client.auth.signInWithPassword({
-        email: `${digits}@talaie.local`,
+        email: `${digits}@${legacyDomain}`,
         password: cleanPassword,
       });
       if (!fallbackRes.error && fallbackRes.data.user) {
@@ -435,8 +437,12 @@ export const SupabaseSyncService = {
           'postgres_changes',
           { event: '*', schema: 'public', table: 'profiles' },
           async () => {
-            const updatedProfiles = await this.fetchProfiles();
-            onUpdate(updatedProfiles);
+            try {
+              onUpdate(await this.fetchProfiles());
+            } catch (err) {
+              // a failed refresh keeps the current list; the next change or app focus retries
+              console.warn('Realtime profiles refresh failed:', err);
+            }
           }
         )
         .subscribe();
@@ -638,6 +644,34 @@ export const SupabaseSyncService = {
     if (error) {
       console.warn('Failed to update team capacity:', error);
       throw error;
+    }
+  },
+
+  /**
+   * Is the server set up with the migrations this app version needs?
+   * schemaVersion: from talaie_schema_version() (null = function missing → migration 024 not run)
+   * salesBookings: false when the sales_bookings table is missing (migration 023 not run)
+   */
+  async checkServerSetup(): Promise<{ schemaVersion: number | null; salesBookings: boolean } | null> {
+    const client = this.getClient();
+    if (!client) return null;
+    try {
+      const [ver, sales] = await Promise.all([
+        client.rpc('talaie_schema_version'),
+        client.from('sales_bookings').select('id', { head: true, count: 'exact' }).limit(1),
+      ]);
+      const isMissing = (err: any) =>
+        Boolean(err) &&
+        (['PGRST202', 'PGRST205', '42P01', '42883'].includes(err.code) || err.status === 404);
+      if ((ver.error && !isMissing(ver.error)) || (sales.error && !isMissing(sales.error))) {
+        return null; // network or permission problem: no conclusion
+      }
+      return {
+        schemaVersion: ver.error ? null : Number(ver.data) || null,
+        salesBookings: !sales.error,
+      };
+    } catch {
+      return null;
     }
   },
 
@@ -863,9 +897,13 @@ export const SupabaseSyncService = {
     return [];
   },
 
-  async fetchMaterialRequests(): Promise<MaterialRequest[]> {
+  /** strict: throw instead of returning [] when the request fails, so callers can tell "none" from "unknown" */
+  async fetchMaterialRequests(options: { strict?: boolean } = {}): Promise<MaterialRequest[]> {
     const client = this.getClient();
-    if (!client) return [];
+    if (!client) {
+      if (options.strict) throw new Error('no client');
+      return [];
+    }
     try {
       const { data, error } = await client
         .from('material_requests')
@@ -873,6 +911,7 @@ export const SupabaseSyncService = {
         .order('updated_at', { ascending: false });
 
       if (error) {
+        if (options.strict) throw error;
         // Fallback gracefully if table is not yet created on server
         return [];
       }
@@ -1417,16 +1456,30 @@ export const SupabaseSyncService = {
     return null;
   },
 
-  async upsertSettings(settings: SystemSettings): Promise<void> {
+  async upsertSettings(settings: SystemSettings, changedKeys?: string[]): Promise<void> {
     const client = this.getClient();
     if (!client) {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
+    // With a list of changed fields, apply just those on top of the latest server copy
+    let value: any = settings;
+    if (Array.isArray(changedKeys)) {
+      const { data: current, error: readError } = await client
+        .from('talaie_sync')
+        .select('value')
+        .eq('key', 'settings')
+        .maybeSingle();
+      if (readError) throw readError;
+      const base = (current?.value as Record<string, unknown>) || {};
+      value = { ...base };
+      for (const k of changedKeys) value[k] = (settings as any)[k];
+    }
+
     const { error, status } = await client.from('talaie_sync').upsert(
       {
         key: 'settings',
-        value: settings,
+        value,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'key' }
@@ -1492,7 +1545,7 @@ export const SupabaseSyncService = {
       }
       case 'UPDATE_SETTINGS': {
         const settings = op.payload?.settings || op.payload;
-        await this.upsertSettings(settings);
+        await this.upsertSettings(settings, op.payload?.changedKeys);
         break;
       }
       case 'CREATE_MATERIAL_REQUEST': {
@@ -1592,6 +1645,7 @@ export const SupabaseSyncService = {
             status: projData.status,
             updatedAt: data.updated_at || projData.updatedAt,
             customerSignature: projData.customerSignature,
+            data: projData,
           };
         } catch {
           return null;

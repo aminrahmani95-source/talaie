@@ -57,4 +57,26 @@ describe('notification rules', () => {
     const b = computeNotificationEvents(snap({ projects: [proj('P1')] }), snap({ projects: [proj('P1', { assignedTeamId: 'TEAM_1' })] }), tech);
     expect(a[0].id).toBe(b[0].id);
   });
+
+  it('passes work along between roles: goods in, measurement, bookings, schedule answers', () => {
+    const waiting = snap({ projects: [proj('P1', { status: 'MEASUREMENT_PENDING', assignedTeamId: undefined, technicalHandover: { isHandoverComplete: false, warehouseConfirmation: { confirmed: false } } } as Partial<Project>)] });
+    const goodsIn = snap({ projects: [proj('P1', { status: 'MEASUREMENT_PENDING', assignedTeamId: undefined, technicalHandover: { isHandoverComplete: true, warehouseConfirmation: { confirmed: true } } } as Partial<Project>)] });
+    expect(titles(computeNotificationEvents(waiting, goodsIn, qc))).toEqual(['کالا به انبار رسید']);
+
+    const measurer = { id: 'm1', role: 'MEASUREMENT_LEAD' } as Pick<User, 'id' | 'role' | 'teamId'>;
+    expect(titles(computeNotificationEvents(empty, waiting, measurer))).toEqual(['بازدید اندازه‌گیری جدید']);
+    expect(titles(computeNotificationEvents(empty, waiting, wh))).toEqual(['پروژه‌ی جدید — منتظر ورود کالا']);
+
+    const booking = { id: 'B1', customerName: 'c', lathsCount: 8, jalaliDate: '1405/09/14', salesRepId: 's1', salesRepName: 'S', createdAt: new Date().toISOString() } as never;
+    const withBooking = snap({ salesBookings: [booking] });
+    expect(titles(computeNotificationEvents(snap({ salesBookings: [] }), withBooking, qc))).toEqual(['رزرو فروش جدید']);
+    const rep = { id: 's1', role: 'SALES_REP' } as Pick<User, 'id' | 'role' | 'teamId'>;
+    const converted = snap({ salesBookings: [{ ...(booking as object), convertedToProjectId: 'P1' } as never] });
+    expect(titles(computeNotificationEvents(withBooking, converted, rep))).toEqual(['رزرو شما وارد برنامه‌ی نصب شد']);
+
+    const req = { id: 'R1', projectCode: 'P1', requestedByUserId: 'c1', status: 'PENDING' } as never;
+    const coord = { id: 'c1', role: 'SCHEDULING_COORDINATOR' } as Pick<User, 'id' | 'role' | 'teamId'>;
+    const answered = snap({ scheduleChangeRequests: [{ ...(req as object), status: 'APPROVED' } as never] });
+    expect(titles(computeNotificationEvents(snap({ scheduleChangeRequests: [req] }), answered, coord))).toEqual(['درخواست تغییر برنامه تایید شد']);
+  });
 });

@@ -703,7 +703,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 @min-[700px]:grid-cols-2 gap-4">
               {filteredBookings.map((b) => (
                 <div
                   key={b.id}
@@ -888,7 +888,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
           </div>
 
           {/* شبکه فشرده روزها: هر خانه = روز + لت خالی؛ لمس = ثبت پروژه */}
-          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 gap-2">
+          <div className="grid grid-cols-4 sm:grid-cols-5 @min-[700px]:grid-cols-7 gap-2">
             {filteredCalendarDays.map((dayCap) => {
               const status = getSalesDayStatus(dayCap);
               const isClosed = status === 'CLOSED';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Project,
   User,
@@ -21,25 +21,27 @@ import {
 } from './types';
 import { StorageService } from './utils/storage';
 import { TEST_USERS, DEFAULT_TEAMS, DEFAULT_TEAM_MEMBERS } from './utils/testUsers';
-import { SupabaseSyncService } from './utils/supabase';
+import { SupabaseSyncService, isValidUUID } from './utils/supabase';
 import { startSalesBookingSync } from './utils/salesBookingSync';
 import { setSalesCapacityConfig } from './utils/salesCapacity';
-import { mergeUsersList } from './utils/userMerge';
 import { getUserRoleLabel } from './utils/roleLabels';
 import { buildWarehouseReferralTicket } from './utils/ticketFactory';
 import { defaultTeamName, nextTeamCode } from './utils/teamNaming';
 import { getIncompleteActivitiesSummary } from './utils/planProgress';
 import { buildActionQueue } from './utils/actionQueue';
+import { captureArrayBaseline } from './utils/arrayRebase';
 import { useNotificationWatcher } from './hooks/useNotificationWatcher';
+import { useSalesBookings } from './hooks/useSalesBookings';
 import { NOTIFICATION_OPEN_TAB_EVENT, markLocalChange } from './utils/notifications';
 import { NotificationPrompt } from './components/layout/NotificationBell';
+import { ServerSetupBanner } from './components/layout/ServerSetupBanner';
 import { useTheme } from './hooks/useTheme';
 import { useLatestRef } from './hooks/useLatestRef';
 import { OfflineBanner } from './components/layout/OfflineBanner';
 import { SplashScreen } from './components/layout/SplashScreen';
 import { ImpersonationBanner } from './components/layout/ImpersonationBanner';
 import { computeNavCounts } from './utils/navCounts';
-import { Outbox, OutboxMutation, OfflineQueue } from './utils/offlineQueue';
+import { Outbox, OutboxMutation, OfflineQueue, OPERATION_FAILED_EVENT } from './utils/offlineQueue';
 import {
   validateProjectPatchRoleGuards,
   validateTicketRoleGuards,
@@ -103,6 +105,9 @@ import {
 // Re-exported for backward compatibility (tests import it from App)
 export { getUserRoleLabel } from './utils/roleLabels';
 
+/** true when a Supabase server is configured (otherwise the app runs on local sample data) */
+const isServerMode = () => SupabaseSyncService.getClient() !== null;
+
 export const App: React.FC = () => {
   // Session & Authentication via Supabase Auth
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -124,10 +129,53 @@ export const App: React.FC = () => {
     }
   });
 
+  /**
+   * Server answer for people, teams and memberships replaces the local copy.
+   * null = that request failed, so the cached copy is kept. Local "deleted" markers are
+   * cleared because the server list already reflects every deletion.
+   */
+  const applyServerPeople = useCallback(
+    (cloudUsers: User[] | null, cloudTeams: InstallationTeam[] | null, cloudMembers: TeamMember[] | null) => {
+      if (cloudUsers) {
+        StorageService.clearDeletedUserIds();
+        StorageService.saveUsers(cloudUsers);
+        setUsers(cloudUsers);
+      }
+      if (cloudTeams) {
+        StorageService.saveTeams(cloudTeams);
+        setTeams(cloudTeams);
+      }
+      if (cloudMembers) {
+        StorageService.clearDeletedTeamMemberIds();
+        StorageService.saveTeamMembers(cloudMembers);
+        setTeamMembers(cloudMembers);
+      }
+    },
+    [],
+  );
+
+  /** re-read people/teams from the server right after a change, so the screen shows what was really saved */
+  const refreshPeopleFromServer = useCallback(async () => {
+    if (!isServerMode()) return;
+    const [u, t, m] = await Promise.all([
+      SupabaseSyncService.fetchProfiles().catch(() => null),
+      SupabaseSyncService.fetchInstallationTeams().catch(() => null),
+      SupabaseSyncService.fetchTeamMembers().catch(() => null),
+    ]);
+    applyServerPeople(u, t, m);
+  }, [applyServerPeople]);
+
   const [users, setUsers] = useState<User[]>(() => {
     const isInitialized = StorageService.isInitialized();
     const stored = StorageService.getUsers();
     const deletedIds = StorageService.getDeletedUserIds();
+
+    // Connected to a server: the people list comes from the server only. Records this
+    // device invented (sample people, or ones whose save failed) are dropped, otherwise
+    // every phone/PC kept showing its own different list.
+    if (isServerMode()) {
+      return stored.filter((u) => isValidUUID(u.id));
+    }
 
     // Fresh first run
     if (!isInitialized && stored.length === 0) {
@@ -148,6 +196,7 @@ export const App: React.FC = () => {
   const [teams, setTeams] = useState<InstallationTeam[]>(() => {
     const isInitialized = StorageService.isInitialized();
     const stored = StorageService.getTeams();
+    if (isServerMode()) return stored.filter((t) => isValidUUID(t.id));
     if (!isInitialized && stored.length === 0) {
       StorageService.saveTeams(DEFAULT_TEAMS);
       return DEFAULT_TEAMS;
@@ -159,6 +208,7 @@ export const App: React.FC = () => {
     const stored = StorageService.getTeamMembers();
     const deletedMemberIds = StorageService.getDeletedTeamMemberIds();
     const deletedUserIds = StorageService.getDeletedUserIds();
+    if (isServerMode()) return stored.filter((m) => isValidUUID(m.teamId) && isValidUUID(m.userId));
     if (!isInitialized && stored.length === 0) {
       const initialMembers = DEFAULT_TEAM_MEMBERS.filter(
         (m) => !deletedMemberIds.has(m.id) && !deletedUserIds.has(m.userId)
@@ -169,6 +219,7 @@ export const App: React.FC = () => {
     return stored.filter((m) => !deletedMemberIds.has(m.id) && !deletedUserIds.has(m.userId));
   });
   const [projects, setProjects] = useState<Project[]>(() => StorageService.getProjects());
+  const salesBookings = useSalesBookings();
   const [tickets, setTickets] = useState<Ticket[]>(() => StorageService.getTickets());
   const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(() => StorageService.getSettings());
@@ -192,6 +243,35 @@ export const App: React.FC = () => {
       }
     }
   }, [currentUser?.id]);
+
+  // A person's team lives in team_members on the server, not on their profile. Without this,
+  // a team member only saw projects that named them personally (not their team's projects),
+  // and could not log, ticket or request material on them from their own phone.
+  const teamIdOf = useCallback(
+    (userId: string | undefined, fallback?: string) => {
+      if (!userId) return fallback;
+      const membership = teamMembers.find((m) => m.userId === userId);
+      if (membership) return membership.teamId;
+      return isServerMode() ? undefined : fallback;
+    },
+    [teamMembers],
+  );
+
+  const usersWithTeams = useMemo(
+    () => users.map((u) => {
+      const teamId = teamIdOf(u.id, u.teamId);
+      return teamId === u.teamId ? u : { ...u, teamId };
+    }),
+    [users, teamIdOf],
+  );
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const teamId = teamIdOf(currentUser.id, currentUser.teamId);
+    if (teamId !== currentUser.teamId) {
+      setCurrentUser((prev) => (prev && prev.id === currentUser.id ? { ...prev, teamId } : prev));
+    }
+  }, [currentUser, teamIdOf]);
 
   const teamsWithMembers: InstallationTeamWithMembers[] = useMemo(() => {
     return teams.map((team) => {
@@ -320,24 +400,21 @@ export const App: React.FC = () => {
         const [cloudProjects, cloudTickets, cloudUsers, cloudSettings, cloudTeams, cloudTeamMembers, cloudScheduleChanges, cloudMaterials] = await Promise.all([
           SupabaseSyncService.fetchProjects(),
           SupabaseSyncService.fetchTickets(),
-          SupabaseSyncService.fetchProfiles().catch(() => []),
+          // null = the request failed (keep what we have); [] = the server really has none
+          SupabaseSyncService.fetchProfiles().catch(() => null),
           SupabaseSyncService.fetchSettings().catch(() => null),
-          SupabaseSyncService.fetchInstallationTeams().catch(() => []),
-          SupabaseSyncService.fetchTeamMembers().catch(() => []),
+          SupabaseSyncService.fetchInstallationTeams().catch(() => null),
+          SupabaseSyncService.fetchTeamMembers().catch(() => null),
           SupabaseSyncService.fetchScheduleChangeRequests().catch(() => []),
-          SupabaseSyncService.fetchMaterialRequests().catch(() => []),
+          SupabaseSyncService.fetchMaterialRequests({ strict: true }).catch(() => null),
         ]);
 
         if (currentSeq !== fetchSeqRef.current || sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
 
-        // Base material requests: prefer cloud materials if available, merged with local cache
-        const localMaterials = StorageService.getMaterialRequests(currentUser.id);
-        const baseMaterials = (cloudMaterials && cloudMaterials.length > 0)
-          ? [
-              ...cloudMaterials,
-              ...localMaterials.filter((lm) => !cloudMaterials.some((cm) => cm.id === lm.id)),
-            ]
-          : localMaterials;
+        // Material requests: the server list when it answered (this device's unsent requests
+        // are added back by applyPendingToMaterialRequests below); the cache only if it failed.
+        // Merging in the whole cache kept requests other devices had already closed or removed.
+        const baseMaterials = cloudMaterials ?? StorageService.getMaterialRequests(currentUser.id);
 
         // Merge any pending outbox operations for current user so unsent local mutations don't vanish
         const mergedProjects = await Outbox.applyPendingToProjects(cloudProjects, undefined, currentUser.id);
@@ -357,28 +434,10 @@ export const App: React.FC = () => {
         projectsRef.current = mergedProjects;
         setTickets(mergedTickets);
         setMaterialRequests(mergedMaterialRequests);
-        if (cloudUsers && cloudUsers.length > 0) {
-          setUsers((prevUsers) => {
-            const current = prevUsers.length > 0 ? prevUsers : StorageService.getUsers();
-            const fallback = StorageService.isInitialized() ? [] : TEST_USERS;
-            const merged = mergeUsersList(current.length > 0 ? current : fallback, cloudUsers);
-            StorageService.saveUsers(merged);
-            return merged;
-          });
-        }
-        if (cloudTeams && cloudTeams.length > 0) {
-          setTeams(cloudTeams);
-          StorageService.saveTeams(cloudTeams);
-        }
-        if (cloudTeamMembers && cloudTeamMembers.length > 0) {
-          const deletedMemberIds = StorageService.getDeletedTeamMemberIds();
-          const deletedUserIds = StorageService.getDeletedUserIds();
-          const filteredMembers = cloudTeamMembers.filter(
-            (m) => !deletedMemberIds.has(m.id) && (!m.userId || !deletedUserIds.has(m.userId))
-          );
-          setTeamMembers(filteredMembers);
-          StorageService.saveTeamMembers(filteredMembers);
-        }
+        // People, teams and memberships: the server's answer replaces the local copy.
+        // (It used to be merged with whatever this device had cached, so each device
+        // kept its own extra/stale people and the lists differed between phone and PC.)
+        applyServerPeople(cloudUsers, cloudTeams, cloudTeamMembers);
         if (cloudScheduleChanges && cloudScheduleChanges.length >= 0) {
           setScheduleChangeRequests(cloudScheduleChanges);
         }
@@ -512,11 +571,7 @@ export const App: React.FC = () => {
     const unsubProfiles = SupabaseSyncService.subscribeProfiles((updatedProfiles) => {
       if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
       if (updatedProfiles && updatedProfiles.length > 0) {
-        setUsers((prevUsers) => {
-          const merged = mergeUsersList(prevUsers, updatedProfiles);
-          StorageService.saveUsers(merged);
-          return merged;
-        });
+        applyServerPeople(updatedProfiles, null, null);
         setCurrentUser((prevUser) => {
           if (!prevUser) return null;
           const currentProfile = updatedProfiles.find((p) => p.id === prevUser.id);
@@ -537,8 +592,7 @@ export const App: React.FC = () => {
           SupabaseSyncService.fetchTeamMembers(),
         ]);
         if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
-        setTeams(t);
-        setTeamMembers(tm);
+        applyServerPeople(null, t, tm);
       } catch (err) {
         console.warn('Realtime teams refresh failed:', err);
       }
@@ -558,7 +612,7 @@ export const App: React.FC = () => {
     const unsubMaterials = SupabaseSyncService.subscribeMaterialRequests(async () => {
       if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
       try {
-        const cloud = await SupabaseSyncService.fetchMaterialRequests();
+        const cloud = await SupabaseSyncService.fetchMaterialRequests({ strict: true });
         const merged = await Outbox.applyPendingToMaterialRequests(cloud, undefined, capturedUserId);
         if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
         setMaterialRequests(merged);
@@ -579,8 +633,29 @@ export const App: React.FC = () => {
     };
     document.addEventListener('visibilitychange', handleVisible);
 
+    // The server refused a change for good: the edit shown on this device is not real.
+    // Warn once and reload the true state so this device matches the others again.
+    let failReloadTimer: number | undefined;
+    const handleOperationFailed = (e: Event) => {
+      if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
+      const reason = (e as CustomEvent).detail?.reason;
+      window.dispatchEvent(
+        new CustomEvent(TOAST_EVENT, {
+          detail: {
+            type: 'error',
+            message: `این تغییر روی سرور ثبت نشد${reason ? `: ${reason}` : ''}. اطلاعات دوباره از سرور خوانده شد.`,
+          },
+        })
+      );
+      window.clearTimeout(failReloadTimer);
+      failReloadTimer = window.setTimeout(() => loadCloudData(), 800);
+    };
+    window.addEventListener(OPERATION_FAILED_EVENT, handleOperationFailed);
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener(OPERATION_FAILED_EVENT, handleOperationFailed);
+      window.clearTimeout(failReloadTimer);
       unsubMaterials();
       window.clearTimeout(slowSyncTimer);
       window.removeEventListener('online', handleOnline);
@@ -627,10 +702,28 @@ export const App: React.FC = () => {
     window.scrollTo({ top: 0 });
   }, [activeTab]);
 
+  // Is the server set up for this app version? (checked once per login for managers)
+  const [missingMigrations, setMissingMigrations] = useState<string[]>([]);
+  useEffect(() => {
+    setMissingMigrations([]);
+    if (!currentUser || !['QC_MANAGER', 'CEO'].includes(currentUser.role) || !isServerMode()) return;
+    let cancelled = false;
+    SupabaseSyncService.checkServerSetup().then((r) => {
+      if (cancelled || !r) return;
+      const missing: string[] = [];
+      if (!r.salesBookings) missing.push('023_sales_bookings_server_sync.sql');
+      if (r.schemaVersion === null || r.schemaVersion < 25) missing.push('024_personnel_repair.sql');
+      setMissingMigrations(missing);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id, currentUser?.role]);
+
   // Phone notifications: watch every data change for what concerns this person's role
   const notifySnapshot = useMemo(
-    () => ({ projects, tickets, materialRequests, scheduleChangeRequests }),
-    [projects, tickets, materialRequests, scheduleChangeRequests],
+    () => ({ projects, tickets, materialRequests, scheduleChangeRequests, salesBookings }),
+    [projects, tickets, materialRequests, scheduleChangeRequests, salesBookings],
   );
   useNotificationWatcher(notifySnapshot, currentUser, isSyncedWithServer);
 
@@ -653,9 +746,10 @@ export const App: React.FC = () => {
   }, [currentUser]);
 
 
-  // CEO navigation restriction: CEO only accesses 'registry' (داشبورد مدیر کل) and 'planner' (دیدن برنامه)
+  // CEO navigation restriction: the same tabs his menu shows (registry, planner, sales).
+  // (sales was in his menu but this redirected it straight back to the registry)
   useEffect(() => {
-    if (currentUser?.role === 'CEO' && activeTab !== 'registry' && activeTab !== 'planner') {
+    if (currentUser?.role === 'CEO' && !['registry', 'planner', 'sales'].includes(activeTab)) {
       setActiveTab('registry');
     }
   }, [currentUser?.role, activeTab]);
@@ -793,7 +887,7 @@ export const App: React.FC = () => {
         const ticket = mutation.payload?.ticket || mutation.payload;
         const project = projectsRef.current.find((p) => p.id === ticket?.projectId);
         try {
-          validateTicketRoleGuards(currentUser, project, ticket);
+          validateTicketRoleGuards(currentUser, project, ticket, currentUser.teamId);
         } catch (err: any) {
           showToast('error', err.message || 'خطای عدم دسترسی به تیکت.');
           return false;
@@ -843,6 +937,8 @@ export const App: React.FC = () => {
           customerSignature: currentProject.customerSignature ? 'present' : 'none',
           dailyLogsCount: currentProject.dailyLogs?.length || 0,
           workSessionsCount: currentProject.workSessions?.length || 0,
+          // list items this device knew about, so items other devices add meanwhile are not overwritten
+          arrayIds: captureArrayBaseline(currentProject as any, mutation.payload?.patch ?? mutation.payload),
         };
       }
     }
@@ -2002,11 +2098,16 @@ export const App: React.FC = () => {
   // Settings handler
   const handleUpdateSettings = async (newSettings: SystemSettings) => {
     if (!currentUser) return;
+    // Only the fields that were really changed are written over the server copy, so a
+    // device with an older copy cannot undo someone else's latest settings change.
+    const changedKeys = (Object.keys(newSettings) as (keyof SystemSettings)[]).filter(
+      (k) => JSON.stringify(newSettings[k]) !== JSON.stringify(settings[k]),
+    );
     await commit(
       {
         type: 'UPDATE_SETTINGS',
         orderingKey: 'settings',
-        payload: newSettings,
+        payload: { settings: newSettings, changedKeys },
       },
       () => {
         setSettings(newSettings);
@@ -2088,6 +2189,7 @@ export const App: React.FC = () => {
       setCurrentUser(effectiveUser);
     }
     showToast('success', `اطلاعات و نقش ${getDisplayName(effectiveUser.name)} با موفقیت ثبت و ذخیره شد.`);
+    void refreshPeopleFromServer();
   };
 
   const handleDeleteUser = (userId: string) => {
@@ -2122,6 +2224,7 @@ export const App: React.FC = () => {
       StorageService.saveTeams(updatedTeams);
       return updatedTeams;
     });
+    void refreshPeopleFromServer();
   };
 
   const handleCreateTeam = async (): Promise<{ success: boolean; error?: string }> => {
@@ -2151,6 +2254,7 @@ export const App: React.FC = () => {
       return updated;
     });
     showToast('success', `«${created.name}» ساخته شد. اعضا را از همین کارت اضافه کنید.`);
+    void refreshPeopleFromServer();
     return { success: true };
   };
 
@@ -2173,6 +2277,7 @@ export const App: React.FC = () => {
       return updated;
     });
     showToast('success', 'اکیپ حذف شد.');
+    void refreshPeopleFromServer();
     return { success: true };
   };
 
@@ -2247,6 +2352,7 @@ export const App: React.FC = () => {
     });
 
     showToast('success', 'عضو با موفقیت به اکیپ انتساب یافت.');
+    void refreshPeopleFromServer();
     return { success: true };
   };
 
@@ -2290,6 +2396,7 @@ export const App: React.FC = () => {
     });
 
     showToast('success', 'عضو با موفقیت از اکیپ حذف شد.');
+    void refreshPeopleFromServer();
     return { success: true };
   };
 
@@ -2359,7 +2466,7 @@ export const App: React.FC = () => {
     if (targetUser.role === 'WAREHOUSE') {
       setActiveTab('materials');
     } else if (targetUser.role === 'QC_MANAGER') {
-      setActiveTab('qc');
+      setActiveTab('control');
     } else if (targetUser.role === 'SCHEDULING_COORDINATOR') {
       setActiveTab('planner');
     } else if (targetUser.role === 'MEASUREMENT_LEAD') {
@@ -2436,7 +2543,7 @@ export const App: React.FC = () => {
   if (!currentUser) {
     return (
       <LoginModal
-        users={users}
+        users={usersWithTeams}
         isOpen={true}
         isStandalone={true}
         onSelectUser={handleLoginSuccess}
@@ -2450,7 +2557,7 @@ export const App: React.FC = () => {
     tickets,
     materialRequests
   );
-  const actionQueueCount = buildActionQueue(projects, tickets).length;
+  const actionQueueCount = buildActionQueue(projects, tickets, salesBookings).length;
 
   const isQcManager = currentUser.role === 'QC_MANAGER';
   const isCoordinator = currentUser.role === 'SCHEDULING_COORDINATOR';
@@ -2492,7 +2599,8 @@ export const App: React.FC = () => {
       <OfflineBanner visible={isOfflineMode} />
 
       {/* Main Body */}
-      <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
+      <main id="main-content" className="@container flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
+        <ServerSetupBanner missing={missingMigrations} />
         {!impersonatorCeo && currentUser.role !== 'CEO' && <NotificationPrompt userId={currentUser.id} />}
         {currentUser.role === 'MEASUREMENT_LEAD' ? (
           // ================= 2ND MEASUREMENT & SITE READINESS DESK =================
@@ -2510,7 +2618,7 @@ export const App: React.FC = () => {
             <MaterialCenter
               materialRequests={materialRequests}
               currentUser={currentUser}
-              users={users}
+              users={usersWithTeams}
               tickets={tickets}
               projects={projects}
               onUpdateMaterialRequest={handleUpdateMaterialRequest}
@@ -2541,14 +2649,15 @@ export const App: React.FC = () => {
               actionQueueCount={actionQueueCount}
             />
 
-            <div className="flex-1 min-w-0">
+            {/* sized by the space left next to the sidebar, not by the window (see CLAUDE.md) */}
+            <div className="@container flex-1 min-w-0">
               <React.Suspense fallback={<DashboardSkeleton />}>
                 {activeTab === 'registry' && (
                   isCeo || isQcManager ? (
                     <CeoMasterRegistry
                       currentUser={currentUser}
                       projects={projects}
-                      users={users}
+                      users={usersWithTeams}
                       fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}
                     />
                   ) : (
@@ -2565,11 +2674,12 @@ export const App: React.FC = () => {
                   <OperationsControlCenter
                     currentUser={currentUser}
                     projects={projects}
-                    users={users}
+                    users={usersWithTeams}
                     tickets={tickets}
                     teamsWithMembers={teamsWithMembers}
                     scheduleChangeRequests={scheduleChangeRequests}
                     materialRequests={materialRequests}
+                    salesBookings={salesBookings}
                     settings={settings}
                     onNavigateTab={(tab) => setActiveTab(tab)}
                     onOpenProject={(p) => setManagedProjectId(p.id)}
@@ -2585,12 +2695,12 @@ export const App: React.FC = () => {
                 {activeTab === 'planner' && (
                   <MonthPlanner
                     projects={projects}
-                    users={users}
+                    users={usersWithTeams}
                     teams={teamsWithMembers}
                     currentUser={currentUser}
                     settings={settings}
                     scheduleChangeRequests={scheduleChangeRequests}
-                    onUpdateSettings={isCeo ? undefined : handleUpdateSettings}
+                    onUpdateSettings={isQcManager ? handleUpdateSettings : undefined}
                     onNewProject={isCeo ? undefined : handleOpenNewProject}
                     onEditProject={isCeo ? undefined : handleOpenEditProject}
                     onManageProject={(p) => setManagedProjectId(p.id)}
@@ -2605,7 +2715,7 @@ export const App: React.FC = () => {
                 {activeTab === 'qc' && (
                   <QcDesk
                     projects={projects}
-                    users={users}
+                    users={usersWithTeams}
                     currentUser={currentUser}
                     selectedProjectId={selectedQcProjectId}
                     onSelectProject={setSelectedQcProjectId}
@@ -2631,7 +2741,7 @@ export const App: React.FC = () => {
                   <TicketCenter
                     tickets={tickets}
                     currentUser={currentUser || undefined}
-                    users={users}
+                    users={usersWithTeams}
                     onUpdateTicket={handleUpdateTicket}
                     onNavigateTab={(tab) => setActiveTab(tab)}
                   />
@@ -2641,7 +2751,7 @@ export const App: React.FC = () => {
                   <MaterialCenter
                     materialRequests={materialRequests}
                     currentUser={currentUser}
-                    users={users}
+                    users={usersWithTeams}
                     tickets={tickets}
                     projects={projects}
                     onUpdateMaterialRequest={handleUpdateMaterialRequest}
@@ -2656,7 +2766,7 @@ export const App: React.FC = () => {
 
                 {activeTab === 'technicians' && (
                   <TechniciansManager
-                    users={users}
+                    users={usersWithTeams}
                     teams={teams}
                     teamMembers={teamMembers}
                     currentUserId={currentUser.id}
@@ -2667,6 +2777,7 @@ export const App: React.FC = () => {
                     onCreateTeam={handleCreateTeam}
                     onDeleteTeam={handleDeleteTeam}
                     onImpersonateUser={currentUser.role === 'CEO' || currentUser.role === 'QC_MANAGER' || Boolean(impersonatorCeo) ? handleImpersonateUser : undefined}
+                    readOnly={!isQcManager && !isCeo}
                   />
                 )}
 
@@ -2680,6 +2791,7 @@ export const App: React.FC = () => {
                     onUpdateSettings={handleUpdateSettings}
                     onResetData={handleResetData}
                     canEditCapacity={isQcManager}
+                    canEdit={isQcManager}
                     definedTeamCount={teams.length}
                   />
                 )}
@@ -2736,7 +2848,7 @@ export const App: React.FC = () => {
             project={editingProject}
             initialData={projectFormInitialData}
             defaultDate={presetDateKey}
-            users={users}
+            users={usersWithTeams}
             teams={teams}
             teamMembers={teamMembers}
             settings={settings}
@@ -2799,7 +2911,7 @@ export const App: React.FC = () => {
             return (
               <ProjectDossierModal
                 project={managed}
-                users={users}
+                users={usersWithTeams}
                 onClose={() => setManagedProjectId(null)}
                 fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}
                 onPrintCertificate={() => {
@@ -2821,7 +2933,7 @@ export const App: React.FC = () => {
           return (
             <ProjectManagerSheet
               project={managed}
-              users={users}
+              users={usersWithTeams}
               tickets={tickets}
               teams={teamsWithMembers}
               currentUser={currentUser}
@@ -2850,7 +2962,7 @@ export const App: React.FC = () => {
         {certificateModalProject && (
           <HandoverCertificateModal
             project={certificateModalProject}
-            users={users}
+            users={usersWithTeams}
             onClose={() => setCertificateModalProject(null)}
           />
         )}
@@ -2858,7 +2970,7 @@ export const App: React.FC = () => {
         {printingPassportProject && (
           <ProjectPassportPrint
             project={printingPassportProject}
-            users={users}
+            users={usersWithTeams}
             onClose={() => setPrintingPassportProject(null)}
           />
         )}
@@ -2894,7 +3006,7 @@ export const App: React.FC = () => {
         {evaluationProject && (
           <PersonnelEvaluationModal
             project={evaluationProject}
-            users={users}
+            users={usersWithTeams}
             currentUser={currentUser}
             isOpen={!!evaluationProject}
             onClose={() => setEvaluationProject(null)}

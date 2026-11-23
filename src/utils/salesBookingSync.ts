@@ -123,15 +123,23 @@ async function pushPending(): Promise<void> {
   // رکوردهایی که در صف هستند ولی دیگر محلی وجود ندارند، از صف خارج می‌شوند
   pending.upserts.filter((id) => !toUpsert.some((b) => b.id === id)).forEach((id) => doneUpserts.add(id));
 
-  if (toUpsert.length > 0) {
-    const { error } = await client.from(TABLE).upsert(toUpsert.map(bookingToRow), { onConflict: 'id' });
-    if (error) throw error;
-    toUpsert.forEach((b) => doneUpserts.add(b.id));
+  // one booking at a time: a single refused booking must not hold back all the others
+  let firstError: unknown = null;
+  for (const b of toUpsert) {
+    const { error } = await client.from(TABLE).upsert(bookingToRow(b), { onConflict: 'id' });
+    if (error) {
+      firstError = firstError || error;
+      continue;
+    }
+    doneUpserts.add(b.id);
   }
 
   for (const id of pending.deletes) {
     const { error } = await client.from(TABLE).delete().eq('id', id);
-    if (error) throw error;
+    if (error) {
+      firstError = firstError || error;
+      continue;
+    }
     doneDeletes.add(id);
   }
 
@@ -147,6 +155,7 @@ async function pushPending(): Promise<void> {
     }),
     deletes: latest.deletes.filter((id) => !doneDeletes.has(id)),
   });
+  if (firstError) throw firstError;
 }
 
 async function pullFromServer(): Promise<void> {
@@ -169,8 +178,16 @@ export function syncSalesBookings(): Promise<void> {
 
   syncInFlight = (async () => {
     try {
-      await pushPending();
+      // A booking the server refuses must not stop this device from receiving everyone
+      // else's bookings: always pull, even when sending failed.
+      let pushError: unknown = null;
+      try {
+        await pushPending();
+      } catch (err) {
+        pushError = err;
+      }
       await pullFromServer();
+      if (pushError) throw pushError;
       warnedUnavailable = false;
     } catch (err: any) {
       // اگر جدول هنوز در سرور ساخته نشده باشد (مایگریشن 018/023 اجرا نشده)، برنامه به حالت محلی ادامه می‌دهد

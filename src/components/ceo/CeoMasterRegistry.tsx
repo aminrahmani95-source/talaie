@@ -128,14 +128,14 @@ const CeoMasterRegistryContent: React.FC<Props> = ({ currentUser, projects, user
   return (
     <div className="space-y-6">
       {/* Executive Welcome Banner */}
-      <div className="bg-surface rounded-2xl p-6 border border-line flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-surface rounded-2xl p-6 border border-line flex flex-col @min-[700px]:flex-row items-start @min-[700px]:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-xl sm:text-2xl font-black text-ink">
-              داشبورد اختصاصی مدیر کل (CEO Master Registry)
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h2 className="text-xl @min-[700px]:text-2xl font-black text-ink">
+              {currentUser.role === 'CEO' ? 'داشبورد مدیرعامل' : 'شناسنامه پروژه‌ها'}
             </h2>
-            <span className="text-xs font-bold bg-brand/15 text-brand-ink border border-brand/30 px-3 py-1 rounded-full">
-              مدیریت عامل
+            <span className="whitespace-nowrap text-xs font-bold bg-brand/15 text-brand-ink border border-brand/30 px-3 py-1 rounded-full">
+              {currentUser.role === 'CEO' ? 'مدیریت عامل' : 'مدیر QC'}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-ink-2 mt-1.5 leading-relaxed">
@@ -149,7 +149,7 @@ const CeoMasterRegistryContent: React.FC<Props> = ({ currentUser, projects, user
       </div>
 
       {/* Interactive KPI Filter Cards (Acts as Primary Status Filter) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" role="tablist" aria-label="فیلتر وضعیت پروژه‌ها">
+      <div className="grid grid-cols-2 sm:grid-cols-3 @min-[900px]:grid-cols-5 gap-3" role="tablist" aria-label="فیلتر وضعیت پروژه‌ها">
         {[
           {
             id: 'ALL' as const,
@@ -267,7 +267,7 @@ const CeoMasterRegistryContent: React.FC<Props> = ({ currentUser, projects, user
       </div>
 
       {/* Search & Results Summary Bar (Filter Chips completely removed) */}
-      <div className="bg-surface rounded-2xl p-3 sm:p-4 border border-line flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <div className="bg-surface rounded-2xl p-3 sm:p-4 border border-line flex flex-col @min-[700px]:flex-row items-stretch @min-[700px]:items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative flex-1 max-w-xl">
           <Search className="w-4 h-4 text-ink-3 absolute right-3.5 top-3.5 pointer-events-none" />
@@ -424,7 +424,7 @@ const CeoMasterRegistryContent: React.FC<Props> = ({ currentUser, projects, user
                 </div>
 
                 {/* Details Breakdown */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div className="grid grid-cols-1 @min-[700px]:grid-cols-3 gap-3 text-xs">
                   {/* Customer info */}
                   <div className="bg-canvas p-3 rounded-xl border border-line space-y-1">
                     <span className="text-ink-3 font-bold block">کارفرما و نشانی:</span>

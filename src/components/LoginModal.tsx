@@ -33,7 +33,7 @@ export const LoginModal: React.FC<Props> = ({
     e.preventDefault();
     setError('');
 
-    const trimmedPhone = toEnglishDigits(phone.trim().replace(/\s+/g, ''));
+    const trimmedPhone = toEnglishDigits(phone).replace(/\D/g, '');
     const trimmedPassword = toEnglishDigits(password.trim());
 
     if (!trimmedPhone || !trimmedPassword) {
@@ -50,7 +50,7 @@ export const LoginModal: React.FC<Props> = ({
     } catch (err: any) {
       // Safe offline/fallback: if network unavailable or Supabase offline, match registered users list
       const localMatched = users.find(
-        (u) => toEnglishDigits((u.phone || '').replace(/\D/g, '')) === trimmedPhone
+        (u) => toEnglishDigits(u.phone || '').replace(/\D/g, '') === trimmedPhone
       );
       // SECURITY: the local fallback is ONLY for genuine connectivity failures.
       // A wrong password ("نادرست" / "invalid credentials") must never log anyone in,

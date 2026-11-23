@@ -38,7 +38,9 @@ import {
   getProjectDailyDurationHours,
   getTeamDailyCapacity,
 } from '../../utils/capacity';
-import { getStoredBookings, linkBookingToInstallationProject } from '../../utils/salesCapacity';
+import { linkBookingToInstallationProject } from '../../utils/salesCapacity';
+import { useSalesBookings } from '../../hooks/useSalesBookings';
+import { isBookingAwaitingAssignment } from '../../utils/actionQueue';
 import { AssignSalesBookingModal } from './AssignSalesBookingModal';
 import { triggerToast } from '../Toast';
 import { SalesProjectBooking } from '../../types';
@@ -121,17 +123,12 @@ export const MonthPlanner: React.FC<Props> = ({
   const [assigningBooking, setAssigningBooking] = useState<SalesProjectBooking | null>(null);
 
   // استخراج رزروهای فعال فروش که هنوز به پروژه اجرایی متصل نشده‌اند
-  const unassignedSalesBookings = useMemo(() => {
-    const allBookings = getStoredBookings();
-    return allBookings.filter((b) => {
-      // اگر تبدیل به پروژه شده بررسی می‌کنیم که آیا در لیست پروژه‌ها هست
-      if (b.convertedToProjectId) {
-        const exists = projects.some((p) => p.id === b.convertedToProjectId);
-        if (exists) return false;
-      }
-      return true;
-    });
-  }, [projects]);
+  // live list: a booking made on a sales rep's phone appears here without reloading
+  const allSalesBookings = useSalesBookings();
+  const unassignedSalesBookings = useMemo(
+    () => allSalesBookings.filter((b) => isBookingAwaitingAssignment(b, projects)),
+    [allSalesBookings, projects],
+  );
 
   const displayedDays = useMemo(() => {
     if (viewMode === '4DAYS') return days.slice(startIndex, startIndex + 4);
@@ -305,7 +302,7 @@ export const MonthPlanner: React.FC<Props> = ({
           </div>
 
           {isSalesTrayOpen && (
-            <div className="mt-3 pt-3 border-t border-line grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="mt-3 pt-3 border-t border-line grid grid-cols-1 sm:grid-cols-2 @min-[900px]:grid-cols-3 gap-3">
               {unassignedSalesBookings.map((b) => (
                 <div
                   key={b.id}
@@ -598,10 +595,10 @@ export const MonthPlanner: React.FC<Props> = ({
         <div
           className={`grid gap-3 ${
             viewMode === '4DAYS'
-              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+              ? 'grid-cols-1 sm:grid-cols-2 @min-[900px]:grid-cols-4'
               : viewMode === '7DAYS'
-              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-7'
-              : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
+              ? 'grid-cols-1 sm:grid-cols-2 @min-[900px]:grid-cols-7'
+              : 'grid-cols-1 sm:grid-cols-2 @min-[700px]:grid-cols-3 @min-[900px]:grid-cols-6'
           }`}
         >
           {displayedDays.map((day) => {

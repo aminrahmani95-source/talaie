@@ -30,7 +30,7 @@ export const INITIAL_SETTINGS: SystemSettings = {
 export const INITIAL_TICKETS: Ticket[] = [];
 
 // Storage keys (v6: Production mode without mock data)
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   PROJECTS: 'talaie_projects_v6',
   USERS: 'talaie_users_v6',
   TICKETS: 'talaie_tickets_v6',
@@ -303,6 +303,12 @@ export const StorageService = {
   clearDeletedUserIds(): void {
     try {
       localStorage.removeItem(STORAGE_KEYS.DELETED_USER_IDS);
+    } catch {}
+  },
+
+  clearDeletedTeamMemberIds(): void {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.DELETED_TEAM_MEMBER_IDS);
     } catch {}
   },
 

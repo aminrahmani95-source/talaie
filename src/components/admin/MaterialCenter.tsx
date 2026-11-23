@@ -535,7 +535,7 @@ export const MaterialCenter: React.FC<Props> = ({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 @min-[700px]:grid-cols-2 gap-4">
               {filteredReferrals.map((t) => {
                 const proj = projects?.find((p) => p.id === t.projectId || p.code === t.projectCode);
                 const isResolved = t.status === 'RESOLVED';

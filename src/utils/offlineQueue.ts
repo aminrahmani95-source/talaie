@@ -4,6 +4,7 @@
 // ==============================================================================
 
 import { Project, Ticket, SystemSettings, MaterialRequest } from '../types';
+import { rebasePatchArrays } from './arrayRebase';
 
 export type OutboxMutationType =
   | 'CREATE_PROJECT'
@@ -213,6 +214,25 @@ export function dataUrlToBlob(dataUrl: string): Blob {
 /**
  * Error thrown on client-side validation failures or permanent rejection
  */
+/**
+ * When the server refuses a change for good, the optimistic local edit is no longer true.
+ * Tell the app so it can warn the user and reload the real state from the server,
+ * instead of silently showing a change that other devices will never see.
+ */
+export const OPERATION_FAILED_EVENT = 'talaie-op-failed';
+function notifyOperationFailed(failedOp: { type: string; errorReason: string; orderingKey: string }): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(
+      new CustomEvent(OPERATION_FAILED_EVENT, {
+        detail: { type: failedOp.type, reason: failedOp.errorReason, orderingKey: failedOp.orderingKey },
+      })
+    );
+  } catch {
+    // ignore
+  }
+}
+
 export class PermanentError extends Error {
   constructor(message: string) {
     super(message);
@@ -351,7 +371,7 @@ export function isPermanentError(err: any, hasSession: boolean = true): boolean 
  * - DELETE_PROJECT: RPC admin_delete_project throws exception if row is not found; repeat throws hard exception (011_p1_server_capacity_and_history_protection.sql:483-485)
  * - CREATE_TICKET: Upsert with onConflict: 'id' overwrites concurrent modifications made by another user (src/utils/supabase.ts:1085-1092)
  * - PATCH_TICKET: Read-modify-write without version check overwrites concurrent modifications made by another user (src/utils/supabase.ts:1110-1128)
- * - UPDATE_SETTINGS: Blind upsert on key 'settings' overwrites concurrent settings changes made by another admin (src/utils/supabase.ts:1243-1250)
+ * - UPDATE_SETTINGS: only the changed fields (payload.changedKeys) are applied over the server copy; older ops without it overwrite (legacy) — admin (src/utils/supabase.ts:1243-1250)
  * - PATCH_MATERIAL_REQUEST: RPC validates status transitions and dispatch states; repeat throws exception (014_p2_3_material_requests.sql:282-285)
  */
 export function isOperationRetrySafe(type: OutboxMutationType): boolean {
@@ -1232,7 +1252,13 @@ export const Outbox = {
     for (const op of settingsOps) {
       if (op.type === 'UPDATE_SETTINGS') {
         const s = op.payload?.settings || op.payload;
-        if (s) {
+        const changed: string[] | undefined = op.payload?.changedKeys;
+        if (s && Array.isArray(changed)) {
+          // only the fields this device changed; the rest keeps the server's newer values
+          const next: any = { ...result };
+          for (const k of changed) next[k] = (s as any)[k];
+          result = next;
+        } else if (s) {
           result = { ...result, ...s };
         }
       }
@@ -1253,7 +1279,7 @@ export const Outbox = {
     refreshSession?: () => Promise<boolean>;
     hasSession?: () => boolean;
     getCurrentSessionEpoch?: () => number;
-    fetchProjectSnapshot?: (projectId: string) => Promise<{ status?: string; updatedAt?: string; customerSignature?: string } | null>;
+    fetchProjectSnapshot?: (projectId: string) => Promise<{ status?: string; updatedAt?: string; customerSignature?: string; data?: any } | null>;
   }): Promise<void> {
     if (isProcessing) return;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
@@ -1298,7 +1324,7 @@ export const Outbox = {
     refreshSession?: () => Promise<boolean>;
     hasSession?: () => boolean;
     getCurrentSessionEpoch?: () => number;
-    fetchProjectSnapshot?: (projectId: string) => Promise<{ status?: string; updatedAt?: string; customerSignature?: string } | null>;
+    fetchProjectSnapshot?: (projectId: string) => Promise<{ status?: string; updatedAt?: string; customerSignature?: string; data?: any } | null>;
   }): Promise<void> {
     if (isProcessing) return;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
@@ -1506,7 +1532,7 @@ export const Outbox = {
               }
 
               const projectId = op.payload?.id || op.orderingKey.replace('project:', '');
-              let serverSnapshot: { status?: string; updatedAt?: string; customerSignature?: string } | null = null;
+              let serverSnapshot: { status?: string; updatedAt?: string; customerSignature?: string; data?: any } | null = null;
               let snapshotFetchFailed = false;
               let snapshotErrorReason = '';
 
@@ -1576,6 +1602,19 @@ export const Outbox = {
                 });
 
                 break; // Hold this key, do not dispatch
+              }
+
+              // Keep list items (daily logs, defects, sessions…) that other devices added since
+              // this change was made; the server would otherwise replace the whole list.
+              if (op.baselineSnapshot.arrayIds && serverSnapshot?.data) {
+                if (op.payload?.patch) {
+                  op.payload = {
+                    ...op.payload,
+                    patch: rebasePatchArrays(op.payload.patch, op.baselineSnapshot.arrayIds, serverSnapshot.data),
+                  };
+                } else if (op.payload) {
+                  op.payload = rebasePatchArrays(op.payload, op.baselineSnapshot.arrayIds, serverSnapshot.data);
+                }
               }
             }
 
@@ -1774,7 +1813,10 @@ export const Outbox = {
                     };
                     fStore.put(failedOp);
 
-                    tx.oncomplete = () => resolve();
+                    tx.oncomplete = () => {
+                      notifyOperationFailed(failedOp);
+                      resolve();
+                    };
                     tx.onerror = () => reject(tx.error);
                     tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
                   });
@@ -1961,7 +2003,10 @@ export const Outbox = {
                   };
                   fStore.put(failedOp);
 
-                  tx.oncomplete = () => resolve();
+                  tx.oncomplete = () => {
+                    notifyOperationFailed(failedOp);
+                    resolve();
+                  };
                   tx.onerror = () => reject(tx.error);
                   tx.onabort = () => reject(tx.error || new DOMException('Transaction aborted', 'AbortError'));
                 });

@@ -36,4 +36,15 @@ describe('buildActionQueue', () => {
     const q = buildActionQueue([proj('S', { status: 'STUCK', assignedTeamId: undefined })], []);
     expect(q.map((i) => i.kind)).toEqual(['STUCK']);
   });
+
+  it('lists sales bookings that are not yet a project, after the jobs', () => {
+    const booking = (id: string, extra: Record<string, unknown> = {}) =>
+      ({ id, customerName: id, lathsCount: 10, requestedDate: '2026-12-05', jalaliDate: '1405/09/14', ...extra }) as never;
+    const q = buildActionQueue(
+      [proj('NEW', { assignedTeamId: undefined })],
+      [],
+      [booking('B-WAIT'), booking('B-DONE', { convertedToProjectId: 'NEW' }), booking('B-GONE', { convertedToProjectId: 'DELETED' })],
+    );
+    expect(q.map((i) => i.key)).toEqual(['in-NEW', 'booking-B-WAIT', 'booking-B-GONE']);
+  });
 });

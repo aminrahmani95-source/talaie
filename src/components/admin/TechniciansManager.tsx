@@ -42,6 +42,8 @@ interface Props {
   onCreateTeam?: () => Promise<{ success: boolean; error?: string }>;
   onDeleteTeam?: (teamId: string) => Promise<{ success: boolean; error?: string }>;
   onImpersonateUser?: (user: User) => void;
+  /** view only: the server lets only the QC manager and the CEO change people and teams */
+  readOnly?: boolean;
 }
 
 type TabFilter = 'ALL' | 'QC_LEADS' | 'COORDINATORS' | 'CREW_LEADS' | 'CREW' | 'OFFICE';
@@ -59,6 +61,7 @@ export const TechniciansManager: React.FC<Props> = ({
   onCreateTeam,
   onDeleteTeam,
   onImpersonateUser,
+  readOnly = false,
 }) => {
   const [mainSection, setMainSection] = useState<MainSection>('PERSONNEL');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -128,7 +131,8 @@ export const TechniciansManager: React.FC<Props> = ({
     setModalError(null);
 
     const trimmedName = name.trim();
-    const trimmedPhone = toEnglishDigits(phone.trim().replace(/\s+/g, ''));
+    // digits only (spaces, dashes and Persian digits are normalised, same as the server)
+    const trimmedPhone = toEnglishDigits(phone).replace(/\D/g, '');
 
     if (!trimmedName || !trimmedPhone) {
       setModalError('لطفاً نام و شماره تلفن را وارد کنید.');
@@ -136,7 +140,7 @@ export const TechniciansManager: React.FC<Props> = ({
     }
 
     const duplicate = users.find(
-      (u) => u.id !== editingUser?.id && toEnglishDigits(String(u.phone || '')).trim() === trimmedPhone,
+      (u) => u.id !== editingUser?.id && toEnglishDigits(String(u.phone || '')).replace(/\D/g, '') === trimmedPhone,
     );
     if (duplicate) {
       setModalError(`این شماره قبلاً برای «${getDisplayName(duplicate.name)}» ثبت شده است.`);
@@ -363,7 +367,10 @@ export const TechniciansManager: React.FC<Props> = ({
     { id: 'TEAM_3', name: 'اکیپ نصب ۳', code: 'TEAM_3', createdAt: '', updatedAt: '' },
     { id: 'TEAM_4', name: 'اکیپ نصب ۴', code: 'TEAM_4', createdAt: '', updatedAt: '' },
   ];
-  const effectiveTeams = teams && teams.length > 0 ? teams : defaultTeams;
+  // Sample teams only without a server: on a server their made-up ids cannot take members,
+  // so an empty list there shows the «اکیپ جدید» button instead.
+  const effectiveTeams =
+    teams && teams.length > 0 ? teams : SupabaseSyncService.getClient() ? [] : defaultTeams;
 
   // Map of team members
   const assignedUserIds = React.useMemo(() => {
@@ -435,8 +442,9 @@ export const TechniciansManager: React.FC<Props> = ({
       {/* Page Header */}
       <PageHeader
         title="پرسنل و اکیپ‌ها"
+        subtitle={readOnly ? 'فقط مشاهده — تغییر پرسنل و اکیپ‌ها با مدیر QC است' : undefined}
         actions={
-          <Button
+          readOnly ? undefined : <Button
             variant="primary"
             size="sm"
             onClick={handleOpenAdd}
@@ -468,7 +476,7 @@ export const TechniciansManager: React.FC<Props> = ({
             </div>
           )}
 
-          {onCreateTeam && (
+          {onCreateTeam && !readOnly && (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-ink-3">
                 {toPersianDigits(effectiveTeams.length)} اکیپ تعریف شده · هر اکیپ یک سرپرست و حداکثر ۲ تکنسین
@@ -486,7 +494,7 @@ export const TechniciansManager: React.FC<Props> = ({
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <fieldset disabled={readOnly} className="min-w-0 grid grid-cols-1 @min-[900px]:grid-cols-2 gap-4">
             {effectiveTeams.map((team) => {
               const leadMember = (teamMembers || []).find(
                 (m) => m.teamId === team.id && m.roleInTeam === 'LEAD'
@@ -804,7 +812,7 @@ export const TechniciansManager: React.FC<Props> = ({
                 </div>
               );
             })}
-          </div>
+          </fieldset>
         </div>
       ) : (
         <>
@@ -837,7 +845,7 @@ export const TechniciansManager: React.FC<Props> = ({
           </div>
 
           {/* Users Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 @min-[900px]:grid-cols-3 gap-3.5">
             {filteredUsers.map((u) => {
               const badge = getRoleBadge(u);
 
@@ -870,7 +878,7 @@ export const TechniciansManager: React.FC<Props> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className={`flex items-center gap-1 shrink-0 ${readOnly ? 'hidden' : ''}`}>
                       <button
                         type="button"
                         onClick={() => handleOpenEdit(u)}

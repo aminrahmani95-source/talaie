@@ -313,7 +313,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 @min-[700px]:grid-cols-2 gap-4">
           {filteredTickets.map((t) => {
             const slaStatus = getTicketSlaStatus(t);
             const slaConfig = SLA_STATUS_LABELS[slaStatus];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Project,
   User,
@@ -92,6 +92,7 @@ export const QcDesk: React.FC<Props> = ({
   const [filter, setFilter] = useState<FilterTab>('PENDING');
   const [internalSelectedProjectId, setInternalSelectedProjectId] = useState<string | null>(null);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
+  const detailPaneRef = useRef<HTMLDivElement>(null);
 
   // Sync external/internal selection
   const selectedProjectId = externalSelectedProjectId ?? internalSelectedProjectId;
@@ -261,7 +262,8 @@ export const QcDesk: React.FC<Props> = ({
     setQcScore(p.qcScore || calculated || 5);
     setQcNotes(p.qcNotes || '');
     setIsEditingApproved(false);
-    setIsMobileDetailOpen(true);
+    // the side pane shows the details when there is room; the sheet is only for narrow screens
+    if (!detailPaneRef.current || !detailPaneRef.current.offsetParent) setIsMobileDetailOpen(true);
     setShowAddDefect(false);
     setNewDefectDesc('');
     setNewDefectLocation('');
@@ -1233,9 +1235,9 @@ export const QcDesk: React.FC<Props> = ({
           </h3>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 @min-[900px]:grid-cols-3 gap-5">
           {/* Projects List (Full width on mobile, 1 column on desktop) */}
-          <div className="lg:col-span-1 space-y-2">
+          <div className="@min-[900px]:col-span-1 space-y-2">
             <div className="text-xs font-bold text-ink-3 px-1">
               لیست پروژه‌ها ({toPersianDigits(relevantProjects.length)} مورد):
             </div>
@@ -1306,7 +1308,7 @@ export const QcDesk: React.FC<Props> = ({
           </div>
 
           {/* Desktop Right Detail Pane (hidden on mobile, shown >= 1024px) */}
-          <div className="hidden lg:block lg:col-span-2 bg-surface rounded-lg border border-line  p-5">
+          <div ref={detailPaneRef} className="hidden @min-[900px]:block @min-[900px]:col-span-2 bg-surface rounded-lg border border-line  p-5">
             {renderDetailWorkspace()}
           </div>
         </div>

@@ -34,6 +34,8 @@ interface Props {
   onResetData: () => void;
   /** فقط مدیر QC ظرفیت نصب را تغییر می‌دهد */
   canEditCapacity?: boolean;
+  /** the server only lets the QC manager (and CEO) save settings; others see them read-only */
+  canEdit?: boolean;
   /** تعداد اکیپ‌های تعریف‌شده، برای هشدار ناهماهنگی با ظرفیت */
   definedTeamCount?: number;
 }
@@ -47,6 +49,7 @@ export const SettingsView: React.FC<Props> = ({
   onUpdateSettings,
   onResetData,
   canEditCapacity = false,
+  canEdit = true,
   definedTeamCount,
 }) => {
   const [companyName, setCompanyName] = useState(settings.companyName);
@@ -184,13 +187,13 @@ export const SettingsView: React.FC<Props> = ({
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
       {/* Banner */}
-      <div className="bg-[#212121] rounded-3xl p-6 text-white shadow-xl flex items-center justify-between border border-brand/30">
+      <div className="bg-surface rounded-3xl p-6 text-ink shadow-xl flex items-center justify-between border border-brand/30">
         <div>
           <div className="flex items-center gap-2">
             <Layers className="w-6 h-6 text-brand-ink" aria-hidden="true" />
             <h2 className="text-xl font-black text-ink">تنظیمات و همگام‌سازی گالری طلایی</h2>
           </div>
-          <p className="text-xs text-[#E8E4DC] mt-1">
+          <p className="text-xs text-ink-2 mt-1">
             شخصی‌سازی ظاهر (تم تیره/روشن)، بانک ابزارها، پنجره دید تکنسین‌ها و پشتیبان‌گیری
           </p>
         </div>
@@ -243,7 +246,14 @@ export const SettingsView: React.FC<Props> = ({
 
       <CapacitySettingsCard settings={settings} canEdit={canEditCapacity} onSave={onUpdateSettings} definedTeamCount={definedTeamCount} />
 
+      {!canEdit && (
+        <p className="text-xs text-ink-2 bg-sunken border border-line rounded-xl p-3">
+          این تنظیمات را فقط مدیر QC می‌تواند تغییر دهد؛ شما آن‌ها را می‌بینید. تم روشن/تیره و پشتیبان‌گیری برای همه در دسترس است.
+        </p>
+      )}
+
       <form onSubmit={handleSaveGeneral} className="space-y-6">
+        <fieldset disabled={!canEdit} className="space-y-6 min-w-0 disabled:opacity-70">
         {/* Section 1: General & Visibility */}
         <div className="bg-surface rounded-3xl p-6 border border-line shadow-xs space-y-4">
           <h3 className="font-bold text-sm text-ink flex items-center gap-2">
@@ -349,7 +359,7 @@ export const SettingsView: React.FC<Props> = ({
           </div>
 
           {/* Tools List */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 @min-[700px]:grid-cols-3 gap-2 pt-2">
             {tools.map((t) => (
               <div
                 key={t}
@@ -487,6 +497,7 @@ export const SettingsView: React.FC<Props> = ({
           <CheckCircle2 className="w-5 h-5 text-on-brand" aria-hidden="true" />
           ذخیره تمام تنظیمات
         </button>
+        </fieldset>
       </form>
 
       {/* Section 4: Backup & Restore */}
@@ -510,6 +521,8 @@ export const SettingsView: React.FC<Props> = ({
             دانلود فایل پشتیبان کامل (JSON Backup)
           </button>
 
+          {/* with the server connected, a restore would only change this device and be overwritten on the next sync */}
+          {!SupabaseSyncService.getClient() && (
           <label className="flex items-center gap-2 px-5 py-2.5 border border-line-strong hover:bg-raised text-ink-2 rounded-full text-xs font-bold transition cursor-pointer active:scale-95 min-h-[44px]">
             <Upload className="w-4 h-4 text-brand-ink" aria-hidden="true" />
             <span>بازیابی از فایل پشتیبان</span>
@@ -520,6 +533,7 @@ export const SettingsView: React.FC<Props> = ({
               className="hidden"
             />
           </label>
+          )}
 
           <button
             type="button"

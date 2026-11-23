@@ -237,9 +237,9 @@ export const StuckProjectsDesk: React.FC<Props> = ({
       />
 
       {/* Main Grid: List + Detail */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 @min-[900px]:grid-cols-12 gap-5">
         {/* Left Column: Project List */}
-        <div className="lg:col-span-5 space-y-3">
+        <div className="@min-[900px]:col-span-5 space-y-3">
           {/* Search */}
           <div className="relative">
             <Search className="w-4 h-4 text-ink-3 absolute right-3 top-3" />
@@ -330,7 +330,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({
         </div>
 
         {/* Right Column: Detail and Resolution Form */}
-        <div className="lg:col-span-7">
+        <div className="@min-[900px]:col-span-7">
           {selectedProject ? (
             <div className="bg-surface rounded-lg p-5 border border-line  space-y-4">
               <div className="flex items-start justify-between border-b border-line pb-3">

@@ -8,6 +8,9 @@ import {
 } from '../types';
 import { getUpcomingDays, formatToPersianDateString } from './jalali';
 import { PermanentError } from './offlineQueue';
+import { STORAGE_KEYS as APP_STORAGE_KEYS } from './storage';
+
+const USERS_STORAGE_KEY = APP_STORAGE_KEYS.USERS;
 
 // مقادیر پیش‌فرض (فقط وقتی مدیر QC در تنظیمات چیزی تعیین نکرده باشد)
 export const MAX_LATHS_PER_TEAM = 20;
@@ -662,12 +665,13 @@ function getNonSalesUserIds(): Set<string> {
   ]);
   if (typeof window !== 'undefined') {
     try {
-      const raw = localStorage.getItem('talaei_users_v1');
+      // the people list the app actually keeps (an old, wrong key meant nobody was ever excluded)
+      const raw = localStorage.getItem(USERS_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           parsed.forEach((u: any) => {
-            if (u && u.id && u.role && u.role !== 'SALES_REP') {
+            if (u && u.id && u.role && u.role !== 'SALES_REP' && u.role !== 'SALES') {
               ids.add(u.id);
             }
           });

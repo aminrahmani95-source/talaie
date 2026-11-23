@@ -303,7 +303,7 @@ export const WarehouseDesk: React.FC<Props> = ({
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-surface rounded-2xl p-5 border border-line flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-sm">
+      <div className="bg-surface rounded-2xl p-5 border border-line flex flex-col @min-[900px]:flex-row items-start @min-[900px]:items-center justify-between gap-4 shadow-sm">
         <div>
           <h2 className="text-lg sm:text-xl font-black text-ink flex items-center gap-2">
             <span>میز کار انبار مرکزی و لجستیک گالری طلایی</span>
@@ -508,7 +508,7 @@ export const WarehouseDesk: React.FC<Props> = ({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 @min-[900px]:grid-cols-2 gap-4">
               {filteredIncomingProjects.map((p) => {
                 const handover = p.technicalHandover || {
                   isHandoverComplete: false,
@@ -751,7 +751,7 @@ export const WarehouseDesk: React.FC<Props> = ({
               هیچ پروژه‌ای در صف آماده‌سازی بار قرار ندارد.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 @min-[700px]:grid-cols-2 gap-4">
               {upcomingDispatchProjects.map((p) => {
                 const isPacked = Boolean(p.warehousePrep?.isPackedAndReady);
                 const isBusy = processingId === p.id;
@@ -909,7 +909,7 @@ export const WarehouseDesk: React.FC<Props> = ({
               هیچ تیکت بازی در کارتابل انبار وجود ندارد. تمام پروژه‌ها در وضعیت تامین پایدار هستند.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 @min-[700px]:grid-cols-2 gap-4">
               {warehouseTickets.map((t) => {
                 const isDirectReferral = t.assignedRole === 'WAREHOUSE' || Boolean(t.referralNote);
 
