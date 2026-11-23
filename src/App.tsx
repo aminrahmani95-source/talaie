@@ -20,7 +20,7 @@ import {
   UserRole,
 } from './types';
 import { StorageService } from './utils/storage';
-import { TEST_USERS, DEFAULT_TEAMS, DEFAULT_TEAM_MEMBERS } from './utils/testUsers';
+import { TEST_USERS, DEFAULT_TEAMS, DEFAULT_TEAM_MEMBERS, isTestOrMockUser } from './utils/testUsers';
 import { SupabaseSyncService } from './utils/supabase';
 import { startSalesBookingSync } from './utils/salesBookingSync';
 import { setSalesCapacityConfig } from './utils/salesCapacity';
@@ -128,7 +128,6 @@ export const App: React.FC = () => {
     const stored = StorageService.getUsers();
     const deletedIds = StorageService.getDeletedUserIds();
 
-    // Ensure all official TEST_USERS are present on all devices
     const userMap = new Map<string, User>();
     for (const tu of TEST_USERS) {
       if (!deletedIds.has(tu.id)) {
@@ -138,15 +137,14 @@ export const App: React.FC = () => {
 
     for (const su of stored) {
       if (!su || !su.id || deletedIds.has(su.id)) continue;
+      if (isTestOrMockUser(su.id)) continue; // Purge all mock/test users completely
       const official = userMap.get(su.id);
       if (official) {
-        // Keep official role, phone, and identity; preserve active status
         userMap.set(su.id, {
           ...official,
           active: su.active !== undefined ? su.active : official.active,
         });
       } else {
-        // Custom user created by admin
         userMap.set(su.id, su);
       }
     }
@@ -166,12 +164,13 @@ export const App: React.FC = () => {
     for (const st of stored) {
       if (!st || !st.id) continue;
       const def = teamMap.get(st.id);
+      const isSupervisorMock = isTestOrMockUser(st.supervisorId);
       teamMap.set(st.id, {
         ...(def || {}),
         ...st,
         name: st.name || (def ? def.name : st.code),
-        supervisorId: st.supervisorId || (def ? def.supervisorId : undefined),
-        supervisorName: st.supervisorName || (def ? def.supervisorName : undefined),
+        supervisorId: isSupervisorMock ? undefined : (st.supervisorId || (def ? def.supervisorId : undefined)),
+        supervisorName: isSupervisorMock ? undefined : (st.supervisorName || (def ? def.supervisorName : undefined)),
       });
     }
     const unifiedTeams = Array.from(teamMap.values());
@@ -186,12 +185,12 @@ export const App: React.FC = () => {
 
     const memberMap = new Map<string, TeamMember>();
     for (const dm of DEFAULT_TEAM_MEMBERS) {
-      if (!deletedMemberIds.has(dm.id) && !deletedUserIds.has(dm.userId)) {
+      if (!deletedMemberIds.has(dm.id) && !deletedUserIds.has(dm.userId) && !isTestOrMockUser(dm.userId)) {
         memberMap.set(dm.id, { ...dm });
       }
     }
     for (const sm of stored) {
-      if (!sm || !sm.id || deletedMemberIds.has(sm.id) || deletedUserIds.has(sm.userId)) continue;
+      if (!sm || !sm.id || deletedMemberIds.has(sm.id) || deletedUserIds.has(sm.userId) || isTestOrMockUser(sm.userId)) continue;
       memberMap.set(sm.id, sm);
     }
     const unifiedMembers = Array.from(memberMap.values());
@@ -390,8 +389,7 @@ export const App: React.FC = () => {
         if (cloudUsers && cloudUsers.length > 0) {
           setUsers((prevUsers) => {
             const current = prevUsers.length > 0 ? prevUsers : StorageService.getUsers();
-            const fallback = StorageService.isInitialized() ? [] : TEST_USERS;
-            const merged = mergeUsersList(current.length > 0 ? current : fallback, cloudUsers);
+            const merged = mergeUsersList(current, cloudUsers);
             StorageService.saveUsers(merged);
             return merged;
           });

@@ -1,6 +1,6 @@
 -- ==============================================================================
 -- گالری طلایی | سامانه عملیات و کنترل کیفیت نصب (Talaei Gallery)
--- Migration 024: همگام‌سازی ساختار اکیپ‌ها، اعضا و پرسنل رسمی در سرور Supabase
+-- Migration 024: همگام‌سازی ساختار اکیپ‌ها و پاکسازی کامل کاربران تستی در Supabase
 -- ==============================================================================
 
 -- ۱. ساخت جدول اکیپ‌های نصب در صورت عدم وجود
@@ -39,7 +39,7 @@ drop policy if exists "Managers modify teams" on public.installation_teams;
 drop policy if exists "Anyone authenticated read members" on public.team_members;
 drop policy if exists "Managers modify members" on public.team_members;
 
--- خواندن برای تمام کاربران معتبر آزاد است
+-- خواندن برای تمام کاربران احرازشده آزاد است
 create policy "Anyone authenticated read teams"
   on public.installation_teams for select to authenticated
   using (true);
@@ -56,41 +56,33 @@ create policy "Managers modify members"
   on public.team_members for all to authenticated
   using (true) with check (true);
 
--- ۵. ثبت اکیپ‌های رسمی ۱ و ۲
-insert into public.installation_teams (id, name, code, supervisor_id, supervisor_name)
+-- ۵. ثبت اکیپ‌های رسمی ۱ و ۲ (بدون سرپرست ساختگی/تستی)
+insert into public.installation_teams (id, name, code)
 values 
-  ('TEAM_1', 'اکیپ نصب ۱', 'TEAM_1', 'usr-lead-a', 'رضا کریمی'),
-  ('TEAM_2', 'اکیپ نصب ۲', 'TEAM_2', 'usr-lead-b', 'حسین مرادی')
+  ('TEAM_1', 'اکیپ نصب ۱', 'TEAM_1'),
+  ('TEAM_2', 'اکیپ نصب ۲', 'TEAM_2')
 on conflict (id) do update set
   name = excluded.name,
-  code = excluded.code,
-  supervisor_id = coalesce(public.installation_teams.supervisor_id, excluded.supervisor_id),
-  supervisor_name = coalesce(public.installation_teams.supervisor_name, excluded.supervisor_name);
+  code = excluded.code;
 
--- ۶. ثبت اعضای پیش‌فرض اکیپ‌ها
-insert into public.team_members (id, team_id, user_id, user_name, role_in_team)
-values
-  ('tm-1', 'TEAM_1', 'usr-lead-a', 'رضا کریمی', 'LEAD'),
-  ('tm-2', 'TEAM_1', 'usr-tech-a', 'مهدی نوری', 'TECHNICIAN'),
-  ('tm-3', 'TEAM_2', 'usr-lead-b', 'حسین مرادی', 'LEAD'),
-  ('tm-4', 'TEAM_2', 'usr-tech-b', 'علی صادقی', 'TECHNICIAN')
-on conflict (id) do update set
-  team_id = excluded.team_id,
-  user_id = excluded.user_id,
-  user_name = excluded.user_name,
-  role_in_team = excluded.role_in_team;
+-- ۶. حذف هرگونه کاربر تستی یا ماک از جدول profiles و team_members
+delete from public.team_members
+where user_id in ('usr-lead-a', 'usr-tech-a', 'usr-lead-b', 'usr-tech-b', 'usr-wh', 'usr-sales')
+   or user_id like 'usr-%'
+   or user_id like 'u-test-%'
+   or user_id like 'u-demo-%';
 
--- ۷. به‌روزرسانی یا درج پروفایل‌های پرسنل رسمی در جدول profiles
+delete from public.profiles
+where id in ('usr-lead-a', 'usr-tech-a', 'usr-lead-b', 'usr-tech-b', 'usr-wh', 'usr-sales')
+   or id like 'usr-%'
+   or id like 'u-test-%'
+   or id like 'u-demo-%';
+
+-- ۷. اطمینان از وجود حساب‌های رسمی ریشه (مدیرعامل و مدیر اپ)
 insert into public.profiles (id, name, phone, role, active)
 values
   ('u-ceo', 'امید طلایی (مدیرعامل)', '09121111110', 'CEO', true),
-  ('u-qc-manager', 'مهندس رحمانی (مدیر اپ و QC)', '09124339038', 'QC_MANAGER', true),
-  ('usr-lead-a', 'رضا کریمی', '09120000001', 'LEAD_TECHNICIAN', true),
-  ('usr-tech-a', 'مهدی نوری', '09120000002', 'TECHNICIAN', true),
-  ('usr-lead-b', 'حسین مرادی', '09120000003', 'LEAD_TECHNICIAN', true),
-  ('usr-tech-b', 'علی صادقی', '09120000004', 'TECHNICIAN', true),
-  ('usr-wh', 'سعید احمدی', '09120000005', 'WAREHOUSE', true),
-  ('usr-sales', 'نگار رستمی', '09120000006', 'SALES_REP', true)
+  ('u-qc-manager', 'مهندس رحمانی (مدیر اپ و QC)', '09124339038', 'QC_MANAGER', true)
 on conflict (id) do update set
   name = excluded.name,
   phone = excluded.phone,

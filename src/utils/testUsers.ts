@@ -17,87 +17,14 @@ export const TEST_USERS: User[] = [
     avatar: '👔',
     active: true,
   },
-  {
-    id: 'usr-lead-a',
-    name: 'رضا کریمی',
-    phone: '09120000001',
-    role: 'LEAD_TECHNICIAN',
-    teamId: 'TEAM_1',
-    avatar: '⭐',
-    active: true,
-  },
-  {
-    id: 'usr-tech-a',
-    name: 'مهدی نوری',
-    phone: '09120000002',
-    role: 'TECHNICIAN',
-    teamId: 'TEAM_1',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'usr-lead-b',
-    name: 'حسین مرادی',
-    phone: '09120000003',
-    role: 'LEAD_TECHNICIAN',
-    teamId: 'TEAM_2',
-    avatar: '⭐',
-    active: true,
-  },
-  {
-    id: 'usr-tech-b',
-    name: 'علی صادقی',
-    phone: '09120000004',
-    role: 'TECHNICIAN',
-    teamId: 'TEAM_2',
-    avatar: '🔧',
-    active: true,
-  },
-  {
-    id: 'usr-wh',
-    name: 'سعید احمدی',
-    phone: '09120000005',
-    role: 'WAREHOUSE',
-    avatar: '📦',
-    active: true,
-  },
-  {
-    id: 'usr-sales',
-    name: 'نگار رستمی',
-    phone: '09120000006',
-    role: 'SALES_REP',
-    avatar: '🎯',
-    active: true,
-  },
 ];
 
 export const DEFAULT_TEAMS: InstallationTeam[] = [
-  {
-    id: 'TEAM_1',
-    name: 'اکیپ نصب ۱',
-    code: 'TEAM_1',
-    supervisorId: 'usr-lead-a',
-    supervisorName: 'رضا کریمی',
-    createdAt: '2026-01-01',
-    updatedAt: '2026-01-01',
-  },
-  {
-    id: 'TEAM_2',
-    name: 'اکیپ نصب ۲',
-    code: 'TEAM_2',
-    supervisorId: 'usr-lead-b',
-    supervisorName: 'حسین مرادی',
-    createdAt: '2026-01-01',
-    updatedAt: '2026-01-01',
-  },
+  { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+  { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
 ];
 
-export const DEFAULT_TEAM_MEMBERS: TeamMember[] = [
-  { id: 'tm-1', teamId: 'TEAM_1', userId: 'usr-lead-a', userName: 'رضا کریمی', roleInTeam: 'LEAD', joinedAt: '2026-01-01' },
-  { id: 'tm-2', teamId: 'TEAM_1', userId: 'usr-tech-a', userName: 'مهدی نوری', roleInTeam: 'TECHNICIAN', joinedAt: '2026-01-01' },
-  { id: 'tm-3', teamId: 'TEAM_2', userId: 'usr-lead-b', userName: 'حسین مرادی', roleInTeam: 'LEAD', joinedAt: '2026-01-01' },
-  { id: 'tm-4', teamId: 'TEAM_2', userId: 'usr-tech-b', userName: 'علی صادقی', roleInTeam: 'TECHNICIAN', joinedAt: '2026-01-01' },
-];
+export const DEFAULT_TEAM_MEMBERS: TeamMember[] = [];
 
 export const ROLE_BADGES: Record<string, { title: string; color: string }> = {
   CEO: { title: 'مدیر عامل', color: 'bg-purple-500/10 text-purple-300 border-purple-500/30' },
@@ -112,3 +39,36 @@ export const ROLE_BADGES: Record<string, { title: string; color: string }> = {
 
 export const INITIAL_TEST_USER_IDS = new Set(TEST_USERS.map((u) => u.id));
 export const isTestUserId = (id: string): boolean => INITIAL_TEST_USER_IDS.has(id);
+
+export const MOCK_TEST_USER_IDS = new Set([
+  'u-coordinator',
+  'u-measurement',
+  'u-warehouse',
+  'u-sales-1',
+  'u-sales-2',
+  'u-sales-3',
+  'u-lead-1',
+  'u-tech-1',
+  'u-tech-2',
+  'u-lead-2',
+  'u-tech-3',
+  'u-tech-4',
+  'u-lead-3',
+  'u-tech-5',
+  'u-lead-4',
+  'u-tech-6',
+  'usr-lead-a',
+  'usr-tech-a',
+  'usr-lead-b',
+  'usr-tech-b',
+  'usr-wh',
+  'usr-sales',
+]);
+
+export function isTestOrMockUser(id?: string | null): boolean {
+  if (!id) return false;
+  if (id === 'u-ceo' || id === 'u-qc-manager') return false;
+  if (MOCK_TEST_USER_IDS.has(id)) return true;
+  if (id.startsWith('usr-') || id.startsWith('u-test-') || id.startsWith('u-demo-')) return true;
+  return false;
+}

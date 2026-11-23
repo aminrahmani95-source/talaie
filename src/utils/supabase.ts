@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient, User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { Project, Ticket, User, SystemSettings, PersonnelEvaluation, ProjectAuditRecord, InstallationTeam, TeamMember, MaterialRequest } from '../types';
+import { isTestOrMockUser } from './testUsers';
 import { toEnglishDigits } from './jalali';
 import { Outbox, OutboxOperation, PendingUpload, PermanentError } from './offlineQueue';
 
@@ -379,33 +380,10 @@ export const SupabaseSyncService = {
       throw error;
     }
 
-    const TEST_PERSONNEL_IDS = new Set([
-      'u-coordinator',
-      'u-measurement',
-      'u-warehouse',
-      'u-sales-1',
-      'u-sales-2',
-      'u-sales-3',
-      'u-lead-1',
-      'u-tech-1',
-      'u-tech-2',
-      'u-lead-2',
-      'u-tech-3',
-      'u-tech-4',
-      'u-lead-3',
-      'u-tech-5',
-      'u-lead-4',
-      'u-tech-6',
-    ]);
-
     return (data || [])
       .filter((d: any) => {
         if (!d || !d.id) return false;
-        if (
-          d.id.startsWith('u-demo-') ||
-          d.id.startsWith('u-test-') ||
-          TEST_PERSONNEL_IDS.has(d.id)
-        ) {
+        if (isTestOrMockUser(d.id)) {
           return false;
         }
         return true;
