@@ -125,48 +125,78 @@ export const App: React.FC = () => {
   });
 
   const [users, setUsers] = useState<User[]>(() => {
-    const isInitialized = StorageService.isInitialized();
     const stored = StorageService.getUsers();
     const deletedIds = StorageService.getDeletedUserIds();
 
-    // Fresh first run
-    if (!isInitialized && stored.length === 0) {
-      StorageService.markInitialized(true);
-      const initialUsers = TEST_USERS.filter((tu) => !deletedIds.has(tu.id));
-      StorageService.saveUsers(initialUsers);
-      return initialUsers;
+    // Ensure all official TEST_USERS are present on all devices
+    const userMap = new Map<string, User>();
+    for (const tu of TEST_USERS) {
+      if (!deletedIds.has(tu.id)) {
+        userMap.set(tu.id, { ...tu });
+      }
     }
 
-    // Existing storage that predates the isInitialized flag
-    if (!isInitialized && stored.length > 0) {
-      StorageService.markInitialized(true);
+    for (const su of stored) {
+      if (!su || !su.id || deletedIds.has(su.id)) continue;
+      const official = userMap.get(su.id);
+      if (official) {
+        // Keep official role, phone, and identity; preserve active status
+        userMap.set(su.id, {
+          ...official,
+          active: su.active !== undefined ? su.active : official.active,
+        });
+      } else {
+        // Custom user created by admin
+        userMap.set(su.id, su);
+      }
     }
 
-    // Never re-seed deleted test users!
-    return stored.filter((u) => !deletedIds.has(u.id));
+    const unifiedUsers = Array.from(userMap.values());
+    StorageService.saveUsers(unifiedUsers);
+    StorageService.markInitialized(true);
+    return unifiedUsers;
   });
+
   const [teams, setTeams] = useState<InstallationTeam[]>(() => {
-    const isInitialized = StorageService.isInitialized();
     const stored = StorageService.getTeams();
-    if (!isInitialized && stored.length === 0) {
-      StorageService.saveTeams(DEFAULT_TEAMS);
-      return DEFAULT_TEAMS;
+    const teamMap = new Map<string, InstallationTeam>();
+    for (const dt of DEFAULT_TEAMS) {
+      teamMap.set(dt.id, { ...dt });
     }
-    return stored.length > 0 ? stored : (isInitialized ? [] : DEFAULT_TEAMS);
+    for (const st of stored) {
+      if (!st || !st.id) continue;
+      const def = teamMap.get(st.id);
+      teamMap.set(st.id, {
+        ...(def || {}),
+        ...st,
+        name: st.name || (def ? def.name : st.code),
+        supervisorId: st.supervisorId || (def ? def.supervisorId : undefined),
+        supervisorName: st.supervisorName || (def ? def.supervisorName : undefined),
+      });
+    }
+    const unifiedTeams = Array.from(teamMap.values());
+    StorageService.saveTeams(unifiedTeams);
+    return unifiedTeams;
   });
+
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
-    const isInitialized = StorageService.isInitialized();
     const stored = StorageService.getTeamMembers();
     const deletedMemberIds = StorageService.getDeletedTeamMemberIds();
     const deletedUserIds = StorageService.getDeletedUserIds();
-    if (!isInitialized && stored.length === 0) {
-      const initialMembers = DEFAULT_TEAM_MEMBERS.filter(
-        (m) => !deletedMemberIds.has(m.id) && !deletedUserIds.has(m.userId)
-      );
-      StorageService.saveTeamMembers(initialMembers);
-      return initialMembers;
+
+    const memberMap = new Map<string, TeamMember>();
+    for (const dm of DEFAULT_TEAM_MEMBERS) {
+      if (!deletedMemberIds.has(dm.id) && !deletedUserIds.has(dm.userId)) {
+        memberMap.set(dm.id, { ...dm });
+      }
     }
-    return stored.filter((m) => !deletedMemberIds.has(m.id) && !deletedUserIds.has(m.userId));
+    for (const sm of stored) {
+      if (!sm || !sm.id || deletedMemberIds.has(sm.id) || deletedUserIds.has(sm.userId)) continue;
+      memberMap.set(sm.id, sm);
+    }
+    const unifiedMembers = Array.from(memberMap.values());
+    StorageService.saveTeamMembers(unifiedMembers);
+    return unifiedMembers;
   });
   const [projects, setProjects] = useState<Project[]>(() => StorageService.getProjects());
   const [tickets, setTickets] = useState<Ticket[]>(() => StorageService.getTickets());

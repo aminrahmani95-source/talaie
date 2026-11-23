@@ -41,7 +41,8 @@ export function registerServiceWorker(): void {
 
         // Look for new deployments periodically and whenever the app comes back to the foreground
         const check = () => reg.update().catch(() => undefined);
-        setInterval(check, 30 * 60 * 1000);
+        check();
+        setInterval(check, 10 * 60 * 1000);
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') check();
         });

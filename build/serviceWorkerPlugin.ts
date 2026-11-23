@@ -43,6 +43,7 @@ const CACHE = 'talaie-shell-${version}';
 const PRECACHE = ${JSON.stringify(precache)};
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE).then((cache) =>
       // Add files one by one so a single missing optional file never breaks installation
