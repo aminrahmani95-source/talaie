@@ -1,5 +1,6 @@
 import { Project, User, Ticket, SystemSettings, MaterialRequest, InstallationTeam, TeamMember } from '../types';
 import { OfflineQueue } from './offlineQueue';
+import { isTestOrMockUser } from './testUsers';
 
 export const DEFAULT_MASTER_TOOLS = [
   'دریل بتن‌کن و چکشی',
@@ -82,11 +83,7 @@ const TEST_PERSONNEL_PHONES = new Set([
   '09123333336',
 ]);
 
-export const isMockUserId = (id: string) =>
-  !id ||
-  id.startsWith('u-demo-') ||
-  id.startsWith('u-test-') ||
-  TEST_PERSONNEL_IDS.has(id);
+export const isMockUserId = (id: string) => isTestOrMockUser(id);
 
 export const isMockUser = (u: User) => {
   if (!u || !u.id) return true;

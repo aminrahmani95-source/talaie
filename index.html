@@ -38,6 +38,45 @@
         } else {
           document.documentElement.classList.add('dark');
         }
+
+        // Automatic clean-slate purge for stale test users and mock personnel across all devices
+        var APP_SLATE = 'v8_clean_slate';
+        if (localStorage.getItem('talaie_app_slate') !== APP_SLATE) {
+          var mockIds = ['usr-lead-a','usr-tech-a','usr-lead-b','usr-tech-b','usr-wh','usr-sales','u-coordinator','u-measurement','u-warehouse','u-sales-1','u-sales-2','u-sales-3','u-lead-1','u-tech-1','u-tech-2','u-lead-2','u-tech-3','u-tech-4','u-lead-3','u-tech-5','u-lead-4','u-tech-6'];
+          var rawUsers = localStorage.getItem('talaie_users_v6');
+          if (rawUsers) {
+            var parsed = JSON.parse(rawUsers);
+            if (Array.isArray(parsed)) {
+              var cleanUsers = parsed.filter(function(u) {
+                if (!u || !u.id) return false;
+                if (u.id === 'u-ceo' || u.id === 'u-qc-manager') return true;
+                if (u.id.startsWith('usr-') || u.id.startsWith('u-test-') || u.id.startsWith('u-demo-')) return false;
+                return mockIds.indexOf(u.id) === -1;
+              });
+              localStorage.setItem('talaie_users_v6', JSON.stringify(cleanUsers));
+            }
+          }
+          var rawMembers = localStorage.getItem('talaie_team_members_v6');
+          if (rawMembers) {
+            var parsedMem = JSON.parse(rawMembers);
+            if (Array.isArray(parsedMem)) {
+              var cleanMem = parsedMem.filter(function(m) {
+                return m && m.userId && !m.userId.startsWith('usr-') && !m.userId.startsWith('u-test-') && !m.userId.startsWith('u-demo-');
+              });
+              localStorage.setItem('talaie_team_members_v6', JSON.stringify(cleanMem));
+            }
+          }
+          localStorage.setItem('talaie_app_slate', APP_SLATE);
+        }
+
+        // Immediate service worker update check
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var i = 0; i < regs.length; i++) {
+              regs[i].update();
+            }
+          });
+        }
       } catch (e) {}
 
     </script>

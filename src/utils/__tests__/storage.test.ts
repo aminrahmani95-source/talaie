@@ -131,7 +131,7 @@ describe('StorageService: Backup, Restore & Reset Integrity (P2.3-R2)', () => {
   };
 
   const mockUser: User = {
-    id: 'usr-lead-1',
+    id: 'u-pers-lead-1',
     name: 'محسن کریمی',
     phone: '09122222222',
     role: 'LEAD_TECHNICIAN',
