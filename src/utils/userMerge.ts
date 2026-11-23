@@ -40,13 +40,13 @@ export function mergeUsersList(localUsers: User[], cloudUsers: User[]): User[] {
         });
       } else {
         map.set(target.id, {
-          ...cu,
           ...target,
-          name: target.name || cu.name,
-          phone: target.phone || cu.phone,
-          role: target.role || cu.role,
-          avatar: target.avatar || cu.avatar,
-          active: target.active !== undefined ? target.active : (cu.active !== undefined ? cu.active : true),
+          ...cu,
+          name: cu.name || target.name,
+          phone: cu.phone || target.phone,
+          role: cu.role || target.role,
+          avatar: cu.avatar || target.avatar,
+          active: cu.active !== undefined ? cu.active : target.active,
         });
       }
     } else {

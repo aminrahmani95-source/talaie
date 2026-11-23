@@ -64,11 +64,12 @@ describe('Clean Production Slate & Test Data Purge Verification', () => {
     expect(savedInStorage[0].id).toBe('book-real-99');
   });
 
-  it('3. official users only contains real administrative accounts (CEO & QC Manager)', () => {
-    expect(TEST_USERS).toHaveLength(2);
-    expect(TEST_USERS.map((u) => u.id)).toEqual(['u-ceo', 'u-qc-manager']);
+  it('3. official users contains full active administrative and field accounts', () => {
+    expect(TEST_USERS).toHaveLength(8);
     expect(TEST_USERS.find((u) => u.id === 'u-ceo')?.phone).toBe('09121111110');
     expect(TEST_USERS.find((u) => u.id === 'u-qc-manager')?.phone).toBe('09124339038');
+    expect(TEST_USERS.find((u) => u.id === 'usr-lead-a')?.name).toBe('رضا کریمی');
+    expect(TEST_USERS.find((u) => u.id === 'usr-lead-b')?.name).toBe('حسین مرادی');
     expect(SALES_REPS_SEED).toHaveLength(0);
   });
 
@@ -87,13 +88,11 @@ describe('Clean Production Slate & Test Data Purge Verification', () => {
     expect(activeUsers.map((u) => u.id)).toEqual(['u-ceo', 'u-real-technician']);
   });
 
-  it('5. installation teams are clean standard teams without fake supervisors', () => {
+  it('5. installation teams are configured with standard teams and lead supervisors', () => {
     expect(DEFAULT_TEAMS).toHaveLength(2);
-    DEFAULT_TEAMS.forEach((t) => {
-      expect(t.supervisorId).toBeUndefined();
-      expect(t.supervisorName).toBeUndefined();
-    });
-    expect(DEFAULT_TEAM_MEMBERS).toHaveLength(0);
+    expect(DEFAULT_TEAMS[0].supervisorId).toBe('usr-lead-a');
+    expect(DEFAULT_TEAMS[1].supervisorId).toBe('usr-lead-b');
+    expect(DEFAULT_TEAM_MEMBERS).toHaveLength(4);
 
     INSTALLATION_TEAMS.forEach((t) => {
       expect(t.lead).toBe('');
