@@ -22,6 +22,8 @@ interface Props {
   onLogout: () => void;
   impersonatorCeo?: User | null;
   onExitImpersonation?: () => void;
+  /** کلیک روی لوگو: برگشت به صفحه‌ی اصلی همان نقش */
+  onGoHome?: () => void;
 }
 
 export const Header: React.FC<Props> = ({
@@ -35,6 +37,7 @@ export const Header: React.FC<Props> = ({
   isDarkMode = false,
   onToggleDarkMode,
   onLogout,
+  onGoHome,
   impersonatorCeo,
   onExitImpersonation,
 }) => {
@@ -47,7 +50,13 @@ export const Header: React.FC<Props> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-6">
         <div className="flex items-center justify-between h-14 gap-3">
           {/* Logo & Brand Name on ONE single line */}
-          <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={onGoHome}
+            aria-label="برگشت به صفحه‌ی اصلی"
+            title="صفحه‌ی اصلی"
+            className="flex items-center gap-2.5 min-w-0 rounded-lg cursor-pointer text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98] transition"
+          >
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-surface p-1.5 border border-brand/40 flex items-center justify-center shrink-0 shadow-xs">
               <img
                 src={LOGO_GOLD}
@@ -63,7 +72,7 @@ export const Header: React.FC<Props> = ({
                 سامانه عملیات و QC
               </span>
             </div>
-          </div>
+          </button>
 
           {/* Right Controls: Sync Pill + Theme Toggle + User Avatar */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">

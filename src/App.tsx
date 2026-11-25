@@ -798,6 +798,16 @@ export const App: React.FC = () => {
   }, [currentUser]);
 
 
+  // کلیک روی لوگو: هر نقش به صفحه‌ی اصلی خودش برمی‌گردد. homeNonce محتوای صفحه را از نو می‌سازد
+  // تا تب‌ها و فیلترهای داخلی (انبار، فروش، اندازه‌گیری، نصاب) هم به حالت اول برگردند.
+  const [homeNonce, setHomeNonce] = useState(0);
+  const handleGoHome = useCallback(() => {
+    const role = currentUser?.role;
+    setActiveTab(role === 'CEO' ? 'registry' : role === 'WAREHOUSE' ? 'materials' : 'control');
+    setHomeNonce((n) => n + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentUser?.role]);
+
   // CEO navigation restriction: the same tabs his menu shows (registry, planner, sales).
   // (sales was in his menu but this redirected it straight back to the registry)
   useEffect(() => {
@@ -2673,12 +2683,13 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
         impersonatorCeo={impersonatorCeo}
         onExitImpersonation={handleExitImpersonation}
+        onGoHome={handleGoHome}
       />
 
       <OfflineBanner visible={isOfflineMode} />
 
       {/* Main Body */}
-      <main id="main-content" className="@container flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
+      <main key={homeNonce} id="main-content" className="@container flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
         <ServerSetupBanner missing={missingMigrations} />
         {!impersonatorCeo && currentUser.role !== 'CEO' && <NotificationPrompt userId={currentUser.id} />}
         {currentUser.role === 'MEASUREMENT_LEAD' ? (
