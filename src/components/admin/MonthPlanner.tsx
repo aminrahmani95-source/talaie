@@ -54,7 +54,11 @@ interface Props {
   settings: SystemSettings;
   scheduleChangeRequests?: ScheduleChangeRequest[];
   onUpdateSettings?: (settings: SystemSettings) => void;
-  onNewProject?: (dateKey?: string, initialData?: Partial<Project>) => void;
+  onNewProject?: (
+    dateKey?: string,
+    initialData?: Partial<Project>,
+    onCreated?: (project: Project) => void
+  ) => void;
   onEditProject?: (project: Project) => void;
   onManageProject: (project: Project) => void;
   onMoveProjectDate?: (projectId: string, newDateKey: string) => void;
@@ -1023,29 +1027,40 @@ export const MonthPlanner: React.FC<Props> = ({
           users={users}
           onClose={() => setAssigningBooking(null)}
           onConfirm={(scheduledDate, teamId, teamName) => {
-            const projectCode = `P-${Date.now().toString().slice(-4)}`;
-            const projectId = `p-${Date.now()}`;
-            
-            // انتساب دیتای فروش به متدهای ثبت پروژه
-            onNewProject(scheduledDate, {
-              id: projectId,
-              code: projectCode,
-              title: `پروژه ${assigningBooking.customerName}`,
-              customerName: assigningBooking.customerName,
-              customerPhone: assigningBooking.customerPhone,
-              address: assigningBooking.address,
-              shadePanels: assigningBooking.lathsCount,
-              curtainPanels: 0,
-              mechanismType: assigningBooking.isSmart ? 'موتور برقی هوشمند سامفی' : 'مکانیزم دستی استاندارد',
-              specialNotes: assigningBooking.notes ? `[رزرو فروش]: ${assigningBooking.notes}` : undefined,
-              assignedTeamId: teamId,
-              assignedTeamName: teamName,
-              status: 'SCHEDULED',
-            });
+            const booking = assigningBooking;
+            const daysCount = Math.max(1, Number(booking.allocatedDaysCount) || 1);
+            let endDate: string | undefined;
+            if (daysCount > 1) {
+              const end = new Date(scheduledDate + 'T00:00:00Z');
+              end.setUTCDate(end.getUTCDate() + daysCount - 1);
+              endDate = end.toISOString().slice(0, 10);
+            }
 
-            // ثبت پیوند رزرو فروش در استوریج فروش
-            linkBookingToInstallationProject(assigningBooking.id, projectId, scheduledDate, teamId);
-            triggerToast('success', `پروژه «${assigningBooking.customerName}» با موفقیت برای تاریخ ${scheduledDate} در برنامه نصب ثبت شد.`);
+            // فرم ثبت مأموریت با اطلاعات رزرو پر می‌شود. پیوند رزرو فقط «بعد از» ثبت واقعی
+            // پروژه انجام می‌شود؛ اگر فرم بدون ذخیره بسته شود، رزرو در سینی باقی می‌ماند.
+            onNewProject(
+              scheduledDate,
+              {
+                title: `پروژه ${booking.customerName}`,
+                customerName: booking.customerName,
+                customerPhone: booking.customerPhone,
+                address: booking.address,
+                shadePanels: booking.lathsCount,
+                curtainPanels: 0,
+                mechanismType: booking.isSmart ? 'موتور برقی هوشمند سامفی' : 'مکانیزم دستی استاندارد',
+                specialNotes: booking.notes ? `[رزرو فروش]: ${booking.notes}` : undefined,
+                salesRepName: booking.salesRepName || undefined,
+                assignedTeamId: teamId,
+                assignedTeamName: teamName,
+                endDate,
+                status: 'SCHEDULED',
+              },
+              (project) => {
+                linkBookingToInstallationProject(booking.id, project.id, project.scheduledDate, project.assignedTeamId || teamId);
+                triggerToast('success', `رزرو «${booking.customerName}» به برنامه نصب منتقل شد.`);
+              }
+            );
+            setAssigningBooking(null);
           }}
         />
       )}

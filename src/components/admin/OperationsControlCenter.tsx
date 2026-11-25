@@ -263,7 +263,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
         {onNewProject && (
           <button
             type="button"
-            onClick={onNewProject}
+            onClick={() => onNewProject()}
             className="shrink-0 px-3.5 py-2 rounded-lg bg-brand hover:bg-brand-hover text-on-brand font-black text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer min-h-[40px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />

@@ -1040,6 +1040,15 @@ export const App: React.FC = () => {
           setProjectFormInitialData(null);
         }
       );
+      const createdHook = projectCreatedHookRef.current;
+      projectCreatedHookRef.current = null;
+      if (createdHook) {
+        try {
+          createdHook(newProj);
+        } catch (hookErr) {
+          console.warn('Post-create hook failed:', hookErr);
+        }
+      }
       showToast(
         'success',
         canQueueOffline
@@ -2492,7 +2501,16 @@ export const App: React.FC = () => {
   // Open Project Form Modal
   const [projectFormInitialData, setProjectFormInitialData] = useState<Partial<Project> | null>(null);
 
-  const handleOpenNewProject = (dateKey?: string, initialData?: Partial<Project>) => {
+  // کاری که باید «بعد از» ثبت واقعی پروژه جدید انجام شود (مثلاً پیوند رزرو فروش)؛
+  // اگر فرم بدون ذخیره بسته شود، اجرا نمی‌شود.
+  const projectCreatedHookRef = useRef<((project: Project) => void) | null>(null);
+
+  const handleOpenNewProject = (
+    dateKey?: string,
+    initialData?: Partial<Project>,
+    onCreated?: (project: Project) => void
+  ) => {
+    projectCreatedHookRef.current = onCreated || null;
     setEditingProject(null);
     setProjectFormInitialData(initialData || null);
     setPresetDateKey(dateKey);
@@ -2500,6 +2518,7 @@ export const App: React.FC = () => {
   };
 
   const handleOpenEditProject = (project: Project) => {
+    projectCreatedHookRef.current = null;
     setEditingProject(project);
     setIsProjectFormOpen(true);
   };
@@ -2907,7 +2926,9 @@ export const App: React.FC = () => {
             teams={teams}
             teamMembers={teamMembers}
             settings={settings}
+            projects={projects}
             onClose={() => {
+              projectCreatedHookRef.current = null;
               setIsProjectFormOpen(false);
               setEditingProject(null);
               setProjectFormInitialData(null);

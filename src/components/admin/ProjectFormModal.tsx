@@ -11,16 +11,19 @@ import {
   Calendar,
   FileText,
   AlertCircle,
-  Warehouse,
   CheckSquare,
+  Pencil,
+  Users,
+  ChevronDown,
+  Crown,
 } from 'lucide-react';
-import { getUpcomingDays, getTodayPersianString, toPersianDigits, getDayInfoFromDateKey, DayInfo } from '../../utils/jalali';
+import { createPortal } from 'react-dom';
+import { getUpcomingDays, getTodayPersianString, toPersianDigits, toEnglishDigits, getDayInfoFromDateKey, DayInfo } from '../../utils/jalali';
 import { getMultiDayTotalDays } from '../../utils/multiDay';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { SupabaseSyncService } from '../../utils/supabase';
 import { CloudImage } from '../common/CloudImage';
 import { computeProjectDiff } from '../../utils/offlineQueue';
-import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
 import { getDisplayName } from '../../utils/technicianName';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -37,6 +40,8 @@ interface Props {
   teams?: InstallationTeam[];
   teamMembers?: TeamMember[];
   settings: SystemSettings;
+  /** برای هشدار تداخل برنامه اکیپ/سرپرست در همان روز (اختیاری) */
+  projects?: Project[];
   onClose: () => void;
   onSave: (data: ProjectFormSaveData) => void;
 }
@@ -49,10 +54,25 @@ export const ProjectFormModal: React.FC<Props> = ({
   teams,
   teamMembers,
   settings,
+  projects,
   onClose,
   onSave,
 }) => {
-  useEscapeKey(onClose);
+  // فرم طولانی است؛ بستن تصادفی (Esc، ضربدر، انصراف) نباید اطلاعات واردشده را دور بریزد.
+  const dirtyRef = React.useRef(false);
+  const markDirty = () => {
+    dirtyRef.current = true;
+  };
+  const requestClose = () => {
+    if (
+      dirtyRef.current &&
+      !window.confirm('تغییرات این فرم ذخیره نشده است. بدون ذخیره بسته شود؟')
+    ) {
+      return;
+    }
+    onClose();
+  };
+  useEscapeKey(requestClose);
   const isEditing = Boolean(project);
   const effective = project || initialData;
   const days: DayInfo[] = useMemo(() => {
@@ -87,12 +107,6 @@ export const ProjectFormModal: React.FC<Props> = ({
   const [whNotes, setWhNotes] = useState<string>(
     effective?.technicalHandover?.warehouseConfirmation?.notes || ''
   );
-
-  const isHistorical = Boolean(effective?.technicalHandover?.isHistoricalMigration);
-  const isHandoverComplete =
-    whConfirmed ||
-    isHistorical ||
-    Boolean(effective && effective.status !== 'MEASUREMENT_PENDING' && !effective.technicalHandover);
 
   // Teams & Workload states
   const [assignedTeamId, setAssignedTeamId] = useState<string>(
@@ -138,13 +152,26 @@ export const ProjectFormModal: React.FC<Props> = ({
   const [scheduledTime, setScheduledTime] = useState(effective?.scheduledTime || '09:30');
 
   // Technician assignment
+  // وقتی فرم با اکیپ از پیش انتخاب‌شده باز می‌شود (خانه اکیپ در تقویم یا رزرو فروش)،
+  // سرپرست و نفرات همان اکیپ از ابتدا نمایش داده شوند، نه فقط موقع ثبت.
+  const presetTeamMembers = useMemo(
+    () =>
+      effective?.assignedTeamId && !effective?.leadTechnicianId && !(effective?.assignedTechnicianIds || []).length
+        ? (teamMembers || []).filter((m) => m.teamId === effective.assignedTeamId)
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
   const [assignedTechnicianIds, setAssignedTechnicianIds] = useState<string[]>(
-    effective?.assignedTechnicianIds || []
+    effective?.assignedTechnicianIds?.length
+      ? effective.assignedTechnicianIds
+      : presetTeamMembers.map((m) => m.userId)
   );
   const [leadTechnicianId, setLeadTechnicianId] = useState<string>(
-    effective?.leadTechnicianId || ''
+    effective?.leadTechnicianId ||
+      presetTeamMembers.find((m) => m.roleInTeam === 'LEAD')?.userId ||
+      ''
   );
-  const [techSearchQuery, setTechSearchQuery] = useState('');
 
   // Tools checklist
   const [isFullTools, setIsFullTools] = useState<boolean>(effective?.isFullTools ?? true);
@@ -249,6 +276,14 @@ export const ProjectFormModal: React.FC<Props> = ({
 
     if (!title.trim()) {
       setFormError('لطفاً عنوان یا نام پروژه را وارد کنید.');
+      document.getElementById('project-title')?.focus();
+      return;
+    }
+
+    const phoneDigits = customerPhone.replace(/\D/g, '');
+    if (phoneDigits && phoneDigits.length < 8) {
+      setFormError('شماره تماس مشتری کامل نیست.');
+      document.getElementById('customer-phone')?.focus();
       return;
     }
 
@@ -275,6 +310,10 @@ export const ProjectFormModal: React.FC<Props> = ({
 
     if (!effectiveLead && finalTechnicianIds.length > 0) {
       effectiveLead = finalTechnicianIds[0];
+    }
+    // سرپرست همیشه جزو نفرات پروژه است (کارتابل نصاب و قوانین سرور بر همین اساس است).
+    if (effectiveLead && !finalTechnicianIds.includes(effectiveLead)) {
+      finalTechnicianIds = [effectiveLead, ...finalTechnicianIds];
     }
 
     // Handover Gate validation: فقط شروع اعزام به کارگاه (EN_ROUTE / IN_PROGRESS) منوط به تایید فیزیکی ورود کالا به انبار است
@@ -414,30 +453,98 @@ export const ProjectFormModal: React.FC<Props> = ({
     }
   };
 
-  const nonQcUsers = users.filter((u) => u.role !== 'QC_MANAGER');
-  const filteredUsers = nonQcUsers.filter((u) => {
-    if (!techSearchQuery.trim()) return true;
-    const q = techSearchQuery.trim().toLowerCase();
-    return getDisplayName(u.name).toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
-  });
+  // ---- انتخاب نفرات ----
+  const leadCandidates = users.filter((u) => u.role === 'LEAD_TECHNICIAN');
+  const crewCandidates = users.filter(
+    (u) => (u.role === 'TECHNICIAN' || u.role === 'LEAD_TECHNICIAN') && u.id !== leadTechnicianId
+  );
+  const userLabel = (id?: string) => {
+    const u = users.find((x) => x.id === id);
+    return u ? getDisplayName(u.name) : '';
+  };
 
-  return (
+  const handleLeadChange = (id: string) => {
+    markDirty();
+    setLeadTechnicianId(id);
+    if (id && !assignedTechnicianIds.includes(id)) {
+      setAssignedTechnicianIds((prev) => [id, ...prev]);
+    }
+  };
+
+  const handleCrewToggle = (id: string) => {
+    markDirty();
+    handleTechnicianToggle(id);
+  };
+
+  // ---- هشدار تداخل: همان اکیپ یا همان سرپرست در بازه همین تاریخ‌ها مأموریت دیگری دارد ----
+  const scheduleConflicts = useMemo(() => {
+    if (!projects || !scheduledDate) return [] as Project[];
+    const rangeEnd = endDate && endDate > scheduledDate ? endDate : scheduledDate;
+    return projects.filter((p) => {
+      if (p.id === projectId) return false;
+      if (p.status === 'CANCELLED' || p.status === 'COMPLETED') return false;
+      const sameTeam = Boolean(assignedTeamId) && p.assignedTeamId === assignedTeamId;
+      const sameLead = Boolean(leadTechnicianId) && p.leadTechnicianId === leadTechnicianId;
+      if (!sameTeam && !sameLead) return false;
+      // هم‌پوشانی بازه‌ها
+      const pStart = p.scheduledDate;
+      const pEnd = p.endDate && p.endDate > p.scheduledDate ? p.endDate : p.scheduledDate;
+      if (!pStart) return false;
+      return pStart <= rangeEnd && pEnd >= scheduledDate;
+    });
+  }, [projects, scheduledDate, endDate, projectId, assignedTeamId, leadTechnicianId]);
+
+  const hasNoCrew = !assignedTeamId && !leadTechnicianId && assignedTechnicianIds.length === 0;
+
+  const dateLabel = (key: string) => {
+    const d = days.find((x) => x.dateKey === key);
+    if (!d) return key;
+    return `${d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} ${d.persianDayNum} ${d.persianMonthName}`;
+  };
+
+  const numericValue = (raw: string) => {
+    const latin = toEnglishDigits(raw).replace(/[^\d]/g, '');
+    return latin ? Number(latin) : 0;
+  };
+  const decimalValue = (raw: string) =>
+    toEnglishDigits(raw)
+      .replace(/[٫,]/g, '.')
+      .replace(/[^\d.]/g, '');
+
+  const inputCls =
+    'w-full text-sm p-2.5 rounded-md border border-line bg-canvas text-ink focus:outline-none focus:border-brand';
+  const labelCls = 'block text-xs font-semibold text-ink-2 mb-1';
+  const sectionCls = 'bg-sunken border border-line rounded-lg p-4 space-y-3';
+  const sectionTitleCls = 'text-sm font-bold text-ink flex items-center gap-1.5';
+  const stepBadge = (n: number) => (
+    <span className="w-5 h-5 rounded-full bg-brand text-black text-[11px] font-black flex items-center justify-center shrink-0">
+      {toPersianDigits(n)}
+    </span>
+  );
+
+  const crewSummary = assignedTeamName
+    ? assignedTeamName
+    : leadTechnicianId
+      ? `سرپرست: ${userLabel(leadTechnicianId)}`
+      : 'بدون اکیپ';
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="project-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
     >
-      <div className="bg-surface rounded-lg max-w-2xl w-full shadow-2xl border border-line flex flex-col max-h-[92vh] overflow-hidden my-4">
+      <div className="bg-surface sm:rounded-lg max-w-2xl w-full shadow-2xl border border-line flex flex-col h-full sm:h-auto sm:max-h-[92vh] overflow-hidden">
         {/* Modal Header */}
-        <div className="bg-canvas px-5 py-3.5 text-ink flex items-center justify-between border-b border-brand/40 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-brand-ink">
-              <Plus className="w-4 h-4" />
+        <div className="bg-canvas px-4 sm:px-5 py-3 text-ink flex items-center justify-between border-b border-brand/40 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-brand-ink shrink-0">
+              {isEditing ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 id="project-modal-title" className="font-bold text-sm sm:text-base text-ink">
+                <h3 id="project-modal-title" className="font-bold text-sm sm:text-base text-ink truncate">
                   {isEditing ? 'ویرایش مأموریت' : 'ثبت مأموریت جدید'}
                 </h3>
                 {projectCode && (
@@ -446,12 +553,15 @@ export const ProjectFormModal: React.FC<Props> = ({
                   </span>
                 )}
               </div>
+              <p className="text-[12px] text-ink-3 truncate">
+                فیلدهای ستاره‌دار الزامی‌اند؛ بقیه را می‌توانید بعداً تکمیل کنید.
+              </p>
             </div>
           </div>
           <button
             type="button"
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 text-ink transition cursor-pointer"
+            onClick={requestClose}
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/20 text-ink transition cursor-pointer shrink-0"
             aria-label="بستن فرم"
           >
             <X className="w-5 h-5" />
@@ -459,88 +569,74 @@ export const ProjectFormModal: React.FC<Props> = ({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-          {/* Section 1: Customer & Address */}
-          <div className="bg-sunken border border-line rounded-lg p-4 space-y-3">
-            <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
+        <form
+          id="project-form"
+          onSubmit={handleSubmit}
+          onChangeCapture={markDirty}
+          className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4"
+          noValidate
+        >
+          {/* ۱. مشتری و محل نصب */}
+          <section className={sectionCls}>
+            <h4 className={sectionTitleCls}>
+              {stepBadge(1)}
               <MapPin className="w-4 h-4 text-brand-ink" />
-              <span>اطلاعات پروژه و محل نصب</span>
+              <span>مشتری و محل نصب</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
-                <label htmlFor="project-title" className="block text-xs font-semibold text-ink-2 mb-1">
-                  عنوان پروژه: *
+                <label htmlFor="project-title" className={labelCls}>
+                  عنوان پروژه <span className="text-rose-400">*</span>
                 </label>
                 <input
                   id="project-title"
                   type="text"
                   required
+                  autoFocus={!isEditing}
                   placeholder="مثال: ویلای لواسان - سالن اصلی"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink"
+                  className={inputCls}
                 />
               </div>
 
-              <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-2 p-2.5 bg-black/30 rounded-lg border border-line">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={isForceMajeure}
-                    onChange={(e) => setIsForceMajeure(e.target.checked)}
-                    className="w-4 h-4 rounded text-rose-500 accent-rose-500 focus:ring-rose-500"
-                  />
-                  <span className={`text-xs font-bold ${isForceMajeure ? 'text-rose-400' : 'text-ink-2'}`}>
-                    🔥 پروژه فورس‌ماژور (اولویت آنی و اقدام سریع)
-                  </span>
-                </label>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-ink-2">کارشناس فروش:</span>
-                  <input
-                    type="text"
-                    placeholder="مثال: خانم سلیمانی"
-                    value={salesRepName}
-                    onChange={(e) => setSalesRepName(e.target.value)}
-                    className="text-xs p-1.5 rounded border border-line bg-canvas text-ink w-36"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label htmlFor="customer-name" className="block text-xs font-semibold text-ink-2 mb-1">
-                  نام کارفرما:
+                <label htmlFor="customer-name" className={labelCls}>
+                  نام کارفرما
                 </label>
                 <input
                   id="customer-name"
                   type="text"
-                  placeholder="مثال: آقای پیروز"
+                  placeholder="اگر خالی بماند، عنوان پروژه ثبت می‌شود"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink"
+                  className={inputCls}
                 />
               </div>
 
               <div>
-                <label htmlFor="customer-phone" className="block text-xs font-semibold text-ink-2 mb-1">
-                  شماره تماس مشتری:
+                <label htmlFor="customer-phone" className={labelCls}>
+                  شماره تماس مشتری
                 </label>
                 <input
                   id="customer-phone"
                   type="tel"
-                  placeholder="09......"
+                  inputMode="tel"
+                  placeholder="09121234567"
                   autoComplete="tel"
                   value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink font-mono text-left"
+                  onChange={(e) =>
+                    setCustomerPhone(toEnglishDigits(e.target.value).replace(/[^\d+\-\s]/g, ''))
+                  }
+                  className={`${inputCls} font-mono text-left`}
                   dir="ltr"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label htmlFor="project-address" className="block text-xs font-semibold text-ink-2 mb-1">
-                  نشانی دقیق محل نصب:
+                <label htmlFor="project-address" className={labelCls}>
+                  نشانی دقیق محل نصب
                 </label>
                 <textarea
                   id="project-address"
@@ -548,221 +644,137 @@ export const ProjectFormModal: React.FC<Props> = ({
                   placeholder="خیابان، کوچه، پلاک، طبقه و واحد..."
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink"
+                  className={inputCls}
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label htmlFor="location-url" className="block text-xs font-semibold text-ink-2 mb-1">
-                  لینک لوکیشن (نشان، بلد یا گوگل‌مپ):
+              <div>
+                <label htmlFor="location-url" className={labelCls}>
+                  لینک لوکیشن (نشان، بلد یا گوگل‌مپ)
                 </label>
                 <input
                   id="location-url"
                   type="url"
-                  placeholder="https://nshn.ir/... یا https://maps.google.com/..."
+                  inputMode="url"
+                  placeholder="https://nshn.ir/..."
                   value={locationUrl}
                   onChange={(e) => setLocationUrl(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink text-left font-mono"
+                  className={`${inputCls} text-left font-mono`}
                   dir="ltr"
                 />
               </div>
-            </div>
-          </div>
 
-          {/* Section: Official Handover Gate */}
-          <div className="bg-sunken border border-brand/40 rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
-                <CheckSquare className="w-4 h-4 text-brand-ink" />
-                <span>گیت ورود کالا به انبار (محموله کارخانه)</span>
-              </h4>
-              <span className={`text-[12px] font-bold px-2.5 py-0.5 rounded-full ${
-                whConfirmed
-                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                  : 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30'
-              }`}>
-                {whConfirmed ? '✓ کالا در انبار تایید شده' : '📦 در انتظار تایید ورود در کارتابل انبار'}
-              </span>
-            </div>
-
-            {!whConfirmed && (
-              <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-md text-xs font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-2">
-                <Warehouse className="w-4 h-4 text-blue-400 shrink-0" />
-                <span>این پروژه پس از زمان‌بندی، در کارتابل انبار قرار می‌گیرد تا مسئول انبار پس از تحویل فیزیکی کالا از کارخانه، رسید کالا را تایید نماید.</span>
+              <div>
+                <label htmlFor="sales-rep" className={labelCls}>
+                  کارشناس فروش
+                </label>
+                <input
+                  id="sales-rep"
+                  type="text"
+                  placeholder="مثال: خانم سلیمانی"
+                  value={salesRepName}
+                  onChange={(e) => setSalesRepName(e.target.value)}
+                  className={inputCls}
+                />
               </div>
-            )}
 
-            {/* Warehouse Confirmation Card (Optional at planning stage) */}
-            <div className={`p-4 rounded-md border transition-all ${
-              whConfirmed
-                ? 'border-emerald-500/40 bg-emerald-500/5'
-                : 'border-line bg-surface'
-            }`}>
-              <label className="flex items-start gap-2.5 cursor-pointer">
+              <label
+                className={`sm:col-span-2 flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer select-none transition ${
+                  isForceMajeure ? 'border-rose-500/50 bg-rose-500/10' : 'border-line bg-surface'
+                }`}
+              >
                 <input
                   type="checkbox"
-                  checked={whConfirmed}
-                  onChange={(e) => {
-                    const val = e.target.checked;
-                    setWhConfirmed(val);
-                    if (val && !whConfirmedBy) {
-                      setWhConfirmedBy('مسئول انبار مرکزی');
-                    }
-                  }}
-                  className="mt-0.5 w-4 h-4 rounded text-brand-ink focus:ring-brand accent-brand"
+                  checked={isForceMajeure}
+                  onChange={(e) => setIsForceMajeure(e.target.checked)}
+                  className="w-4 h-4 rounded accent-rose-500"
                 />
-                <div className="text-xs space-y-0.5">
-                  <span className="font-bold text-ink flex items-center gap-1.5">
-                    <Warehouse className="w-4 h-4 text-brand-ink" />
-                    <span>تأیید دستی ورود فیزیکی کالا به انبار مرکزی (اختیاری در زمان زمان‌بندی)</span>
-                  </span>
-                  <span className="text-ink-2 block text-[12px]">
-                    چنانچه بار هم‌اکنون در انبار تحویل شده تیک بزنید؛ در غیر این صورت تایید توسط مسئول انبار در کارتابل انبار انجام خواهد شد.
-                  </span>
-                </div>
-              </label>
-              {whConfirmed && (
-                <div className="mt-3 pt-3 border-t border-emerald-500/20 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="نام یا سمت تحویل‌گیرنده انبار..."
-                    value={whConfirmedBy}
-                    onChange={(e) => setWhConfirmedBy(e.target.value)}
-                    className="w-full text-xs p-2 rounded-lg border border-emerald-500/30 bg-canvas text-ink"
-                  />
-                  <input
-                    type="text"
-                    placeholder="شماره قفسه، حواله انبار یا یادداشت تحویل..."
-                    value={whNotes}
-                    onChange={(e) => setWhNotes(e.target.value)}
-                    className="w-full text-xs p-2 rounded-lg border border-line bg-canvas text-ink"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section 2: Technical Specifications */}
-          <div className="bg-sunken border border-line rounded-lg p-4 space-y-3">
-            <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-brand-ink" />
-              <span>مشخصات فنی پرده و شید</span>
-            </h4>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div>
-                <label htmlFor="shade-panels" className="block text-xs font-semibold text-ink-2 mb-1">
-                  تعداد لت شید:
-                </label>
-                <input
-                  id="shade-panels"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  value={shadePanels}
-                  onChange={(e) => setShadePanels(Number(e.target.value))}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink text-center font-mono font-bold"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="curtain-panels" className="block text-xs font-semibold text-ink-2 mb-1">
-                  تعداد لت پرده:
-                </label>
-                <input
-                  id="curtain-panels"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  value={curtainPanels}
-                  onChange={(e) => setCurtainPanels(Number(e.target.value))}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink text-center font-mono font-bold"
-                />
-              </div>
-
-              <div className="col-span-2 sm:col-span-2">
-                <label htmlFor="mechanism-type" className="block text-xs font-semibold text-ink-2 mb-1">
-                  نوع مکانیزم و موتور:
-                </label>
-                <input
-                  id="mechanism-type"
-                  type="text"
-                  placeholder="موتور سامفی رادیویی + ریل برقی"
-                  value={mechanismType}
-                  onChange={(e) => setMechanismType(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink"
-                />
-              </div>
-
-              <div className="col-span-2 sm:col-span-4">
-                <label htmlFor="special-notes" className="block text-xs font-semibold text-ink-2 mb-1">
-                  توضیحات و نکات کلیدی:
-                </label>
-                <textarea
-                  id="special-notes"
-                  rows={2}
-                  placeholder="نکات حساسیت مشتری، نوع سقف کاذب، زیرسازی..."
-                  value={specialNotes}
-                  onChange={(e) => setSpecialNotes(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section 3: Proposal Images */}
-          <div className="bg-sunken border border-brand/30 rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
-                <Camera className="w-4 h-4 text-brand-ink" />
-                <span>تصویر پروپوزال فروش (نقشه و برگه سفارش)</span>
-              </h4>
-            </div>
-
-            <div className="flex flex-wrap gap-2 items-center">
-              {proposalImages.map((img) => (
-                <div
-                  key={img.id}
-                  className="relative w-16 h-20 rounded-md overflow-hidden border border-brand  bg-canvas"
-                >
-                  <CloudImage src={img.url} alt="" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveProposalImage(img.id)}
-                    className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 shadow hover:bg-red-700 transition cursor-pointer"
-                    aria-label="حذف عکس"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-
-              <label className="flex flex-col items-center justify-center w-20 h-20 rounded-md border-2 border-dashed border-brand hover:border-[#212121] bg-canvas cursor-pointer text-brand-ink transition">
-                <Camera className="w-5 h-5 mb-1" />
-                <span className="text-xs font-bold">پیوست عکس</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleProposalUpload}
-                  className="hidden"
-                />
+                <span className={`text-xs font-bold ${isForceMajeure ? 'text-rose-400' : 'text-ink-2'}`}>
+                  🔥 فورس‌ماژور — اولویت آنی و اقدام سریع
+                </span>
               </label>
             </div>
-          </div>
+          </section>
 
-          {/* Section 4: Schedule & Team Assignment */}
-          <div className="bg-sunken border border-line rounded-lg p-4 space-y-3">
-            <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
+          {/* ۲. زمان و اکیپ */}
+          <section className={sectionCls}>
+            <h4 className={sectionTitleCls}>
+              {stepBadge(2)}
               <Calendar className="w-4 h-4 text-brand-ink" />
-              <span>زمان‌بندی، انتساب اکیپ و برآورد فنی</span>
+              <span>زمان اجرا و اکیپ</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Assigned Installation Team */}
-              <div className="sm:col-span-2">
-                <label htmlFor="assigned-team" className="block text-xs font-semibold text-ink-2 mb-1">
-                  اکیپ تخصیص‌یافته:
+              <div>
+                <label htmlFor="scheduled-date" className={labelCls}>
+                  تاریخ شروع <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  id="scheduled-date"
+                  value={scheduledDate}
+                  onChange={(e) => {
+                    const newStart = e.target.value;
+                    setScheduledDate(newStart);
+                    if (!endDate || endDate < newStart) {
+                      setEndDate(newStart);
+                    }
+                  }}
+                  className={`${inputCls} font-bold`}
+                >
+                  {days.map((d) => (
+                    <option key={d.dateKey} value={d.dateKey}>
+                      {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
+                      {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="end-date" className="block text-xs font-semibold text-ink-2">
+                    تاریخ پایان
+                  </label>
+                  {endDate && endDate > scheduledDate ? (
+                    <span className="text-[12px] bg-brand/20 text-brand-ink font-bold px-2 py-0.5 rounded-full">
+                      {toPersianDigits(getMultiDayTotalDays(scheduledDate, endDate))} روزه
+                    </span>
+                  ) : (
+                    <span className="text-[12px] text-ink-3">یک‌روزه</span>
+                  )}
+                </div>
+                <select
+                  id="end-date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className={`${inputCls} font-bold`}
+                >
+                  {days
+                    .filter((d) => d.dateKey >= scheduledDate)
+                    .map((d) => (
+                      <option key={d.dateKey} value={d.dateKey}>
+                        {d.dateKey === scheduledDate ? 'همان روز (یک‌روزه)' : `${d.persianDayName} - ${d.persianDayNum} ${d.persianMonthName} (${toPersianDigits(d.persianDateStr)})`}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="scheduled-time" className={labelCls}>
+                  ساعت حضور در محل
+                </label>
+                <input
+                  id="scheduled-time"
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  className={`${inputCls} text-center font-bold font-mono`}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="assigned-team" className={labelCls}>
+                  اکیپ نصب
                 </label>
                 <select
                   id="assigned-team"
@@ -793,260 +805,470 @@ export const ProjectFormModal: React.FC<Props> = ({
                     }
                     setAssignedTeamName(computedTeamName);
                   }}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink font-bold"
+                  className={`${inputCls} font-bold`}
                 >
-                  <option value="">بدون اکیپ (تعیین نشده)</option>
+                  <option value="">بدون اکیپ ثابت (انتخاب دستی نفرات)</option>
                   {effectiveTeams.map((t) => {
                     const leadMember = (teamMembers || []).find((m) => m.teamId === t.id && m.roleInTeam === 'LEAD');
                     const sup = users.find((u) => u.id === (leadMember?.userId || t.supervisorId));
                     const displayName = sup ? `اکیپ نصب ${getDisplayName(sup.name)}` : t.name;
                     return (
                       <option key={t.id || t.code} value={t.id || t.code}>
-                        {displayName} ({t.code})
+                        {displayName}
                       </option>
                     );
                   })}
                 </select>
               </div>
 
-              {/* Workload & Duration Estimates */}
+              {/* سرپرست و نفرات */}
+              <div className="sm:col-span-2 rounded-lg border border-line bg-surface p-3 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-brand-ink" />
+                    نفرات اعزامی
+                  </span>
+                  {assignedTeamId && (
+                    <span className="text-[12px] text-ink-3">از روی اعضای اکیپ پر شد؛ قابل تغییر است</span>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="lead-technician" className={labelCls}>
+                    سرپرست
+                  </label>
+                  <select
+                    id="lead-technician"
+                    value={leadTechnicianId}
+                    onChange={(e) => handleLeadChange(e.target.value)}
+                    className={`${inputCls} font-bold`}
+                  >
+                    <option value="">— {assignedTeamId ? 'سرپرست اکیپ (خودکار)' : 'انتخاب نشده'} —</option>
+                    {leadCandidates.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {getDisplayName(u.name)}
+                      </option>
+                    ))}
+                    {leadTechnicianId && !leadCandidates.some((u) => u.id === leadTechnicianId) && (
+                      <option value={leadTechnicianId}>{userLabel(leadTechnicianId) || 'کاربر حذف‌شده'}</option>
+                    )}
+                  </select>
+                </div>
+
+                {crewCandidates.length > 0 && (
+                  <div>
+                    <span className={labelCls}>نفرات همراه (اختیاری)</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {crewCandidates.map((u) => {
+                        const checked = assignedTechnicianIds.includes(u.id);
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            aria-pressed={checked}
+                            onClick={() => handleCrewToggle(u.id)}
+                            className={`text-xs px-2.5 py-1.5 rounded-full font-bold transition flex items-center gap-1 cursor-pointer border ${
+                              checked
+                                ? 'bg-brand text-black border-brand'
+                                : 'bg-canvas text-ink-2 border-line hover:border-brand/60'
+                            }`}
+                          >
+                            {u.role === 'LEAD_TECHNICIAN' && <Crown className="w-3 h-3" />}
+                            {checked ? '✓' : '+'} {getDisplayName(u.name)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {hasNoCrew && (
+                  <p className="text-[12px] font-semibold text-amber-700 dark:text-amber-300">
+                    بدون اکیپ و سرپرست، این مأموریت در کارتابل هیچ نصابی دیده نمی‌شود.
+                  </p>
+                )}
+              </div>
+
+              {scheduleConflicts.length > 0 && (
+                <div className="sm:col-span-2 p-3 rounded-md border border-amber-500/40 bg-amber-500/10 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    این اکیپ/سرپرست در همین تاریخ مأموریت دیگری هم دارد:
+                  </div>
+                  <ul className="list-disc pr-5 space-y-0.5">
+                    {scheduleConflicts.slice(0, 4).map((p) => (
+                      <li key={p.id}>
+                        {p.title} — {dateLabel(p.scheduledDate)}
+                        {p.scheduledTime ? ` ساعت ${toPersianDigits(p.scheduledTime)}` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="text-[12px] opacity-80">ثبت مجاز است؛ فقط برای جلوگیری از تداخل اعلام شد.</div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ۳. مشخصات فنی و مدارک */}
+          <section className={sectionCls}>
+            <h4 className={sectionTitleCls}>
+              {stepBadge(3)}
+              <FileText className="w-4 h-4 text-brand-ink" />
+              <span>مشخصات فنی و مدارک</span>
+            </h4>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <label htmlFor="estimated-workload" className="block text-xs font-semibold text-ink-2 mb-1">
-                  حجم کار تخمینی (متر طول / مساحت):
+                <label htmlFor="shade-panels" className={labelCls}>
+                  لت شید
+                </label>
+                <input
+                  id="shade-panels"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={shadePanels ? String(shadePanels) : ''}
+                  onChange={(e) => setShadePanels(numericValue(e.target.value))}
+                  className={`${inputCls} text-center font-mono font-bold`}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="curtain-panels" className={labelCls}>
+                  لت پرده
+                </label>
+                <input
+                  id="curtain-panels"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={curtainPanels ? String(curtainPanels) : ''}
+                  onChange={(e) => setCurtainPanels(numericValue(e.target.value))}
+                  className={`${inputCls} text-center font-mono font-bold`}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="estimated-workload" className={labelCls}>
+                  حجم کار (متر)
                 </label>
                 <input
                   id="estimated-workload"
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  placeholder="مثال: 24.5"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="24.5"
                   value={estimatedWorkload}
-                  onChange={(e) => setEstimatedWorkload(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink font-bold text-center font-mono"
+                  onChange={(e) => setEstimatedWorkload(decimalValue(e.target.value))}
+                  className={`${inputCls} text-center font-mono font-bold`}
                 />
               </div>
 
               <div>
-                <label htmlFor="required-duration" className="block text-xs font-semibold text-ink-2 mb-1">
-                  تخمین مدت کار (ساعت):
+                <label htmlFor="required-duration" className={labelCls}>
+                  مدت کار (ساعت)
                 </label>
                 <input
                   id="required-duration"
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  placeholder="مثال: 4"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="4"
                   value={requiredDurationHours}
-                  onChange={(e) => setRequiredDurationHours(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink font-bold text-center font-mono"
+                  onChange={(e) => setRequiredDurationHours(decimalValue(e.target.value))}
+                  className={`${inputCls} text-center font-mono font-bold`}
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label htmlFor="second-measurement-doc" className="block text-xs font-semibold text-ink-2 mb-1">
-                  سند قطعی اندازه‌گیری دوم (شماره فرم یا توضیحات ابعاد تاییدشده):
+              <div className="col-span-2 sm:col-span-4">
+                <label htmlFor="mechanism-type" className={labelCls}>
+                  نوع مکانیزم و موتور
+                </label>
+                <input
+                  id="mechanism-type"
+                  type="text"
+                  list="mechanism-suggestions"
+                  placeholder="مثال: موتور سامفی رادیویی + ریل برقی"
+                  value={mechanismType}
+                  onChange={(e) => setMechanismType(e.target.value)}
+                  className={inputCls}
+                />
+                <datalist id="mechanism-suggestions">
+                  <option value="مکانیزم دستی استاندارد" />
+                  <option value="مکانیزم زنجیری" />
+                  <option value="موتور برقی هوشمند سامفی" />
+                  <option value="موتور سامفی رادیویی + ریل برقی" />
+                  <option value="ریل برقی پرده" />
+                </datalist>
+              </div>
+
+              <div className="col-span-2 sm:col-span-4">
+                <label htmlFor="special-notes" className={labelCls}>
+                  توضیحات و نکات کلیدی
+                </label>
+                <textarea
+                  id="special-notes"
+                  rows={2}
+                  placeholder="حساسیت مشتری، نوع سقف کاذب، زیرسازی..."
+                  value={specialNotes}
+                  onChange={(e) => setSpecialNotes(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+
+              <div className="col-span-2 sm:col-span-4">
+                <label htmlFor="second-measurement-doc" className={labelCls}>
+                  سند اندازه‌گیری دوم (شماره فرم یا توضیح ابعاد تأییدشده)
                 </label>
                 <input
                   id="second-measurement-doc"
                   type="text"
-                  placeholder="مثال: فرم اندازه‌گیری دوم شماره 108 — ابعاد کف‌سازی با کناف مطابقت دارد"
+                  placeholder="مثال: فرم شماره 108 — ابعاد با کناف مطابقت دارد"
                   value={secondMeasurementDoc}
                   onChange={(e) => setSecondMeasurementDoc(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="scheduled-date" className="block text-xs font-semibold text-ink-2 mb-1">
-                  تاریخ اجرا:
-                </label>
-                <select
-                  id="scheduled-date"
-                  value={scheduledDate}
-                  onChange={(e) => {
-                    const newStart = e.target.value;
-                    setScheduledDate(newStart);
-                    if (!endDate || endDate < newStart) {
-                      setEndDate(newStart);
-                    }
-                  }}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink font-bold"
-                >
-                  {days.map((d) => (
-                    <option key={d.dateKey} value={d.dateKey}>
-                      {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
-                      {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="end-date" className="block text-xs font-semibold text-ink-2">
-                    تاریخ پایان (برای پروژه‌های چندروزه):
-                  </label>
-                  {endDate && endDate > scheduledDate && (
-                    <span className="text-xs bg-brand/20 text-brand-ink font-bold px-2 py-0.5 rounded-full">
-                      پروژه {toPersianDigits(getMultiDayTotalDays(scheduledDate, endDate))} روزه
-                    </span>
-                  )}
-                </div>
-                <select
-                  id="end-date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink font-bold"
-                >
-                    {days
-                      .filter((d) => d.dateKey >= scheduledDate)
-                      .map((d) => (
-                        <option key={d.dateKey} value={d.dateKey}>
-                          {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
-                          {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
-                        </option>
-                      ))}
-                </select>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label htmlFor="scheduled-time" className="block text-xs font-semibold text-ink-2 mb-1">
-                  ساعت حضور در محل:
-                </label>
-                <input
-                  id="scheduled-time"
-                  type="time"
-                  value={scheduledTime}
-                  onChange={(e) => setScheduledTime(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-md border border-line bg-canvas text-ink text-center font-bold font-mono"
+                  className={inputCls}
                 />
               </div>
             </div>
-          </div>
 
-          {/* Section 5: Tools Checklist */}
-          <div className="bg-sunken border border-line rounded-lg p-4 space-y-3">
-            {/* Special Tools (فارسی‌بر، دریل سرکج، نردبان 4 متری، تراز 360 و ...) */}
-            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-300">
-                  ⚡ ابزارهای ویژه و کم‌تعداد (تحویل به این اکیپ):
-                </span>
-                <span className="text-[12px] text-amber-400">رهگیری ابزارهای خاص محدود</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  'فارسی‌بر',
-                  'دریل سرکج',
-                  'نردبان 4 متری',
-                  'تراز لیزری 360',
-                  'دستگاه شیارزن',
-                  'پیچ‌بند ضربه‌ای',
-                ].map((tool) => {
-                  const isChecked = specialTools.includes(tool);
-                  return (
+            <div>
+              <span className={`${labelCls} flex items-center gap-1.5`}>
+                <Camera className="w-3.5 h-3.5 text-brand-ink" />
+                تصویر پروپوزال فروش (نقشه و برگه سفارش)
+              </span>
+              <div className="flex flex-wrap gap-2 items-center">
+                {proposalImages.map((img) => (
+                  <div
+                    key={img.id}
+                    className="relative w-16 h-20 rounded-md overflow-hidden border border-brand bg-canvas"
+                  >
+                    <CloudImage src={img.url} alt="" className="w-full h-full object-cover" />
                     <button
-                      key={tool}
                       type="button"
-                      onClick={() =>
-                        setSpecialTools((prev) =>
-                          prev.includes(tool) ? prev.filter((t) => t !== tool) : [...prev, tool]
-                        )
-                      }
-                      className={`text-xs px-2.5 py-1 rounded-md font-bold transition flex items-center gap-1 cursor-pointer ${
-                        isChecked
-                          ? 'bg-amber-400 text-black shadow-sm'
-                          : 'bg-black/40 text-ink border border-line hover:border-amber-400/50'
+                      onClick={() => {
+                        markDirty();
+                        handleRemoveProposalImage(img.id);
+                      }}
+                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 shadow hover:bg-red-700 transition cursor-pointer"
+                      aria-label="حذف عکس"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+
+                <label className="flex flex-col items-center justify-center w-20 h-20 rounded-md border-2 border-dashed border-brand/70 hover:border-brand bg-canvas cursor-pointer text-brand-ink transition">
+                  <Camera className="w-5 h-5 mb-1" />
+                  <span className="text-xs font-bold">افزودن عکس</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleProposalUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+          </section>
+
+          {/* ۴. ورود کالا به انبار */}
+          <section className={`${sectionCls} ${whConfirmed ? 'border-emerald-500/40' : 'border-brand/40'}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className={sectionTitleCls}>
+                {stepBadge(4)}
+                <CheckSquare className="w-4 h-4 text-brand-ink" />
+                <span>ورود کالا به انبار</span>
+              </h4>
+              <span
+                className={`text-[12px] font-bold px-2.5 py-0.5 rounded-full ${
+                  whConfirmed
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                    : 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30'
+                }`}
+              >
+                {whConfirmed ? '✓ کالا در انبار است' : '📦 منتظر تأیید انبار'}
+              </span>
+            </div>
+
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={whConfirmed}
+                onChange={(e) => {
+                  const val = e.target.checked;
+                  setWhConfirmed(val);
+                  if (val && !whConfirmedBy) {
+                    setWhConfirmedBy('مسئول انبار مرکزی');
+                  }
+                }}
+                className="mt-0.5 w-4 h-4 rounded accent-brand"
+              />
+              <span className="text-xs text-ink-2 leading-6">
+                <span className="font-bold text-ink">کالا همین حالا در انبار تحویل شده است.</span>{' '}
+                اگر تیک نزنید، پروژه در کارتابل انبار می‌ماند و اکیپ تا تأیید انبار نمی‌تواند حرکت کند.
+              </span>
+            </label>
+            {whConfirmed && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  aria-label="تحویل‌گیرنده انبار"
+                  placeholder="نام یا سمت تحویل‌گیرنده انبار"
+                  value={whConfirmedBy}
+                  onChange={(e) => setWhConfirmedBy(e.target.value)}
+                  className={inputCls}
+                />
+                <input
+                  type="text"
+                  aria-label="یادداشت انبار"
+                  placeholder="شماره قفسه، حواله یا یادداشت تحویل"
+                  value={whNotes}
+                  onChange={(e) => setWhNotes(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+            )}
+          </section>
+
+          {/* ۵. ابزار — پیش‌فرض فول ابزار است؛ فقط در صورت نیاز باز می‌شود */}
+          <details className="group bg-sunken border border-line rounded-lg">
+            <summary className="list-none cursor-pointer p-4 flex items-center justify-between gap-2 select-none">
+              <span className={sectionTitleCls}>
+                {stepBadge(5)}
+                <Wrench className="w-4 h-4 text-brand-ink" />
+                <span>ابزار</span>
+              </span>
+              <span className="flex items-center gap-2 text-[12px] text-ink-2">
+                {isFullTools ? 'فول ابزار' : `${toPersianDigits(toolsRequired.length)} ابزار`}
+                {specialTools.length > 0 && ` + ${toPersianDigits(specialTools.length)} ابزار ویژه`}
+                <ChevronDown className="w-4 h-4 transition group-open:rotate-180" />
+              </span>
+            </summary>
+
+            <div className="px-4 pb-4 space-y-3">
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-2">
+                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 block">
+                  ⚡ ابزارهای ویژه و کم‌تعداد (تحویل به این اکیپ)
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {['فارسی‌بر', 'دریل سرکج', 'نردبان 4 متری', 'تراز لیزری 360', 'دستگاه شیارزن', 'پیچ‌بند ضربه‌ای'].map(
+                    (tool) => {
+                      const isChecked = specialTools.includes(tool);
+                      return (
+                        <button
+                          key={tool}
+                          type="button"
+                          aria-pressed={isChecked}
+                          onClick={() => {
+                            markDirty();
+                            setSpecialTools((prev) =>
+                              prev.includes(tool) ? prev.filter((t) => t !== tool) : [...prev, tool]
+                            );
+                          }}
+                          className={`text-xs px-2.5 py-1 rounded-md font-bold transition flex items-center gap-1 cursor-pointer ${
+                            isChecked
+                              ? 'bg-amber-400 text-black shadow-sm'
+                              : 'bg-canvas text-ink border border-line hover:border-amber-400/50'
+                          }`}
+                        >
+                          {isChecked ? '✓' : '+'} {tool}
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-ink">چک‌لیست ابزار عمومی</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    markDirty();
+                    handleToggleFullTools();
+                  }}
+                  className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
+                    isFullTools ? 'bg-brand text-black' : 'bg-hover text-ink'
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>{isFullTools ? '✓ فول ابزار' : 'انتخاب همه'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {settings.defaultTools.map((tool) => {
+                  const checked = toolsRequired.includes(tool);
+                  return (
+                    <label
+                      key={tool}
+                      className={`flex items-center gap-2 p-2 rounded-md border text-xs cursor-pointer transition select-none ${
+                        checked ? 'border-brand bg-surface font-bold' : 'border-line bg-canvas'
                       }`}
                     >
-                      {isChecked ? '✓' : '+'} {tool}
-                    </button>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => handleToolCheckbox(tool)}
+                        className="rounded w-4 h-4 accent-brand"
+                      />
+                      <span>{tool}</span>
+                    </label>
                   );
                 })}
               </div>
-            </div>
 
-            <div className="flex items-center justify-between pt-1">
-              <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
-                <Wrench className="w-4 h-4 text-brand-ink" />
-                <span>چک‌لیست ابزار عمومی</span>
-              </h4>
-
-              <button
-                type="button"
-                onClick={handleToggleFullTools}
-                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
-                  isFullTools
-                    ? 'bg-canvas text-brand-soft'
-                    : 'bg-hover text-ink'
-                }`}
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>{isFullTools ? '✓ حالت فول ابزار' : 'دکمه فول ابزار'}</span>
-              </button>
+              <textarea
+                rows={2}
+                aria-label="یادداشت ابزار"
+                placeholder="یادداشت ابزار (مثلاً: کابل‌کشی اضافه لازم است)"
+                value={customToolsNotes}
+                onChange={(e) => setCustomToolsNotes(e.target.value)}
+                className={inputCls}
+              />
             </div>
+          </details>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto">
-              {settings.defaultTools.map((tool) => {
-                const checked = toolsRequired.includes(tool);
-                return (
-                  <label
-                    key={tool}
-                    className={`flex items-center gap-2 p-2 rounded-md border text-xs cursor-pointer transition select-none ${
-                      checked
-                        ? 'border-brand bg-white dark:bg-[#222222] font-bold'
-                        : 'border-line bg-surface'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => handleToolCheckbox(tool)}
-                      className="rounded text-brand-ink focus:ring-brand w-4 h-4 accent-brand"
-                    />
-                    <span>{tool}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Inline Error */}
-          {formError && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-              <span>{formError}</span>
-            </div>
-          )}
         </form>
 
         {/* Sticky Modal Footer */}
-        <div className="p-4 border-t border-line bg-surface flex items-center gap-3 shrink-0">
-          <Button
-            type="button"
-            variant="ghost"
-            size="md"
-            disabled={isSubmitting}
-            onClick={onClose}
-            className="flex-1"
-          >
-            انصراف
-          </Button>
+        <div className="px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-line bg-surface shrink-0 space-y-2">
+          <div className="text-[12px] text-ink-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>📅 {dateLabel(scheduledDate)}{endDate && endDate > scheduledDate ? ` تا ${dateLabel(endDate)}` : ''}</span>
+            <span>⏰ {toPersianDigits(scheduledTime || '—')}</span>
+            <span>👷 {crewSummary}</span>
+          </div>
+          {formError && (
+            <div className="text-[12px] font-bold text-rose-600 dark:text-rose-300">{formError}</div>
+          )}
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="md"
+              disabled={isSubmitting}
+              onClick={requestClose}
+              className="flex-1"
+            >
+              انصراف
+            </Button>
 
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            loading={isSubmitting}
-            disabled={!hasLeadTechnician || isSubmitting}
-            onClick={handleSubmit}
-            className="flex-1"
-            icon={<CheckCircle2 className="w-4 h-4" />}
-          >
-            {isEditing ? 'ذخیره تغییرات' : 'ثبت مأموریت'}
-          </Button>
+            <Button
+              type="submit"
+              form="project-form"
+              variant="primary"
+              size="md"
+              loading={isSubmitting}
+              disabled={!hasLeadTechnician || isSubmitting}
+              disabledReason="ابتدا از بخش پرسنل حداقل یک سرپرست اکیپ تعریف کنید."
+              className="flex-[2]"
+              icon={<CheckCircle2 className="w-4 h-4" />}
+            >
+              {isEditing ? 'ذخیره تغییرات' : 'ثبت مأموریت'}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
