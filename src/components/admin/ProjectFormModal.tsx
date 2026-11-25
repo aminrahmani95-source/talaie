@@ -25,6 +25,7 @@ import { compressImageFile } from '../../utils/imageCompressor';
 import { SupabaseSyncService } from '../../utils/supabase';
 import { CloudImage } from '../common/CloudImage';
 import { ProductCountsInput } from '../sales/ProductCountsInput';
+import { normalizeLocationLink } from '../common/NavigateSheet';
 import { computeProjectDiff } from '../../utils/offlineQueue';
 import { Button } from '../ui/Button';
 import { getDisplayName } from '../../utils/technicianName';
@@ -357,7 +358,7 @@ export const ProjectFormModal: React.FC<Props> = ({
           customerName: customerName.trim() || title.trim(),
           customerPhone: customerPhone.trim(),
           address: address.trim(),
-          locationUrl: locationUrl.trim(),
+          locationUrl: normalizeLocationLink(locationUrl) || locationUrl.trim(),
           shadePanels: Number(shadePanels) || 0,
           curtainPanels: Number(curtainPanels) || 0,
           railCount: Number(railCount) || 0,
@@ -412,7 +413,7 @@ export const ProjectFormModal: React.FC<Props> = ({
           customerName: customerName.trim() || title.trim(),
           customerPhone: customerPhone.trim(),
           address: address.trim(),
-          locationUrl: locationUrl.trim(),
+          locationUrl: normalizeLocationLink(locationUrl) || locationUrl.trim(),
           shadePanels: Number(shadePanels) || 0,
           curtainPanels: Number(curtainPanels) || 0,
           railCount: Number(railCount) || 0,
@@ -654,9 +655,12 @@ export const ProjectFormModal: React.FC<Props> = ({
                 <label htmlFor="location-url" className={labelCls}>
                   لینک لوکیشن (نشان، بلد یا گوگل‌مپ)
                 </label>
+                <p className="text-[11px] text-ink-3 -mt-0.5 mb-1">
+                  «اشتراک‌گذاری» در نشان/بلد را بزنید و لینک را اینجا بچسبانید؛ مختصات «35.75, 51.41» هم قبول است.
+                </p>
                 <input
                   id="location-url"
-                  type="url"
+                  type="text"
                   inputMode="url"
                   placeholder="https://nshn.ir/..."
                   value={locationUrl}

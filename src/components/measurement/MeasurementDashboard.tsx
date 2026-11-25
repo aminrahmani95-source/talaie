@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { NavigateSheet } from '../common/NavigateSheet';
 import { Project, User } from '../../types';
 import {
   Ruler,
@@ -37,6 +38,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
   onViewProposal,
 }) => {
   const [viewTab, setViewTab] = useState<'PENDING' | 'COMPLETED'>('PENDING');
+  const [navigateProject, setNavigateProject] = useState<Project | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [verifiedDimensions, setVerifiedDimensions] = useState('');
   const [siteReadinessNotes, setSiteReadinessNotes] = useState('');
@@ -225,15 +227,15 @@ export const MeasurementDashboard: React.FC<Props> = ({
                           <Phone className="w-4 h-4" />
                         </a>
                       )}
-                      <a
-                        href={proj.locationUrl || `https://nshn.ir/search/${encodeURIComponent(proj.address)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-2 rounded-xl bg-raised text-brand-ink hover:bg-hover border border-line"
+                      <button
+                        type="button"
+                        onClick={() => setNavigateProject(proj)}
+                        className="p-2 rounded-xl bg-raised text-brand-ink hover:bg-hover border border-line cursor-pointer"
                         title="مسیریابی"
+                        aria-label="مسیریابی"
                       >
                         <Navigation className="w-4 h-4" />
-                      </a>
+                      </button>
                       {onViewProposal && proj.proposalImages?.length > 0 && (
                         <button
                           type="button"
@@ -417,6 +419,13 @@ export const MeasurementDashboard: React.FC<Props> = ({
           </div>
         )}
       </div>
+      <NavigateSheet
+        isOpen={Boolean(navigateProject)}
+        onClose={() => setNavigateProject(null)}
+        address={navigateProject?.address}
+        locationUrl={navigateProject?.locationUrl}
+        title={navigateProject ? `${navigateProject.code} • ${navigateProject.title}` : undefined}
+      />
     </div>
   );
 };

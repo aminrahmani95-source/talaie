@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { NavigateSheet } from '../common/NavigateSheet';
 import { Portal } from '../ui/Portal';
 import { formatProductCounts, projectProductCounts } from '../../utils/productCounts';
 import { Project, User, ProjectStatus, MaterialRequest, Ticket } from '../../types';
@@ -84,6 +85,7 @@ export const ProjectCard: React.FC<Props> = ({
     );
   }, [tickets, project.id]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isNavigateOpen, setIsNavigateOpen] = useState(false);
   const [isPreInstallModalOpen, setIsPreInstallModalOpen] = useState(false);
   const [resolvingDefectId, setResolvingDefectId] = useState<string | null>(null);
   const [resolvingNotes, setResolvingNotes] = useState<string>('');
@@ -570,10 +572,17 @@ export const ProjectCard: React.FC<Props> = ({
           {project.customerName && project.customerName !== project.title && (
             <span className="font-bold text-ink">{project.customerName}</span>
           )}
-          <span className="flex items-center gap-1 truncate max-w-xs">
-            <MapPin className="w-3.5 h-3.5 text-brand-ink shrink-0" />
-            <span className="truncate">{project.address}</span>
-          </span>
+          {project.address && (
+            <button
+              type="button"
+              onClick={() => setIsNavigateOpen(true)}
+              className="flex items-center gap-1 truncate max-w-xs text-right hover:text-ink cursor-pointer underline-offset-2 hover:underline"
+              title="مسیریابی"
+            >
+              <MapPin className="w-3.5 h-3.5 text-brand-ink shrink-0" />
+              <span className="truncate">{project.address}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -649,20 +658,16 @@ export const ProjectCard: React.FC<Props> = ({
         )}
 
         {(project.locationUrl || project.address) && (
-          <a
-            href={
-              project.locationUrl ||
-              `https://nshn.ir/search/${encodeURIComponent(project.address)}`
-            }
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => setIsNavigateOpen(true)}
             aria-label={`مسیریابی آدرس ${project.address}`}
             className="flex-1 flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[48px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             title="مسیریابی با نشان / بلد"
           >
             <Navigation className="w-4 h-4 text-brand-ink mb-0.5" />
             <span className="text-xs font-bold">مسیریابی</span>
-          </a>
+          </button>
         )}
 
         {(project.proposalImages?.length ?? 0) > 0 && (
@@ -1002,6 +1007,14 @@ export const ProjectCard: React.FC<Props> = ({
           </div>
         </div></Portal>
       )}
+
+      <NavigateSheet
+        isOpen={isNavigateOpen}
+        onClose={() => setIsNavigateOpen(false)}
+        address={project.address}
+        locationUrl={project.locationUrl}
+        title={`${project.code} • ${project.title}`}
+      />
 
       {/* Pre-Installation Photos Mandatory Gate Modal */}
       <PreInstallPhotoModal
