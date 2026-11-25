@@ -33,7 +33,7 @@ import { getDisplayName } from '../../utils/technicianName';
 import { isProjectMultiDay, isProjectScheduledOnDate } from '../../utils/multiDay';
 import { computeSlaMetrics } from '../../utils/sla';
 import { getHandoverEvidence } from '../../utils/qcWorkflow';
-import { buildActionQueue, type ActionKind } from '../../utils/actionQueue';
+import { buildActionQueue, isBookingAwaitingAssignment, isBookingDueSoon, type ActionKind } from '../../utils/actionQueue';
 import { ProjectDossierModal } from '../ceo/ProjectDossierModal';
 import { ProjectPassportPrint } from '../common/ProjectPassportPrint';
 import { triggerToast } from '../Toast';
@@ -155,6 +155,11 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
     [projects, tickets, salesBookings],
   );
   const pendingScheduleRequests = scheduleChangeRequests.filter((r) => r.status === 'PENDING').length;
+  // bookings for later days: one summary line instead of a row each
+  const laterBookings = useMemo(
+    () => salesBookings.filter((b) => isBookingAwaitingAssignment(b, projects) && !isBookingDueSoon(b)),
+    [salesBookings, projects],
+  );
   const queueCounts = useMemo(() => {
     const c: Record<ActionKind, number> = { STUCK: 0, TICKET: 0, QC: 0, INCOMING: 0, BOOKING: 0 };
     for (const i of actionQueue) c[i.kind]++;
@@ -494,6 +499,23 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                 </div>
               );
             })}
+
+            {laterBookings.length > 0 && (activeUrgentCategory === 'ALL' || activeUrgentCategory === 'INCOMING') && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('planner')}
+                className="w-full rounded-xl border border-dashed border-line bg-sunken/50 p-3 flex items-center justify-between gap-3 text-right cursor-pointer hover:bg-raised"
+              >
+                <span className="text-sm text-ink-2">
+                  <span className="font-bold text-ink">{toPersianDigits(laterBookings.length)} رزرو فروش</span> برای روزهای بعد
+                  منتظر تخصیص است
+                </span>
+                <span className="text-xs font-bold text-brand-ink flex items-center gap-1 shrink-0">
+                  تقویم
+                  <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
+                </span>
+              </button>
+            )}
 
             {visibleQueue.length === 0 && (
               <div className="flex items-center gap-3 p-4 rounded-xl border border-dashed border-line bg-sunken/50">

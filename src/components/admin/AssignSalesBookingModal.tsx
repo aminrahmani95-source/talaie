@@ -12,7 +12,7 @@ import {
   Clock,
   X,
 } from 'lucide-react';
-import { toPersianDigits, getUpcomingDays } from '../../utils/jalali';
+import { toPersianDigits, getUpcomingDays, formatJalali } from '../../utils/jalali';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
@@ -155,7 +155,7 @@ export const AssignSalesBookingModal: React.FC<Props> = ({
             <div className="pt-2 border-t border-dashed border-line flex items-center justify-between text-[12px]">
               <span className="text-ink-2">تاریخ تخمینی و اولویت فروش:</span>
               <span className="font-bold text-brand-soft font-mono bg-raised px-2 py-0.5 rounded border border-line-strong">
-                {booking.jalaliDate} ({booking.requestedDate})
+                {booking.jalaliDate ? toPersianDigits(booking.jalaliDate) : formatJalali(booking.requestedDate)}
               </span>
             </div>
           </div>
@@ -181,7 +181,7 @@ export const AssignSalesBookingModal: React.FC<Props> = ({
             >
               {upcomingDays.map((d) => (
                 <option key={d.dateKey} value={d.dateKey}>
-                  {d.persianDayName} {d.persianDayNum} {d.persianMonthName} ({d.dateKey})
+                  {d.persianDayName} {toPersianDigits(d.persianDayNum)} {d.persianMonthName}
                   {d.dateKey === booking.requestedDate ? ' — [پیشنهاد اولیه فروش]' : ''}
                 </option>
               ))}

@@ -603,6 +603,9 @@ export const MonthPlanner: React.FC<Props> = ({
         >
           {displayedDays.map((day) => {
             const dayProjects = projects.filter((p) => isProjectScheduledOnDate(p, day.dateKey));
+            // bookings the customer asked for on this day that have no team yet: shown in the day
+            // itself, so the planner sees the day's demand where he assigns it
+            const dayBookings = unassignedSalesBookings.filter((b) => b.requestedDate === day.dateKey);
             const totalWorkload = dayProjects.reduce(
               (sum, p) => sum + getProjectDailyDurationHours(p, day.dateKey),
               0
@@ -753,6 +756,26 @@ export const MonthPlanner: React.FC<Props> = ({
                     );
                   })}
 
+                  {dayBookings.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      disabled={!canEditSchedule}
+                      onClick={() => setAssigningBooking(b)}
+                      title="رزرو فروش بدون اکیپ — برای تخصیص بزنید"
+                      className="w-full text-right p-2.5 rounded-md border border-dashed border-sky-500/60 bg-sky-500/5 hover:bg-sky-500/10 transition cursor-pointer disabled:cursor-default"
+                    >
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span className="font-bold text-ink truncate">{b.customerName}</span>
+                        <span className="shrink-0 text-[11px] font-bold text-sky-400">رزرو</span>
+                      </div>
+                      <div className="text-[11px] text-ink-3 mt-0.5">
+                        {toPersianDigits(b.lathsCount)} لت{b.isSmart ? ' هوشمند' : ''}
+                        {canEditSchedule ? ' · تخصیص اکیپ' : ''}
+                      </div>
+                    </button>
+                  ))}
+
                   {/* دکمه افزودن همیشه هست (قبلاً بعد از اولین مأموریت روز ناپدید می‌شد) */}
                   {canEditSchedule && onNewProject && (
                     <button
@@ -760,10 +783,10 @@ export const MonthPlanner: React.FC<Props> = ({
                       onClick={() => onNewProject(day.dateKey)}
                       aria-label={`افزودن مأموریت برای ${day.persianDayName}`}
                       className={`w-full border border-dashed border-line hover:border-brand rounded-md flex items-center justify-center text-ink-3 hover:text-brand-ink text-xs transition cursor-pointer ${
-                        dayProjects.length === 0 ? 'py-5' : 'py-2.5'
+                        dayProjects.length === 0 && dayBookings.length === 0 ? 'py-5' : 'py-2.5'
                       }`}
                     >
-                      {dayProjects.length === 0 ? '+ افزودن مأموریت' : '+ مأموریت دیگر'}
+                      {dayProjects.length === 0 && dayBookings.length === 0 ? '+ افزودن مأموریت' : '+ مأموریت دیگر'}
                     </button>
                   )}
                 </div>

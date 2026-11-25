@@ -764,6 +764,7 @@ export const App: React.FC = () => {
       const missing: string[] = [];
       if (!r.salesBookings) missing.push('023_sales_bookings_server_sync.sql');
       if (r.schemaVersion === null || r.schemaVersion < 25) missing.push('024_personnel_repair.sql');
+      if (r.schemaVersion === null || r.schemaVersion < 26) missing.push('025_server_catch_up.sql');
       setMissingMigrations(missing);
     });
     return () => {

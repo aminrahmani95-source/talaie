@@ -39,11 +39,18 @@ describe('buildActionQueue', () => {
 
   it('lists sales bookings that are not yet a project, after the jobs', () => {
     const booking = (id: string, extra: Record<string, unknown> = {}) =>
-      ({ id, customerName: id, lathsCount: 10, requestedDate: '2026-12-05', jalaliDate: '1405/09/14', ...extra }) as never;
+      ({ id, customerName: id, lathsCount: 10, requestedDate: today, jalaliDate: '1405/09/14', ...extra }) as never;
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const q = buildActionQueue(
       [proj('NEW', { assignedTeamId: undefined })],
       [],
-      [booking('B-WAIT'), booking('B-DONE', { convertedToProjectId: 'NEW' }), booking('B-GONE', { convertedToProjectId: 'DELETED' })],
+      [
+        booking('B-WAIT'),
+        booking('B-DONE', { convertedToProjectId: 'NEW' }),
+        booking('B-GONE', { convertedToProjectId: 'DELETED' }),
+        booking('B-LATER', { requestedDate: '2999-01-01' }), // weeks away: summed up, not listed
+      ],
     );
     expect(q.map((i) => i.key)).toEqual(['in-NEW', 'booking-B-WAIT', 'booking-B-GONE']);
   });

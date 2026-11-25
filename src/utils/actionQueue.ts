@@ -22,6 +22,22 @@ export function needsScheduling(p: Project): boolean {
   return p.status === 'MEASUREMENT_PENDING' || !p.assignedTeamId || !p.scheduledDate;
 }
 
+/** bookings for the next few days are action items; later ones wait in the calendar */
+export const BOOKING_ACTION_DAYS = 3;
+
+function dayKeyAfter(days: number, from: Date = new Date()): string {
+  const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + days);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+/** requested for today, the next couple of days, or already overdue (or no date at all) */
+export function isBookingDueSoon(b: SalesProjectBooking, now: Date = new Date()): boolean {
+  if (!b.requestedDate) return true;
+  return b.requestedDate < dayKeyAfter(BOOKING_ACTION_DAYS, now);
+}
+
 /** a sales booking the manager still has to turn into a scheduled project */
 export function isBookingAwaitingAssignment(b: SalesProjectBooking, projects: Project[]): boolean {
   if (!b.convertedToProjectId) return true;
@@ -73,9 +89,11 @@ export function buildActionQueue(
     items.push({ kind: 'INCOMING', key: `in-${p.id}`, project: p, tickets: [] });
   }
 
-  // sold by a sales rep, waiting for the manager to give it a team and a date
+  // sold by a sales rep, waiting for the manager to give it a team and a date. Only the ones due
+  // in the next few days are listed: with weeks of bookings the queue was all bookings and the
+  // real problems (stops, tickets) got lost below them. Later ones are summed up on the dashboard.
   const waiting = bookings
-    .filter((b) => isBookingAwaitingAssignment(b, projects))
+    .filter((b) => isBookingAwaitingAssignment(b, projects) && isBookingDueSoon(b))
     .sort((a, b) => (a.requestedDate || '').localeCompare(b.requestedDate || ''));
   for (const b of waiting) {
     items.push({ kind: 'BOOKING', key: `booking-${b.id}`, booking: b, tickets: [] });
