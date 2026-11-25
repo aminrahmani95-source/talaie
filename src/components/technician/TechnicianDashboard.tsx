@@ -120,6 +120,15 @@ export const TechnicianDashboard: React.FC<Props> = ({
     return isEnRouteOrInProgress || isStuck || isPaused || isQcRejected || hasUnresolvedDefects;
   });
 
+  // فقط وقتی چیزی واقعاً گیر دارد (توقف، رد QC، ایراد باز) بخش بالا قرمز و چشمک‌زن می‌شود؛
+  // کار عادی در جریان نباید مثل هشدار به نظر برسد.
+  const needsAttention = openProjects.some(
+    (p) =>
+      p.status === 'STUCK' ||
+      p.qcStatus === 'REJECTED' ||
+      Boolean(p.qcDefects && p.qcDefects.some((d) => d.status !== 'RESOLVED' && d.status !== 'VERIFIED'))
+  );
+
   // OPEN PROJECT IDS for deduplication so no job ever appears twice!
   const openProjectIds = new Set(openProjects.map((p) => p.id));
   // a job this person is already driving to / working on (used to warn before starting another one)
@@ -200,18 +209,32 @@ export const TechnicianDashboard: React.FC<Props> = ({
 
       {/* PRIORITY JOBS: Open, in-flight, stuck, or QC-rejected jobs (Show FIRST) */}
       {openProjects.length > 0 && (
-        <div className="space-y-3 bg-surface p-3.5 sm:p-4 rounded-lg border border-rose-500/30">
+        <div
+          className={`space-y-3 bg-surface p-3 sm:p-4 rounded-lg border ${
+            needsAttention ? 'border-rose-500/40' : 'border-brand/40'
+          }`}
+        >
           <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2 text-xs font-bold text-rose-300">
+            <div
+              className={`flex items-center gap-2 text-xs font-bold ${
+                needsAttention ? 'text-rose-600 dark:text-rose-300' : 'text-ink'
+              }`}
+            >
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                {needsAttention && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                )}
+                <span
+                  className={`relative inline-flex rounded-full h-2 w-2 ${needsAttention ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                ></span>
               </span>
-              <span>کارهای فعال و نیازمند پیگیری:</span>
+              <span>{needsAttention ? 'نیاز به پیگیری' : 'کار در جریان'}</span>
             </div>
-            <span className="text-xs bg-rose-600/90 text-white px-2 py-0.5 rounded font-bold tabular-nums">
-              {toPersianDigits(openProjects.length)}
-            </span>
+            {openProjects.length > 1 && (
+              <span className="text-xs bg-raised text-ink px-2 py-0.5 rounded font-bold tabular-nums">
+                {toPersianDigits(openProjects.length)}
+              </span>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -248,10 +271,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
         <div className="text-xs font-semibold text-ink mb-2 px-1 flex items-center justify-between">
           <span className="flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-brand-ink" />
-            <span>برنامه روزهای کاری:</span>
-          </span>
-          <span className="text-xs text-ink-2 tabular-nums">
-            (پنجره دید {toPersianDigits(settings.visibilityWindowDays)} روز آینده)
+            <span>برنامه‌ی روزهای آینده</span>
           </span>
         </div>
 
@@ -264,7 +284,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
             const isSelected = day.dateKey === selectedDateKey;
             const count = projects.filter(
               (p) =>
-                p.scheduledDate === day.dateKey &&
+                isProjectScheduledOnDate(p, day.dateKey) &&
                 (viewScope === 'ALL_DAY_JOBS' && isLead ? true : isProjectAssignedToMe(p))
             ).length;
 
@@ -312,9 +332,11 @@ export const TechnicianDashboard: React.FC<Props> = ({
             مأموریت‌های {selectedDayInfo?.persianDayName} {selectedDayInfo?.persianDayNum ? toPersianDigits(selectedDayInfo.persianDayNum) : ''}{' '}
             {selectedDayInfo?.persianMonthName}:
           </div>
-          <span className="text-xs text-ink-2 font-medium tabular-nums">
-            {toPersianDigits(filteredScheduledProjects.length)} مأموریت
-          </span>
+          {filteredScheduledProjects.length > 0 && (
+            <span className="text-xs text-ink-2 font-medium tabular-nums">
+              {toPersianDigits(filteredScheduledProjects.length)} مأموریت
+            </span>
+          )}
         </div>
 
         {filteredScheduledProjects.length === 0 ? (

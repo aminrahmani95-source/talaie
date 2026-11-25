@@ -634,55 +634,54 @@ export const ProjectCard: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Action Row: Large Icon Buttons (Call, Map Route, Proposal, Tools) - Min 44px */}
-      <div className="grid grid-cols-4 gap-2 text-xs">
-        {project.customerPhone ? (
+      {/* Action Row: فقط کارهایی که برای این پروژه واقعاً ممکن است (بدون کاشی خاموش «بدون تلفن») */}
+      <div className="flex gap-2 text-xs">
+        {project.customerPhone && (
           <a
             href={`tel:${project.customerPhone}`}
             aria-label={`تماس تلفنی با مشتری ${project.customerName || ''}`}
-            className="flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[44px] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="flex-1 flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[48px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             title={`تماس با ${project.customerPhone}`}
           >
             <Phone className="w-4 h-4 text-brand-ink mb-0.5" />
             <span className="text-xs font-bold">تماس</span>
           </a>
-        ) : (
-          <div className="flex flex-col items-center justify-center p-2 rounded-md bg-sunken text-ink-3 border border-line opacity-60 min-h-[44px]">
-            <Phone className="w-4 h-4 mb-0.5" />
-            <span className="text-xs">بدون تلفن</span>
-          </div>
         )}
 
-        <a
-          href={
-            project.locationUrl ||
-            `https://nshn.ir/search/${encodeURIComponent(project.address)}`
-          }
-          target="_blank"
-          rel="noreferrer"
-          aria-label={`مسیریابی آدرس ${project.address}`}
-          className="flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[44px] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          title="مسیریابی هوشمند نشان / بلد"
-        >
-          <Navigation className="w-4 h-4 text-brand-ink mb-0.5" />
-          <span className="text-xs font-bold">مسیریابی</span>
-        </a>
+        {(project.locationUrl || project.address) && (
+          <a
+            href={
+              project.locationUrl ||
+              `https://nshn.ir/search/${encodeURIComponent(project.address)}`
+            }
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`مسیریابی آدرس ${project.address}`}
+            className="flex-1 flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[48px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            title="مسیریابی با نشان / بلد"
+          >
+            <Navigation className="w-4 h-4 text-brand-ink mb-0.5" />
+            <span className="text-xs font-bold">مسیریابی</span>
+          </a>
+        )}
 
-        <button
-          type="button"
-          onClick={() => onViewProposal(project)}
-          aria-label="مشاهده پروپوزال و جزئیات فنی"
-          className="flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[44px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          <FileText className="w-4 h-4 text-brand-ink mb-0.5" />
-          <span className="text-xs font-bold">پروپوزال</span>
-        </button>
+        {(project.proposalImages?.length ?? 0) > 0 && (
+          <button
+            type="button"
+            onClick={() => onViewProposal(project)}
+            aria-label="مشاهده پروپوزال و نقشه"
+            className="flex-1 flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[48px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            <FileText className="w-4 h-4 text-brand-ink mb-0.5" />
+            <span className="text-xs font-bold">پروپوزال</span>
+          </button>
+        )}
 
         <button
           type="button"
           onClick={() => onOpenToolChecklist(project)}
           aria-label="چک‌لیست ابزار مورد نیاز"
-          className="flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[44px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="flex-1 flex flex-col items-center justify-center p-2 rounded-md bg-raised hover:bg-hover border border-line-strong text-ink transition min-h-[48px] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           <Wrench className="w-4 h-4 text-brand-ink mb-0.5" />
           <span className="text-xs font-bold">ابزار</span>
@@ -766,23 +765,33 @@ export const ProjectCard: React.FC<Props> = ({
 
             {isInProgress && (
               <div className="space-y-2.5">
-                {/* Fast Action Toolbar during Installation */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* Fast Action Toolbar during Installation: سه راه جدا برای سه مشکل متفاوت */}
+                <div className={`grid gap-2 ${onOpenMaterialModal && onReportStuck ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  {onOpenMaterialModal && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenMaterialModal(project)}
+                      className="py-2.5 px-2 bg-sunken hover:bg-raised rounded-md text-xs font-bold transition flex flex-col sm:flex-row items-center justify-center gap-1 cursor-pointer shadow-xs active:scale-95 min-h-[52px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand text-purple-700 dark:text-purple-300 border border-purple-500/40"
+                    >
+                      <Package className="w-4 h-4" />
+                      <span>درخواست متریال</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onOpenTicketModal(project)}
-                    className="py-2.5 px-3 bg-sunken hover:bg-raised text-amber-300 border border-amber-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    className="py-2.5 px-2 bg-sunken hover:bg-raised rounded-md text-xs font-bold transition flex flex-col sm:flex-row items-center justify-center gap-1 cursor-pointer shadow-xs active:scale-95 min-h-[52px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand text-amber-700 dark:text-amber-300 border border-amber-500/40"
                   >
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                    <span>ثبت کسری</span>
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>ثبت ایراد</span>
                   </button>
                   {onReportStuck && (
                     <button
                       type="button"
                       onClick={() => onReportStuck(project)}
-                      className="py-2.5 px-3 bg-sunken hover:bg-raised text-rose-300 border border-rose-500/30 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                      className="py-2.5 px-2 bg-sunken hover:bg-raised rounded-md text-xs font-bold transition flex flex-col sm:flex-row items-center justify-center gap-1 cursor-pointer shadow-xs active:scale-95 min-h-[52px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand text-rose-700 dark:text-rose-300 border border-rose-500/40"
                     >
-                      <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
+                      <AlertOctagon className="w-4 h-4" />
                       <span>اعلام توقف</span>
                     </button>
                   )}
@@ -886,50 +895,44 @@ export const ProjectCard: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Secondary Actions Menu (...) */}
-      <div className="pt-1 flex items-center justify-between border-t border-line text-xs">
-        <button
-          type="button"
-          onClick={() => setIsMenuOpen((prev) => !prev)}
-          className="flex items-center gap-1 text-ink-2 hover:text-ink py-1.5 px-2 rounded transition cursor-pointer min-h-[40px]"
-        >
-          <MoreVertical className="w-3.5 h-3.5" />
-          <span>اقدامات بیشتر</span>
-        </button>
+      {/* Secondary Actions: وقتی کار در جریان است همه‌ی این‌ها بالاتر روی کارت هستند */}
+      {!isInProgress && (
+        <div className="pt-1 flex items-center justify-between border-t border-line text-xs">
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+            aria-expanded={isMenuOpen}
+            className="flex items-center gap-1 text-ink-2 hover:text-ink py-1.5 px-2 rounded transition cursor-pointer min-h-[40px]"
+          >
+            <MoreVertical className="w-3.5 h-3.5" />
+            <span>اقدامات بیشتر</span>
+          </button>
 
-        {isMenuOpen && (
-          <div className="flex items-center gap-2">
-            {isInProgress && onReportStuck && (
+          {isMenuOpen && (
+            <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => onReportStuck(project)}
-                className="text-xs text-rose-400 font-bold hover:underline cursor-pointer min-h-[40px] px-2 flex items-center"
+                onClick={() => onOpenTicketModal(project)}
+                className="text-xs text-amber-700 dark:text-amber-300 font-bold hover:underline cursor-pointer min-h-[40px] px-2 flex items-center gap-1"
               >
-                گزارش توقف کار
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>ثبت ایراد</span>
               </button>
-            )}
 
-            <button
-              type="button"
-              onClick={() => onOpenTicketModal(project)}
-              className="text-xs text-brand-ink font-bold hover:underline cursor-pointer min-h-[40px] px-2 flex items-center"
-            >
-              ثبت تیکت فوری
-            </button>
-
-            {onOpenMaterialModal && (
-              <button
-                type="button"
-                onClick={() => onOpenMaterialModal(project)}
-                className="text-xs text-purple-400 hover:text-purple-300 font-bold hover:underline cursor-pointer min-h-[44px] px-2 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              >
-                <Package className="w-3.5 h-3.5" />
-                <span>درخواست متریال</span>
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+              {onOpenMaterialModal && (
+                <button
+                  type="button"
+                  onClick={() => onOpenMaterialModal(project)}
+                  className="text-xs text-purple-700 dark:text-purple-300 font-bold hover:underline cursor-pointer min-h-[40px] px-2 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                >
+                  <Package className="w-3.5 h-3.5" />
+                  <span>درخواست متریال</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Confirmation Dialog for Material Receipt */}
       {confirmingReceiptTarget && (

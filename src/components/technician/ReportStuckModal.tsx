@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Project, StuckIncident, StuckCategory } from '../../types';
-import { AlertOctagon, X, ShieldAlert, Send } from 'lucide-react';
+import { X, Send } from 'lucide-react';
 import { getDisplayName } from '../../utils/technicianName';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { PhotoSourceButtons } from '../ui/PhotoSourceButtons';
 import { CloudImage } from '../common/CloudImage';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { Sheet } from '../ui/Sheet';
 
 interface Props {
   project: Project;
@@ -32,7 +32,6 @@ export const ReportStuckModal: React.FC<Props> = ({
   onClose,
   onSubmit,
 }) => {
-  useEscapeKey(onClose, isOpen);
   const [category, setCategory] = useState<StuckCategory>('HARDWARE_SHORTAGE');
   const [description, setDescription] = useState('');
   const [completedWork, setCompletedWork] = useState('');
@@ -44,6 +43,15 @@ export const ReportStuckModal: React.FC<Props> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
+
+  const requestClose = () => {
+    if (isSubmitting) return;
+    const dirty = description.trim() || completedWork.trim() || remainingWork.trim() || requiredParts.trim() || photos.length > 0;
+    if (dirty && !window.confirm('اعلام توقف ثبت نشده است. بدون ثبت بسته شود؟')) return;
+    onClose();
+  };
+
+  const focusField = (id: string) => document.getElementById(id)?.focus();
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -70,22 +78,25 @@ export const ReportStuckModal: React.FC<Props> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (isSubmitting) return;
 
     if (!description.trim()) {
-      setError('لطفاً شرح دقیق مانع یا دلیل توقف کار را یادداشت فرمایید.');
+      setError('بنویسید چرا کار متوقف شد.');
+      focusField('stuck-description');
       return;
     }
 
     if (!completedWork.trim()) {
-      setError('لطفاً اقدامات انجام‌شده تا این لحظه را جهت اطلاع اکیپ بعدی بنویسید.');
+      setError('بنویسید تا اینجا چه کارهایی انجام شد.');
+      focusField('stuck-completed');
       return;
     }
 
     if (!remainingWork.trim()) {
-      setError('لطفاً اقدامات باقیمانده را جهت اطلاع اکیپ بعدی بنویسید.');
+      setError('بنویسید چه کارهایی باقی مانده است.');
+      focusField('stuck-remaining');
       return;
     }
 
@@ -123,198 +134,167 @@ export const ReportStuckModal: React.FC<Props> = ({
     }
   };
 
+  const fieldCls =
+    'w-full text-sm p-2.5 rounded-md border border-line bg-canvas text-ink resize-none focus:outline-none focus:border-rose-500';
+
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="report-stuck-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
-    >
-      <div className="bg-surface rounded-xl max-w-xl w-full shadow-2xl border border-rose-500/30 overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
-        {/* Header in Rose & Graphite */}
-        <div className="bg-canvas px-6 py-4 text-ink flex items-center justify-between border-b border-line">
+    <Sheet
+      isOpen
+      onClose={requestClose}
+      title="اعلام توقف کار"
+      subtitle={`${project.code} • ${project.title}`}
+      size="lg"
+      footer={
+        <div className="space-y-2">
+          {error && (
+            <p role="alert" className="text-rose-600 dark:text-rose-300 text-xs font-bold">
+              {error}
+            </p>
+          )}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center shrink-0">
-              <AlertOctagon className="w-4 h-4" aria-hidden="true" />
-            </div>
-            <div>
-              <h3 id="report-stuck-title" className="font-bold text-base text-ink">
-                اعلام توقف کار و صورت‌جلسه تحویل به اکیپ بعدی
-              </h3>
-              <p className="text-xs text-rose-400 mt-0.5">
-                <span className="font-mono">{project.code}</span> • {project.title}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-raised text-ink-2 hover:text-ink transition cursor-pointer"
-            aria-label="بستن پنجره"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Warning Banner */}
-        <div className="bg-rose-500/10 border-b border-rose-500/20 p-3.5 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-rose-300 font-semibold">
-            <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
-            <span>پروژه جهت جلوگیری از فراموشی به کارتابل «نیمه‌کاره‌ها» منتقل می‌شود</span>
-          </div>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
-          {/* Category */}
-          <div>
-            <label className="block text-xs font-semibold text-ink mb-2">
-              علت توقف پروژه: *
-            </label>
-            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-              {CATEGORIES.map((cat) => {
-                const isSelected = category === cat.key;
-                return (
-                  <button
-                    key={cat.key}
-                    type="button"
-                    onClick={() => {
-                      setCategory(cat.key);
-                      setError('');
-                    }}
-                    className={`w-full text-right p-2 rounded-md text-xs font-medium flex items-center justify-between transition cursor-pointer border ${
-                      isSelected
-                        ? 'bg-rose-500/15 border-rose-500/50 text-rose-300 font-bold'
-                        : 'bg-sunken border-line text-ink-2 hover:border-line-strong hover:text-ink'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-sm">{cat.icon}</span>
-                      <span>{cat.label}</span>
-                    </span>
-                    {isSelected && <span className="text-rose-400 font-bold">✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label htmlFor="stuck-description" className="block text-xs font-semibold text-ink mb-1">
-              شرح دقیق مانع / علت توقف: *
-            </label>
-            <textarea
-              id="stuck-description"
-              rows={2}
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                setError('');
-              }}
-              placeholder="مثلاً: ابعاد 2 عدد شید سالن مغایرت داشت و باید مجدداً اصلاح شود..."
-              className="w-full text-xs p-2.5 rounded-md border border-line focus:ring-1 focus:ring-rose-500 focus:border-rose-500 bg-canvas text-ink resize-none"
-            />
-          </div>
-
-          {/* Handover Details for next team */}
-          <div className="p-3.5 bg-sunken rounded-xl border border-sky-500/30 space-y-3">
-            <h4 className="text-xs font-bold text-sky-300 flex items-center gap-1.5">
-              <span>📋 اطلاعات تحویل کارگاه به اکیپ بعدی (رفع نیاز به تماس تلفنی)</span>
-            </h4>
-
-            <div>
-              <label className="block text-[12px] font-semibold text-ink-2 mb-1">
-                1. اقدامات انجام‌شده تا این لحظه: *
-              </label>
-              <textarea
-                rows={2}
-                value={completedWork}
-                onChange={(e) => setCompletedWork(e.target.value)}
-                placeholder="مثال: تمام ریل‌ها و براکت‌های سقفی نصب شد. سیم‌کشی برق 220 ولت انجام و تست شد."
-                className="w-full text-xs p-2 rounded-md border border-line bg-canvas text-ink resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[12px] font-semibold text-ink-2 mb-1">
-                2. کارهای باقیمانده برای اکیپ بعدی: *
-              </label>
-              <textarea
-                rows={2}
-                value={remainingWork}
-                onChange={(e) => setRemainingWork(e.target.value)}
-                placeholder="مثال: فقط آویزان کردن 2 عدد شید اصلاح‌شده، کالیبره کردن لیمیت موتور و کد ریموت."
-                className="w-full text-xs p-2 rounded-md border border-line bg-canvas text-ink resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[12px] font-semibold text-ink-2 mb-1">
-                3. قطعات یا متریال مورد نیاز (جهت تامین انبار):
-              </label>
-              <input
-                type="text"
-                value={requiredParts}
-                onChange={(e) => setRequiredParts(e.target.value)}
-                placeholder="مثال: 2 عدد شید اصلاحی با عرض 2.45 متر + 2 عدد ریموت تک‌کانال"
-                className="w-full text-xs p-2 rounded-md border border-line bg-canvas text-ink"
-              />
-            </div>
-
-            {/* Photos */}
-            <div>
-              <label className="block text-[12px] font-semibold text-ink-2 mb-1">
-                عکس‌های وضعیت فعلی کارگاه و علت توقف:
-              </label>
-              <div className="flex items-center gap-2">
-<PhotoSourceButtons onChange={handlePhotoUpload} busy={isProcessingPhotos} />
-                <span className="text-[12px] text-ink-3">
-                  {photos.length > 0 ? `${photos.length} عکس ثبت شد` : 'اختیاری اما توصیه می‌شود'}
-                </span>
-              </div>
-              {photos.length > 0 && (
-                <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1">
-                  {photos.map((p, i) => (
-                    <div key={i} className="relative w-14 h-14 rounded overflow-hidden border border-line shrink-0">
-                      <CloudImage src={p} alt="وضعیت توقف" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
-                        className="absolute top-0.5 left-0.5 bg-black/70 text-white rounded-full p-0.5"
-                      >
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {error && <p className="text-rose-400 text-xs font-semibold">{error}</p>}
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
             <button
               type="button"
               disabled={isSubmitting}
-              onClick={onClose}
-              className="px-4 py-2 rounded-md text-xs font-semibold bg-raised hover:bg-hover text-ink-2 hover:text-ink transition cursor-pointer"
+              onClick={requestClose}
+              className="flex-1 min-h-[44px] px-4 py-2 rounded-md text-sm font-semibold bg-raised hover:bg-hover text-ink-2 hover:text-ink transition cursor-pointer"
             >
               انصراف
             </button>
             <button
               type="submit"
+              form="report-stuck-form"
               disabled={isSubmitting || isProcessingPhotos}
-              className="px-5 py-2 rounded-md text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 transition disabled:opacity-50 cursor-pointer shadow-md"
+              className="flex-[2] min-h-[44px] px-4 py-2 rounded-md text-sm font-bold bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center gap-1.5 transition disabled:opacity-50 cursor-pointer shadow-md"
             >
-              <Send className="w-3.5 h-3.5" />
-              <span>{isSubmitting ? 'در حال ثبت...' : 'ثبت توقف و ارسال به نیمه‌کاره‌ها'}</span>
+              <Send className="w-4 h-4" />
+              <span>{isSubmitting ? 'در حال ثبت...' : 'ثبت توقف'}</span>
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      }
+    >
+      <form id="report-stuck-form" onSubmit={handleSubmit} className="space-y-4">
+        <p className="text-[12px] leading-6 text-rose-700 dark:text-rose-200 bg-rose-500/10 border border-rose-500/30 rounded-md p-2.5">
+          پروژه به «نیمه‌کاره‌ها» می‌رود و مدیر فنی پیگیری می‌کند. آنچه اینجا می‌نویسید به اکیپی که کار را ادامه می‌دهد نشان داده می‌شود، پس دیگر لازم نیست تلفنی توضیح بدهید.
+        </p>
+
+        {/* Category */}
+        <div>
+          <span className="block text-xs font-bold text-ink mb-2">
+            ۱. علت توقف <span className="text-rose-400">*</span>
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {CATEGORIES.map((cat) => {
+              const isSelected = category === cat.key;
+              return (
+                <button
+                  key={cat.key}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => {
+                    setCategory(cat.key);
+                    setError('');
+                  }}
+                  className={`w-full text-right p-2.5 rounded-md text-xs flex items-center gap-2 transition cursor-pointer border min-h-[44px] ${
+                    isSelected
+                      ? 'bg-rose-500/15 border-rose-500/60 text-ink font-bold'
+                      : 'bg-sunken border-line text-ink-2 hover:border-line-strong hover:text-ink'
+                  }`}
+                >
+                  <span className="text-base shrink-0">{cat.icon}</span>
+                  <span className="leading-snug">{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Description */}
+        <div>
+          <label htmlFor="stuck-description" className="block text-xs font-bold text-ink mb-1.5">
+            ۲. توضیح مانع <span className="text-rose-400">*</span>
+          </label>
+          <textarea
+            id="stuck-description"
+            rows={2}
+            value={description}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              setError('');
+            }}
+            placeholder="مثلاً: ابعاد ۲ شید سالن با پنجره نمی‌خواند و باید اصلاح شود."
+            className={fieldCls}
+          />
+        </div>
+
+        {/* Handover Details for next team */}
+        <div className="p-3 bg-sunken rounded-lg border border-line space-y-3">
+          <span className="text-xs font-bold text-ink block">۳. تحویل به اکیپ بعدی</span>
+
+          <div>
+            <label htmlFor="stuck-completed" className="block text-[12px] font-semibold text-ink-2 mb-1">
+              تا اینجا چه انجام شد؟ <span className="text-rose-400">*</span>
+            </label>
+            <textarea
+              id="stuck-completed"
+              rows={2}
+              value={completedWork}
+              onChange={(e) => setCompletedWork(e.target.value)}
+              placeholder="مثلاً: ریل‌ها و براکت‌ها نصب و برق تست شد."
+              className={fieldCls}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="stuck-remaining" className="block text-[12px] font-semibold text-ink-2 mb-1">
+              چه کاری مانده است؟ <span className="text-rose-400">*</span>
+            </label>
+            <textarea
+              id="stuck-remaining"
+              rows={2}
+              value={remainingWork}
+              onChange={(e) => setRemainingWork(e.target.value)}
+              placeholder="مثلاً: آویزان کردن ۲ شید اصلاحی، تنظیم لیمیت موتور و ریموت."
+              className={fieldCls}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="stuck-parts" className="block text-[12px] font-semibold text-ink-2 mb-1">
+              قطعه یا متریال لازم (اختیاری)
+            </label>
+            <input
+              id="stuck-parts"
+              type="text"
+              value={requiredParts}
+              onChange={(e) => setRequiredParts(e.target.value)}
+              placeholder="مثلاً: ۲ شید اصلاحی عرض ۲.۴۵ + ۲ ریموت تک‌کانال"
+              className={fieldCls}
+            />
+          </div>
+        </div>
+
+        {/* Photos */}
+        <div>
+          <span className="block text-xs font-bold text-ink mb-2">۴. عکس وضعیت فعلی (توصیه می‌شود)</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <PhotoSourceButtons onChange={handlePhotoUpload} busy={isProcessingPhotos} />
+            {photos.map((p, i) => (
+              <div key={i} className="relative w-14 h-14 rounded-md overflow-hidden border border-line shrink-0">
+                <CloudImage src={p} alt="وضعیت توقف" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="absolute top-0.5 left-0.5 bg-black/70 text-white rounded-full p-1"
+                  aria-label="حذف عکس"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </form>
+    </Sheet>
   );
 };

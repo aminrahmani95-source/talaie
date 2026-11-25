@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Project, User, MaterialCategory, MaterialRequestReason, MaterialUrgency, MaterialRequest } from '../../types';
 import {
   Package,
-  X,
   Plus,
   Trash2,
   AlertCircle,
   Sparkles,
+  Minus,
   Scissors,
   Settings2,
   Sliders,
@@ -21,14 +21,14 @@ import {
   MATERIAL_URGENCY_LABELS,
   COMMON_MATERIAL_SUGGESTIONS,
 } from '../../utils/materialRequests';
-import { toPersianDigits } from '../../utils/jalali';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { toPersianDigits, toEnglishDigits } from '../../utils/jalali';
+import { Sheet } from '../ui/Sheet';
 
 interface Props {
   project: Project;
   currentUser: User;
   onClose: () => void;
-  onSubmit: (request: MaterialRequest) => void;
+  onSubmit: (request: MaterialRequest) => Promise<void> | void;
 }
 
 interface DraftItem {
@@ -54,10 +54,10 @@ export const MaterialRequestModal: React.FC<Props> = ({
   onClose,
   onSubmit,
 }) => {
-  useEscapeKey(onClose);
   const [selectedCategory, setSelectedCategory] = useState<MaterialCategory>('HARDWARE');
   const [selectedReason, setSelectedReason] = useState<MaterialRequestReason>('SHORTAGE');
-  const [selectedUrgency, setSelectedUrgency] = useState<MaterialUrgency>('URGENT');
+  // «عادی» پیش‌فرض است تا «فوری» و «بحرانی» برای انبار معنی داشته باشند.
+  const [selectedUrgency, setSelectedUrgency] = useState<MaterialUrgency>('NORMAL');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<DraftItem[]>([
     {
@@ -67,25 +67,51 @@ export const MaterialRequestModal: React.FC<Props> = ({
       unit: 'عدد',
     },
   ]);
+  const [qtyDrafts, setQtyDrafts] = useState<Record<number, string>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Quick suggestion click
+  const isDirty =
+    notes.trim().length > 0 || items.some((it) => it.title.trim().length > 0) || items.length > 1;
+
+  const requestClose = () => {
+    if (submitting) return;
+    if (isDirty && !window.confirm('درخواست ارسال نشده است. بدون ارسال بسته شود؟')) return;
+    onClose();
+  };
+
+  // Quick suggestion click: اگر همان قلم قبلاً اضافه شده، فقط تعدادش یکی زیاد می‌شود
   const handleAddSuggestion = (sug: { title: string; category: MaterialCategory; unit: string }) => {
-    // If the first item is empty, replace it; otherwise append
     setItems((prev) => {
+      const existing = prev.findIndex((it) => it.title.trim() === sug.title);
+      if (existing >= 0) {
+        const copy = [...prev];
+        copy[existing] = { ...copy[existing], requestedQty: (copy[existing].requestedQty || 0) + 1 };
+        return copy;
+      }
       if (prev.length === 1 && !prev[0].title.trim()) {
         return [{ title: sug.title, category: sug.category, requestedQty: 1, unit: sug.unit }];
       }
       return [...prev, { title: sug.title, category: sug.category, requestedQty: 1, unit: sug.unit }];
     });
-    setSelectedCategory(sug.category);
+    setQtyDrafts({});
   };
 
   const handleUpdateItem = (index: number, patch: Partial<DraftItem>) => {
     setItems((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], ...patch };
+      return copy;
+    });
+  };
+
+  const stepQty = (index: number, delta: number) => {
+    const current = items[index]?.requestedQty || 0;
+    const next = Math.max(1, Math.round((current + delta) * 100) / 100);
+    handleUpdateItem(index, { requestedQty: next });
+    setQtyDrafts((d) => {
+      const copy = { ...d };
+      delete copy[index];
       return copy;
     });
   };
@@ -105,15 +131,21 @@ export const MaterialRequestModal: React.FC<Props> = ({
   const handleRemoveItemRow = (index: number) => {
     if (items.length <= 1) return;
     setItems((prev) => prev.filter((_, idx) => idx !== index));
+    setQtyDrafts({});
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (submitting) return;
     setErrorMessage(null);
 
     const validItems = items.filter((it) => it.title.trim().length > 0);
     if (validItems.length === 0) {
-      setErrorMessage('لطفاً حداقل عنوان یک قلم متریال درخواستی را وارد کنید.');
+      setErrorMessage('حداقل نام یک قلم را بنویسید یا از اقلام پرکاربرد انتخاب کنید.');
+      return;
+    }
+    if (validItems.some((it) => !(it.requestedQty > 0))) {
+      setErrorMessage('تعداد هر قلم باید بیشتر از صفر باشد.');
       return;
     }
 
@@ -125,13 +157,13 @@ export const MaterialRequestModal: React.FC<Props> = ({
         category: selectedCategory,
         reason: selectedReason,
         urgency: selectedUrgency,
-        items: validItems,
+        items: validItems.map((it) => ({ ...it, title: it.title.trim() })),
         notes: notes.trim() || undefined,
       });
 
-      onSubmit(payload);
+      await onSubmit(payload);
     } catch (err: any) {
-      setErrorMessage(err.message || 'خطا در ثبت درخواست متریال.');
+      setErrorMessage(err?.message || 'خطا در ثبت درخواست متریال.');
       setSubmitting(false);
     }
   };
@@ -140,254 +172,284 @@ export const MaterialRequestModal: React.FC<Props> = ({
     (s) => s.category === selectedCategory
   );
 
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="material-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
-    >
-      <div className="bg-surface w-full max-w-2xl rounded-lg shadow-2xl border border-line overflow-hidden my-6">
-        {/* Modal Header */}
-        <div className="bg-canvas text-ink p-4 sm:p-5 flex items-center justify-between border-b border-line">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-md bg-raised border border-brand/30 flex items-center justify-center text-brand-ink">
-              <Package className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 id="material-modal-title" className="text-base sm:text-lg font-bold text-ink">
-                درخواست کسری و تامین متریال
-              </h2>
-              <p className="text-xs text-ink-2 font-medium">
-                {project.title} ({project.code}) — {project.customerName}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-md hover:bg-raised text-ink-2 hover:text-ink transition flex items-center justify-center cursor-pointer"
-            aria-label="بستن پنجره"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+  const subtitle = [project.code, project.title, project.customerName && project.customerName !== project.title ? project.customerName : '']
+    .filter(Boolean)
+    .join(' • ');
 
-        {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5 max-h-[calc(85vh-8rem)] overflow-y-auto">
+  const urgencyStyles: Record<MaterialUrgency, string> = {
+    NORMAL: 'border-brand bg-raised text-ink',
+    URGENT: 'border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-200',
+    CRITICAL_BLOCKING: 'border-rose-500 bg-rose-500/15 text-rose-700 dark:text-rose-200',
+  };
+  const urgencyShort: Record<MaterialUrgency, string> = {
+    NORMAL: 'عادی',
+    URGENT: 'فوری',
+    CRITICAL_BLOCKING: 'کار متوقف است',
+  };
+
+  const validCount = items.filter((it) => it.title.trim()).length;
+
+  return (
+    <Sheet
+      isOpen
+      onClose={requestClose}
+      title="درخواست متریال / کسری"
+      subtitle={subtitle}
+      size="lg"
+      footer={
+        <div className="space-y-2">
           {errorMessage && (
-            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 p-3 rounded-md text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+            <div role="alert" className="text-rose-600 dark:text-rose-300 text-xs font-bold flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
-
-          {/* 1. Category Selector */}
-          <div>
-            <label className="block text-xs font-semibold text-ink mb-2">
-              دسته‌بندی اصلی متریال:
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {(Object.keys(MATERIAL_CATEGORY_LABELS) as MaterialCategory[]).map((cat) => {
-                const Icon = CATEGORY_ICONS[cat];
-                const isSelected = selectedCategory === cat;
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategory(cat);
-                    }}
-                    className={`flex items-center gap-2 p-2.5 rounded-md border text-xs font-semibold transition text-right cursor-pointer min-h-[44px] ${
-                      isSelected
-                        ? 'border-brand bg-raised text-brand-soft ring-1 ring-brand/40'
-                        : 'border-line bg-sunken text-ink-2 hover:bg-raised hover:text-ink'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span className="truncate">{MATERIAL_CATEGORY_LABELS[cat]}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Quick Suggestions Pills (Zero typing!) */}
-          {filteredSuggestions.length > 0 && (
-            <div className="bg-sunken p-3 rounded-md border border-line">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-2 mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-brand-ink" />
-                <span>اقلام پرکاربرد (یک‌کلیک برای افزودن):</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {filteredSuggestions.map((sug, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleAddSuggestion(sug)}
-                    className="text-xs bg-raised hover:bg-hover hover:border-brand border border-line-strong px-2.5 py-1.5 rounded-md text-ink transition cursor-pointer flex items-center gap-1 min-h-[36px]"
-                  >
-                    <Plus className="w-3 h-3 text-brand-ink" />
-                    <span>{sug.title}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 2. Items List */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-ink">
-                اقلام مورد نیاز جهت ارسال به کارگاه:
-              </label>
-              <button
-                type="button"
-                onClick={handleAddItemRow}
-                className="text-xs font-semibold text-brand-ink hover:underline flex items-center gap-1 cursor-pointer py-1 px-2"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>افزودن ردیف جدید</span>
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {items.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2.5 bg-sunken rounded-md border border-line"
-                >
-                  <span className="text-xs font-bold text-brand-ink self-center shrink-0 w-6 text-center tabular-nums">
-                    {toPersianDigits(idx + 1)}.
-                  </span>
-
-                  <input
-                    type="text"
-                    placeholder="عنوان دقیق قطعه یا متریال..."
-                    value={item.title}
-                    onChange={(e) => handleUpdateItem(idx, { title: e.target.value })}
-                    className="flex-1 text-xs p-2 rounded-md bg-canvas border border-line text-ink focus:border-brand min-h-[40px]"
-                    required
-                  />
-
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 w-24">
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        min="0.1"
-                        step="any"
-                        value={item.requestedQty}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          handleUpdateItem(idx, { requestedQty: isNaN(val) ? 0 : val });
-                        }}
-                        className="w-14 text-xs p-2 rounded-md bg-canvas border border-line text-ink text-center font-bold tabular-nums focus:border-brand min-h-[40px]"
-                        required
-                      />
-                      <select
-                        value={item.unit}
-                        onChange={(e) => handleUpdateItem(idx, { unit: e.target.value })}
-                        className="text-xs p-2 rounded-md bg-canvas border border-line text-ink focus:border-brand min-h-[40px]"
-                      >
-                        <option value="عدد">عدد</option>
-                        <option value="متر">متر</option>
-                        <option value="شاخه">شاخه</option>
-                        <option value="دستگاه">دستگاه</option>
-                        <option value="جفت">جفت</option>
-                        <option value="بسته">بسته</option>
-                        <option value="طاقه">طاقه</option>
-                      </select>
-                    </div>
-
-                    {items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItemRow(idx)}
-                        className="text-rose-400 hover:text-rose-300 p-2 rounded-md hover:bg-rose-500/10 transition cursor-pointer min-w-[36px] min-h-[40px] flex items-center justify-center"
-                        title="حذف این ردیف"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 3. Reason & Urgency */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-ink mb-1.5">
-                علت نیاز به متریال:
-              </label>
-              <select
-                value={selectedReason}
-                onChange={(e) => setSelectedReason(e.target.value as MaterialRequestReason)}
-                className="w-full text-xs p-2.5 rounded-md bg-canvas border border-line text-ink font-medium focus:border-brand min-h-[44px]"
-              >
-                {(Object.keys(MATERIAL_REASON_LABELS) as MaterialRequestReason[]).map((r) => (
-                  <option key={r} value={r}>
-                    {MATERIAL_REASON_LABELS[r]}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-ink mb-1.5">
-                اولویت و فوریت تحویل:
-              </label>
-              <select
-                value={selectedUrgency}
-                onChange={(e) => setSelectedUrgency(e.target.value as MaterialUrgency)}
-                className="w-full text-xs p-2.5 rounded-md bg-canvas border border-line text-ink font-medium focus:border-brand min-h-[44px]"
-              >
-                {(Object.keys(MATERIAL_URGENCY_LABELS) as MaterialUrgency[]).map((u) => (
-                  <option key={u} value={u}>
-                    {MATERIAL_URGENCY_LABELS[u].label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* 4. Notes */}
-          <div>
-            <label className="block text-xs font-semibold text-ink mb-1.5">
-              توضیحات تکمیلی سر کارگاه (اختیاری):
-            </label>
-            <textarea
-              rows={2}
-              placeholder="مثال: جهت پنجره دوم سالن، به دلیل بتن بودن سقف نیاز به پایه‌های دوبل داریم..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full text-xs p-2.5 rounded-md bg-canvas border border-line text-ink focus:border-brand resize-none"
-            />
-          </div>
-
-          {/* Modal Footer */}
-          <div className="pt-2 flex items-center justify-end gap-3 border-t border-line">
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               disabled={submitting}
-              className="px-4 py-2.5 rounded-md border border-line bg-raised text-ink-2 hover:text-ink text-xs font-semibold hover:bg-hover transition min-h-[44px] cursor-pointer"
+              className="flex-1 px-4 py-2.5 rounded-md border border-line bg-raised text-ink-2 hover:text-ink text-sm font-semibold hover:bg-hover transition min-h-[44px] cursor-pointer"
             >
               انصراف
             </button>
             <button
               type="submit"
+              form="material-request-form"
               disabled={submitting}
-              className="px-6 py-2.5 rounded-md bg-brand text-on-brand hover:bg-brand-hover text-xs font-bold transition min-h-[44px] flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="flex-[2] px-4 py-2.5 rounded-md bg-brand text-on-brand hover:bg-brand-hover text-sm font-bold transition min-h-[44px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Package className="w-4 h-4" />
-              <span>{submitting ? 'در حال ثبت...' : 'ارسال درخواست به انبار و دفتر'}</span>
+              <span>
+                {submitting
+                  ? 'در حال ثبت...'
+                  : validCount > 1
+                    ? `ارسال ${toPersianDigits(validCount)} قلم به انبار`
+                    : 'ارسال به انبار'}
+              </span>
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      }
+    >
+      <form id="material-request-form" onSubmit={handleSubmit} className="space-y-5">
+        {/* 1. Category Selector */}
+        <div>
+          <span className="block text-xs font-bold text-ink mb-2">۱. چه نوع قطعه‌ای لازم دارید؟</span>
+          <div className="grid grid-cols-3 gap-1.5">
+            {(Object.keys(MATERIAL_CATEGORY_LABELS) as MaterialCategory[]).map((cat) => {
+              const Icon = CATEGORY_ICONS[cat];
+              const isSelected = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`flex flex-col items-center justify-center gap-1 p-2 rounded-md border text-[12px] font-semibold transition text-center cursor-pointer min-h-[56px] ${
+                    isSelected
+                      ? 'border-brand bg-raised text-brand-ink ring-1 ring-brand/40'
+                      : 'border-line bg-sunken text-ink-2 hover:bg-raised hover:text-ink'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="leading-tight">{MATERIAL_CATEGORY_LABELS[cat]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Quick Suggestions Pills */}
+        {filteredSuggestions.length > 0 && (
+          <div className="bg-sunken p-3 rounded-md border border-line">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-2 mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-brand-ink" />
+              <span>پرکاربردها — با هر بار زدن یکی اضافه می‌شود</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {filteredSuggestions.map((sug, idx) => {
+                const added = items.find((it) => it.title.trim() === sug.title);
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleAddSuggestion(sug)}
+                    className={`text-xs border px-2.5 py-1.5 rounded-full transition cursor-pointer flex items-center gap-1 min-h-[36px] ${
+                      added
+                        ? 'bg-brand/15 border-brand text-ink font-bold'
+                        : 'bg-raised hover:bg-hover border-line-strong text-ink'
+                    }`}
+                  >
+                    <Plus className="w-3 h-3 text-brand-ink" />
+                    <span>{sug.title}</span>
+                    {added && (
+                      <span className="bg-brand text-black rounded-full px-1.5 text-[11px] font-black tabular-nums">
+                        {toPersianDigits(added.requestedQty)}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 2. Items List */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-ink">۲. اقلام درخواستی</span>
+            <button
+              type="button"
+              onClick={handleAddItemRow}
+              className="text-xs font-semibold text-brand-ink hover:underline flex items-center gap-1 cursor-pointer py-1.5 px-2 min-h-[36px]"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>ردیف جدید</span>
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {items.map((item, idx) => (
+              <div key={idx} className="p-2.5 bg-sunken rounded-md border border-line space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-brand-ink shrink-0 w-5 text-center tabular-nums">
+                    {toPersianDigits(idx + 1)}
+                  </span>
+                  <input
+                    type="text"
+                    aria-label={`نام قلم ${idx + 1}`}
+                    placeholder="نام قطعه یا متریال (مثلاً پایه سقفی)"
+                    value={item.title}
+                    onChange={(e) => handleUpdateItem(idx, { title: e.target.value })}
+                    className="flex-1 min-w-0 text-sm p-2 rounded-md bg-canvas border border-line text-ink focus:border-brand min-h-[42px]"
+                  />
+                  {items.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItemRow(idx)}
+                      className="text-rose-500 hover:text-rose-400 p-2 rounded-md hover:bg-rose-500/10 transition cursor-pointer min-w-[40px] min-h-[42px] flex items-center justify-center shrink-0"
+                      aria-label="حذف این ردیف"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 pr-7">
+                  <div className="flex items-center rounded-md border border-line bg-canvas overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => stepQty(idx, 1)}
+                      className="w-10 h-10 flex items-center justify-center text-ink hover:bg-raised cursor-pointer"
+                      aria-label="افزایش تعداد"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      aria-label={`تعداد قلم ${idx + 1}`}
+                      value={qtyDrafts[idx] ?? String(item.requestedQty || '')}
+                      onChange={(e) => {
+                        const raw = toEnglishDigits(e.target.value).replace(/[٫,]/g, '.').replace(/[^\d.]/g, '');
+                        setQtyDrafts((d) => ({ ...d, [idx]: raw }));
+                        const val = parseFloat(raw);
+                        handleUpdateItem(idx, { requestedQty: isNaN(val) ? 0 : val });
+                      }}
+                      className="w-14 h-10 text-sm bg-transparent text-ink text-center font-bold tabular-nums border-x border-line"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => stepQty(idx, -1)}
+                      className="w-10 h-10 flex items-center justify-center text-ink hover:bg-raised cursor-pointer"
+                      aria-label="کاهش تعداد"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <select
+                    aria-label={`واحد قلم ${idx + 1}`}
+                    value={item.unit}
+                    onChange={(e) => handleUpdateItem(idx, { unit: e.target.value })}
+                    className="text-sm px-2 rounded-md bg-canvas border border-line text-ink focus:border-brand h-10"
+                  >
+                    <option value="عدد">عدد</option>
+                    <option value="متر">متر</option>
+                    <option value="شاخه">شاخه</option>
+                    <option value="دستگاه">دستگاه</option>
+                    <option value="جفت">جفت</option>
+                    <option value="بسته">بسته</option>
+                    <option value="طاقه">طاقه</option>
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 3. Urgency */}
+        <div>
+          <span className="block text-xs font-bold text-ink mb-2">۳. چقدر فوری است؟</span>
+          <div className="grid grid-cols-3 gap-1.5">
+            {(Object.keys(MATERIAL_URGENCY_LABELS) as MaterialUrgency[]).map((u) => {
+              const isSelected = selectedUrgency === u;
+              return (
+                <button
+                  key={u}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => setSelectedUrgency(u)}
+                  className={`min-h-[44px] rounded-md border text-xs font-bold transition cursor-pointer px-1 ${
+                    isSelected ? urgencyStyles[u] : 'border-line bg-sunken text-ink-2 hover:text-ink'
+                  }`}
+                >
+                  {urgencyShort[u]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 4. Reason */}
+        <div>
+          <span className="block text-xs font-bold text-ink mb-2">۴. علت</span>
+          <div className="flex flex-wrap gap-1.5">
+            {(Object.keys(MATERIAL_REASON_LABELS) as MaterialRequestReason[]).map((r) => {
+              const isSelected = selectedReason === r;
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => setSelectedReason(r)}
+                  className={`text-xs px-3 py-2 rounded-full border font-semibold transition cursor-pointer min-h-[36px] ${
+                    isSelected
+                      ? 'border-brand bg-raised text-ink ring-1 ring-brand/40'
+                      : 'border-line bg-sunken text-ink-2 hover:text-ink'
+                  }`}
+                >
+                  {MATERIAL_REASON_LABELS[r]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 5. Notes */}
+        <div>
+          <label htmlFor="material-notes" className="block text-xs font-bold text-ink mb-1.5">
+            توضیح برای انبار (اختیاری)
+          </label>
+          <textarea
+            id="material-notes"
+            rows={2}
+            placeholder="مثلاً: برای پنجره دوم سالن؛ سقف بتنی است و پایه دوبل لازم است."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full text-sm p-2.5 rounded-md bg-canvas border border-line text-ink focus:border-brand resize-none"
+          />
+        </div>
+      </form>
+    </Sheet>
   );
 };

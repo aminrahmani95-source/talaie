@@ -3,10 +3,8 @@ import { triggerToast } from './Toast';
 import { Project, Ticket, TicketType, IssueCategory, User } from '../types';
 import {
   AlertTriangle,
-  Camera,
-  Upload,
-  X,
   CheckCircle2,
+  ChevronDown,
   Scissors,
   Settings2,
   Hammer,
@@ -21,13 +19,14 @@ import { compressImageFile } from '../utils/imageCompressor';
 import { CloudImage } from './common/CloudImage';
 import { getDisplayName } from '../utils/technicianName';
 import { getSlaDeadline, ISSUE_CATEGORY_LABELS } from '../utils/sla';
-import { useEscapeKey } from '../hooks/useEscapeKey';
+import { Sheet } from './ui/Sheet';
+import { PhotoSourceButtons } from './ui/PhotoSourceButtons';
 
 interface Props {
   project: Project;
   currentUser: User;
   onClose: () => void;
-  onSubmit: (ticket: Ticket) => void;
+  onSubmit: (ticket: Ticket) => Promise<void> | void;
 }
 
 interface TicketTypeConfig {
@@ -84,7 +83,6 @@ const TICKET_TYPES: TicketTypeConfig[] = [
 ];
 
 export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, onSubmit }) => {
-  useEscapeKey(onClose);
   const [selectedType, setSelectedType] = useState<TicketType>('DEFICIENCY_FABRIC');
   const [selectedCategory, setSelectedCategory] = useState<IssueCategory>('PRODUCTION_DEFECT');
   const [isBlocking, setIsBlocking] = useState<boolean>(false);
@@ -93,6 +91,14 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
   const [photos, setPhotos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [ticketError, setTicketError] = useState<string | null>(null);
+  const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
+
+  const requestClose = () => {
+    if (submitting) return;
+    const dirty = description.trim() || blockingReason.trim() || photos.length > 0;
+    if (dirty && !window.confirm('گزارش ارسال نشده است. بدون ارسال بسته شود؟')) return;
+    onClose();
+  };
 
   const handleSelectType = (type: TicketType, defaultCat: IssueCategory) => {
     setSelectedType(type);
@@ -102,6 +108,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+    setIsProcessingPhotos(true);
 
     for (const file of Array.from(files)) {
       try {
@@ -112,6 +119,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
         triggerToast('error', err instanceof Error && err.message ? err.message : 'این عکس آماده نشد؛ دوباره امتحان کنید.');
       }
     }
+    setIsProcessingPhotos(false);
     e.target.value = '';
   };
 
@@ -119,13 +127,14 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (submitting) return;
     setTicketError(null);
 
     if (!description.trim()) {
-      setTicketError('لطفاً شرح مشکل را بنویسید.');
+      setTicketError('در یک جمله بنویسید چه مشکلی پیش آمده.');
+      document.getElementById('ticket-description')?.focus();
       return;
     }
 
@@ -168,102 +177,183 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
     };
 
     try {
-      onSubmit(newTicket);
+      await onSubmit(newTicket);
     } catch (err: any) {
       setTicketError(err.message || 'خطا در ثبت تیکت.');
       setSubmitting(false);
     }
   };
 
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="ticket-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
-    >
-      <div className="bg-surface rounded-lg max-w-lg w-full overflow-hidden shadow-2xl my-8 border border-line transition-colors animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="bg-canvas px-6 py-4 text-ink flex items-center justify-between border-b border-line">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-md bg-raised border border-brand/30 flex items-center justify-center text-brand-ink">
-              <AlertTriangle className="w-4 h-4" aria-hidden="true" />
-            </div>
-            <div>
-              <h3 id="ticket-modal-title" className="font-bold text-base sm:text-lg text-ink">
-                ثبت تیکت کسری یا خرابی سر پروژه
-              </h3>
-              <p className="text-xs text-ink-2 line-clamp-1">{project.title}</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="بستن پنجره تیکت"
-            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-raised text-ink-2 hover:text-ink transition cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+  const selectedConfig = TICKET_TYPES.find((t) => t.type === selectedType);
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+  return (
+    <Sheet
+      isOpen
+      onClose={requestClose}
+      title="گزارش ایراد فنی"
+      subtitle={`${project.code} • ${project.title}`}
+      size="md"
+      footer={
+        <div className="space-y-2">
           {ticketError && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md text-xs font-semibold text-rose-300 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+            <div role="alert" className="text-xs font-bold text-rose-600 dark:text-rose-300 flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{ticketError}</span>
             </div>
           )}
-          {/* Ticket Type Picker */}
-          <div>
-            <label className="block text-xs font-semibold text-ink mb-2">
-              نوع ایراد یا کسری را انتخاب کنید:
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {TICKET_TYPES.map((t) => {
-                const isSelected = selectedType === t.type;
-                const IconComponent = t.icon;
-                return (
-                  <button
-                    key={t.type}
-                    type="button"
-                    onClick={() => handleSelectType(t.type, t.category)}
-                    className={`flex items-start gap-2.5 p-2.5 rounded-md border text-right transition cursor-pointer min-h-[48px] ${
-                      isSelected
-                        ? 'border-brand bg-raised text-brand-soft ring-1 ring-brand/40 font-bold'
-                        : 'border-line bg-sunken text-ink-2 hover:bg-raised hover:text-ink'
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={requestClose}
+              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-md border border-line bg-raised text-ink-2 hover:text-ink font-semibold transition text-sm cursor-pointer disabled:opacity-50"
+            >
+              انصراف
+            </button>
+            <button
+              type="submit"
+              form="ticket-form"
+              disabled={submitting || isProcessingPhotos}
+              className="flex-[2] min-h-[44px] py-2.5 px-4 rounded-md bg-brand hover:bg-brand-hover text-on-brand font-bold transition text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              {submitting ? 'در حال ارسال...' : 'ارسال به QC'}
+            </button>
+          </div>
+        </div>
+      }
+    >
+      <form id="ticket-form" onSubmit={handleSubmit} className="space-y-4">
+        <p className="text-[12px] text-ink-2 leading-6 bg-sunken border border-line rounded-md p-2.5">
+          برای ایراد قطعه، پارچه، ابعاد یا محل نصب. اگر فقط قطعه یا متریال کم دارید، «درخواست متریال» سریع‌تر به انبار می‌رسد.
+        </p>
+
+        {/* Ticket Type Picker */}
+        <div>
+          <span className="block text-xs font-bold text-ink mb-2">۱. نوع ایراد</span>
+          <div className="grid grid-cols-2 gap-1.5">
+            {TICKET_TYPES.map((t) => {
+              const isSelected = selectedType === t.type;
+              const IconComponent = t.icon;
+              return (
+                <button
+                  key={t.type}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => handleSelectType(t.type, t.category)}
+                  className={`flex items-center gap-2 p-2.5 rounded-md border text-right transition cursor-pointer min-h-[52px] ${
+                    isSelected
+                      ? 'border-brand bg-raised text-ink ring-1 ring-brand/40 font-bold'
+                      : 'border-line bg-sunken text-ink-2 hover:bg-raised hover:text-ink'
+                  }`}
+                >
+                  <span
+                    className={`p-1.5 rounded shrink-0 ${
+                      isSelected ? 'bg-brand text-on-brand' : 'bg-raised text-ink-2'
                     }`}
                   >
-                    <div
-                      className={`p-1.5 rounded shrink-0 mt-0.5 ${
-                        isSelected
-                          ? 'bg-brand text-on-brand'
-                          : 'bg-raised text-ink-2'
-                      }`}
-                    >
-                      <IconComponent className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-xs leading-snug">{t.label}</div>
-                      <div className="text-[12px] opacity-75 leading-tight mt-0.5 line-clamp-2">
-                        {t.desc}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                    <IconComponent className="w-4 h-4" />
+                  </span>
+                  <span className="text-xs leading-snug">{t.label}</span>
+                </button>
+              );
+            })}
           </div>
+          {selectedConfig && (
+            <p className="text-[12px] text-ink-3 mt-1.5 pr-1">{selectedConfig.desc}</p>
+          )}
+        </div>
 
-          {/* Issue Category (8 Official Categories) */}
-          <div>
-            <label className="block text-xs font-semibold text-ink mb-1.5">
-              دسته‌بندی استاندارد ایراد (جهت پایش کیفیت و ریشه‌یابی):
-            </label>
+        {/* Description */}
+        <div>
+          <label htmlFor="ticket-description" className="block text-xs font-bold text-ink mb-1.5">
+            ۲. چه شده؟ <span className="text-rose-400">*</span>
+          </label>
+          <textarea
+            id="ticket-description"
+            rows={3}
+            value={description}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              setTicketError(null);
+            }}
+            placeholder="مثلاً: پارچه شید لت سوم ۵ سانت پارگی دارد / ریل پنجره سمت راست ۱۵ سانت کوتاه است."
+            className="w-full text-sm p-3 rounded-md border border-line bg-canvas text-ink placeholder:text-ink-3 focus:outline-none focus:border-brand transition"
+          />
+        </div>
+
+        {/* Photo attachments */}
+        <div>
+          <span className="block text-xs font-bold text-ink mb-2">۳. عکس (توصیه می‌شود)</span>
+          <div className="flex flex-wrap gap-2 items-center">
+            <PhotoSourceButtons onChange={handlePhotoUpload} busy={isProcessingPhotos} />
+            {photos.map((p, idx) => (
+              <div
+                key={idx}
+                className="relative w-14 h-14 rounded-md overflow-hidden border border-line shadow-xs"
+              >
+                <CloudImage src={p} alt={`تصویر ایراد ${idx + 1}`} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => handleRemovePhoto(idx)}
+                  aria-label={`حذف تصویر شماره ${idx + 1}`}
+                  className="absolute top-0.5 right-0.5 w-5 h-5 bg-rose-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-rose-700 transition"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Blocking Toggle */}
+        <div
+          className={`p-3 rounded-md border space-y-2.5 transition ${
+            isBlocking ? 'border-rose-500/50 bg-rose-500/10' : 'border-line bg-sunken'
+          }`}
+        >
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isBlocking}
+              onChange={(e) => setIsBlocking(e.target.checked)}
+              className="mt-0.5 rounded w-4 h-4 accent-rose-500"
+            />
+            <span>
+              <span className={`text-xs font-bold flex items-center gap-1.5 ${isBlocking ? 'text-rose-600 dark:text-rose-300' : 'text-ink'}`}>
+                <AlertOctagon className="w-3.5 h-3.5" />
+                این ایراد جلوی ادامه‌ی کار را گرفته است
+              </span>
+              <span className="text-[12px] text-ink-3 block mt-0.5">
+                با اولویت بالا پیگیری می‌شود. اگر کل کار را باید رها کنید، از «اعلام توقف» استفاده کنید.
+              </span>
+            </span>
+          </label>
+
+          {isBlocking && (
+            <input
+              type="text"
+              aria-label="چه چیزی مانع ادامه‌ی کار است"
+              value={blockingReason}
+              onChange={(e) => setBlockingReason(e.target.value)}
+              placeholder="چه چیزی مانع ادامه است؟ مثلاً: برق قطع است / بازوی موتور شکست"
+              className="w-full text-sm p-2.5 rounded-md border border-rose-500/40 bg-canvas text-ink"
+            />
+          )}
+        </div>
+
+        {/* Issue Category: برای QC؛ از روی نوع ایراد خودکار پر می‌شود */}
+        <details className="group rounded-md border border-line bg-sunken">
+          <summary className="list-none cursor-pointer p-2.5 flex items-center justify-between text-xs text-ink-2 select-none">
+            <span>دسته‌بندی کیفی: {ISSUE_CATEGORY_LABELS[selectedCategory]}</span>
+            <ChevronDown className="w-4 h-4 transition group-open:rotate-180" />
+          </summary>
+          <div className="px-2.5 pb-2.5">
             <select
+              aria-label="دسته‌بندی کیفی ایراد"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value as IssueCategory)}
-              className="w-full text-xs p-2.5 rounded-md border border-line bg-canvas text-ink focus:border-brand"
+              className="w-full text-sm p-2.5 rounded-md border border-line bg-canvas text-ink focus:border-brand"
             >
               {Object.entries(ISSUE_CATEGORY_LABELS).map(([catKey, catLabel]) => (
                 <option key={catKey} value={catKey}>
@@ -272,136 +362,8 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
               ))}
             </select>
           </div>
-
-          {/* Blocking Toggle */}
-          <div className="p-3.5 rounded-md border border-rose-500/30 bg-rose-500/10 space-y-2.5">
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isBlocking}
-                onChange={(e) => setIsBlocking(e.target.checked)}
-                className="mt-0.5 rounded border-rose-500/40 text-rose-500 focus:ring-rose-500 w-4 h-4"
-              />
-              <div>
-                <span className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
-                  <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
-                  این مشکل مانع پیشرفت و ادامه عملیات نصب است (مسدودکننده / Blocking)
-                </span>
-                <span className="text-[12px] text-rose-400/80 block mt-0.5">
-                  تیکت‌های مسدودکننده در دسک کنترل توقف با اولویت بحرانی پیگیری می‌شوند.
-                </span>
-              </div>
-            </label>
-
-            {isBlocking && (
-              <div className="pt-2 border-t border-rose-500/30">
-                <label className="block text-xs font-semibold text-rose-300 mb-1">
-                  علت توقف کار و مانع موجود:
-                </label>
-                <input
-                  type="text"
-                  value={blockingReason}
-                  onChange={(e) => setBlockingReason(e.target.value)}
-                  placeholder="مثال: عدم امکان ادامه به دلیل نبود برق / شکستگی بازو حین نصب"
-                  className="w-full text-xs p-2 rounded-md border border-rose-500/40 bg-canvas text-ink focus:ring-1 focus:ring-rose-500"
-                  required={isBlocking}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Description */}
-          <div>
-            <label htmlFor="ticket-description" className="block text-xs font-semibold text-ink mb-1.5">
-              توضیح دقیق مشکل (ویژه مسئولین فنی و کنترل کیفیت):
-            </label>
-            <textarea
-              id="ticket-description"
-              required
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="مثال: پارچه شید لت سوم دارای پارگی 5 سانتی‌متری است یا ریل پرده برای قاب سمت راست 15 سانتی‌متر کوتاه است..."
-              className="w-full text-xs p-3 rounded-md border border-line bg-canvas text-ink placeholder:text-ink-3 focus:outline-none focus:border-brand transition"
-            />
-          </div>
-
-          {/* Photo attachments */}
-          <div>
-            <label className="block text-xs font-semibold text-ink mb-2">
-              بارگذاری عکس از محل ایراد یا برچسب قطعه (اختیاری):
-            </label>
-            <div className="flex flex-wrap gap-2.5 items-center">
-              {photos.map((p, idx) => (
-                <div
-                  key={idx}
-                  className="relative w-16 h-16 rounded-md overflow-hidden border border-line shadow-xs group"
-                >
-                  <CloudImage src={p} alt={`تصویر ایراد ${idx + 1}`} className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePhoto(idx)}
-                    aria-label={`حذف تصویر شماره ${idx + 1}`}
-                    className="absolute top-1 right-1 w-5 h-5 bg-rose-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-rose-700 transition text-xs"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-
-              {/* Camera Button (with capture) */}
-              <label
-                className="flex flex-col items-center justify-center w-16 h-16 rounded-md border border-dashed border-brand/60 bg-brand/10 hover:bg-brand/20 cursor-pointer text-brand-ink transition min-h-[64px] min-w-[64px]"
-              >
-                <Camera className="w-4 h-4 mb-0.5" aria-hidden="true" />
-                <span className="text-[11px] font-semibold">دوربین</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-              </label>
-
-              {/* Gallery Button (without capture) */}
-              <label
-                className="flex flex-col items-center justify-center w-16 h-16 rounded-md border border-dashed border-line-strong hover:border-brand bg-sunken hover:bg-raised cursor-pointer text-ink-2 hover:text-ink transition min-h-[64px] min-w-[64px]"
-              >
-                <Upload className="w-4 h-4 mb-0.5" aria-hidden="true" />
-                <span className="text-[11px] font-semibold">گالری</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
-          </div>
-
-          {/* Action buttons with minimum 44px touch targets */}
-          <div className="flex items-center gap-3 pt-4 border-t border-line">
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={onClose}
-              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-md border border-line bg-raised text-ink-2 hover:text-ink font-semibold transition text-xs cursor-pointer disabled:opacity-50"
-            >
-              انصراف
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 min-h-[44px] py-2.5 px-4 rounded-md bg-brand hover:bg-brand-hover text-on-brand font-bold transition text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              {submitting ? 'در حال ارسال تیکت...' : 'ارسال فوری تیکت به QC'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </details>
+      </form>
+    </Sheet>
   );
 };

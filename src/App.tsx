@@ -2039,7 +2039,12 @@ export const App: React.FC = () => {
         setTicketModalProject(null);
       }
     );
-    showToast('warning', 'تیکت اضطراری با موفقیت ثبت شد و به اطلاع مدیر QC رسید.');
+    showToast(
+      newTicket.isBlocking ? 'warning' : 'success',
+      newTicket.isBlocking
+        ? 'ایراد متوقف‌کننده ثبت شد و با اولویت بالا به مدیر QC اطلاع داده شد.'
+        : 'گزارش ایراد ثبت شد و به مدیر QC اطلاع داده شد.'
+    );
   };
 
   const handleUpdateTicket = async (updatedTicket: Ticket) => {
