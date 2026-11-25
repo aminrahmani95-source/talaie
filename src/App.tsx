@@ -41,7 +41,7 @@ import { OfflineBanner } from './components/layout/OfflineBanner';
 import { SplashScreen } from './components/layout/SplashScreen';
 import { ImpersonationBanner } from './components/layout/ImpersonationBanner';
 import { computeNavCounts } from './utils/navCounts';
-import { Outbox, OutboxMutation, OfflineQueue, OPERATION_FAILED_EVENT } from './utils/offlineQueue';
+import { Outbox, OutboxMutation, OfflineQueue, OPERATION_FAILED_EVENT, SERVER_COPY_EVENT, getLastServerWriteAt } from './utils/offlineQueue';
 import {
   validateProjectPatchRoleGuards,
   validateTicketRoleGuards,
@@ -107,6 +107,18 @@ export { getUserRoleLabel } from './utils/roleLabels';
 
 /** true when a Supabase server is configured (otherwise the app runs on local sample data) */
 const isServerMode = () => SupabaseSyncService.getClient() !== null;
+
+/** records this device changed on the server after `since` keep their on-screen version */
+function keepNewerLocal<T extends { id: string }>(fromServer: T[], onScreen: T[], keyPrefix: string, since: number): T[] {
+  const newer = onScreen.filter((r) => getLastServerWriteAt(`${keyPrefix}:${r.id}`) > since);
+  if (newer.length === 0) return fromServer;
+  const byId = new Map(newer.map((r) => [r.id, r]));
+  const result = fromServer.map((r) => byId.get(r.id) ?? r);
+  for (const r of newer) {
+    if (!fromServer.some((x) => x.id === r.id)) result.unshift(r);
+  }
+  return result;
+}
 
 export const App: React.FC = () => {
   // Session & Authentication via Supabase Auth
@@ -396,6 +408,7 @@ export const App: React.FC = () => {
         return;
       }
       const currentSeq = ++fetchSeqRef.current;
+      const fetchStartedAt = Date.now();
       try {
         const [cloudProjects, cloudTickets, cloudUsers, cloudSettings, cloudTeams, cloudTeamMembers, cloudScheduleChanges, cloudMaterials] = await Promise.all([
           SupabaseSyncService.fetchProjects(),
@@ -417,12 +430,26 @@ export const App: React.FC = () => {
         const baseMaterials = cloudMaterials ?? StorageService.getMaterialRequests(currentUser.id);
 
         // Merge any pending outbox operations for current user so unsent local mutations don't vanish
-        const mergedProjects = await Outbox.applyPendingToProjects(cloudProjects, undefined, currentUser.id);
-        const mergedTickets = await Outbox.applyPendingToTickets(cloudTickets, undefined, currentUser.id);
-        const mergedMaterialRequests = await Outbox.applyPendingToMaterialRequests(
-          baseMaterials,
-          undefined,
-          currentUser.id
+        // A change this phone saved on the server while this reload was on its way is newer
+        // than the reloaded copy: keep what is on screen for those records (otherwise a job
+        // jumped back a step a few seconds after "arrived + photos" was sent).
+        const mergedProjects = keepNewerLocal(
+          await Outbox.applyPendingToProjects(cloudProjects, undefined, currentUser.id),
+          projectsRef.current,
+          'project',
+          fetchStartedAt,
+        );
+        const mergedTickets = keepNewerLocal(
+          await Outbox.applyPendingToTickets(cloudTickets, undefined, currentUser.id),
+          ticketsRef.current,
+          'ticket',
+          fetchStartedAt,
+        );
+        const mergedMaterialRequests = keepNewerLocal(
+          await Outbox.applyPendingToMaterialRequests(baseMaterials, undefined, currentUser.id),
+          materialRequestsRef.current,
+          'material',
+          fetchStartedAt,
         );
         const mergedSettings = cloudSettings
           ? await Outbox.applyPendingToSettings(cloudSettings)
@@ -652,9 +679,33 @@ export const App: React.FC = () => {
     };
     window.addEventListener(OPERATION_FAILED_EVENT, handleOperationFailed);
 
+    // A save went through: show the server's copy of that project at once (with this phone's
+    // still-unsent changes on top), so the next action starts from what the server really has.
+    const handleServerCopy = async (e: Event) => {
+      if (sessionEpochRef.current !== capturedEpoch || currentUser?.id !== capturedUserId) return;
+      const { orderingKey, record } = ((e as CustomEvent).detail || {}) as { orderingKey?: string; record?: Project };
+      if (!orderingKey?.startsWith('project:') || !record?.id) return;
+      let fresh: Project = record;
+      try {
+        const [merged] = await Outbox.applyPendingToProjects([record], undefined, capturedUserId);
+        if (merged) fresh = merged;
+      } catch {
+        // keep the server copy as-is
+      }
+      if (sessionEpochRef.current !== capturedEpoch) return;
+      setProjects((prev) => {
+        if (!prev.some((p) => p.id === fresh.id)) return prev;
+        const next = prev.map((p) => (p.id === fresh.id ? fresh : p));
+        projectsRef.current = next;
+        return next;
+      });
+    };
+    window.addEventListener(SERVER_COPY_EVENT, handleServerCopy);
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisible);
       window.removeEventListener(OPERATION_FAILED_EVENT, handleOperationFailed);
+      window.removeEventListener(SERVER_COPY_EVENT, handleServerCopy);
       window.clearTimeout(failReloadTimer);
       unsubMaterials();
       window.clearTimeout(slowSyncTimer);
@@ -1319,9 +1370,11 @@ export const App: React.FC = () => {
               })),
               note: 'اتمام کار: نصب اقلام باقیمانده در روز آخر',
               photos: [],
-              supervisorConfirmed: true,
-              supervisorConfirmedBy: currentUser.name,
-              supervisorConfirmedAt: nowIso,
+              // only the team's lead may confirm a log; a technician finishing the job used to be
+              // refused here ("confirming daily logs is the lead's job") and could not complete it
+              ...(currentUser.role === 'LEAD_TECHNICIAN' || completionModalProject.leadTechnicianId === currentUser.id
+                ? { supervisorConfirmed: true, supervisorConfirmedBy: currentUser.name, supervisorConfirmedAt: nowIso }
+                : { supervisorConfirmed: false }),
               byUserId: currentUser.id,
               byUserName: currentUser.name,
               createdAt: nowIso,
@@ -1687,7 +1740,8 @@ export const App: React.FC = () => {
 
     const patch: Partial<Project> = {
       status: 'IN_PROGRESS',
-      beforePhotos: [...(current.beforePhotos || []), ...photos],
+      // the modal already lists the photos the job had; join without repeats or empty entries
+      beforePhotos: Array.from(new Set([...(current.beforePhotos || []), ...photos].filter(Boolean))),
       preInstallPhotosConfirmed: true,
       startedAt: current.startedAt || nowIso,
       workSessions: updatedSessions,

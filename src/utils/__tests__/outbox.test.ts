@@ -68,6 +68,90 @@ describe('Talaei Outbox Writing Layer & Sync Tests', () => {
   // --------------------------------------------------------------------------
   // Scenario 2: Permanent failure stops only that key; other keys continue
   // --------------------------------------------------------------------------
+  it('2c. the same photo in two queued changes maps to the same stored file', async () => {
+    const { extractUploadsAndDeduplicate } = await import('../offlineQueue');
+    const photo = 'data:image/jpeg;base64,' + 'A'.repeat(500);
+    const first = extractUploadsAndDeduplicate({ patch: { dailyLogs: [{ id: 'L1', photos: [photo] }] } }, 'op1', 'project:p');
+    const second = extractUploadsAndDeduplicate(
+      { patch: { dailyLogs: [{ id: 'L1', photos: [photo] }, { id: 'L2', photos: [] }] } },
+      'op2',
+      'project:p'
+    );
+    expect(second.uploads[0].fileName).toBe(first.uploads[0].fileName);
+    const other = extractUploadsAndDeduplicate({ p: ['data:image/jpeg;base64,' + 'B'.repeat(500)] }, 'op3', 'project:p');
+    expect(other.uploads[0].fileName).not.toBe(first.uploads[0].fileName);
+  });
+
+  it('2d. a change held only because the server check failed (network) is sent once the server answers', async () => {
+    await Outbox.commit(
+      {
+        type: 'PATCH_PROJECT',
+        orderingKey: 'project:key-net',
+        payload: { id: 'key-net', patch: { status: 'IN_PROGRESS' } },
+        baselineSnapshot: { projectId: 'key-net', status: 'EN_ROUTE' },
+      },
+      'user-lead-2'
+    );
+    const sent: string[] = [];
+    const run = (snapshot: () => Promise<any>) =>
+      Outbox.processQueue({
+        currentUserId: 'user-lead-2',
+        uploadBlob: async () => 'path',
+        fetchProjectSnapshot: snapshot,
+        executeMutation: async (op) => {
+          sent.push(op.payload.patch.status);
+        },
+      });
+    await run(async () => {
+      throw new Error('network down');
+    });
+    expect(sent).toEqual([]);
+    const [held] = await Outbox.getPendingOperations();
+    expect(held.executionState).toBe('CONFLICT_HOLD');
+
+    // time passes beyond the retry delay
+    held.nextRetryAt = Date.now() - 1;
+    const db = await openDb();
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction('pending_operations', 'readwrite');
+      tx.objectStore('pending_operations').put(held);
+      tx.oncomplete = () => resolve();
+    });
+    resetProcessingStateForTesting();
+    await run(async () => ({ status: 'EN_ROUTE', data: { status: 'EN_ROUTE' } }));
+    expect(sent).toEqual(['IN_PROGRESS']);
+    expect(await Outbox.getPendingCount()).toBe(0);
+  });
+
+  it('2b. a change made after an older failure on the same record is still sent', async () => {
+    await Outbox.commit(
+      { type: 'PATCH_PROJECT', orderingKey: 'project:key-c', payload: { id: 'key-c', patch: { notes: 'rejected' } } },
+      'user-lead-1'
+    );
+    const run = (fail: boolean, sent: string[]) =>
+      Outbox.processQueue({
+        currentUserId: 'user-lead-1',
+        uploadBlob: async () => 'path',
+        executeMutation: async (op) => {
+          if (fail) throw new PostgrestError({ message: 'rejected by server', code: 'P0001', details: '', hint: '' });
+          sent.push(op.payload.patch.notes);
+        },
+      });
+    await run(true, []);
+    expect((await Outbox.getFailedOperations()).length).toBe(1);
+
+    await new Promise((r) => setTimeout(r, 5));
+    await Outbox.commit(
+      { type: 'PATCH_PROJECT', orderingKey: 'project:key-c', payload: { id: 'key-c', patch: { notes: 'arrived with photos' } } },
+      'user-lead-1'
+    );
+    resetProcessingStateForTesting();
+    const sent: string[] = [];
+    await run(false, sent);
+    expect(sent).toEqual(['arrived with photos']);
+    expect(await Outbox.getPendingCount()).toBe(0);
+  });
+
   it('2. permanent failure blocks only its own key, while other ordering keys continue', async () => {
     const executedOps: string[] = [];
 

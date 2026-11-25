@@ -938,7 +938,8 @@ export const SupabaseSyncService = {
     }
   },
 
-  async patchProject(projectId: string, patch: Record<string, any>, signal?: AbortSignal): Promise<void> {
+  /** returns the project exactly as the server saved it (null if the server sent nothing back) */
+  async patchProject(projectId: string, patch: Record<string, any>, signal?: AbortSignal): Promise<Project | null> {
     const client = this.getClient();
     if (!client) {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
@@ -974,7 +975,7 @@ export const SupabaseSyncService = {
       throw new PermanentError('تغییرات پروژه حاوی داده base64 است و قبل از ارسال باید تصاویر آپلود شوند.');
     }
 
-    const { error, status } = await client.rpc('patch_project', {
+    const { data, error, status } = await client.rpc('patch_project', {
       id: projectId,
       patch: cleanPatch,
     });
@@ -984,6 +985,7 @@ export const SupabaseSyncService = {
       console.warn(`Failed to patch project ${projectId}:`, error);
       throw error;
     }
+    return data && typeof data === 'object' ? ({ ...(data as any), id: projectId } as Project) : null;
   },
 
   async createProject(project: Project): Promise<void> {
@@ -1506,7 +1508,9 @@ export const SupabaseSyncService = {
       case 'PATCH_PROJECT': {
         const projectId = op.payload?.id || op.orderingKey.replace('project:', '');
         const patch = op.payload?.patch || op.payload;
-        await this.patchProject(projectId, patch, signal);
+        const saved = await this.patchProject(projectId, patch, signal);
+        // handed to the queue, which tells the app (see SERVER_COPY_EVENT)
+        if (saved) (op as any).__serverCopy = saved;
         break;
       }
       case 'APPEND_PROJECT_EVALUATION': {

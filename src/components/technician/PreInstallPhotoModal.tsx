@@ -20,7 +20,8 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
   onSubmit,
 }) => {
   useEscapeKey(onClose, isOpen);
-  const [photos, setPhotos] = useState<string[]>(project.beforePhotos || []);
+  // only real photos: an empty entry is a photo still waiting to upload and must not be sent again
+  const [photos, setPhotos] = useState<string[]>(() => (project.beforePhotos || []).filter(Boolean));
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -125,7 +126,6 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
               type="file"
               accept="image/*"
               multiple
-              capture="environment"
               onChange={handleFileChange}
               disabled={isProcessing || isSubmitting}
               className="hidden"

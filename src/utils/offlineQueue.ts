@@ -54,8 +54,18 @@ export interface OutboxOperation {
     clientStatus?: string;
     serverUpdatedAt?: string;
     detectedAt: number;
+    /** the hold only means "could not reach the server to check"; try again later */
+    retryable?: boolean;
   };
   baselineSnapshot?: any;
+}
+
+/** a hold caused by a failed check (network), not by a real contradiction with the server */
+export function isRetryableHold(op: { executionState?: string; conflictDetails?: { reason?: string; retryable?: boolean } }): boolean {
+  if (op.executionState !== 'CONFLICT_HOLD') return false;
+  if (op.conflictDetails?.retryable) return true;
+  // holds saved by older versions of the app for the same reason
+  return Boolean(op.conflictDetails?.reason?.startsWith('اعتبارسنجی پیش‌نیاز سرور ناموفق'));
 }
 
 export interface TargetPath {
@@ -220,6 +230,33 @@ export function dataUrlToBlob(dataUrl: string): Blob {
  * instead of silently showing a change that other devices will never see.
  */
 export const OPERATION_FAILED_EVENT = 'talaie-op-failed';
+
+/**
+ * When this device last changed each record on the server (by ordering key, e.g. "project:ID").
+ * A full reload that was already on its way before that moment carries the old copy and
+ * must not overwrite the newer one on screen (it made a project jump back a step).
+ */
+const lastServerWriteAt = new Map<string, number>();
+export function getLastServerWriteAt(orderingKey: string): number {
+  return lastServerWriteAt.get(orderingKey) ?? 0;
+}
+
+/**
+ * After a save, the server's copy of the record (photos as stored files, lists as the server
+ * keeps them). The app swaps it in right away instead of waiting for the live connection,
+ * which is often unreliable on mobile networks. Without it the next edit was built on this
+ * phone's own stale copy (e.g. a daily log still holding its photo data) and the server
+ * refused it as "changing an earlier entry".
+ */
+export const SERVER_COPY_EVENT = 'talaie-server-copy';
+function notifyServerCopy(orderingKey: string, record: unknown): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(new CustomEvent(SERVER_COPY_EVENT, { detail: { orderingKey, record } }));
+  } catch {
+    // ignore
+  }
+}
 function notifyOperationFailed(failedOp: { type: string; errorReason: string; orderingKey: string }): void {
   if (typeof window === 'undefined') return;
   try {
@@ -403,6 +440,19 @@ export function getNextBackoffDelay(retryCount: number): number {
   return Math.min(delay, maxDelay);
 }
 
+/** short stable fingerprint of a data URL (two FNV-1a hashes + length) */
+export function contentKey(text: string): string {
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193);
+    h2 = Math.imul(h2 ^ c, 0x5bd1e995);
+    h2 ^= h2 >>> 15;
+  }
+  return `${(h1 >>> 0).toString(36)}${(h2 >>> 0).toString(36)}-${text.length.toString(36)}`;
+}
+
 /**
  * Extracts and deduplicates base64 images from payload.
  * Identical images (e.g. afterPhotos and completionPhotos referencing the same data URL)
@@ -427,7 +477,11 @@ export function extractUploadsAndDeduplicate(
         const ext = isSignature ? 'png' : 'jpg';
 
         if (!uploadsMap.has(value)) {
-          const uuid = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+          // Named after the photo's content: when a later change still carries the same photo
+          // (e.g. an earlier daily log, while the first change is waiting to send), it maps to the
+          // same stored file instead of a new copy, so the earlier entry stays identical and the
+          // server does not refuse the change as "editing an earlier entry".
+          const uuid = contentKey(value);
           const fileName = isSignature ? `signature-${uuid}.png` : `${uuid}.${ext}`;
           const blob = dataUrlToBlob(value);
 
@@ -1072,6 +1126,9 @@ export const Outbox = {
     const ops = pendingOps || (await Outbox.getPendingOperations(currentUserId));
     const result = [...serverProjects];
     const projectOps = ops
+      // a change held because the server's copy contradicts it (e.g. the job was completed or
+      // cancelled meanwhile) is not shown: the server's state is the true one
+      .filter((op) => !(op.executionState === 'CONFLICT_HOLD' && !isRetryableHold(op)))
       .filter((op) => op.orderingKey.startsWith('project:') && (!currentUserId || op.userId === currentUserId))
       .sort((a, b) => a.createdAt - b.createdAt);
 
@@ -1094,6 +1151,10 @@ export const Outbox = {
           if (idx >= 0) {
             // _auditReason فقط برای تاریخچه‌ی سرور است و نباید روی خود پروژه بماند
             const { _auditReason: _ignored, ...rest } = patch as Record<string, unknown>;
+            // photos still waiting to upload are stored as empty entries: don't show or reuse them
+            for (const field of ['beforePhotos', 'afterPhotos', 'completionPhotos', 'unavailabilityPhotos']) {
+              if (Array.isArray(rest[field])) rest[field] = (rest[field] as unknown[]).filter((ph) => ph !== '');
+            }
             result[idx] = { ...result[idx], ...(rest as Partial<Project>) };
           }
         }
@@ -1379,7 +1440,16 @@ export const Outbox = {
       if (!isSessionValid()) return;
 
       const myFailedList = failedList.filter((f) => f.userId === processingUserId);
-      const blockedKeys = new Set<string>(myFailedList.map((f) => f.orderingKey));
+      // A failed change holds back only the changes that were queued behind it when it failed
+      // (they were built on top of it). Changes made afterwards start from the server's real state
+      // (the app reloads it after a failure), so they must not wait forever behind an old failure:
+      // that kept every later edit of the project on this phone and never sent it to anyone else.
+      const blockedUntil = new Map<string, number>();
+      for (const f of myFailedList) {
+        const t = typeof f.failedAt === 'number' ? f.failedAt : Number.MAX_SAFE_INTEGER;
+        blockedUntil.set(f.orderingKey, Math.max(blockedUntil.get(f.orderingKey) ?? 0, t));
+      }
+      const blockedKeys = new Set<string>();
 
       // 3. Group operations by orderingKey
       const opsByKey = new Map<string, OutboxOperation[]>();
@@ -1405,9 +1475,16 @@ export const Outbox = {
       const keyPromises: Promise<void>[] = [];
 
       for (const [key, ops] of opsByKey.entries()) {
-        // If this key has a failed operation for the current user, block subsequent ops on this key only!
+        // If this key has a failed operation for the current user, block the ops queued before it failed
         if (blockedKeys.has(key)) {
           continue;
+        }
+        const failedAtForKey = blockedUntil.get(key);
+        if (failedAtForKey !== undefined) {
+          const afterFailure = ops.filter((o) => o.createdAt > failedAtForKey);
+          if (afterFailure.length === 0) continue;
+          ops.length = 0;
+          ops.push(...afterFailure);
         }
 
         // If this key is actively in-flight, do NOT spawn a duplicate processor!
@@ -1435,7 +1512,14 @@ export const Outbox = {
             // If this operation is already held in CONFLICT_HOLD, keep it held
             // and stop further processing for this key to preserve causal ordering.
             if (op.executionState === 'CONFLICT_HOLD') {
-              break;
+              // A check that failed only because the network dropped is tried again later.
+              // (It used to stay held forever: the change showed on this phone but never
+              // reached the server or anyone else, and blocked every later change of the job.)
+              if (!isRetryableHold(op) || (op.nextRetryAt && Date.now() < op.nextRetryAt)) {
+                break;
+              }
+              op.executionState = 'QUEUED';
+              op.conflictDetails = undefined;
             }
 
             // 3. Unresolved non-idempotent operation check:
@@ -1558,7 +1642,10 @@ export const Outbox = {
                 op.conflictDetails = {
                   reason: `اعتبارسنجی پیش‌نیاز سرور ناموفق بود (${snapshotErrorReason}). جهت جلوگیری از بازنویسی ناسازگار، عملیات متوقف شد.`,
                   detectedAt: Date.now(),
+                  retryable: true,
                 };
+                op.retryCount = (op.retryCount || 0) + 1;
+                op.nextRetryAt = Date.now() + getNextBackoffDelay(op.retryCount);
 
                 await new Promise<void>((res, rej) => {
                   const tx = db.transaction(STORE_PENDING, 'readwrite');
@@ -1827,6 +1914,10 @@ export const Outbox = {
               }
 
               if (mutationSucceeded) {
+                lastServerWriteAt.set(op.orderingKey, Date.now());
+                const serverCopy = (op as any).__serverCopy;
+                delete (op as any).__serverCopy;
+                if (serverCopy) notifyServerCopy(op.orderingKey, serverCopy);
                 // Confirmed Server Success:
                 // Step C1: Persist durable COMMITTED_LOCAL_ACK_PENDING state before local deletion
                 op.executionState = 'COMMITTED_LOCAL_ACK_PENDING';

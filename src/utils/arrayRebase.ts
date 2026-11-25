@@ -61,8 +61,34 @@ export function rebasePatchArrays(patch: Item, baseline: ArrayBaseline | undefin
       return Boolean(k) && !known.has(k as string);
     });
     if (addedElsewhere.length === 0) continue;
+    // Keep the server's order and add this device's new items after it. The server only
+    // accepts lists that keep their existing items in place (e.g. work sessions, daily logs);
+    // putting the other device's item after ours made it reject the whole change.
+    const patchedByKey = new Map<string, Item>();
+    for (const item of patched) {
+      const k = keyFn(item);
+      if (k) patchedByKey.set(k, item);
+    }
+    const baseSet = new Set<string>(baseIds);
+    const merged: Item[] = [];
+    const used = new Set<string>();
+    for (const item of server) {
+      const k = keyFn(item);
+      if (!k) continue;
+      if (patchedByKey.has(k)) {
+        merged.push(patchedByKey.get(k)!);
+        used.add(k);
+      } else if (!baseSet.has(k)) {
+        merged.push(item); // added on another device meanwhile
+      }
+      // in the baseline but not in the patch: removed on purpose here
+    }
+    for (const item of patched) {
+      const k = keyFn(item);
+      if (!k || !used.has(k)) merged.push(item);
+    }
     next = next || { ...patch };
-    next[field] = [...patched, ...addedElsewhere];
+    next[field] = merged;
   }
   return next || patch;
 }

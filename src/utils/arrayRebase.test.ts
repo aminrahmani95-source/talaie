@@ -7,7 +7,7 @@ describe('array rebase (keeps list items added by other devices)', () => {
     const patch = { dailyLogs: [{ id: 'a' }, { id: 'mine' }] };
     const baseline = captureArrayBaseline(local, patch);
     const server = { dailyLogs: [{ id: 'a' }, { id: 'theirs' }] };
-    expect(rebasePatchArrays(patch, baseline, server).dailyLogs.map((x: any) => x.id)).toEqual(['a', 'mine', 'theirs']);
+    expect(rebasePatchArrays(patch, baseline, server).dailyLogs.map((x: any) => x.id)).toEqual(['a', 'theirs', 'mine']);
   });
 
   it('keeps an item this device deleted on purpose deleted', () => {
@@ -34,7 +34,11 @@ describe('array rebase (keeps list items added by other devices)', () => {
     const patch = { workSessions: [{ byUserId: 'u1', startedAt: 't1' }] };
     const baseline = captureArrayBaseline(local, patch);
     const server = { workSessions: [{ byUserId: 'u2', startedAt: 't0' }] };
-    expect(rebasePatchArrays(patch, baseline, server).workSessions).toHaveLength(2);
+    // the server keeps existing sessions in place, so theirs must stay first and ours is appended
+    expect(rebasePatchArrays(patch, baseline, server).workSessions).toEqual([
+      { byUserId: 'u2', startedAt: 't0' },
+      { byUserId: 'u1', startedAt: 't1' },
+    ]);
   });
 
   it('leaves patches without list fields untouched', () => {

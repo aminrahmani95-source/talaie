@@ -241,9 +241,9 @@ export const StorageService = {
               ...img,
               url: img.url.startsWith('data:') ? '' : img.url,
             })),
-            beforePhotos: p.beforePhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
-            afterPhotos: p.afterPhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
-            completionPhotos: p.completionPhotos?.map((ph) => (ph.startsWith('data:') ? '' : ph)),
+            beforePhotos: p.beforePhotos?.filter((ph) => ph && !ph.startsWith('data:')),
+            afterPhotos: p.afterPhotos?.filter((ph) => ph && !ph.startsWith('data:')),
+            completionPhotos: p.completionPhotos?.filter((ph) => ph && !ph.startsWith('data:')),
             customerSignature: p.customerSignature && p.customerSignature.length > 5000 ? '' : p.customerSignature,
           };
           delete copy.__fromCache;
