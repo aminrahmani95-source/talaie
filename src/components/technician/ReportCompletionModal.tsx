@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { triggerToast } from '../Toast';
 import { Project, HandoverChecklist, HandoverSigneeType, User, ExceptionalCompletionDetails } from '../../types';
 import {
   Camera,
@@ -132,6 +133,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
         }
       } catch (err) {
         console.warn('Image compression failed:', err);
+        triggerToast('error', err instanceof Error && err.message ? err.message : 'این عکس آماده نشد؛ دوباره امتحان کنید.');
       }
     }
     e.target.value = '';
@@ -147,6 +149,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
         setUnavailabilityPhotos((prev) => [...prev, compressed]);
       } catch (err) {
         console.warn('Unavailability image compression failed:', err);
+        triggerToast('error', err instanceof Error && err.message ? err.message : 'این عکس آماده نشد؛ دوباره امتحان کنید.');
       }
     }
     e.target.value = '';

@@ -6,12 +6,12 @@ import {
   Phone,
   Navigation,
   FileText,
-  Camera,
   Loader2,
   Clock,
   MapPin,
 } from 'lucide-react';
 import { compressImageFile } from '../../utils/imageCompressor';
+import { PhotoSourceButtons } from '../ui/PhotoSourceButtons';
 import { toPersianDigits } from '../../utils/jalali';
 import { CloudImage } from '../common/CloudImage';
 
@@ -349,19 +349,7 @@ export const MeasurementDashboard: React.FC<Props> = ({
                           عکس‌های اندازه‌گیری پنجره‌ها و کناف:
                         </label>
                         <div className="flex items-center gap-2">
-                          <label className="px-3 py-2 bg-raised hover:bg-hover text-brand-ink rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-brand/30">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              capture="environment"
-                              onChange={handlePhotoUpload}
-                              disabled={isUploading}
-                              className="hidden"
-                            />
-                            <Camera className="w-4 h-4" />
-                            <span>{isUploading ? 'در حال بهینه‌سازی...' : '+ افزودن عکس کارگاه'}</span>
-                          </label>
+<PhotoSourceButtons onChange={handlePhotoUpload} busy={isUploading} />
                           <span className="text-[12px] text-ink-3">
                             {photos.length > 0 ? `${toPersianDigits(photos.length)} عکس پیوست شد` : 'اختیاری اما مستند'}
                           </span>

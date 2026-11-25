@@ -1,5 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { SupabaseSyncService } from '../../utils/supabase';
+import { looksLikeHeic } from '../../utils/imageCompressor';
+
+/**
+ * عکس‌های HEIC قدیمی (قبل از تبدیل خودکار به JPEG آپلود شده‌اند) در کروم/اندروید باز نمی‌شوند.
+ * وقتی <img> خطا داد، فایل را می‌گیریم و اگر HEIC بود همین‌جا به JPEG تبدیل و نمایش می‌دهیم.
+ */
+const heicCache = new Map<string, Promise<string | null>>();
+function convertHeicUrl(url: string): Promise<string | null> {
+  let job = heicCache.get(url);
+  if (!job) {
+    job = (async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        if (!(await looksLikeHeic(blob))) return null;
+        const { heicTo } = await import('heic-to');
+        const jpeg = await heicTo({ blob, type: 'image/jpeg', quality: 0.85 });
+        return URL.createObjectURL(jpeg);
+      } catch {
+        return null;
+      }
+    })();
+    heicCache.set(url, job);
+  }
+  return job;
+}
 
 interface Props extends React.ImgHTMLAttributes<HTMLImageElement> {
   src?: string;
@@ -27,9 +54,11 @@ export const CloudImage: React.FC<Props> = ({
   });
 
   const [hasError, setHasError] = useState(false);
+  const [triedHeic, setTriedHeic] = useState(false);
 
   useEffect(() => {
     setHasError(false);
+    setTriedHeic(false);
     if (!src || src.trim() === '') {
       setResolvedSrc(undefined);
       return;
@@ -100,7 +129,18 @@ export const CloudImage: React.FC<Props> = ({
       src={resolvedSrc}
       alt={alt}
       className={className}
-      onError={() => setHasError(true)}
+      onError={() => {
+        if (triedHeic || resolvedSrc.startsWith('blob:') || resolvedSrc.startsWith('data:image/jpeg') || resolvedSrc.startsWith('data:image/png')) {
+          setHasError(true);
+          return;
+        }
+        setTriedHeic(true);
+        const failed = resolvedSrc;
+        convertHeicUrl(failed).then((converted) => {
+          if (converted) setResolvedSrc(converted);
+          else setHasError(true);
+        });
+      }}
       {...rest}
     />
   );

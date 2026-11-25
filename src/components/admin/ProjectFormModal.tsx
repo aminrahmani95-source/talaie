@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { triggerToast } from '../Toast';
 import { Project, User, SystemSettings, ProposalImage, InstallationTeam, TeamMember, ProjectTechnicalHandover } from '../../types';
 import {
   X,
@@ -256,6 +257,7 @@ export const ProjectFormModal: React.FC<Props> = ({
         setProposalImages((prev) => [...prev, newImg]);
       } catch (err) {
         console.warn('Proposal upload compression failed:', err);
+        triggerToast('error', err instanceof Error && err.message ? err.message : 'این عکس آماده نشد؛ دوباره امتحان کنید.');
       }
     }
     e.target.value = '';

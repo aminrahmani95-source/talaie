@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { triggerToast } from '../Toast';
 import { Project, SiteReadinessInspection, SiteReadinessItem, SiteChecklistState, User } from '../../types';
 import {
   Ruler,
@@ -16,6 +17,7 @@ import {
 import { getUpcomingDays, toPersianDigits } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
 import { compressImageFile } from '../../utils/imageCompressor';
+import { PhotoSourceButtons } from '../ui/PhotoSourceButtons';
 import { CloudImage } from '../common/CloudImage';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
@@ -129,6 +131,7 @@ export const PreInstallationModal: React.FC<Props> = ({
         setPhotos((prev) => [...prev, compressed]);
       } catch (err) {
         console.warn('Failed to compress site readiness photo:', err);
+        triggerToast('error', err instanceof Error && err.message ? err.message : 'این عکس آماده نشد؛ دوباره امتحان کنید.');
       }
     }
     e.target.value = '';
@@ -373,17 +376,7 @@ export const PreInstallationModal: React.FC<Props> = ({
                 <Camera className="w-4 h-4 text-brand-ink" />
                 <span>تصاویر و مستندات میدانی وضعیت بستر ({photos.length}):</span>
               </label>
-              <label className="cursor-pointer px-3 py-1.5 rounded-md border border-brand/40 bg-raised text-xs font-bold text-brand-ink hover:bg-brand/10 transition flex items-center gap-1.5">
-                <Camera className="w-3.5 h-3.5" />
-                <span>افزودن تصویر</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-              </label>
+<PhotoSourceButtons onChange={handlePhotoUpload} />
             </div>
 
             {photos.length > 0 && (

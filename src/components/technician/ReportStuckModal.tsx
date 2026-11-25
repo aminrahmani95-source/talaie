@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Project, StuckIncident, StuckCategory } from '../../types';
-import { AlertOctagon, X, ShieldAlert, Send, Camera } from 'lucide-react';
+import { AlertOctagon, X, ShieldAlert, Send } from 'lucide-react';
 import { getDisplayName } from '../../utils/technicianName';
 import { compressImageFile } from '../../utils/imageCompressor';
+import { PhotoSourceButtons } from '../ui/PhotoSourceButtons';
 import { CloudImage } from '../common/CloudImage';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
@@ -267,19 +268,7 @@ export const ReportStuckModal: React.FC<Props> = ({
                 عکس‌های وضعیت فعلی کارگاه و علت توقف:
               </label>
               <div className="flex items-center gap-2">
-                <label className="px-3 py-1.5 bg-raised hover:bg-line-strong text-brand-ink rounded-md text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-brand/30">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    capture="environment"
-                    onChange={handlePhotoUpload}
-                    disabled={isProcessingPhotos}
-                    className="hidden"
-                  />
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>{isProcessingPhotos ? 'در حال بهینه‌سازی...' : '+ افزودن عکس کارگاه'}</span>
-                </label>
+<PhotoSourceButtons onChange={handlePhotoUpload} busy={isProcessingPhotos} />
                 <span className="text-[12px] text-ink-3">
                   {photos.length > 0 ? `${photos.length} عکس ثبت شد` : 'اختیاری اما توصیه می‌شود'}
                 </span>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { triggerToast } from './Toast';
 import { Project, Ticket, TicketType, IssueCategory, User } from '../types';
 import {
   AlertTriangle,
@@ -108,6 +109,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
         setPhotos((prev) => [...prev, compressed]);
       } catch (err) {
         console.warn('Ticket image compression failed:', err);
+        triggerToast('error', err instanceof Error && err.message ? err.message : 'این عکس آماده نشد؛ دوباره امتحان کنید.');
       }
     }
     e.target.value = '';

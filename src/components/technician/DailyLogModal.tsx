@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { triggerToast } from '../Toast';
 import { Project, DailyActivityProgress, User } from '../../types';
 import {
   X,
@@ -155,6 +156,7 @@ export const DailyLogModal: React.FC<Props> = ({
         setPhotos((prev) => [...prev, compressed]);
       } catch (err) {
         console.warn('Image compression failed:', err);
+        triggerToast('error', err instanceof Error && err.message ? err.message : 'این عکس آماده نشد؛ دوباره امتحان کنید.');
       }
     }
     e.target.value = '';

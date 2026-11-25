@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Camera, X, CheckCircle2, Upload, AlertTriangle, Loader2 } from 'lucide-react';
+import { Camera, X, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { PhotoSourceButtons } from '../ui/PhotoSourceButtons';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { Project } from '../../types';
 import { CloudImage } from '../common/CloudImage';
@@ -77,7 +79,7 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -120,32 +122,20 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
 
         {/* Content Body */}
         <div className="p-5 space-y-4">
-          {/* Upload Button */}
-          <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line-strong hover:border-brand rounded-xl p-6 bg-canvas cursor-pointer transition text-center group">
-            <input
-              type="file"
-              accept="image/*"
-              multiple
+          {/* Upload: camera and gallery are separate (Android 14+ picker has no camera) */}
+          <div className="space-y-1.5">
+            <PhotoSourceButtons
+              size="large"
               onChange={handleFileChange}
-              disabled={isProcessing || isSubmitting}
-              className="hidden"
+              busy={isProcessing}
+              disabled={isSubmitting}
+              cameraLabel="عکس با دوربین"
+              galleryLabel="انتخاب از گالری"
             />
-            {isProcessing ? (
-              <Loader2 className="w-8 h-8 text-brand-ink animate-spin" />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-raised text-brand-ink group-hover:bg-brand/20 flex items-center justify-center transition">
-                <Upload className="w-6 h-6" />
-              </div>
-            )}
-            <div>
-              <p className="text-xs sm:text-sm font-bold text-ink group-hover:text-brand-ink transition">
-                عکاسی با دوربین یا انتخاب از گالری
-              </p>
-              <p className="text-[12px] text-ink-3 mt-0.5">
-                تصاویر به صورت هوشمند و بدون افت کیفیت فشرده می‌شوند
-              </p>
-            </div>
-          </label>
+            <p className="text-[12px] text-ink-3 text-center">
+              {isProcessing ? 'در حال آماده‌سازی عکس…' : 'عکس‌ها خودکار سبک می‌شوند تا سریع ارسال شوند.'}
+            </p>
+          </div>
 
           {/* Photo Thumbnails */}
           {photos.length > 0 && (
@@ -208,6 +198,7 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
