@@ -61,8 +61,11 @@ export function bookingToRow(b: SalesProjectBooking): SalesBookingRow {
     sales_rep_name: b.salesRepName,
     created_at: b.createdAt,
     updated_at: new Date().toISOString(),
-    // نسخه کامل رکورد (شامل daysDetails و اطلاعات تبدیل به پروژه) برای سازگاری رو به جلو
-    data: b,
+    // نسخه کامل رکورد (شامل daysDetails و اطلاعات تبدیل به پروژه) برای سازگاری رو به جلو.
+    // عکسی که هنوز آپلود نشده (base64) به جدول نمی‌رود.
+    data: b.proposalImages?.some((img) => img.url?.startsWith('data:'))
+      ? { ...b, proposalImages: b.proposalImages.filter((img) => !img.url?.startsWith('data:')) }
+      : b,
   };
 }
 
@@ -106,6 +109,37 @@ export function mergeServerBookings(
   return [...byId.values()].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 
+/** returns ids whose photos are still only on this device (they wait for the next round) */
+async function uploadPendingProposalPhotos(ids: string[]): Promise<Set<string>> {
+  const notReady = new Set<string>();
+  const withLocalPhotos = getStoredBookings().filter(
+    (b) => ids.includes(b.id) && (b.proposalImages || []).some((img) => img.url?.startsWith('data:'))
+  );
+  for (const b of withLocalPhotos) {
+    try {
+      const uploaded = await Promise.all(
+        (b.proposalImages || []).map(async (img) => ({
+          ...img,
+          url: await SupabaseSyncService.uploadBookingPhoto(b.id, img.url),
+        }))
+      );
+      // فقط همین رکورد به‌روز می‌شود؛ اگر در این فاصله عوض شده باشد، دور بعد دوباره امتحان می‌شود
+      const current = getStoredBookings();
+      const idx = current.findIndex((x) => x.id === b.id);
+      if (idx >= 0 && JSON.stringify(current[idx].proposalImages) === JSON.stringify(b.proposalImages)) {
+        current[idx] = { ...current[idx], proposalImages: uploaded };
+        saveStoredBookings(current);
+      } else {
+        notReady.add(b.id);
+      }
+    } catch (err) {
+      notReady.add(b.id);
+      console.warn('[SalesBookingSync] آپلود عکس پروپوزال انجام نشد؛ دوباره تلاش می‌شود.', err);
+    }
+  }
+  return notReady;
+}
+
 let syncInFlight: Promise<void> | null = null;
 let warnedUnavailable = false;
 
@@ -115,13 +149,19 @@ async function pushPending(): Promise<void> {
   const pending = getPendingSalesSync();
   if (pending.upserts.length === 0 && pending.deletes.length === 0) return;
 
+  // عکس‌های پروپوزالِ هنوز محلی (base64) اول به فضای ابری می‌روند تا جدول فقط مسیر نگه دارد
+  // (رزروی که عکسش هنوز آپلود نشده، این دور ارسال نمی‌شود تا نسخه‌ی بی‌عکس روی سرور ننشیند)
+  const photosNotReady = await uploadPendingProposalPhotos(pending.upserts);
+
   const local = getStoredBookings();
   const doneUpserts = new Set<string>();
   const doneDeletes = new Set<string>();
 
-  const toUpsert = local.filter((b) => pending.upserts.includes(b.id));
+  const toUpsert = local.filter((b) => pending.upserts.includes(b.id) && !photosNotReady.has(b.id));
   // رکوردهایی که در صف هستند ولی دیگر محلی وجود ندارند، از صف خارج می‌شوند
-  pending.upserts.filter((id) => !toUpsert.some((b) => b.id === id)).forEach((id) => doneUpserts.add(id));
+  pending.upserts
+    .filter((id) => !photosNotReady.has(id) && !local.some((b) => b.id === id))
+    .forEach((id) => doneUpserts.add(id));
 
   // one booking at a time: a single refused booking must not hold back all the others
   let firstError: unknown = null;

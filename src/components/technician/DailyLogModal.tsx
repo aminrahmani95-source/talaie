@@ -206,9 +206,9 @@ export const DailyLogModal: React.FC<Props> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-surface rounded-lg max-w-lg w-full shadow-2xl border border-line overflow-hidden my-6 transition-all max-h-[92vh] flex flex-col">
+      <div className="bg-surface rounded-lg max-w-lg w-full shadow-2xl border border-line overflow-hidden my-auto transition-all max-h-[92vh] flex flex-col">
         {/* Header - Auto-populated metadata */}
         <div className="bg-canvas px-5 py-4 text-ink flex items-center justify-between border-b border-line shrink-0">
           <div className="flex items-center gap-2.5">

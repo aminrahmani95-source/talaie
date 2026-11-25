@@ -291,7 +291,7 @@ export interface CustomerSurvey {
 }
 
 // دسته‌بندی فعالیت‌ها و اقلام کار در طرح اولیه نصب (فاز P2.1)
-export type PlanActivityCategory = 'SHADE' | 'CURTAIN' | 'MOTOR' | 'ACCESSORY' | 'CUSTOM';
+export type PlanActivityCategory = 'SHADE' | 'CURTAIN' | 'RAIL' | 'MOTOR' | 'ACCESSORY' | 'CUSTOM';
 
 // قلم فعالیت در طرح اولیه نصب (کاملاً تغییرناپذیر پس از قفل اولیه)
 export interface PlanActivityItem {
@@ -429,6 +429,7 @@ export interface Project {
   // مشخصات فنی
   shadePanels: number; // تعداد لت شید
   curtainPanels: number; // تعداد لت پرده
+  railCount?: number; // تعداد ریل (محصول سوم گالری در کنار شید و پرده)
   mechanismType?: string; // دستی، موتور سامفی، زنجیری و...
   approximateArea?: number; // متراژ تقریبی به متر مربع
   specialNotes?: string; // توضیحات ویژه سفارش فروش
@@ -854,7 +855,11 @@ export interface SalesProjectBooking {
   customerName: string;
   customerPhone: string;
   address: string;
-  lathsCount: number; // تعداد لت‌ها (بدون سقف عددی پروژه)
+  lathsCount: number; // جمع کل واحدها برای ظرفیت (شید + ریل + پرده)
+  shadeCount?: number; // لت شید
+  railCount?: number; // تعداد ریل
+  curtainCount?: number; // لت پرده
+  proposalImages?: ProposalImage[]; // عکس پروپوزال/برگه سفارش (قبل از ارسال به سرور به مسیر فضای ابری تبدیل می‌شود)
   isSmart: boolean; // هوشمند/موتوردار یا مکانیکی/دستی
   notes: string;
   requestedDate: string; // YYYY-MM-DD

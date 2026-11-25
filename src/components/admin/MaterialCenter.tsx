@@ -30,7 +30,6 @@ import {
   Loader2,
 } from 'lucide-react';
 import { PageHeader } from '../ui/PageHeader';
-import { Button } from '../ui/Button';
 import { toPersianDigits, formatJalaliDateTime, localDateKey } from '../../utils/jalali';
 import { triggerToast } from '../Toast';
 import { WarehouseDesk } from '../warehouse/WarehouseDesk';
@@ -47,7 +46,7 @@ import {
   MATERIAL_REASON_LABELS,
 } from '../../utils/materialRequests';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { getUpcomingDispatchProjects } from '../../utils/warehouseLists';
+import { getUpcomingDispatchProjects, needsWarehouseReceipt, DISPATCH_HORIZON_DAYS } from '../../utils/warehouseLists';
 
 interface Props {
   materialRequests: MaterialRequest[];
@@ -80,7 +79,7 @@ interface Props {
   onNavigateTab?: (tab: any) => void;
 }
 
-type FilterTab = 'ALL' | 'PENDING' | 'IN_TRANSIT' | 'DELIVERED' | 'REJECTED';
+type FilterTab = 'OPEN' | 'ALL' | 'PENDING' | 'IN_TRANSIT' | 'DELIVERED' | 'REJECTED';
 type HubTab = 'REFERRALS' | 'REQUESTS' | 'GOODS_RECEIPT' | 'PACKING';
 
 export const MaterialCenter: React.FC<Props> = ({
@@ -109,9 +108,12 @@ export const MaterialCenter: React.FC<Props> = ({
       });
   }, [tickets]);
 
-  const [hubTab, setHubTab] = useState<HubTab>(
-    warehouseTickets.length > 0 ? 'REFERRALS' : 'REQUESTS'
-  );
+  const [hubTab, setHubTab] = useState<HubTab>(() => {
+    if (warehouseTickets.length > 0) return 'REFERRALS';
+    if (materialRequests.some((r) => r.status !== 'DELIVERED_CONFIRMED' && r.status !== 'REJECTED')) return 'REQUESTS';
+    if ((projects || []).some(needsWarehouseReceipt)) return 'GOODS_RECEIPT';
+    return 'REQUESTS';
+  });
 
   // Referrals filter & search
   const [referralFilter, setReferralFilter] = useState<'OPEN' | 'BLOCKING' | 'RESOLVED'>('OPEN');
@@ -129,17 +131,18 @@ export const MaterialCenter: React.FC<Props> = ({
   // Incoming factory goods & dispatch counts for KPI cards
   const pendingReceiptCount = useMemo(() => {
     if (!projects) return 0;
-    return projects.filter(
-      (p) => p.status !== 'COMPLETED' && p.status !== 'CANCELLED' && !p.technicalHandover?.warehouseConfirmation?.confirmed
-    ).length;
+    return projects.filter(needsWarehouseReceipt).length;
   }, [projects]);
 
   const upcomingDispatchCount = useMemo(() => {
     if (!projects) return 0;
-    return getUpcomingDispatchProjects(projects, localDateKey()).length;
+    return getUpcomingDispatchProjects(projects, localDateKey(), DISPATCH_HORIZON_DAYS).filter(
+      (p) => !p.warehousePrep?.isPackedAndReady
+    ).length;
   }, [projects]);
 
-  const [filterTab, setFilterTab] = useState<FilterTab>('ALL');
+  // پیش‌فرض: فقط درخواست‌هایی که هنوز کاری دارند
+  const [filterTab, setFilterTab] = useState<FilterTab>('OPEN');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [urgencyFilter, setUrgencyFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -194,6 +197,7 @@ export const MaterialCenter: React.FC<Props> = ({
   const filteredRequests = useMemo(() => {
     return materialRequests.filter((r) => {
       // Tab filter
+      if (filterTab === 'OPEN' && (r.status === 'DELIVERED_CONFIRMED' || r.status === 'REJECTED')) return false;
       if (filterTab === 'PENDING' && r.status !== 'SUBMITTED' && r.status !== 'IN_PROCUREMENT') return false;
       if (filterTab === 'IN_TRANSIT' && r.status !== 'PARTIALLY_DISPATCHED' && r.status !== 'DISPATCHED') return false;
       if (filterTab === 'DELIVERED' && r.status !== 'DELIVERED_CONFIRMED') return false;
@@ -216,6 +220,15 @@ export const MaterialCenter: React.FC<Props> = ({
       }
 
       return true;
+    }).sort((a, b) => {
+      // کارهای باز اول، بعد بحرانی ← فوری ← عادی، بعد جدیدترین
+      const closed = (r: MaterialRequest) => (r.status === 'DELIVERED_CONFIRMED' || r.status === 'REJECTED' ? 1 : 0);
+      const urg = (r: MaterialRequest) => (r.urgency === 'CRITICAL_BLOCKING' ? 0 : r.urgency === 'URGENT' ? 1 : 2);
+      return (
+        closed(a) - closed(b) ||
+        urg(a) - urg(b) ||
+        (b.createdAt || '').localeCompare(a.createdAt || '')
+      );
     });
   }, [materialRequests, filterTab, categoryFilter, urgencyFilter, searchQuery]);
 
@@ -442,9 +455,9 @@ export const MaterialCenter: React.FC<Props> = ({
         {(
           [
             { key: 'REFERRALS' as const, label: 'ارجاعات فوری', count: warehouseTickets.length, icon: AlertTriangle, tone: 'text-purple-400', ring: 'ring-purple-500' },
-            { key: 'REQUESTS' as const, label: 'درخواست‌ها', count: metrics.total, icon: Package, tone: 'text-brand-ink', ring: 'ring-brand' },
+            { key: 'REQUESTS' as const, label: 'درخواست متریال', count: metrics.pending + metrics.inTransit, icon: Package, tone: 'text-brand-ink', ring: 'ring-brand' },
             { key: 'GOODS_RECEIPT' as const, label: 'ورود کالا', count: pendingReceiptCount, icon: ArrowDownToLine, tone: 'text-amber-400', ring: 'ring-amber-500' },
-            { key: 'PACKING' as const, label: 'بار فردا', count: upcomingDispatchCount, icon: Truck, tone: 'text-emerald-400', ring: 'ring-emerald-500' },
+            { key: 'PACKING' as const, label: 'بارگیری', count: upcomingDispatchCount, icon: Truck, tone: 'text-emerald-400', ring: 'ring-emerald-500' },
           ]
         ).map((t) => {
           const Icon = t.icon;
@@ -735,6 +748,7 @@ export const MaterialCenter: React.FC<Props> = ({
       {hubTab === 'GOODS_RECEIPT' && currentUser && (
         <WarehouseDesk
           initialTab="GOODS_RECEIPT"
+          embedded
           currentUser={currentUser}
           projects={projects || []}
           tickets={tickets || []}
@@ -750,6 +764,7 @@ export const MaterialCenter: React.FC<Props> = ({
       {hubTab === 'PACKING' && currentUser && (
         <WarehouseDesk
           initialTab="PACKING"
+          embedded
           currentUser={currentUser}
           projects={projects || []}
           tickets={tickets || []}
@@ -786,13 +801,14 @@ export const MaterialCenter: React.FC<Props> = ({
       {/* Filter Tabs & Search */}
       <div className="bg-surface p-4 rounded-lg border border-line space-y-4">
         {/* Main Status Tabs */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3">
+        <div className="flex items-center gap-2 border-b border-line pb-3 overflow-x-auto no-scrollbar -mx-1 px-1">
           {[
-            { id: 'ALL' as const, label: 'همه درخواست‌ها', count: metrics.total },
+            { id: 'OPEN' as const, label: 'باز', count: metrics.pending + metrics.inTransit },
             { id: 'PENDING' as const, label: 'در انتظار تامین', count: metrics.pending },
             { id: 'IN_TRANSIT' as const, label: 'در مسیر و پیک', count: metrics.inTransit },
             { id: 'DELIVERED' as const, label: 'تحویل شده', count: metrics.delivered },
             { id: 'REJECTED' as const, label: 'رد شده', count: materialRequests.filter((r) => r.status === 'REJECTED').length },
+            { id: 'ALL' as const, label: 'همه', count: metrics.total },
           ].map((tab) => {
             const isSelected = filterTab === tab.id;
             return (
@@ -800,7 +816,7 @@ export const MaterialCenter: React.FC<Props> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => handleSetFilterTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-bold transition cursor-pointer min-h-[40px] ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-bold transition cursor-pointer min-h-[40px] whitespace-nowrap shrink-0 ${
                   isSelected
                     ? 'text-brand-ink bg-brand dark:text-[#181818] '
                     : 'text-ink-3 hover:bg-raised'
@@ -816,12 +832,12 @@ export const MaterialCenter: React.FC<Props> = ({
         </div>
 
         {/* Sub-filters (Category, Urgency, Search) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="relative">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+          <div className="relative col-span-2 sm:col-span-1">
             <Search className="w-4 h-4 text-ink-3 absolute right-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="جستجو بر اساس نام پروژه، مشتری، تکنسین، یا قطعه..."
+              placeholder="جستجو: پروژه، مشتری، نصاب یا قطعه"
               value={searchQuery}
               onChange={(e) => handleSetSearchQuery(e.target.value)}
               className="w-full text-xs pr-9 pl-3 py-2.5 rounded-md bg-raised border border-line text-ink focus:outline-none focus:ring-1 focus:ring-brand min-h-[44px]"
@@ -834,7 +850,7 @@ export const MaterialCenter: React.FC<Props> = ({
               onChange={(e) => handleSetCategoryFilter(e.target.value)}
               className="w-full text-xs p-2.5 rounded-md bg-raised border border-line text-ink font-medium focus:outline-none focus:ring-1 focus:ring-brand min-h-[44px]"
             >
-              <option value="ALL">همه دسته‌بندی‌های متریال</option>
+              <option value="ALL">همه دسته‌ها</option>
               {(Object.keys(MATERIAL_CATEGORY_LABELS) as MaterialCategory[]).map((c) => (
                 <option key={c} value={c}>
                   {MATERIAL_CATEGORY_LABELS[c]}
@@ -883,131 +899,118 @@ export const MaterialCenter: React.FC<Props> = ({
                 className="bg-surface rounded-lg border border-line overflow-hidden  transition hover:border-brand/50"
               >
                 {/* Header row */}
-                <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2DDD4]/60 dark:border-[#2E2B26]/60">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-black bg-[#212121] text-brand-soft px-2 py-0.5 rounded-md">
+                <div className="p-4 space-y-1.5 border-b border-line">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+                      <span className="font-mono text-xs font-black bg-canvas text-brand-ink border border-line-strong px-2 py-0.5 rounded-md">
                         {req.projectCode}
                       </span>
-                      <h3 className="font-bold text-sm sm:text-base text-ink">
-                        {req.projectTitle}
-                      </h3>
-                      <span className={`text-[12px] px-2 py-0.5 rounded-md ${urgencyConfig.badgeClass}`}>
-                        {urgencyConfig.label}
-                      </span>
+                      <h3 className="font-bold text-sm sm:text-base text-ink">{req.projectTitle}</h3>
+                      {req.urgency !== 'NORMAL' && (
+                        <span className={`text-[12px] px-2 py-0.5 rounded-md ${urgencyConfig.badgeClass}`}>
+                          {urgencyConfig.label}
+                        </span>
+                      )}
                     </div>
-
-                    <div className="text-xs text-ink-3 flex items-center gap-2 flex-wrap">
-                      <span>کارفرما: {req.customerName || '—'}</span>
-                      <span>•</span>
-                      <span>درخواست‌کننده: {req.requestedByUserName}</span>
-                      <span>•</span>
-                      <span>علت: {MATERIAL_REASON_LABELS[req.reason]}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                     <span
-                      className={`text-xs px-2.5 py-1 rounded-md font-bold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
+                      className={`text-[12px] px-2 py-1 rounded-md font-bold border shrink-0 ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
                     >
                       {MATERIAL_STATUS_LABELS[req.status]}
                     </span>
-
-                    {/* Quick action buttons */}
-                    {req.status !== 'DELIVERED_CONFIRMED' && req.status !== 'REJECTED' && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleOpenDispatchModal(req)}
-                        className="bg-[#212121] text-brand-ink hover:bg-brand hover:text-[#212121] text-xs font-bold gap-1 min-h-[38px]"
-                      >
-                        <Truck className="w-3.5 h-3.5" />
-                        <span>ارسال با پیک</span>
-                      </Button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => handleOpenStatusModal(req)}
-                      className="text-xs text-ink-3 hover:text-ink p-2 rounded-lg border border-line min-h-[38px] cursor-pointer"
-                      title="تغییر وضعیت یا مسئول پیگیری"
-                    >
-                      وضعیت
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setExpandedId(isExpanded ? null : req.id)}
-                      className="text-ink-3 hover:text-ink p-2 rounded-lg min-h-[38px] cursor-pointer"
-                      aria-label="نمایش جزئیات"
-                    >
-                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
                   </div>
+
+                  <div className="text-xs text-ink-3 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+                    {req.customerName && req.customerName !== req.projectTitle && (
+                      <>
+                        <span>کارفرما: {req.customerName}</span>
+                        <span>•</span>
+                      </>
+                    )}
+                    <span>{req.requestedByUserName}</span>
+                    <span>•</span>
+                    <span>{formatJalaliDateTime(req.createdAt)}</span>
+                    <span>•</span>
+                    <span>{MATERIAL_REASON_LABELS[req.reason]}</span>
+                  </div>
+
+                  {req.notes && (
+                    <p className="text-xs text-ink bg-amber-500/10 border border-amber-500/30 rounded-md px-2.5 py-1.5">
+                      <span className="font-bold text-amber-700 dark:text-amber-300">یادداشت کارگاه: </span>
+                      {req.notes}
+                    </p>
+                  )}
                 </div>
 
                 {/* Items Balance Summary Table */}
-                <div className="p-4 sm:p-5 bg-[#FAF7F2]/40 dark:bg-[#181714]/40 space-y-3">
-                  <div className="text-xs font-black text-ink-2 flex items-center justify-between">
-                    <span>اقلام درخواستی و وضعیت ارسال/تحویل:</span>
-                    <span className="text-[12px] text-brand-ink">
-                      تعداد کل: {toPersianDigits(summary.totalItems)} قلم
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
+                <div className="p-4 space-y-3">
+                  <div className="space-y-1.5">
                     {summary.balances.map((b) => {
+                      const started = b.totalDispatchedQty > 0;
                       const dispatchPct = Math.min(100, Math.round((b.totalDispatchedQty / b.requestedQty) * 100));
                       const receivedPct = Math.min(100, Math.round((b.totalReceivedQty / b.requestedQty) * 100));
-
                       return (
-                        <div
-                          key={b.itemId}
-                          className="bg-raised p-3 rounded-md border border-line space-y-1.5 text-xs"
-                        >
-                          <div className="flex items-center justify-between font-bold">
-                            <span className="text-ink">{b.title}</span>
-                            <span className="font-mono text-brand-ink">
-                              نیاز: {toPersianDigits(b.requestedQty)} {b.unit} • ارسال‌شده: {toPersianDigits(b.totalDispatchedQty)} • دریافت‌شده: {toPersianDigits(b.totalReceivedQty)}
+                        <div key={b.itemId} className="bg-canvas px-3 py-2 rounded-md border border-line text-xs space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-ink">{b.title}</span>
+                            <span className="font-black text-ink tabular-nums shrink-0">
+                              {toPersianDigits(b.requestedQty)} {b.unit}
                             </span>
                           </div>
-
-                          {/* Dual progress bar: Dispatched vs Received */}
-                          <div className="w-full bg-raised h-2 rounded-full overflow-hidden relative">
-                            {/* Dispatched bar (purple) */}
-                            <div
-                              className="h-full bg-purple-400 dark:bg-purple-600 transition-all duration-300 absolute right-0 top-0"
-                              style={{ width: `${dispatchPct}%` }}
-                            />
-                            {/* Received bar (emerald) */}
-                            <div
-                              className="h-full bg-emerald-500 transition-all duration-300 absolute right-0 top-0"
-                              style={{ width: `${receivedPct}%` }}
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between text-[12px] text-ink-3">
-                            <span>
-                              {b.remainingToDispatch > 0 ? (
-                                <span className="text-amber-600 dark:text-amber-400 font-bold">
-                                  مانده برای ارسال: {toPersianDigits(b.remainingToDispatch)} {b.unit}
+                          {started && (
+                            <>
+                              <div className="w-full bg-raised h-1.5 rounded-full overflow-hidden relative">
+                                <div className="h-full bg-purple-500 absolute right-0 top-0" style={{ width: `${dispatchPct}%` }} />
+                                <div className="h-full bg-emerald-500 absolute right-0 top-0" style={{ width: `${receivedPct}%` }} />
+                              </div>
+                              <div className="flex items-center justify-between text-[12px] text-ink-3 gap-2 flex-wrap">
+                                <span>
+                                  ارسال‌شده {toPersianDigits(b.totalDispatchedQty)} • تحویل در کارگاه {toPersianDigits(b.totalReceivedQty)}
                                 </span>
-                              ) : (
-                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                                  تمام مقدار ارسال شد
-                                </span>
-                              )}
-                            </span>
-
-                            {b.pendingReceiptQty > 0 && (
-                              <span className="text-purple-600 dark:text-purple-400 font-bold">
-                                {toPersianDigits(b.pendingReceiptQty)} {b.unit} در مسیر پیک (در انتظار تایید کارگاه)
-                              </span>
-                            )}
-                          </div>
+                                {b.remainingToDispatch > 0 ? (
+                                  <span className="text-amber-700 dark:text-amber-300 font-bold">
+                                    مانده {toPersianDigits(b.remainingToDispatch)} {b.unit}
+                                  </span>
+                                ) : b.pendingReceiptQty > 0 ? (
+                                  <span className="text-purple-700 dark:text-purple-300 font-bold">در مسیر کارگاه</span>
+                                ) : (
+                                  <span className="text-emerald-700 dark:text-emerald-300 font-bold">کامل</span>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </div>
                       );
                     })}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-1">
+                    {req.status !== 'DELIVERED_CONFIRMED' && req.status !== 'REJECTED' && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenDispatchModal(req)}
+                        className="flex-1 min-h-[42px] rounded-md bg-brand hover:bg-brand-hover text-on-brand text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                      >
+                        <Truck className="w-4 h-4" />
+                        <span>ثبت ارسال</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenStatusModal(req)}
+                      className="min-h-[42px] px-3 rounded-md border border-line bg-raised text-ink-2 hover:text-ink text-xs font-bold cursor-pointer"
+                    >
+                      تغییر وضعیت
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(isExpanded ? null : req.id)}
+                      aria-expanded={isExpanded}
+                      className="min-h-[42px] px-3 rounded-md border border-line bg-raised text-ink-2 hover:text-ink text-xs font-bold cursor-pointer flex items-center gap-1"
+                    >
+                      <span>سوابق</span>
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -1097,14 +1100,6 @@ export const MaterialCenter: React.FC<Props> = ({
                         </div>
                       </div>
 
-                      <div>
-                        <span className="font-bold text-ink-2 block mb-1">
-                          یادداشت تکنسین سر کارگاه:
-                        </span>
-                        <p className="text-ink-3">
-                          {req.notes || 'توضیحی ثبت نشده است.'}
-                        </p>
-                      </div>
                     </div>
                   </div>
                 )}
@@ -1169,9 +1164,9 @@ export const MaterialCenter: React.FC<Props> = ({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+          className="fixed inset-0 z-50 flex justify-center items-start p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
         >
-          <div className="bg-sunken w-full max-w-xl rounded-lg shadow-2xl border border-line overflow-hidden my-6">
+          <div className="bg-sunken w-full max-w-xl rounded-lg shadow-2xl border border-line overflow-hidden my-auto">
             <div className="bg-[#212121] text-white p-4 sm:p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-md bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
@@ -1303,9 +1298,9 @@ export const MaterialCenter: React.FC<Props> = ({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+          className="fixed inset-0 z-50 flex justify-center items-start p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
         >
-          <div className="bg-sunken w-full max-w-md rounded-lg shadow-2xl border border-line overflow-hidden my-6">
+          <div className="bg-sunken w-full max-w-md rounded-lg shadow-2xl border border-line overflow-hidden my-auto">
             <div className="bg-[#212121] text-white p-4 flex items-center justify-between">
               <h3 className="text-sm font-black text-[#F5EFEB]">تغییر وضعیت و مسئول پیگیری</h3>
               <button
@@ -1400,9 +1395,9 @@ export const MaterialCenter: React.FC<Props> = ({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+          className="fixed inset-0 z-50 flex justify-center items-start p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
         >
-          <div className="bg-surface w-full max-w-lg rounded-lg shadow-2xl border border-line overflow-hidden my-6">
+          <div className="bg-surface w-full max-w-lg rounded-lg shadow-2xl border border-line overflow-hidden my-auto">
             <div className="bg-[#212121] text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Printer className="w-5 h-5 text-brand-ink" />

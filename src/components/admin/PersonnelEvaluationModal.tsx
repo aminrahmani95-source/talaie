@@ -125,9 +125,9 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-surface rounded-lg max-w-lg w-full shadow-2xl border border-line-strong overflow-hidden my-6 transition-all animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface rounded-lg max-w-lg w-full shadow-2xl border border-line-strong overflow-hidden my-auto transition-all animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="bg-canvas px-6 py-4 text-ink flex items-center justify-between border-b-2 border-brand">
           <div className="flex items-center gap-2.5">

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { formatProductCounts, projectProductCounts } from '../../utils/productCounts';
 import { Project, User, ProjectStatus, MaterialRequest, Ticket } from '../../types';
 import {
   Clock,
@@ -627,9 +628,7 @@ export const ProjectCard: React.FC<Props> = ({
           </div>
         ) : (
           <div className="text-xs text-ink-2">
-            {project.shadePanels > 0 && `${toPersianDigits(project.shadePanels)} لت شید`}
-            {project.shadePanels > 0 && project.curtainPanels > 0 && ' • '}
-            {project.curtainPanels > 0 && `${toPersianDigits(project.curtainPanels)} لت پرده`}
+            {formatProductCounts(projectProductCounts(project))}
           </div>
         )}
       </div>

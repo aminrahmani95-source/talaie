@@ -24,6 +24,7 @@ import { getMultiDayTotalDays } from '../../utils/multiDay';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { SupabaseSyncService } from '../../utils/supabase';
 import { CloudImage } from '../common/CloudImage';
+import { ProductCountsInput } from '../sales/ProductCountsInput';
 import { computeProjectDiff } from '../../utils/offlineQueue';
 import { Button } from '../ui/Button';
 import { getDisplayName } from '../../utils/technicianName';
@@ -137,6 +138,7 @@ export const ProjectFormModal: React.FC<Props> = ({
 
   const [shadePanels, setShadePanels] = useState<number>(effective?.shadePanels ?? 0);
   const [curtainPanels, setCurtainPanels] = useState<number>(effective?.curtainPanels ?? 0);
+  const [railCount, setRailCount] = useState<number>(effective?.railCount ?? 0);
   const [mechanismType, setMechanismType] = useState(effective?.mechanismType || '');
   const [approximateArea, setApproximateArea] = useState<string>(
     effective?.approximateArea ? String(effective.approximateArea) : ''
@@ -358,6 +360,7 @@ export const ProjectFormModal: React.FC<Props> = ({
           locationUrl: locationUrl.trim(),
           shadePanels: Number(shadePanels) || 0,
           curtainPanels: Number(curtainPanels) || 0,
+          railCount: Number(railCount) || 0,
           mechanismType: mechanismType.trim(),
           approximateArea: approximateArea ? Number(approximateArea) : undefined,
           specialNotes: specialNotes.trim(),
@@ -412,6 +415,7 @@ export const ProjectFormModal: React.FC<Props> = ({
           locationUrl: locationUrl.trim(),
           shadePanels: Number(shadePanels) || 0,
           curtainPanels: Number(curtainPanels) || 0,
+          railCount: Number(railCount) || 0,
           mechanismType: mechanismType.trim(),
           approximateArea: approximateArea ? Number(approximateArea) : undefined,
           specialNotes: specialNotes.trim(),
@@ -504,10 +508,6 @@ export const ProjectFormModal: React.FC<Props> = ({
     return `${d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} ${d.persianDayNum} ${d.persianMonthName}`;
   };
 
-  const numericValue = (raw: string) => {
-    const latin = toEnglishDigits(raw).replace(/[^\d]/g, '');
-    return latin ? Number(latin) : 0;
-  };
   const decimalValue = (raw: string) =>
     toEnglishDigits(raw)
       .replace(/[٫,]/g, '.')
@@ -919,37 +919,17 @@ export const ProjectFormModal: React.FC<Props> = ({
               <span>مشخصات فنی و مدارک</span>
             </h4>
 
+            <ProductCountsInput
+              value={{ shade: shadePanels, rail: railCount, curtain: curtainPanels }}
+              onChange={(c) => {
+                markDirty();
+                setShadePanels(c.shade);
+                setRailCount(c.rail);
+                setCurtainPanels(c.curtain);
+              }}
+            />
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div>
-                <label htmlFor="shade-panels" className={labelCls}>
-                  لت شید
-                </label>
-                <input
-                  id="shade-panels"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={shadePanels ? String(shadePanels) : ''}
-                  onChange={(e) => setShadePanels(numericValue(e.target.value))}
-                  className={`${inputCls} text-center font-mono font-bold`}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="curtain-panels" className={labelCls}>
-                  لت پرده
-                </label>
-                <input
-                  id="curtain-panels"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={curtainPanels ? String(curtainPanels) : ''}
-                  onChange={(e) => setCurtainPanels(numericValue(e.target.value))}
-                  className={`${inputCls} text-center font-mono font-bold`}
-                />
-              </div>
-
               <div>
                 <label htmlFor="estimated-workload" className={labelCls}>
                   حجم کار (متر)

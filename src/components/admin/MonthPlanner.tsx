@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { formatProductCounts, projectProductCounts, capacityUnits, bookingProductCounts } from '../../utils/productCounts';
 import {
   Project,
   User,
@@ -316,7 +317,7 @@ export const MonthPlanner: React.FC<Props> = ({
                     <div className="flex items-center justify-between gap-1">
                       <span className="font-bold text-xs text-ink truncate">{b.customerName}</span>
                       <span className="font-mono text-[12px] font-bold text-brand-ink bg-brand/10 px-1.5 py-0.5 rounded shrink-0">
-                        {toPersianDigits(b.lathsCount)} لت
+                        {formatProductCounts(bookingProductCounts(b)) || `${toPersianDigits(b.lathsCount)} لت`}
                       </span>
                     </div>
 
@@ -332,6 +333,15 @@ export const MonthPlanner: React.FC<Props> = ({
                     <div className="mt-2 text-[11px] bg-surface p-1.5 rounded border border-line flex items-center justify-between text-ink-2">
                       <span>پیشنهاد اولیه فروش:</span>
                       <span className="font-mono font-bold text-brand-soft">{b.jalaliDate}</span>
+                    </div>
+                    <div className="mt-1.5 text-[11px]">
+                      {(b.proposalImages?.length ?? 0) > 0 ? (
+                        <span className="text-emerald-600 dark:text-emerald-300 font-bold">
+                          📎 پروپوزال ({toPersianDigits(b.proposalImages?.length ?? 0)} عکس)
+                        </span>
+                      ) : (
+                        <span className="text-amber-700 dark:text-amber-300">بدون پروپوزال</span>
+                      )}
                     </div>
                   </div>
 
@@ -544,7 +554,7 @@ export const MonthPlanner: React.FC<Props> = ({
                                         {multiProg.badgeText}
                                       </span>
                                     ) : (
-                                      <span className="tabular-nums">{toPersianDigits(p.shadePanels + p.curtainPanels)} لت</span>
+                                      <span className="tabular-nums">{toPersianDigits(capacityUnits(projectProductCounts(p)))} لت</span>
                                     )}
                                   </div>
                                 </div>
@@ -774,7 +784,7 @@ export const MonthPlanner: React.FC<Props> = ({
                         <span className="shrink-0 text-[11px] font-bold text-sky-400">رزرو</span>
                       </div>
                       <div className="text-[11px] text-ink-3 mt-0.5">
-                        {toPersianDigits(b.lathsCount)} لت{b.isSmart ? ' هوشمند' : ''}
+                        {formatProductCounts(bookingProductCounts(b)) || `${toPersianDigits(b.lathsCount)} لت`}{b.isSmart ? ' · هوشمند' : ''}
                         {canEditSchedule ? ' · تخصیص اکیپ' : ''}
                       </div>
                     </button>
@@ -805,9 +815,9 @@ export const MonthPlanner: React.FC<Props> = ({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
         >
-          <div className="bg-surface rounded-lg max-w-md w-full shadow-2xl border border-line overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-surface rounded-lg max-w-md w-full shadow-2xl border border-line overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
             <div className="bg-canvas px-5 py-4 text-ink flex items-center justify-between border-b border-line">
               <div className="flex items-center gap-2">
                 <ArrowRightLeft className="w-5 h-5 text-brand-ink" />
@@ -940,9 +950,9 @@ export const MonthPlanner: React.FC<Props> = ({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
         >
-          <div className="bg-surface rounded-lg max-w-md w-full shadow-2xl border border-line overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-surface rounded-lg max-w-md w-full shadow-2xl border border-line overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
             <div className="bg-canvas px-5 py-4 text-ink flex items-center justify-between border-b border-line">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-brand-ink" />
@@ -1045,8 +1055,10 @@ export const MonthPlanner: React.FC<Props> = ({
                 customerName: booking.customerName,
                 customerPhone: booking.customerPhone,
                 address: booking.address,
-                shadePanels: booking.lathsCount,
-                curtainPanels: 0,
+                shadePanels: bookingProductCounts(booking).shade,
+                railCount: bookingProductCounts(booking).rail,
+                curtainPanels: bookingProductCounts(booking).curtain,
+                proposalImages: booking.proposalImages?.length ? booking.proposalImages : undefined,
                 mechanismType: booking.isSmart ? 'موتور برقی هوشمند سامفی' : 'مکانیزم دستی استاندارد',
                 specialNotes: booking.notes ? `[رزرو فروش]: ${booking.notes}` : undefined,
                 salesRepName: booking.salesRepName || undefined,

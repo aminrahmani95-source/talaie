@@ -51,9 +51,9 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
       role="dialog"
       aria-modal="true"
       aria-labelledby="cert-title"
-      className="certificate-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+      className="certificate-modal-overlay fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="certificate-modal-container bg-[#151B23] rounded-lg max-w-3xl w-full shadow-2xl my-6 border border-[#212835] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="certificate-modal-container bg-[#151B23] rounded-lg max-w-3xl w-full shadow-2xl my-auto border border-[#212835] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Top Action Bar (Screen Only - Hidden in Print) */}
         <div className="no-print bg-[#0D1117] px-6 py-4 text-[#F0F4F8] flex items-center justify-between border-b border-[#212835]">
           <div className="flex items-center gap-3">
@@ -190,6 +190,14 @@ export const HandoverCertificateModal: React.FC<Props> = ({ project, users, onCl
                   {toPersianDigits(project.curtainPanels)} لت
                 </span>
               </div>
+              {(project.railCount || 0) > 0 && (
+                <div className="p-2.5">
+                  <span className="text-slate-400 block text-xs">ریل:</span>
+                  <span className="font-black text-base text-[#212121] mt-1 block">
+                    {toPersianDigits(project.railCount || 0)} عدد
+                  </span>
+                </div>
+              )}
               <div className="p-2.5">
                 <span className="text-slate-400 block text-xs">متراژ تقریبی:</span>
                 <span className="font-black text-sm text-slate-700 mt-1 block">

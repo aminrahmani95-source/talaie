@@ -122,10 +122,11 @@ export function formatAuditDiff(
 
   if (
     oldP.shadePanels !== newP.shadePanels ||
-    oldP.curtainPanels !== newP.curtainPanels
+    oldP.curtainPanels !== newP.curtainPanels ||
+    (newP.railCount !== undefined && oldP.railCount !== newP.railCount)
   ) {
     changes.push(
-      `تغییر لت‌ها: ${newP.shadePanels ?? oldP.shadePanels ?? 0} شید، ${newP.curtainPanels ?? oldP.curtainPanels ?? 0} پرده`
+      `تغییر مقادیر: ${newP.shadePanels ?? oldP.shadePanels ?? 0} شید، ${newP.railCount ?? oldP.railCount ?? 0} ریل، ${newP.curtainPanels ?? oldP.curtainPanels ?? 0} پرده`
     );
   }
 

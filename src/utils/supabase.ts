@@ -1812,6 +1812,28 @@ export const SupabaseSyncService = {
   },
 
   /**
+   * Uploads a sales-booking proposal photo (data URL) to bookings/<bookingId>/<uuid>.jpg.
+   * Returns the storage path; a value that is already a path is returned unchanged.
+   */
+  async uploadBookingPhoto(bookingId: string, dataUrlOrPath: string): Promise<string> {
+    if (!dataUrlOrPath.startsWith('data:')) return dataUrlOrPath;
+    const client = this.getClient();
+    if (!client) {
+      throw new Error('عدم اتصال به سرویس ذخیره‌سازی ابری Supabase.');
+    }
+    const blob = await (await fetch(dataUrlOrPath)).blob();
+    const safeId = bookingId.replace(/[^\w-]/g, '_');
+    const storagePath = `bookings/${safeId}/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.jpg`;
+    const { error } = await client.storage
+      .from('talaie-photos')
+      .upload(storagePath, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
+    if (error) {
+      throw new Error(`خطا در آپلود عکس پروپوزال: ${error.message}`);
+    }
+    return storagePath;
+  },
+
+  /**
    * Uploads customer signature (base64 data URL or Blob) to Supabase Storage.
    * Stored at path: projects/<projectId>/signature-<uuid>.png
    * Returns storage relative path (e.g. 'projects/p-101/signature-1730000000-abc1234.png').

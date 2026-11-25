@@ -321,9 +321,9 @@ export const ReportCompletionModal: React.FC<Props> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="report-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
     >
-      <div className="bg-surface rounded-lg max-w-lg w-full overflow-hidden shadow-2xl border border-line flex flex-col max-h-[92vh] my-4">
+      <div className="bg-surface rounded-lg max-w-lg w-full overflow-hidden shadow-2xl border border-line flex flex-col max-h-[92vh] my-auto">
         {/* Header */}
         <div className="bg-canvas px-5 py-3.5 text-ink flex items-center justify-between border-b border-line shrink-0">
           <div className="flex items-center gap-2.5">

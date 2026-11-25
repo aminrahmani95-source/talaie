@@ -83,9 +83,9 @@ export const QcRejectModal: React.FC<Props> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="qc-reject-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex justify-center items-start bg-black/85 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-surface rounded-lg max-w-lg w-full border border-rose-500/40 overflow-hidden my-6 transition-all animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface rounded-lg max-w-lg w-full border border-rose-500/40 overflow-hidden my-auto transition-all animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="bg-canvas px-5 py-3.5 text-ink flex items-center justify-between border-b border-line">
           <div className="flex items-center gap-3">

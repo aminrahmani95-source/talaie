@@ -44,9 +44,9 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
     <div
       role="dialog"
       aria-modal="true"
-      className="passport-print-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto"
+      className="passport-print-overlay fixed inset-0 z-50 flex justify-center items-start bg-black/85 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="passport-print-container bg-[#151B23] rounded-2xl max-w-4xl w-full shadow-2xl border border-[#212835] overflow-hidden my-6">
+      <div className="passport-print-container bg-[#151B23] rounded-2xl max-w-4xl w-full shadow-2xl border border-[#212835] overflow-hidden my-auto">
         {/* On-Screen Action Bar (Hidden in Print) */}
         <div className="no-print bg-[#0D1117] px-6 py-4 border-b border-[#212835] flex items-center justify-between text-[#F0F4F8]">
           <div className="flex items-center gap-3">
@@ -136,7 +136,7 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
             <div className="bg-stone-100 px-3 py-1.5 font-black text-stone-800 border-b border-stone-300 text-[11px]">
               مشخصات فنی و مقادیر سفارش
             </div>
-            <div className="grid grid-cols-4 p-2.5 gap-2 text-center divide-x divide-x-reverse divide-stone-200">
+            <div className={`grid ${(project.railCount || 0) > 0 ? 'grid-cols-5' : 'grid-cols-4'} p-2.5 gap-2 text-center divide-x divide-x-reverse divide-stone-200`}>
               <div>
                 <span className="text-stone-500 block text-[10px]">تعداد لت شید</span>
                 <span className="font-black text-xs sm:text-sm text-stone-900">{toPersianDigits(project.shadePanels || 0)} لت</span>
@@ -145,6 +145,12 @@ export const ProjectPassportPrint: React.FC<Props> = ({ project, users = [], onC
                 <span className="text-stone-500 block text-[10px]">تعداد لت پرده</span>
                 <span className="font-black text-xs sm:text-sm text-stone-900">{toPersianDigits(project.curtainPanels || 0)} لت</span>
               </div>
+              {(project.railCount || 0) > 0 && (
+                <div>
+                  <span className="text-stone-500 block text-[10px]">تعداد ریل</span>
+                  <span className="font-black text-xs sm:text-sm text-stone-900">{toPersianDigits(project.railCount || 0)} عدد</span>
+                </div>
+              )}
               <div>
                 <span className="text-stone-500 block text-[10px]">مکانیزم و نوع موتور</span>
                 <span className="font-bold text-stone-900 text-[11px]">{project.mechanismType || 'استاندارد'}</span>

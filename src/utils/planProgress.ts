@@ -70,6 +70,16 @@ export function getEffectiveProjectPlan(project: Project): PlanActivityItem[] {
     });
   }
 
+  if (typeof project.railCount === 'number' && project.railCount > 0) {
+    legacyActivities.push({
+      id: 'legacy-act-rails',
+      title: 'نصب ریل‌ها',
+      category: 'RAIL',
+      plannedQuantity: Number(project.railCount),
+      unit: 'عدد',
+    });
+  }
+
   if (legacyActivities.length === 0 && typeof project.estimatedWorkload === 'number' && project.estimatedWorkload > 0) {
     legacyActivities.push({
       id: 'legacy-act-workload',

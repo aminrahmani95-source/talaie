@@ -80,7 +80,7 @@ export const LoginModal: React.FC<Props> = ({
 
   const containerClasses = isStandalone
     ? 'min-h-screen w-full flex items-center justify-center bg-canvas p-4 relative overflow-hidden'
-    : 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 overflow-y-auto';
+    : 'fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-xs p-4 overflow-y-auto';
 
   return (
     <div
@@ -89,7 +89,7 @@ export const LoginModal: React.FC<Props> = ({
       aria-labelledby="login-modal-title"
       className={containerClasses}
     >
-      <div className="bg-surface text-ink rounded-xl max-w-md w-full shadow-2xl border border-line-strong overflow-hidden my-6 relative transition-all animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface text-ink rounded-xl max-w-md w-full shadow-2xl border border-line-strong overflow-hidden my-auto relative transition-all animate-in fade-in zoom-in-95 duration-150">
         {/* Brand Banner Header */}
         <div className="bg-sunken px-6 pt-7 pb-5 text-center relative border-b border-line">
           {onClose && !isStandalone && (

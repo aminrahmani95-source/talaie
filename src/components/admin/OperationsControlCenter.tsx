@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { formatProductCounts, projectProductCounts, bookingProductCounts } from '../../utils/productCounts';
 import {
   Project,
   User,
@@ -415,7 +416,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               } else if (item.kind === 'BOOKING' && b) {
                 detail = (
                   <>
-                    {toPersianDigits(b.lathsCount)} لت{b.isSmart ? ' هوشمند' : ''}
+                    {formatProductCounts(bookingProductCounts(b)) || `${toPersianDigits(b.lathsCount)} لت`}{b.isSmart ? ' · هوشمند' : ''}
                     {(b.jalaliDate || b.requestedDate) &&
                       ` · درخواست برای ${b.jalaliDate ? toPersianDigits(b.jalaliDate) : formatJalali(b.requestedDate)}`}
                     {b.salesRepName ? ` · فروش: ${b.salesRepName}` : ''}
@@ -432,7 +433,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                 ].filter(Boolean);
                 detail = (
                   <>
-                    {toPersianDigits((p.shadePanels || 0) + (p.curtainPanels || 0))} لت
+                    {formatProductCounts(projectProductCounts(p)) || '—'}
                     {p.salesRepName ? ` · ${p.salesRepName}` : ''}
                     {missing.length > 0 && <span className="text-amber-500"> · مانده: {missing.join('، ')}</span>}
                   </>
@@ -739,9 +740,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                       <div className="bg-canvas p-2.5 rounded-xl border border-line space-y-1">
                         <span className="text-ink-3 font-bold block">مشخصات فنی و مقادیر:</span>
                         <p className="font-bold text-brand-ink">
-                          {p.shadePanels > 0 && `${toPersianDigits(p.shadePanels)} لت شید`}
-                          {p.shadePanels > 0 && p.curtainPanels > 0 && ' • '}
-                          {p.curtainPanels > 0 && `${toPersianDigits(p.curtainPanels)} لت پرده`}
+                          {formatProductCounts(projectProductCounts(p))}
                         </p>
                         <p className="text-ink-2">{p.mechanismType || 'مکانیزم استاندارد'}</p>
                       </div>

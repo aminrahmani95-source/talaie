@@ -21,7 +21,10 @@ import {
   FileText,
   AlertTriangle,
 } from 'lucide-react';
-import { User, SalesProjectBooking, SalesAllocationMode, DailyLathCapacity } from '../../types';
+import { User, SalesProjectBooking, SalesAllocationMode, DailyLathCapacity, ProposalImage } from '../../types';
+import { ProductCountsInput } from './ProductCountsInput';
+import { ProposalUploader } from './ProposalUploader';
+import { type ProductCounts, formatProductCounts, capacityUnits, bookingProductCounts } from '../../utils/productCounts';
 import {
   getSalesCapacity,
   getThreeMonthCapacities,
@@ -60,7 +63,9 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
   const [editCustomerName, setEditCustomerName] = useState('');
   const [editCustomerPhone, setEditCustomerPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
-  const [editLathsCount, setEditLathsCount] = useState<number>(15);
+  const [editProducts, setEditProducts] = useState<ProductCounts>({ shade: 0, rail: 0, curtain: 0 });
+  const editLathsCount = capacityUnits(editProducts);
+  const [editProposalImages, setEditProposalImages] = useState<ProposalImage[]>([]);
   const [editIsSmart, setEditIsSmart] = useState<boolean>(true);
   const [editNotes, setEditNotes] = useState('');
   const [editDateKey, setEditDateKey] = useState<string>('');
@@ -82,7 +87,10 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [lathsCount, setLathsCount] = useState<number>(15);
+  const [products, setProducts] = useState<ProductCounts>({ shade: 0, rail: 0, curtain: 0 });
+  const lathsCount = capacityUnits(products);
+  const [proposalImages, setProposalImages] = useState<ProposalImage[]>([]);
+  const [proposalMissing, setProposalMissing] = useState(false);
   const [isSmart, setIsSmart] = useState<boolean>(true);
   const [notes, setNotes] = useState('');
 
@@ -180,7 +188,8 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
     setEditCustomerName(b.customerName);
     setEditCustomerPhone(b.customerPhone);
     setEditAddress(b.address);
-    setEditLathsCount(b.lathsCount);
+    setEditProducts(bookingProductCounts(b));
+    setEditProposalImages(b.proposalImages || []);
     setEditIsSmart(b.isSmart);
     setEditNotes(b.notes || '');
     setEditDateKey(b.requestedDate);
@@ -206,7 +215,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
       return;
     }
     if (editLathsCount <= 0) {
-      setEditFormError('تعداد لت‌ها باید بزرگتر از صفر باشد.');
+      setEditFormError('تعداد شید، ریل یا پرده را وارد کنید.');
       return;
     }
 
@@ -233,6 +242,10 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
       customerPhone: editCustomerPhone.trim(),
       address: editAddress.trim(),
       lathsCount: editLathsCount,
+      shadeCount: editProducts.shade,
+      railCount: editProducts.rail,
+      curtainCount: editProducts.curtain,
+      proposalImages: editProposalImages,
       isSmart: editIsSmart,
       notes: editNotes.trim(),
       requestedDate: editDateKey,
@@ -300,7 +313,12 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
       return;
     }
     if (lathsCount <= 0) {
-      setFormError('تعداد لت‌ها باید بیشتر از صفر باشد.');
+      setFormError('تعداد شید، ریل یا پرده را وارد کنید.');
+      return;
+    }
+    if (proposalImages.length === 0) {
+      setProposalMissing(true);
+      setFormError('عکس پروپوزال یا برگه‌ی سفارش را اضافه کنید؛ نصاب و برنامه‌ریز از روی آن کار می‌کنند.');
       return;
     }
 
@@ -327,6 +345,10 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
       customerPhone: customerPhone.trim(),
       address: address.trim(),
       lathsCount,
+      shadeCount: products.shade,
+      railCount: products.rail,
+      curtainCount: products.curtain,
+      proposalImages,
       isSmart,
       notes: notes.trim(),
       requestedDate: selectedDateKey,
@@ -346,6 +368,9 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
     setCustomerPhone('');
     setAddress('');
     setNotes('');
+    setProducts({ shade: 0, rail: 0, curtain: 0 });
+    setProposalImages([]);
+    setProposalMissing(false);
   };
 
   // تفکیک ماه‌ها در تقویم (۳ ماه آینده با شروع قطعی از آذر)
@@ -520,8 +545,8 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                 <span className="font-bold text-ink">{justBooked.customerName}</span>
               </div>
               <div className="flex justify-between items-center text-ink">
-                <span className="text-ink-2">تعداد لت‌ها:</span>
-                <span className="font-bold text-emerald-400 text-sm">{justBooked.lathsCount} لت</span>
+                <span className="text-ink-2">محصولات:</span>
+                <span className="font-bold text-emerald-400 text-sm">{formatProductCounts(bookingProductCounts(justBooked))}</span>
               </div>
               <div className="flex justify-between items-center text-ink">
                 <span className="text-ink-2">نوع سیستم:</span>
@@ -732,8 +757,11 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
 
                       <div className="text-left shrink-0">
                         <span className="inline-block bg-emerald-950/70 border border-emerald-800/80 text-emerald-300 text-xs sm:text-sm font-black px-2.5 py-1 rounded-xl">
-                          {b.lathsCount} لت
+                          {formatProductCounts(bookingProductCounts(b)) || `${b.lathsCount} لت`}
                         </span>
+                        {(b.proposalImages?.length ?? 0) > 0 && (
+                          <span className="block text-[11px] text-ink-3 mt-1">📎 پروپوزال دارد</span>
+                        )}
                       </div>
                     </div>
 
@@ -987,8 +1015,8 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
         const isFull = modalDayCap.remainingLaths <= 0;
 
         return (
-          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true">
-            <div className="bg-sunken border border-brand rounded-2xl max-w-3xl w-full p-5 sm:p-6 text-right shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200 space-y-5">
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex justify-center items-start p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true">
+            <div className="bg-sunken border border-brand rounded-2xl max-w-3xl w-full p-5 sm:p-6 text-right shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-200 space-y-5">
               {/* هدر مودال */}
               <div className="flex items-center justify-between border-b border-line pb-3">
                 <div className="flex items-center gap-3">
@@ -1125,58 +1153,25 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                   </div>
                 </div>
 
-                {/* تعداد لت‌ها و نوع مکانیزم */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-semibold text-ink">
-                        تعداد کل شیدها (لت‌ها)
-                      </label>
-                      <span className="text-[12px] text-brand-ink font-black">
-                        {lathsCount} لت
-                      </span>
-                    </div>
+                {/* محصولات: شید، ریل، پرده */}
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1.5">
+                    محصولات سفارش <span className="text-rose-400">*</span>
+                  </label>
+                  <ProductCountsInput value={products} onChange={setProducts} />
+                </div>
 
-                    {/* دکمه‌های پرکاربرد (شامل ۱۰۰ و ۱۱۵ لت) */}
-                    <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                      {[5, 10, 15, 20, 30, 45, 60, 100, 115].map((val) => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setLathsCount(val)}
-                          className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition cursor-pointer ${
-                            lathsCount === val
-                              ? 'bg-brand text-black shadow-xs font-black'
-                              : 'bg-raised text-ink hover:bg-hover'
-                          }`}
-                        >
-                          {val} لت
-                        </button>
-                      ))}
-                    </div>
+                <ProposalUploader
+                  images={proposalImages}
+                  onChange={(imgs) => {
+                    setProposalImages(imgs);
+                    if (imgs.length) setProposalMissing(false);
+                  }}
+                  required
+                  error={proposalMissing}
+                />
 
-                    {/* اینپوت عددی و اسلایدر بدون سقف ۶۰ */}
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        value={lathsCount}
-                        onChange={(e) =>
-                          setLathsCount(Math.max(1, parseInt(e.target.value) || 1))
-                        }
-                        className="w-20 bg-canvas border border-line-strong/80 rounded-xl px-2.5 py-1.5 text-xs font-black text-center text-ink focus:border-brand focus:outline-none"
-                      />
-                      <input
-                        type="range"
-                        min={1}
-                        max={Math.max(150, lathsCount)}
-                        value={lathsCount}
-                        onChange={(e) => setLathsCount(parseInt(e.target.value))}
-                        className="flex-1 accent-brand cursor-pointer"
-                      />
-                    </div>
-                  </div>
-
+                <div className="grid grid-cols-1 gap-4">
                   {/* نوع سیستم */}
                   <div>
                     <label className="block text-xs font-semibold text-ink mb-1">
@@ -1410,8 +1405,8 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
       })()}
 {/* ================= مودال ویرایش اطلاعات و تاریخ پروژه ================= */}
       {editingBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true">
-          <div className="bg-sunken border border-brand rounded-2xl max-w-2xl w-full p-5 sm:p-6 text-right shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-center items-start p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true">
+          <div className="bg-sunken border border-brand rounded-2xl max-w-2xl w-full p-5 sm:p-6 text-right shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-200">
             {/* هدر مودال */}
             <div className="flex items-center justify-between border-b border-line pb-3 mb-4">
               <div className="flex items-center gap-2">
@@ -1493,54 +1488,14 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                 </div>
               </div>
 
-              {/* تعداد لت‌ها و نوع سیستم */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-ink">
-                      تعداد کل لت‌ها (نامحدود)
-                    </label>
-                    <span className="text-[12px] text-brand-ink font-black">
-                      {editLathsCount} لت
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                    {[5, 10, 15, 20, 30, 45, 60, 100, 115].map((val) => (
-                      <button
-                        key={val}
-                        type="button"
-                        onClick={() => setEditLathsCount(val)}
-                        className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition cursor-pointer ${
-                          editLathsCount === val
-                            ? 'bg-brand text-black shadow-xs font-black'
-                            : 'bg-raised text-ink hover:bg-hover'
-                        }`}
-                      >
-                        {val} لت
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      value={editLathsCount}
-                      onChange={(e) =>
-                        setEditLathsCount(Math.max(1, parseInt(e.target.value) || 1))
-                      }
-                      className="w-20 bg-canvas border border-line-strong/80 rounded-xl px-2.5 py-1.5 text-xs font-black text-center text-ink focus:border-brand focus:outline-none"
-                    />
-                    <input
-                      type="range"
-                      min={1}
-                      max={Math.max(150, editLathsCount)}
-                      value={editLathsCount}
-                      onChange={(e) => setEditLathsCount(parseInt(e.target.value))}
-                      className="flex-1 accent-brand cursor-pointer"
-                    />
-                  </div>
-                </div>
+              {/* محصولات و پروپوزال */}
+              <div>
+                <label className="block text-xs font-semibold text-ink mb-1.5">محصولات سفارش</label>
+                <ProductCountsInput value={editProducts} onChange={setEditProducts} />
+              </div>
+              <ProposalUploader images={editProposalImages} onChange={setEditProposalImages} />
 
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-ink mb-1.5">
                     مکانیزم حرکت

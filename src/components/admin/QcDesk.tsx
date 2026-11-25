@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { formatProductCounts, projectProductCounts } from '../../utils/productCounts';
 import {
   Project,
   User,
@@ -1298,7 +1299,7 @@ export const QcDesk: React.FC<Props> = ({
                         <span className="truncate max-w-[90px]">{leadName || 'سرپرست'}</span>
                       </div>
                       <span>
-                        {toPersianDigits(p.shadePanels)} شید / {toPersianDigits(p.curtainPanels)} پرده
+                        {formatProductCounts(projectProductCounts(p)) || '—'}
                       </span>
                     </div>
                   </div>

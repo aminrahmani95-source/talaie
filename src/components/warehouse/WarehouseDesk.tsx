@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { formatProductCounts, projectProductCounts } from '../../utils/productCounts';
 import { Project, Ticket, User } from '../../types';
 import {
   Package,
   CheckCircle2,
   Send,
   AlertTriangle,
-  Clock,
   Layers,
   Wrench,
   Search,
@@ -15,13 +15,10 @@ import {
   X,
   Truck,
   ArrowDownToLine,
-  CheckSquare,
-  ShieldCheck,
   Eye,
   RotateCcw,
   Pencil,
   Inbox,
-  Warehouse,
 } from 'lucide-react';
 import {
   toPersianDigits,
@@ -31,7 +28,7 @@ import {
 } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { getUpcomingDispatchProjects } from '../../utils/warehouseLists';
+import { getUpcomingDispatchProjects, needsWarehouseReceipt, relativeDayLabel, DISPATCH_HORIZON_DAYS } from '../../utils/warehouseLists';
 
 interface Props {
   currentUser: User;
@@ -59,6 +56,8 @@ interface Props {
   onViewProposal?: (project: Project) => void;
   onOpenTicketModal?: (project: Project) => void;
   initialTab?: 'GOODS_RECEIPT' | 'PACKING' | 'TICKETS';
+  /** داخل «انبار و متریال»: سربرگ و تب‌های داخلی تکراری نمایش داده نمی‌شوند */
+  embedded?: boolean;
 }
 
 export const WarehouseDesk: React.FC<Props> = ({
@@ -71,6 +70,7 @@ export const WarehouseDesk: React.FC<Props> = ({
   onViewProposal,
   onOpenTicketModal,
   initialTab,
+  embedded = false,
 }) => {
   // Main view tabs: GOODS_RECEIPT (Default), PACKING, TICKETS
   const [activeTab, setActiveTab] = useState<'GOODS_RECEIPT' | 'PACKING' | 'TICKETS'>(
@@ -85,7 +85,7 @@ export const WarehouseDesk: React.FC<Props> = ({
 
   // Search & Filters for Incoming Goods Pipeline
   const [receiptSearchQuery, setReceiptSearchQuery] = useState('');
-  const [receiptFilterStatus, setReceiptFilterStatus] = useState<'ALL' | 'PENDING' | 'RECEIVED'>('ALL');
+  const [receiptFilterStatus, setReceiptFilterStatus] = useState<'ALL' | 'PENDING' | 'RECEIVED'>('PENDING');
 
   // Goods Receipt Modal states
   const [receiptModalProject, setReceiptModalProject] = useState<Project | null>(null);
@@ -120,7 +120,11 @@ export const WarehouseDesk: React.FC<Props> = ({
   // 1. Incoming goods pipeline projects (active projects awaiting receipt or in progress)
   const incomingGoodsProjects = useMemo(() => {
     return projects.filter(
-      (p) => p.status !== 'COMPLETED' && p.status !== 'CANCELLED'
+      (p) =>
+        needsWarehouseReceipt(p) ||
+        (p.status !== 'COMPLETED' &&
+          p.status !== 'CANCELLED' &&
+          Boolean(p.technicalHandover?.warehouseConfirmation?.confirmed))
     );
   }, [projects]);
 
@@ -160,19 +164,26 @@ export const WarehouseDesk: React.FC<Props> = ({
     }
 
     return [...list].sort((a, b) => {
-      // Prioritize unconfirmed warehouse projects (needs physical receipt)
+      // اول آن‌هایی که هنوز کالا ندارند، به ترتیب نزدیک‌ترین تاریخ نصب (بدون تاریخ آخر)
       const aRec = Boolean(a.technicalHandover?.warehouseConfirmation?.confirmed);
       const bRec = Boolean(b.technicalHandover?.warehouseConfirmation?.confirmed);
       if (!aRec && bRec) return -1;
       if (aRec && !bRec) return 1;
-
+      const ad = a.scheduledDate || '9999';
+      const bd = b.scheduledDate || '9999';
+      if (ad !== bd) return ad.localeCompare(bd);
       return (b.createdAt || '').localeCompare(a.createdAt || '');
     });
   }, [incomingGoodsProjects, receiptFilterStatus, receiptSearchQuery]);
 
   // 2. Pre-dispatch packing projects
   const upcomingDispatchProjects = useMemo(() => {
-    return getUpcomingDispatchProjects(projects, todayKey);
+    return getUpcomingDispatchProjects(projects, todayKey, DISPATCH_HORIZON_DAYS).sort((a, b) => {
+      // بسته‌نشده‌ها اول
+      const ap = a.warehousePrep?.isPackedAndReady ? 1 : 0;
+      const bp = b.warehousePrep?.isPackedAndReady ? 1 : 0;
+      return ap - bp || String(a.scheduledDate || '').localeCompare(String(b.scheduledDate || ''));
+    });
   }, [projects, todayKey]);
 
   // 3. Urgent warehouse tickets
@@ -301,8 +312,9 @@ export const WarehouseDesk: React.FC<Props> = ({
   useEscapeKey(() => setSelectedTicket(null), Boolean(selectedTicket));
 
   return (
-    <div className="space-y-6">
+    <div className={embedded ? 'space-y-4' : 'space-y-6'}>
       {/* Top Banner */}
+      {!embedded && (
       <div className="bg-surface rounded-2xl p-5 border border-line flex flex-col @min-[900px]:flex-row items-start @min-[900px]:items-center justify-between gap-4 shadow-sm">
         <div>
           <h2 className="text-lg sm:text-xl font-black text-ink flex items-center gap-2">
@@ -363,370 +375,181 @@ export const WarehouseDesk: React.FC<Props> = ({
           </button>
         </div>
       </div>
+      )}
 
       {/* ===================== TAB 1: INCOMING GOODS & TECHNICAL HANDOVER GATE ===================== */}
       {activeTab === 'GOODS_RECEIPT' && (
         <div className="space-y-5">
-          {/* Information Callout */}
-          <div className="bg-sunken p-4 rounded-xl border border-brand/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-brand/10 border border-brand/30 flex items-center justify-center text-brand-ink shrink-0 mt-0.5">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
-                  <span>گیت تحویل رسمی به واحد فنی (مرجع انحصاری: تاییدیه ورود کالا به انبار)</span>
-                  <span className="text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.2 rounded-full">
-                    پیش‌نیاز زمان‌بندی و اعزام اکیپ
-                  </span>
-                </h4>
-                <p className="text-xs text-ink-2 mt-1 leading-relaxed">
-                  طبق فرآیند سیستم، به دلیل عدم دسترسی به کارگاه تولید، گیت تحویل فنی منحصراً بر اساس
-                  <strong className="text-brand-ink mx-1">ورود فیزیکی و تحویل کالا به انبار مرکزی</strong> عمل می‌کند.
-                  به محض تحویل محموله پرده، شید، ریل و یراق‌آلات، ورود آن را تایید و شماره قفسه را ثبت نمایید تا گیت فنی پروژه ۱۰۰٪ باز شده و در کارتابل هماهنگی مجاز به زمان‌بندی و اعزام اکیپ گردد.
-                </p>
-              </div>
+          {/* راهنمای یک‌خطی + فیلتر + جستجو */}
+          <div className="bg-surface p-3 rounded-xl border border-line space-y-2.5">
+            <p className="text-[12px] text-ink-2 leading-6">
+              وقتی بار پروژه از کارخانه به انبار رسید، «تأیید ورود کالا» را بزنید؛ تا آن موقع اکیپ نمی‌تواند به محل نصب برود.
+            </p>
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {(
+                [
+                  { key: 'PENDING' as const, label: 'منتظر ورود', count: pendingReceiptCount, on: 'bg-amber-500 text-black' },
+                  { key: 'RECEIVED' as const, label: 'در انبار', count: receivedCount, on: 'bg-emerald-600 text-white' },
+                  { key: 'ALL' as const, label: 'همه', count: incomingGoodsProjects.length, on: 'bg-brand text-on-brand' },
+                ]
+              ).map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  aria-pressed={receiptFilterStatus === f.key}
+                  onClick={() => setReceiptFilterStatus(f.key)}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap shrink-0 cursor-pointer min-h-[38px] ${
+                    receiptFilterStatus === f.key ? f.on : 'bg-canvas text-ink-2 hover:text-ink border border-line'
+                  }`}
+                >
+                  {f.label} ({toPersianDigits(f.count)})
+                </button>
+              ))}
             </div>
-          </div>
-
-          {/* 3 KPI Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-surface p-4 rounded-xl border border-line flex items-center justify-between">
-              <div>
-                <span className="text-[12px] font-bold text-ink-2">کل سفارشات در گردش ورود کالا</span>
-                <div className="text-xl font-black text-ink tabular-nums mt-0.5">
-                  {toPersianDigits(incomingGoodsProjects.length)}
-                </div>
-                <span className="text-[11px] text-ink-3">پروژه‌های در حال پیگیری بار</span>
-              </div>
-              <div className="w-9 h-9 rounded-lg bg-canvas border border-line flex items-center justify-center text-ink-2">
-                <Inbox className="w-4 h-4" />
-              </div>
-            </div>
-
-            <div
-              onClick={() => setReceiptFilterStatus('PENDING')}
-              className={`bg-surface p-4 rounded-xl border cursor-pointer transition hover:border-amber-500/40 flex items-center justify-between ${
-                receiptFilterStatus === 'PENDING'
-                  ? 'border-amber-500 ring-1 ring-amber-500/30'
-                  : 'border-line'
-              }`}
-            >
-              <div>
-                <span className="text-[12px] font-bold text-amber-400 flex items-center gap-1">
-                  <span>در انتظار تحویل و ورود به انبار</span>
-                  {pendingReceiptCount > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />}
-                </span>
-                <div className="text-xl font-black text-amber-300 tabular-nums mt-0.5">
-                  {toPersianDigits(pendingReceiptCount)}
-                </div>
-                <span className="text-[11px] text-ink-3">گیت قفل • نیازمند وصول فیزیکی کالا</span>
-              </div>
-              <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                <ArrowDownToLine className="w-4 h-4" />
-              </div>
-            </div>
-
-            <div
-              onClick={() => setReceiptFilterStatus('RECEIVED')}
-              className={`bg-surface p-4 rounded-xl border cursor-pointer transition hover:border-emerald-500/40 flex items-center justify-between ${
-                receiptFilterStatus === 'RECEIVED'
-                  ? 'border-emerald-500 ring-1 ring-emerald-500/30'
-                  : 'border-line'
-              }`}
-            >
-              <div>
-                <span className="text-[12px] font-bold text-emerald-400">تحویل‌شده در انبار (گیت باز)</span>
-                <div className="text-xl font-black text-emerald-300 tabular-nums mt-0.5">
-                  {toPersianDigits(receivedCount)}
-                </div>
-                <span className="text-[11px] text-ink-3">چیدمان‌شده در قفسه • آماده زمان‌بندی</span>
-              </div>
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-            </div>
-          </div>
-
-          {/* Search & Sub-Filter Bar */}
-          <div className="bg-surface p-3 rounded-xl border border-line flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-ink-2 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="relative">
+              <Search className="w-4 h-4 text-ink-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={receiptSearchQuery}
                 onChange={(e) => setReceiptSearchQuery(e.target.value)}
-                placeholder="جستجو با کد، نام مشتری، تلفن، آدرس یا فروشنده..."
-                className="w-full text-xs pr-9 pl-3 py-2 rounded-lg border border-line bg-canvas text-ink placeholder-ink-3 focus:border-brand focus:outline-none"
+                placeholder="جستجو: کد، مشتری، تلفن یا آدرس"
+                className="w-full text-sm pr-9 pl-3 py-2 rounded-lg border border-line bg-canvas text-ink placeholder-ink-3 focus:border-brand focus:outline-none min-h-[40px]"
               />
-            </div>
-
-            <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
-              <button
-                type="button"
-                onClick={() => setReceiptFilterStatus('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-                  receiptFilterStatus === 'ALL'
-                    ? 'bg-brand text-on-brand'
-                    : 'bg-canvas text-ink-2 hover:text-ink border border-line'
-                }`}
-              >
-                همه ({toPersianDigits(incomingGoodsProjects.length)})
-              </button>
-              <button
-                type="button"
-                onClick={() => setReceiptFilterStatus('PENDING')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-                  receiptFilterStatus === 'PENDING'
-                    ? 'bg-amber-500 text-on-brand'
-                    : 'bg-canvas text-amber-400 hover:text-amber-300 border border-amber-500/30'
-                }`}
-              >
-                در انتظار تحویل به انبار ⏳ ({toPersianDigits(pendingReceiptCount)})
-              </button>
-              <button
-                type="button"
-                onClick={() => setReceiptFilterStatus('RECEIVED')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-                  receiptFilterStatus === 'RECEIVED'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-canvas text-emerald-400 hover:text-emerald-300 border border-emerald-500/30'
-                }`}
-              >
-                تحویل‌شده در انبار ✅ ({toPersianDigits(receivedCount)})
-              </button>
             </div>
           </div>
 
-          {/* Projects Pipeline Cards */}
           {filteredIncomingProjects.length === 0 ? (
-            <div className="bg-surface rounded-2xl p-12 text-center border border-line text-xs text-ink-2 space-y-2">
+            <div className="bg-surface rounded-2xl p-10 text-center border border-line text-xs text-ink-2 space-y-2">
               <Inbox className="w-8 h-8 text-ink-3 mx-auto" />
-              <p className="font-bold">هیچ پروژه‌ای مطابق فیلتر جاری یافت نشد.</p>
-              <p className="text-[12px] text-ink-3">
-                با تغییر عبارت جستجو یا انتخاب تب «همه»، پروژه‌های در گردش را بررسی نمایید.
+              <p className="font-bold">
+                {receiptFilterStatus === 'PENDING' && !receiptSearchQuery.trim()
+                  ? 'همه‌ی بارها وارد انبار شده‌اند. کاری در صف نیست.'
+                  : 'پروژه‌ای با این فیلتر پیدا نشد.'}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 @min-[900px]:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 @min-[900px]:grid-cols-2 gap-3">
               {filteredIncomingProjects.map((p) => {
-                const handover = p.technicalHandover || {
-                  isHandoverComplete: false,
-                  warehouseConfirmation: { confirmed: false },
-                };
-
-                const whConfirmed = Boolean(handover.warehouseConfirmation?.confirmed);
-                const isGateOpen = Boolean(handover.isHandoverComplete);
+                const wc = p.technicalHandover?.warehouseConfirmation;
+                const whConfirmed = Boolean(wc?.confirmed);
+                const day = relativeDayLabel(p.scheduledDate, todayKey);
+                const dayTone =
+                  whConfirmed
+                    ? 'bg-canvas text-ink-2 border-line'
+                    : day.tone === 'late' || day.tone === 'soon'
+                      ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40'
+                      : day.tone === 'near'
+                        ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/40'
+                        : 'bg-canvas text-ink-2 border-line';
+                const products = formatProductCounts(projectProductCounts(p));
 
                 return (
                   <div
                     key={p.id}
-                    className={`bg-surface rounded-2xl p-5 border transition flex flex-col justify-between gap-4 ${
-                      whConfirmed
-                        ? 'border-emerald-500/40 ring-1 ring-emerald-500/20'
-                        : 'border-amber-500/50 ring-1 ring-amber-500/20'
+                    className={`bg-surface rounded-xl p-4 border space-y-3 ${
+                      whConfirmed ? 'border-emerald-500/40' : 'border-line'
                     }`}
                   >
-                    <div className="space-y-3.5">
-                      {/* Card Header */}
-                      <div className="flex items-start justify-between gap-2 border-b border-line pb-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-black bg-canvas text-brand-ink border border-line-strong px-2 py-0.5 rounded">
-                              {p.code || 'بدون کد'}
-                            </span>
-                            <h3 className="font-black text-sm text-ink">{p.title}</h3>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-ink-2 mt-1.5">
-                            <span className="font-bold text-ink">{p.customerName || 'کارفرما نامشخص'}</span>
-                            {p.customerPhone && (
-                              <a
-                                href={`tel:${p.customerPhone}`}
-                                className="text-brand-ink hover:underline flex items-center gap-1 tabular-nums font-mono text-[12px]"
-                                dir="ltr"
-                              >
-                                <Phone className="w-3 h-3" />
-                                {p.customerPhone}
-                              </a>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Status Pills */}
-                        <div className="flex flex-col items-end gap-1.5 shrink-0">
-                          {whConfirmed ? (
-                            <span className="text-[12px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>کالا در انبار تحویل شد</span>
-                            </span>
-                          ) : (
-                            <span className="text-[12px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse">
-                              <ArrowDownToLine className="w-3.5 h-3.5" />
-                              <span>در انتظار ورود به انبار</span>
-                            </span>
-                          )}
-
-                          <span
-                            className={`text-[11px] px-2 py-0.2 rounded-full border ${
-                              isGateOpen
-                                ? 'bg-brand/15 text-brand-ink border-brand/30'
-                                : 'bg-zinc-500/10 text-ink-2 border-line-strong/50'
-                            }`}
-                          >
-                            {isGateOpen ? '✓ گیت فنی باز است' : '🔒 گیت فنی قفل است'}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-black bg-canvas text-brand-ink border border-line-strong px-2 py-0.5 rounded">
+                            {p.code || 'بدون کد'}
                           </span>
+                          <h3 className="font-black text-sm text-ink">{p.title}</h3>
                         </div>
+                        {p.customerName && p.customerName !== p.title && (
+                          <p className="text-xs text-ink-2 mt-1">{p.customerName}</p>
+                        )}
                       </div>
-
-                      {/* Address & Sales Rep */}
-                      <div className="text-xs text-ink-2 space-y-1 bg-sunken p-2.5 rounded-xl border border-line">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-brand-ink shrink-0" />
-                          <span className="truncate">{p.address || 'آدرس ثبت نشده'}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-[12px] text-ink-3 pt-1 border-t border-line/50">
-                          <span>کارشناس فروش: <strong className="text-ink-2">{p.salesRepName || 'واحد فروش'}</strong></span>
-                          <span>تاریخ ثبت: <strong className="text-ink-2">{formatJalali(p.createdAt)}</strong></span>
-                        </div>
-                      </div>
-
-                      {/* Technical Specifications (Panels, Mechanism, Area) */}
-                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                        <div className="bg-canvas p-2 rounded-lg border border-line">
-                          <span className="text-[11px] text-ink-3 block">لت‌های پرده</span>
-                          <span className="font-bold text-ink tabular-nums mt-0.5 block">
-                            {toPersianDigits(p.curtainPanels ?? 0)} لت
-                          </span>
-                        </div>
-                        <div className="bg-canvas p-2 rounded-lg border border-line">
-                          <span className="text-[11px] text-ink-3 block">لت‌های شید</span>
-                          <span className="font-bold text-ink tabular-nums mt-0.5 block">
-                            {toPersianDigits(p.shadePanels ?? 0)} لت
-                          </span>
-                        </div>
-                        <div className="bg-canvas p-2 rounded-lg border border-line">
-                          <span className="text-[11px] text-ink-3 block">مکانیزم و متراژ</span>
-                          <span className="font-bold text-brand-ink text-[12px] truncate block mt-0.5">
-                            {p.mechanismType || 'استاندارد'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Official Handover Gate Checklist Status (Single Warehouse Authority) */}
-                      <div className="bg-canvas p-3 rounded-xl border border-line space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[12px] font-bold text-brand-ink flex items-center gap-1.5">
-                            <CheckSquare className="w-3.5 h-3.5" />
-                            <span>گیت تحویل رسمی به واحد فنی (صرفاً تاییدیه انبار):</span>
-                          </span>
-                          <span
-                            className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                              whConfirmed
-                                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                                : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                            }`}
-                          >
-                            {whConfirmed ? '✓ گیت باز است (آماده زمان‌بندی)' : '🔒 گیت قفل است (نیازمند ورود کالا)'}
-                          </span>
-                        </div>
-
-                        <div className="p-2.5 rounded-lg bg-surface text-xs">
-                          {whConfirmed ? (
-                            <div className="space-y-1">
-                              <div className="text-emerald-400 font-bold flex items-center gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                                <span>
-                                  کالا به انبار تحویل شده و چیدمان گردید — تاییدکننده:{' '}
-                                  {handover.warehouseConfirmation?.confirmedBy || 'انباردار'} (
-                                  {formatJalali(handover.warehouseConfirmation?.confirmedAt)})
-                                </span>
-                              </div>
-                              {handover.warehouseConfirmation?.shelfLocation && (
-                                <p className="text-[12px] text-ink mr-5">
-                                  موقعیت چیدمان:{' '}
-                                  <strong className="text-brand-ink">
-                                    {handover.warehouseConfirmation.shelfLocation}
-                                  </strong>
-                                </p>
-                              )}
-                              {handover.warehouseConfirmation?.notes && (
-                                <p className="text-[12px] text-ink-2 mr-5 italic">
-                                  یادداشت انبار: {handover.warehouseConfirmation.notes}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="text-amber-300/90 flex items-center gap-1.5 leading-relaxed">
-                              <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                              <span>
-                                فیزیک کالا هنوز به انبار تحویل نشده است. به محض وصول بار، دکمه تایید ورود کالا را بزنید تا گیت فنی فوراً باز شود.
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <span className={`text-[12px] font-bold px-2 py-1 rounded-md border shrink-0 text-center ${dayTone}`}>
+                        {p.scheduledDate ? (
+                          <>
+                            نصب {day.text ? `${day.text} · ` : ''}
+                            {formatJalali(p.scheduledDate)}
+                          </>
+                        ) : (
+                          'بدون تاریخ نصب'
+                        )}
+                      </span>
                     </div>
 
-                    {/* Card Actions */}
-                    <div className="pt-2 border-t border-line flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        {p.proposalImages && p.proposalImages.length > 0 && onViewProposal && (
-                          <button
-                            type="button"
-                            onClick={() => onViewProposal(p)}
-                            className="px-2.5 py-1.5 rounded-lg bg-canvas hover:bg-raised text-ink-2 hover:text-ink border border-line text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>تصاویر سفارش ({toPersianDigits(p.proposalImages.length)})</span>
-                          </button>
-                        )}
-
-                        {onOpenTicketModal && (
-                          <button
-                            type="button"
-                            onClick={() => onOpenTicketModal(p)}
-                            className="px-2.5 py-1.5 rounded-lg bg-canvas hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 border border-rose-500/30 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                            title="در صورت مشاهده نقص در پارچه، مغایرت یا کسری قطعات، تیکت فوری ثبت کنید"
-                          >
-                            <AlertTriangle className="w-3.5 h-3.5" />
-                            <span>گزارش نقص یا کسری</span>
-                          </button>
-                        )}
+                    <div className="text-xs text-ink-2 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-ink">
+                        <Layers className="w-3.5 h-3.5 text-brand-ink shrink-0" />
+                        <span>{products || 'مقادیر ثبت نشده'}</span>
+                        {p.mechanismType && <span className="font-normal text-ink-3 truncate">· {p.mechanismType}</span>}
                       </div>
+                      {p.address && (
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-ink-3 shrink-0" />
+                          <span className="truncate">{p.address}</span>
+                        </div>
+                      )}
+                      {p.salesRepName && <div className="text-[12px] text-ink-3">فروش: {p.salesRepName}</div>}
+                    </div>
 
-                      {/* Primary Receipt Actions */}
-                      <div className="flex items-center gap-1.5">
-                        {!whConfirmed ? (
+                    {whConfirmed && (
+                      <div className="text-[12px] text-emerald-800 dark:text-emerald-200 bg-emerald-500/10 border border-emerald-500/30 rounded-md px-2.5 py-1.5">
+                        ✓ در انبار از {formatJalali(wc?.confirmedAt)}
+                        {wc?.shelfLocation ? ` · قفسه ${wc.shelfLocation}` : ''}
+                        {wc?.notes ? ` · ${wc.notes}` : ''}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-1">
+                      {!whConfirmed ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenReceiptModal(p)}
+                          className="flex-1 min-h-[42px] rounded-lg bg-brand hover:bg-brand-hover text-on-brand font-black text-xs transition flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                        >
+                          <ArrowDownToLine className="w-4 h-4" />
+                          <span>تأیید ورود کالا</span>
+                        </button>
+                      ) : (
+                        <>
                           <button
                             type="button"
                             onClick={() => handleOpenReceiptModal(p)}
-                            className="px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-on-brand font-black text-xs transition flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+                            className="flex-1 min-h-[40px] rounded-lg bg-canvas hover:bg-raised text-brand-ink border border-brand/40 text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
                           >
-                            <ArrowDownToLine className="w-4 h-4" />
-                            <span>تأیید ورود و تحویل کالا به انبار</span>
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>ویرایش رسید</span>
                           </button>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenReceiptModal(p)}
-                              className="px-3 py-1.5 rounded-lg bg-canvas hover:bg-raised text-brand-ink border border-brand/40 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                              <span>ویرایش رسید</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setRevokeModalProject(p)}
-                              className="px-2.5 py-1.5 rounded-lg bg-canvas hover:bg-rose-500/20 text-rose-400 border border-line text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                              title="لغو تاییدیه در صورت ثبت اشتباهی"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              <span>لغو</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                          <button
+                            type="button"
+                            onClick={() => setRevokeModalProject(p)}
+                            className="min-h-[40px] px-3 rounded-lg bg-canvas hover:bg-rose-500/10 text-rose-600 dark:text-rose-300 border border-line text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                            title="لغو تأیید در صورت ثبت اشتباه"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>لغو</span>
+                          </button>
+                        </>
+                      )}
+                      {p.proposalImages && p.proposalImages.length > 0 && onViewProposal && (
+                        <button
+                          type="button"
+                          onClick={() => onViewProposal(p)}
+                          className="min-h-[40px] px-3 rounded-lg bg-canvas hover:bg-raised text-ink-2 hover:text-ink border border-line text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                          aria-label="پروپوزال"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>پروپوزال</span>
+                        </button>
+                      )}
+                      {onOpenTicketModal && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenTicketModal(p)}
+                          className="min-h-[40px] px-3 rounded-lg bg-canvas hover:bg-rose-500/10 text-rose-600 dark:text-rose-300 border border-rose-500/30 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                          title="نقص، مغایرت یا کسری در محموله"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          <span>نقص</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -742,13 +565,13 @@ export const WarehouseDesk: React.FC<Props> = ({
           <div className="bg-sunken p-4 rounded-xl border border-brand/20 text-xs text-ink-2 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-brand-ink shrink-0" />
             <span>
-              با زدن دکمه «تایید بسته‌بندی»، در تقویم مدیر فنی چراغ سبز «بار آماده ✅» روشن می‌شود و مسئول هماهنگی از تکمیل بار مأموریت فردا اطمینان خواهد یافت.
+              بار کارهای امروز تا پس‌فردا. بعد از بستن هر بار «بار آماده است» را بزنید تا در تقویم مدیر علامت ✅ بخورد.
             </span>
           </div>
 
           {upcomingDispatchProjects.length === 0 ? (
             <div className="bg-surface rounded-2xl p-10 text-center border border-line text-xs text-ink-2">
-              هیچ پروژه‌ای در صف آماده‌سازی بار قرار ندارد.
+              برای امروز تا پس‌فردا باری در صف نیست.
             </div>
           ) : (
             <div className="grid grid-cols-1 @min-[700px]:grid-cols-2 gap-4">
@@ -759,7 +582,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                 return (
                   <div
                     key={p.id}
-                    className={`bg-surface rounded-2xl p-5 border transition space-y-4 ${
+                    className={`bg-surface rounded-xl p-4 border transition space-y-3 ${
                       isPacked
                         ? 'border-emerald-500/40 ring-1 ring-emerald-500/20'
                         : p.isForceMajeure
@@ -775,13 +598,26 @@ export const WarehouseDesk: React.FC<Props> = ({
                           </span>
                           <h3 className="font-black text-sm text-ink">{p.title}</h3>
                         </div>
-                        <p className="text-xs text-ink-2 mt-1">{p.customerName}</p>
+                        {p.customerName && p.customerName !== p.title && (
+                          <p className="text-xs text-ink-2 mt-1">{p.customerName}</p>
+                        )}
                       </div>
 
                       <div className="flex flex-col items-end gap-1">
-                        <span className="text-xs font-bold text-brand-ink bg-canvas px-2.5 py-1 rounded-md border border-line">
-                          اعزام: {formatJalali(p.scheduledDate)}
-                        </span>
+                        {(() => {
+                          const day = relativeDayLabel(p.scheduledDate, todayKey);
+                          const tone =
+                            isPacked
+                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                              : day.tone === 'late' || day.tone === 'soon'
+                                ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40'
+                                : 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/40';
+                          return (
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-md border ${tone}`}>
+                              {day.text || 'اعزام'} · {formatJalali(p.scheduledDate)}
+                            </span>
+                          );
+                        })()}
                         {p.isForceMajeure && (
                           <span className="text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded">
                             فورس ماژور
@@ -802,7 +638,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                       <div className="flex items-center gap-2 pt-1 border-t border-line text-[12px] text-brand-ink">
                         <Layers className="w-3.5 h-3.5 shrink-0" />
                         <span>
-                          {toPersianDigits(p.shadePanels ?? 0)} شید • {toPersianDigits(p.curtainPanels ?? 0)} پرده
+                          {formatProductCounts(projectProductCounts(p)) || '—'}
                         </span>
                         {p.mechanismType && <span className="mr-1">({p.mechanismType})</span>}
                       </div>
@@ -867,8 +703,8 @@ export const WarehouseDesk: React.FC<Props> = ({
                             onChange={(e) =>
                               setPackingNotes({ ...packingNotes, [p.id]: e.target.value })
                             }
-                            placeholder="یادداشت بسته‌بندی یا شماره قفسه (اختیاری)..."
-                            className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink placeholder-ink-3 focus:border-brand focus:outline-none"
+                            placeholder="یادداشت بار (اختیاری)، مثلاً: ۳ کارتن + ریل جدا"
+                            className="w-full text-sm p-2.5 rounded-xl border border-line bg-canvas text-ink placeholder-ink-3 focus:border-brand focus:outline-none"
                           />
                           <button
                             type="button"
@@ -881,7 +717,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                             ) : (
                               <Package className="w-4 h-4" />
                             )}
-                            <span>تایید بسته‌بندی و اعلام به مدیر فنی</span>
+                            <span>بار آماده است</span>
                           </button>
                         </div>
                       )}
@@ -1025,10 +861,7 @@ export const WarehouseDesk: React.FC<Props> = ({
                 <span>
                   حجم اقلام:{' '}
                   <strong className="text-ink tabular-nums">
-                    {toPersianDigits(
-                      (receiptModalProject.shadePanels ?? 0) + (receiptModalProject.curtainPanels ?? 0)
-                    )}{' '}
-                    لت
+                    {formatProductCounts(projectProductCounts(receiptModalProject)) || '—'}
                   </strong>
                 </span>
               </div>
@@ -1063,15 +896,14 @@ export const WarehouseDesk: React.FC<Props> = ({
               {/* Shelf Location */}
               <div>
                 <label className="block text-xs font-bold text-ink-2 mb-1">
-                  شماره قفسه یا موقعیت چیدمان در انبار (جهت بارگیری سریع اکیپ): *
+                  جای کالا در انبار (اختیاری)
                 </label>
                 <input
                   type="text"
                   value={receiptShelfLocation}
                   onChange={(e) => setReceiptShelfLocation(e.target.value)}
-                  placeholder="مثال: ردیف B، قفسه ۴ / انبار شید غربی"
-                  className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink placeholder-ink-3 focus:border-brand focus:outline-none font-bold"
-                  required
+                  placeholder="مثال: ردیف B، قفسه ۴"
+                  className="w-full text-sm p-2.5 rounded-xl border border-line bg-canvas text-ink placeholder-ink-3 focus:border-brand focus:outline-none font-bold"
                 />
               </div>
 

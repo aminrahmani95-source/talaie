@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { formatProductCounts, projectProductCounts } from '../../utils/productCounts';
 import {
   Info,
   Activity,
@@ -314,7 +315,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
           {(project.assignedTechnicianIds || []).map((id) => userName(id)).join('، ') || '—'}
         </Row>
         <Row label="لت‌ها">
-          {toPersianDigits(project.shadePanels || 0)} شید، {toPersianDigits(project.curtainPanels || 0)} پرده
+          {formatProductCounts(projectProductCounts(project)) || '—'}
         </Row>
         <Row label="تیکت‌ها">{toPersianDigits(projectTickets.length)}</Row>
       </div>

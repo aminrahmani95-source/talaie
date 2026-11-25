@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { formatProductCounts, projectProductCounts } from '../../utils/productCounts';
 import { Project, User, ProjectAuditRecord } from '../../types';
 import {
   FileCheck2,
@@ -437,9 +438,7 @@ const CeoMasterRegistryContent: React.FC<Props> = ({ currentUser, projects, user
                   <div className="bg-canvas p-3 rounded-xl border border-line space-y-1">
                     <span className="text-ink-3 font-bold block">مشخصات فنی و مقادیر:</span>
                     <p className="font-bold text-brand-ink">
-                      {p.shadePanels > 0 && `${toPersianDigits(p.shadePanels)} لت شید`}
-                      {p.shadePanels > 0 && p.curtainPanels > 0 && ' • '}
-                      {p.curtainPanels > 0 && `${toPersianDigits(p.curtainPanels)} لت پرده`}
+                      {formatProductCounts(projectProductCounts(p))}
                     </p>
                     <p className="text-ink-2">{p.mechanismType || 'مکانیزم استاندارد'}</p>
                     {p.specialTools && p.specialTools.length > 0 && (

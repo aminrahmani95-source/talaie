@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { formatProductCounts, bookingProductCounts } from '../../utils/productCounts';
 import { SalesProjectBooking, InstallationTeam, User } from '../../types';
 import {
   CalendarDays,
@@ -14,6 +16,7 @@ import {
 } from 'lucide-react';
 import { toPersianDigits, getUpcomingDays, formatJalali } from '../../utils/jalali';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { CloudImage } from '../common/CloudImage';
 
 interface Props {
   booking: SalesProjectBooking;
@@ -30,7 +33,8 @@ export const AssignSalesBookingModal: React.FC<Props> = ({
   onClose,
   onConfirm,
 }) => {
-  useEscapeKey(onClose);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  useEscapeKey(() => (previewUrl ? setPreviewUrl(null) : onClose()));
   // تاریخ‌های ۹۰ روز آینده برای انتخاب آزادانه تاریخ
   const upcomingDays = getUpcomingDays(90);
 
@@ -71,14 +75,14 @@ export const AssignSalesBookingModal: React.FC<Props> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label="تخصیص رزرو فروش به برنامه قطعی نصب"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
     >
-      <div className="bg-surface border border-line rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl text-ink">
+      <div className="bg-surface border border-line rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl text-ink my-auto">
         {/* Modal Header */}
         <div className="px-5 py-4 border-b border-line flex items-center justify-between bg-canvas">
           <div className="flex items-center gap-2.5">
@@ -129,7 +133,7 @@ export const AssignSalesBookingModal: React.FC<Props> = ({
                 )}
               </div>
               <span className="font-black text-xs text-brand-ink bg-brand/10 px-2 py-0.5 rounded border border-brand/20">
-                {toPersianDigits(booking.lathsCount)} لت
+                {formatProductCounts(bookingProductCounts(booking)) || `${toPersianDigits(booking.lathsCount)} لت`}
               </span>
             </div>
 
@@ -150,6 +154,38 @@ export const AssignSalesBookingModal: React.FC<Props> = ({
                 <span className="truncate">{booking.address}</span>
               </div>
             )}
+
+            {/* پروپوزال ثبت‌شده توسط فروشنده؛ همین عکس‌ها خودکار به فرم مأموریت منتقل می‌شوند */}
+            <div className="pt-2 border-t border-line">
+              {booking.proposalImages && booking.proposalImages.length > 0 ? (
+                <div className="space-y-1.5">
+                  <div className="text-[12px] text-ink-2 flex items-center justify-between">
+                    <span>📎 پروپوزال فروشنده</span>
+                    <span className="text-emerald-600 dark:text-emerald-300 font-bold">به فرم مأموریت منتقل می‌شود</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {booking.proposalImages.map((img) => (
+                      <a
+                        key={img.id}
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPreviewUrl(img.url);
+                        }}
+                        className="block w-14 h-16 rounded-md overflow-hidden border border-line hover:border-brand"
+                        aria-label={`نمایش ${img.title}`}
+                      >
+                        <CloudImage src={img.url} alt={img.title} className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-[12px] text-amber-700 dark:text-amber-300">
+                  این رزرو پروپوزال ندارد؛ در فرم مأموریت می‌توانید اضافه کنید.
+                </div>
+              )}
+            </div>
 
             {/* تاریخ پیشنهادی فروش */}
             <div className="pt-2 border-t border-dashed border-line flex items-center justify-between text-[12px]">
@@ -241,6 +277,17 @@ export const AssignSalesBookingModal: React.FC<Props> = ({
           </div>
         </form>
       </div>
-    </div>
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setPreviewUrl(null)}
+          role="dialog"
+          aria-label="نمایش بزرگ پروپوزال"
+        >
+          <CloudImage src={previewUrl} alt="پروپوزال" className="max-w-full max-h-full object-contain rounded-lg" />
+        </div>
+      )}
+    </div>,
+    document.body
   );
 };

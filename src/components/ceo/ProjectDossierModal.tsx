@@ -101,9 +101,9 @@ export const ProjectDossierModal: React.FC<Props> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="dossier-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-5 overflow-y-auto"
+      className="fixed inset-0 z-50 flex justify-center items-start bg-black/85 backdrop-blur-md p-3 sm:p-5 overflow-y-auto"
     >
-      <div className="bg-surface border border-line rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden my-4 flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface border border-line rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
         {/* ================= Header ================= */}
         <div className="bg-canvas p-4 sm:p-5 border-b border-line flex items-start justify-between gap-3">
           <div className="space-y-1.5 min-w-0">
@@ -573,6 +573,14 @@ export const ProjectDossierModal: React.FC<Props> = ({
                       {toPersianDigits(project.curtainPanels || 0)} لت
                     </span>
                   </div>
+                  {(project.railCount || 0) > 0 && (
+                    <div className="bg-canvas p-3 rounded-xl border border-line text-center">
+                      <span className="text-ink-3 block text-[11px]">تعداد ریل</span>
+                      <span className="font-black text-sm text-ink font-mono">
+                        {toPersianDigits(project.railCount || 0)} عدد
+                      </span>
+                    </div>
+                  )}
                   <div className="bg-canvas p-3 rounded-xl border border-line text-center">
                     <span className="text-ink-3 block text-[11px]">مکانیزم و تیپ</span>
                     <span className="font-bold text-xs text-brand-ink truncate block">
@@ -605,7 +613,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
                       title: 'ثبت پرونده و اندازه‌گیری اولیه',
                       date: project.createdAt,
                       done: true,
-                      desc: `ثبت سفارش اولیه با مشخصات ${toPersianDigits(project.shadePanels || 0)} لت شید و ${toPersianDigits(project.curtainPanels || 0)} لت پرده`,
+                      desc: `ثبت سفارش اولیه: ${[project.shadePanels ? `${toPersianDigits(project.shadePanels)} لت شید` : '', project.railCount ? `${toPersianDigits(project.railCount)} ریل` : '', project.curtainPanels ? `${toPersianDigits(project.curtainPanels)} لت پرده` : ''].filter(Boolean).join('، ') || '—'}`,
                     },
                     {
                       title: 'تخصیص اکیپ و زمان‌بندی تقویم',

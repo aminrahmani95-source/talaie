@@ -84,9 +84,9 @@ export const PreInstallPhotoModal: React.FC<Props> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="pre-install-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
     >
-      <div className="bg-surface rounded-xl max-w-lg w-full shadow-2xl border border-brand/40 overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-surface rounded-xl max-w-lg w-full shadow-2xl border border-brand/40 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="bg-canvas px-5 py-4 border-b border-line flex items-center justify-between text-ink">
           <div className="flex items-center gap-3">
