@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Portal } from '../ui/Portal';
 import {
   MaterialRequest,
   MaterialCategory,
@@ -1161,7 +1162,7 @@ export const MaterialCenter: React.FC<Props> = ({
 
       {/* DISPATCH DRAWER / MODAL */}
       {dispatchModalRequest && (
-        <div
+        <Portal><div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex justify-center items-start p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
@@ -1290,12 +1291,12 @@ export const MaterialCenter: React.FC<Props> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* STATUS & ASSIGNMENT MODAL */}
       {statusModalRequest && (
-        <div
+        <Portal><div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex justify-center items-start p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
@@ -1387,12 +1388,12 @@ export const MaterialCenter: React.FC<Props> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* PRINTABLE DISPATCH MANIFEST MODAL */}
       {manifestText && (
-        <div
+        <Portal><div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex justify-center items-start p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
@@ -1447,12 +1448,12 @@ export const MaterialCenter: React.FC<Props> = ({
               </div>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ===================== MODAL: LOGISTICS TICKET RESOLUTION ===================== */}
       {resolvingTicket && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <Portal><div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="bg-surface border border-purple-500/40 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="font-black text-base text-ink flex items-center gap-2">
@@ -1601,7 +1602,7 @@ export const MaterialCenter: React.FC<Props> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

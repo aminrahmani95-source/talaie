@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Portal } from '../ui/Portal';
 import { Project } from '../../types';
 import { XCircle, X, AlertTriangle, Send, Calendar } from 'lucide-react';
 import { getUpcomingDays, formatJalali, toPersianDigits } from '../../utils/jalali';
@@ -79,7 +80,7 @@ export const QcRejectModal: React.FC<Props> = ({
   };
 
   return (
-    <div
+    <Portal><div
       role="dialog"
       aria-modal="true"
       aria-labelledby="qc-reject-title"
@@ -207,6 +208,6 @@ export const QcRejectModal: React.FC<Props> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div></Portal>
   );
 };

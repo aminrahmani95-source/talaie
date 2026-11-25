@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Portal } from '../ui/Portal';
 import { triggerToast } from '../Toast';
 import { Project, SiteReadinessInspection, SiteReadinessItem, SiteChecklistState, User } from '../../types';
 import {
@@ -181,7 +182,7 @@ export const PreInstallationModal: React.FC<Props> = ({
   };
 
   return (
-    <div
+    <Portal><div
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
@@ -493,6 +494,6 @@ export const PreInstallationModal: React.FC<Props> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div></Portal>
   );
 };

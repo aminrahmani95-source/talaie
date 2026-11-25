@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Portal } from '../ui/Portal';
 import {
   X,
   Cloud,
@@ -87,7 +88,7 @@ export const PendingOperationsModal: React.FC<Props> = ({
   if (!isOpen) return null;
 
   return (
-    <div
+    <Portal><div
       role="dialog"
       aria-modal="true"
       aria-label="مدیریت صف تغییرات آفلاین"
@@ -218,6 +219,6 @@ export const PendingOperationsModal: React.FC<Props> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 };

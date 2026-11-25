@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Portal } from './ui/Portal';
 import { ProposalImage } from '../types';
 import { X, ZoomIn, ZoomOut, RotateCcw, Download, FileText } from 'lucide-react';
 import { toPersianDigits } from '../utils/jalali';
@@ -20,7 +21,7 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
 
   if (!validImages || validImages.length === 0) {
     return (
-      <div
+      <Portal><div
         role="dialog"
         aria-modal="true"
         aria-labelledby="empty-proposal-title"
@@ -44,7 +45,7 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
             بستن پنجره
           </button>
         </div>
-      </div>
+      </div></Portal>
     );
   }
 
@@ -57,7 +58,7 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
   const zoomPercent = Math.round(scale * 100);
 
   return (
-    <div
+    <Portal><div
       role="dialog"
       aria-modal="true"
       aria-labelledby="proposal-viewer-title"
@@ -174,6 +175,6 @@ export const ProposalViewerModal: React.FC<Props> = ({ images, projectTitle, onC
           ))}
         </div>
       )}
-    </div>
+    </div></Portal>
   );
 };

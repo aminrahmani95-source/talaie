@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Portal } from '../ui/Portal';
 import { formatProductCounts, projectProductCounts } from '../../utils/productCounts';
 import {
   Project,
@@ -1339,7 +1340,7 @@ export const QcDesk: React.FC<Props> = ({
 
       {/* Photo Lightbox Modal with Prev/Next Navigation */}
       {previewPhotoIndex !== null && allProjectPhotos[previewPhotoIndex] && (
-        <div
+        <Portal><div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4"
@@ -1401,7 +1402,7 @@ export const QcDesk: React.FC<Props> = ({
               )}
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

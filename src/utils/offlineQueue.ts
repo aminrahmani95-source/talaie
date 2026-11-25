@@ -68,6 +68,18 @@ export function isRetryableHold(op: { executionState?: string; conflictDetails?:
   return Boolean(op.conflictDetails?.reason?.startsWith('اعتبارسنجی پیش‌نیاز سرور ناموفق'));
 }
 
+const LIFECYCLE_HOLD_REASON = 'تداخل شیفت کاری با وضعیت جدید سرور';
+
+/**
+ * a hold because the server's job status contradicted the change. It is checked again later
+ * (with backoff): the server may have moved on (QC reopened the job), or the rule that held it
+ * may no longer apply. A still-real conflict is simply held again. It stays out of the screen
+ * (applyPendingToProjects), unlike a network hold.
+ */
+export function isRecheckableLifecycleHold(op: { executionState?: string; conflictDetails?: { reason?: string } }): boolean {
+  return op.executionState === 'CONFLICT_HOLD' && op.conflictDetails?.reason === LIFECYCLE_HOLD_REASON;
+}
+
 export interface TargetPath {
   path: (string | number)[];
 }
@@ -1515,7 +1527,10 @@ export const Outbox = {
               // A check that failed only because the network dropped is tried again later.
               // (It used to stay held forever: the change showed on this phone but never
               // reached the server or anyone else, and blocked every later change of the job.)
-              if (!isRetryableHold(op) || (op.nextRetryAt && Date.now() < op.nextRetryAt)) {
+              if (
+                !(isRetryableHold(op) || isRecheckableLifecycleHold(op)) ||
+                (op.nextRetryAt && Date.now() < op.nextRetryAt)
+              ) {
                 break;
               }
               op.executionState = 'QUEUED';
@@ -1663,21 +1678,28 @@ export const Outbox = {
               const serverStatus = serverSnapshot!.status;
               const patchStatus = op.payload?.patch?.status;
 
-              // Detect lifecycle state conflicts:
+              // Detect lifecycle state conflicts: only when the server moved to that state AFTER this
+              // change was made (baseline differs). A deliberate change from the state the user saw
+              // (QC rejecting a COMPLETED job back to IN_PROGRESS, reopening a stuck job) is not a conflict;
+              // holding it made «رد بازرسی» QC sit in the queue forever.
+              const serverMovedSinceBaseline = !baseStatus || baseStatus !== serverStatus;
               const isLifecycleConflict =
-                (serverStatus === 'COMPLETED' && patchStatus && patchStatus !== 'COMPLETED') ||
-                (serverStatus === 'STUCK' && patchStatus && patchStatus === 'COMPLETED') ||
-                (serverStatus === 'CANCELLED' && patchStatus && patchStatus !== 'CANCELLED');
+                serverMovedSinceBaseline &&
+                ((serverStatus === 'COMPLETED' && patchStatus && patchStatus !== 'COMPLETED') ||
+                  (serverStatus === 'STUCK' && patchStatus && patchStatus === 'COMPLETED') ||
+                  (serverStatus === 'CANCELLED' && patchStatus && patchStatus !== 'CANCELLED'));
 
               if (isLifecycleConflict) {
                 op.executionState = 'CONFLICT_HOLD';
                 op.conflictDetails = {
-                  reason: 'تداخل شیفت کاری با وضعیت جدید سرور',
+                  reason: LIFECYCLE_HOLD_REASON,
                   serverStatus,
                   clientStatus: patchStatus,
                   serverUpdatedAt: serverSnapshot!.updatedAt,
                   detectedAt: Date.now(),
                 };
+                op.retryCount = (op.retryCount || 0) + 1;
+                op.nextRetryAt = Date.now() + getNextBackoffDelay(op.retryCount);
 
                 await new Promise<void>((res, rej) => {
                   const tx = db.transaction(STORE_PENDING, 'readwrite');

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Portal } from '../ui/Portal';
 import { Project, User, PersonnelEvaluation } from '../../types';
 import {
   Award,
@@ -122,7 +123,7 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
   );
 
   return (
-    <div
+    <Portal><div
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
@@ -260,6 +261,6 @@ export const PersonnelEvaluationModal: React.FC<Props> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div></Portal>
   );
 };

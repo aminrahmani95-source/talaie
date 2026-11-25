@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Portal } from '../ui/Portal';
 import { triggerToast } from '../Toast';
 import { Project, HandoverChecklist, HandoverSigneeType, User, ExceptionalCompletionDetails } from '../../types';
 import {
@@ -317,7 +318,7 @@ export const ReportCompletionModal: React.FC<Props> = ({
   };
 
   return (
-    <div
+    <Portal><div
       role="dialog"
       aria-modal="true"
       aria-labelledby="report-modal-title"
@@ -1079,6 +1080,6 @@ export const ReportCompletionModal: React.FC<Props> = ({
           </Button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 };

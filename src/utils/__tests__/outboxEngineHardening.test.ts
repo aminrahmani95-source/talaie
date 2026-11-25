@@ -471,6 +471,26 @@ describe('M1-B1 Outbox Engine Hardening Tests', () => {
   // --------------------------------------------------------------------------
   // Scenario 7: Lease Release Dispatches Queue Awakening Event
   // --------------------------------------------------------------------------
+  it('6b. QC rejecting a job it saw as COMPLETED (baseline = server) is dispatched, not held', async () => {
+    let mutationDispatched = false;
+    const mutation: OutboxMutation = {
+      type: 'PATCH_PROJECT',
+      orderingKey: 'project:p-qc-reject',
+      payload: { id: 'p-qc-reject', patch: { status: 'IN_PROGRESS', qcStatus: 'REJECTED' } },
+      baselineSnapshot: { projectId: 'p-qc-reject', status: 'COMPLETED', updatedAt: '2026-11-14T08:00:00Z' },
+    };
+    await Outbox.commit(mutation, 'user-qc-1');
+    await Outbox.processQueue({
+      currentUserId: 'user-qc-1',
+      uploadBlob: async () => 'mock-url',
+      fetchProjectSnapshot: async () => ({ status: 'COMPLETED', updatedAt: '2026-11-14T08:00:00Z' }),
+      executeMutation: async () => {
+        mutationDispatched = true;
+      },
+    });
+    expect(mutationDispatched).toBe(true);
+  });
+
   it('7. dispatches talaie-queue-lease-released event upon settling lease', async () => {
     let leaseReleasedEventFired = false;
     let releasedEventDetail: any = null;

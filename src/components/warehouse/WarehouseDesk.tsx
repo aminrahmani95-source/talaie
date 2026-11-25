@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { Portal } from '../ui/Portal';
 import { formatProductCounts, projectProductCounts } from '../../utils/productCounts';
 import { Project, Ticket, User } from '../../types';
 import {
@@ -834,7 +835,7 @@ export const WarehouseDesk: React.FC<Props> = ({
 
       {/* ===================== MODAL: GOODS RECEIPT CONFIRMATION ===================== */}
       {receiptModalProject && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <Portal><div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="bg-surface border border-brand/40 rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="font-black text-base text-ink flex items-center gap-2">
@@ -954,12 +955,12 @@ export const WarehouseDesk: React.FC<Props> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ===================== MODAL: REVOKE RECEIPT CONFIRMATION ===================== */}
       {revokeModalProject && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <Portal><div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="bg-surface border border-rose-500/40 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="font-black text-sm text-rose-300 flex items-center gap-2">
@@ -1007,12 +1008,12 @@ export const WarehouseDesk: React.FC<Props> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ===================== MODAL: TICKET RESOLUTION ===================== */}
       {selectedTicket && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <Portal><div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="bg-surface border border-purple-500/40 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="font-black text-base text-ink flex items-center gap-2">
@@ -1167,7 +1168,7 @@ export const WarehouseDesk: React.FC<Props> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

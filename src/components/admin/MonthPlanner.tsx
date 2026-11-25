@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Portal } from '../ui/Portal';
 import { formatProductCounts, projectProductCounts, capacityUnits, bookingProductCounts } from '../../utils/productCounts';
 import {
   Project,
@@ -812,7 +813,7 @@ export const MonthPlanner: React.FC<Props> = ({
 
       {/* ===================== MODAL: PROPOSE SCHEDULE CHANGE ===================== */}
       {proposingProject && (
-        <div
+        <Portal><div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
@@ -942,12 +943,12 @@ export const MonthPlanner: React.FC<Props> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ===================== MODAL: REVIEW SCHEDULE REQUEST (QC MANAGER ONLY) ===================== */}
       {reviewingRequest && isQcManager && (
-        <div
+        <Portal><div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
@@ -1026,7 +1027,7 @@ export const MonthPlanner: React.FC<Props> = ({
               </div>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* مودال تخصیص رزرو فروش به تقویم قطعی نصب */}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Portal } from '../ui/Portal';
 import {
   X,
   AlertOctagon,
@@ -165,7 +166,7 @@ export const FailedOperationsModal: React.FC<Props> = ({
   };
 
   return (
-    <div
+    <Portal><div
       role="dialog"
       aria-modal="true"
       aria-labelledby="failed-ops-title"
@@ -323,6 +324,6 @@ export const FailedOperationsModal: React.FC<Props> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 };

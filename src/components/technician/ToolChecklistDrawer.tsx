@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Portal } from '../ui/Portal';
 import { Project } from '../../types';
 import { Wrench, CheckCircle2, X } from 'lucide-react';
 import { toPersianDigits } from '../../utils/jalali';
@@ -37,7 +38,7 @@ export const ToolChecklistDrawer: React.FC<Props> = ({ project, onClose }) => {
       : 100;
 
   return (
-    <div
+    <Portal><div
       role="dialog"
       aria-modal="true"
       aria-labelledby="tool-checklist-title"
@@ -150,6 +151,6 @@ export const ToolChecklistDrawer: React.FC<Props> = ({ project, onClose }) => {
           </button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 };

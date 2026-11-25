@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Portal } from '../ui/Portal';
 import { Project, User, ProjectAuditRecord } from '../../types';
 import {
   X,
@@ -97,7 +98,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
   };
 
   return (
-    <div
+    <Portal><div
       role="dialog"
       aria-modal="true"
       aria-labelledby="dossier-title"
@@ -798,6 +799,6 @@ export const ProjectDossierModal: React.FC<Props> = ({
           </div>
         </div>
       )}
-    </div>
+    </div></Portal>
   );
 };

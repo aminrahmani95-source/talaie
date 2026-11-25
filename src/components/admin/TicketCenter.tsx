@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Portal } from '../ui/Portal';
 import { Ticket, User } from '../../types';
 import {
   CheckCircle2,
@@ -592,7 +593,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
 
       {/* Lightbox for Ticket Photo */}
       {previewPhoto && (
-        <div
+        <Portal><div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
@@ -613,7 +614,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
               className="max-h-[85vh] max-w-full rounded-lg shadow-2xl object-contain bg-black"
             />
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

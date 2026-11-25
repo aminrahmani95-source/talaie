@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Portal } from '../ui/Portal';
 import {
   CalendarDays,
   PlusCircle,
@@ -523,7 +524,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
 
       {/* مودال موفقیت پس از ثبت */}
       {justBooked && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <Portal><div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="bg-surface border border-brand rounded-2xl max-w-lg w-full p-6 text-right shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <div className="w-14 h-14 rounded-full bg-emerald-500/20 border border-emerald-500 flex items-center justify-center text-emerald-400 mx-auto mb-4">
               <CheckCircle2 className="w-8 h-8" />
@@ -588,7 +589,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ================= تب ۲: مدیریت و اصلاح پروژه‌ها (ویرایش برای همه، حذف فقط برای مدیر QC) ================= */}
@@ -1015,7 +1016,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
         const isFull = modalDayCap.remainingLaths <= 0;
 
         return (
-          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex justify-center items-start p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true">
+          <Portal><div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex justify-center items-start p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true">
             <div className="bg-sunken border border-brand rounded-2xl max-w-3xl w-full p-5 sm:p-6 text-right shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-200 space-y-5">
               {/* هدر مودال */}
               <div className="flex items-center justify-between border-b border-line pb-3">
@@ -1400,12 +1401,12 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                 )}
               </div>
             </div>
-          </div>
+          </div></Portal>
         );
       })()}
 {/* ================= مودال ویرایش اطلاعات و تاریخ پروژه ================= */}
       {editingBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-center items-start p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true">
+        <Portal><div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-center items-start p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true">
           <div className="bg-sunken border border-brand rounded-2xl max-w-2xl w-full p-5 sm:p-6 text-right shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-200">
             {/* هدر مودال */}
             <div className="flex items-center justify-between border-b border-line pb-3 mb-4">
@@ -1660,12 +1661,12 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ================= مودال تایید حذف رزرو (فقط مدیر QC) ================= */}
       {deletingBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <Portal><div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="bg-surface border border-rose-600/80 rounded-2xl max-w-md w-full p-6 text-right shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <div className="w-14 h-14 rounded-full bg-rose-500/20 border border-rose-500 flex items-center justify-center text-rose-400 mx-auto mb-4">
               <AlertTriangle className="w-8 h-8" />
@@ -1718,7 +1719,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* پیام فلوتینگ موفقیت */}

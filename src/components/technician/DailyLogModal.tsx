@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Portal } from '../ui/Portal';
 import { triggerToast } from '../Toast';
 import { Project, DailyActivityProgress, User } from '../../types';
 import {
@@ -203,7 +204,7 @@ export const DailyLogModal: React.FC<Props> = ({
   };
 
   return (
-    <div
+    <Portal><div
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-50 flex justify-center items-start bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
@@ -548,6 +549,6 @@ export const DailyLogModal: React.FC<Props> = ({
           </Button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 };

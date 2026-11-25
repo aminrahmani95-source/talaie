@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Portal } from '../ui/Portal';
 import { formatProductCounts, projectProductCounts } from '../../utils/productCounts';
 import { Project, User, ProjectStatus, MaterialRequest, Ticket } from '../../types';
 import {
@@ -935,7 +936,7 @@ export const ProjectCard: React.FC<Props> = ({
 
       {/* Confirmation Dialog for Material Receipt */}
       {confirmingReceiptTarget && (
-        <div
+        <Portal><div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm"
@@ -999,7 +1000,7 @@ export const ProjectCard: React.FC<Props> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Pre-Installation Photos Mandatory Gate Modal */}
