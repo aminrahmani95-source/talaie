@@ -111,7 +111,7 @@ export const MonthPlanner: React.FC<Props> = ({
   const canEditSchedule = !isCeo && Boolean(onNewProject);
 
   // View modes: '4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'
-  // روی گوشی پیش‌فرض «روزانه» است (۴ روز زیر هم بیش از ۲۰۰۰ پیکسل می‌شد)؛ انتخاب کاربر یادش می‌ماند
+  // روی گوشی پیش‌فرض «روزانه» است (4 روز زیر هم بیش از 2000 پیکسل می‌شد)؛ انتخاب کاربر یادش می‌ماند
   const [viewMode, setViewModeState] = useState<'1DAY' | '4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'>(() => {
     try {
       const saved = localStorage.getItem('talaei_planner_view');
@@ -285,7 +285,7 @@ export const MonthPlanner: React.FC<Props> = ({
               options={[
                 { id: '1DAY', label: 'روزانه' },
                 { id: 'TIMELINE', label: 'خط سیر اکیپ‌ها' },
-                { id: '4DAYS', label: '۴ روزه' },
+                { id: '4DAYS', label: '4 روزه' },
                 { id: '7DAYS', label: 'هفتگی' },
                 { id: 'FULL_MONTH', label: '30 روزه' },
               ]}
@@ -530,7 +530,7 @@ export const MonthPlanner: React.FC<Props> = ({
             {/* سرستون روزهای خط سیر */}
             <div className="grid grid-cols-6 border-b border-line bg-canvas text-xs font-semibold">
               <div className="p-3 text-ink-2 flex items-center justify-center border-l border-line">
-                اکیپ‌های ۲ گانه نصب
+                اکیپ‌های 2 گانه نصب
               </div>
               {displayedDays.map((d) => (
                 <div
@@ -757,7 +757,7 @@ export const MonthPlanner: React.FC<Props> = ({
                         key={proj.id}
                         className="p-3 space-y-2 rounded-md border border-line bg-sunken hover:border-brand shadow-none transition"
                       >
-                        {/* کل کارت پرونده را باز می‌کند؛ قبلاً فقط دو آیکن ۲۶ پیکسلی */}
+                        {/* کل کارت پرونده را باز می‌کند؛ قبلاً فقط دو آیکن 26 پیکسلی */}
                         <button
                           type="button"
                           onClick={() => onManageProject(proj)}

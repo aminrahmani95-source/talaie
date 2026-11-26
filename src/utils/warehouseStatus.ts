@@ -92,7 +92,7 @@ export function countsChangedSincePacking(p: Project): CountDiff[] {
   return diffCounts(prep.expectedCounts, projectProductCounts(p));
 }
 
-/** «۲ ریل کم» / «۱ شید بیشتر» برای نمایش کوتاه */
+/** «2 ریل کم» / «1 شید بیشتر» برای نمایش کوتاه */
 export function formatCountDiffs(diffs: CountDiff[], mode: 'shortage' | 'change'): string {
   return diffs
     .map((d) =>
@@ -106,7 +106,7 @@ export function formatCountDiffs(diffs: CountDiff[], mode: 'shortage' | 'change'
 export type WarehouseAlertLevel = 'urgent' | 'warn' | null;
 
 /**
- * هشدار انبار برای داشبورد مدیر: کاری که تا ۲ روز دیگر نصب دارد و کالایش نرسیده،
+ * هشدار انبار برای داشبورد مدیر: کاری که تا 2 روز دیگر نصب دارد و کالایش نرسیده،
  * یا تعدادش بعد از ثبت انبار عوض شده.
  */
 export function warehouseAlert(p: Project, todayKey: string): { level: WarehouseAlertLevel; text: string } {

@@ -235,7 +235,7 @@ export const MaterialRequestModal: React.FC<Props> = ({
       <form id="material-request-form" onSubmit={handleSubmit} className="space-y-5">
         {/* 1. Category Selector */}
         <div>
-          <span className="block text-xs font-bold text-ink mb-2">۱. چه نوع قطعه‌ای لازم دارید؟</span>
+          <span className="block text-xs font-bold text-ink mb-2">1. چه نوع قطعه‌ای لازم دارید؟</span>
           <div className="grid grid-cols-3 gap-1.5">
             {(Object.keys(MATERIAL_CATEGORY_LABELS) as MaterialCategory[]).map((cat) => {
               const Icon = CATEGORY_ICONS[cat];
@@ -298,7 +298,7 @@ export const MaterialRequestModal: React.FC<Props> = ({
         {/* 2. Items List */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-ink">۲. اقلام درخواستی</span>
+            <span className="text-xs font-bold text-ink">2. اقلام درخواستی</span>
             <button
               type="button"
               onClick={handleAddItemRow}
@@ -389,7 +389,7 @@ export const MaterialRequestModal: React.FC<Props> = ({
 
         {/* 3. Urgency */}
         <div>
-          <span className="block text-xs font-bold text-ink mb-2">۳. چقدر فوری است؟</span>
+          <span className="block text-xs font-bold text-ink mb-2">3. چقدر فوری است؟</span>
           <div className="grid grid-cols-3 gap-1.5">
             {(Object.keys(MATERIAL_URGENCY_LABELS) as MaterialUrgency[]).map((u) => {
               const isSelected = selectedUrgency === u;
@@ -412,7 +412,7 @@ export const MaterialRequestModal: React.FC<Props> = ({
 
         {/* 4. Reason */}
         <div>
-          <span className="block text-xs font-bold text-ink mb-2">۴. علت</span>
+          <span className="block text-xs font-bold text-ink mb-2">4. علت</span>
           <div className="flex flex-wrap gap-1.5">
             {(Object.keys(MATERIAL_REASON_LABELS) as MaterialRequestReason[]).map((r) => {
               const isSelected = selectedReason === r;

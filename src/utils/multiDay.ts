@@ -75,7 +75,7 @@ export interface MultiDayProgress {
 }
 
 /**
- * Computes the multi-day badge «روز ۲ از ۳» for a given view date or today.
+ * Computes the multi-day badge «روز 2 از 3» for a given view date or today.
  */
 export function getMultiDayProgress(
   project: Pick<Project, 'scheduledDate' | 'endDate'>,
@@ -145,7 +145,7 @@ export function calculateWorkSessionsSummary(
       totalDays: 1,
       formattedHours,
       formattedText: `${durationStr} (در ${toPersianDigits(1)} روز)`,
-      text: `مجموع: ${toPersianDigits(formattedHours)} ساعت در ۱ روز`,
+      text: `مجموع: ${toPersianDigits(formattedHours)} ساعت در 1 روز`,
     };
   }
 

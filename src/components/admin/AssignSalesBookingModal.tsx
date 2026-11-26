@@ -35,7 +35,7 @@ export const AssignSalesBookingModal: React.FC<Props> = ({
 }) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   useEscapeKey(() => (previewUrl ? setPreviewUrl(null) : onClose()));
-  // تاریخ‌های ۹۰ روز آینده برای انتخاب آزادانه تاریخ
+  // تاریخ‌های 90 روز آینده برای انتخاب آزادانه تاریخ
   const upcomingDays = getUpcomingDays(90);
 
   // پیش‌فرض تاریخ روی تاریخ پیشنهادی فروش قرار می‌گیرد اما کاملاً دست مدیر QC باز است
@@ -196,7 +196,7 @@ export const AssignSalesBookingModal: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* فیلد ۱: انتخاب تاریخ قطعی نصب (کاملاً آزاد و منعطف) */}
+          {/* فیلد 1: انتخاب تاریخ قطعی نصب (کاملاً آزاد و منعطف) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="font-bold text-xs text-ink flex items-center gap-1.5">
@@ -227,7 +227,7 @@ export const AssignSalesBookingModal: React.FC<Props> = ({
             </p>
           </div>
 
-          {/* فیلد ۲: انتخاب اکیپ نصب */}
+          {/* فیلد 2: انتخاب اکیپ نصب */}
           <div className="space-y-1.5">
             <label className="font-bold text-xs text-ink flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-brand-ink" />

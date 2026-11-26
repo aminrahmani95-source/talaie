@@ -12,6 +12,8 @@
 /** Formats every browser can show in an <img>. Anything else must be re-encoded. */
 const WEB_SAFE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']);
 
+import { reportClientError, describeError } from './errorReporter';
+
 export class ImageFormatError extends Error {}
 
 function readAsDataURL(blob: Blob): Promise<string> {
@@ -55,11 +57,39 @@ async function heicToJpegBlob(file: Blob): Promise<Blob> {
   return heicTo({ blob: file, type: 'image/jpeg', quality: 0.9 });
 }
 
+/**
+ * عکس را برای آپلود آماده می‌کند (تبدیل HEIC، کوچک کردن، JPEG). اگر نشد، خطا با مشخصات
+ * فایل (نوع، حجم، پسوند) به‌طور خودکار برای مدیر گزارش می‌شود.
+ */
 export async function compressImageFile(
   file: File,
   maxWidthOrOptions: number | { maxWidth?: number; maxHeight?: number; quality?: number } = 1280,
   maxHeight = 1280,
   quality = 0.75
+): Promise<string> {
+  try {
+    return await compressImageFileInner(file, maxWidthOrOptions, maxHeight, quality);
+  } catch (err) {
+    const d = describeError(err);
+    reportClientError({
+      context: 'PHOTO_PREPARE',
+      message: d.message,
+      details: {
+        name: d.name,
+        type: file?.type || '(empty)',
+        kb: Math.round((file?.size || 0) / 1024),
+        ext: ((file?.name || '').match(/\.([\w]+)$/) || [])[1] || '',
+      },
+    });
+    throw err;
+  }
+}
+
+async function compressImageFileInner(
+  file: File,
+  maxWidthOrOptions: number | { maxWidth?: number; maxHeight?: number; quality?: number },
+  maxHeight: number,
+  quality: number
 ): Promise<string> {
   let maxWidth = 1280;
   if (typeof maxWidthOrOptions === 'object') {

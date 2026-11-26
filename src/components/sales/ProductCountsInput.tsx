@@ -66,7 +66,7 @@ export const ProductCountsInput: React.FC<Props> = ({ value, onChange, footnote 
         ))}
       </div>
       <div className="flex items-center justify-between text-xs px-1">
-        <span className="text-ink-3">{footnote || 'هر لت شید یا پرده ۱ و هر ریل ½ لت از ظرفیت اکیپ می‌گیرد.'}</span>
+        <span className="text-ink-3">{footnote || 'هر لت شید یا پرده 1 و هر ریل ½ لت از ظرفیت اکیپ می‌گیرد.'}</span>
         <span className="font-black text-brand-ink tabular-nums shrink-0">ظرفیت: {toPersianDigits(total)} لت</span>
       </div>
     </div>

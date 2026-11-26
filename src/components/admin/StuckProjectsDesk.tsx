@@ -248,7 +248,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({
       {/* Page Header */}
       <PageHeader
         title={embedded ? 'توقف‌ها' : 'پروژه‌های متوقف'}
-        subtitle={`مهلت رفع هر توقف: ۷۲ ساعت${allIncidents.length > 0 ? ` · ${toPersianDigits(complianceRate)}٪ در مهلت حل شده` : ''}`}
+        subtitle={`مهلت رفع هر توقف: 72 ساعت${allIncidents.length > 0 ? ` · ${toPersianDigits(complianceRate)}٪ در مهلت حل شده` : ''}`}
         actions={
           <SegmentedControl
             options={[

@@ -97,15 +97,15 @@ export function isValidStatusTransition(from: ProjectStatus, to: ProjectStatus):
 /**
  * گارد اختصاصی و فوق امنیتی برای تایید تحویل پروژه انتقالی (فاز P2.2 Hardening).
  * مسیرهای مجاز منحصراً دو مورد است:
- * مسیر ۱: تایید دریافت توسط سرپرست رسمی و قطعی اکیپ مقصد (Strict Receiving Lead)
+ * مسیر 1: تایید دریافت توسط سرپرست رسمی و قطعی اکیپ مقصد (Strict Receiving Lead)
  *    - الزامات: user.id === project.leadTechnicianId و user.role === 'LEAD_TECHNICIAN' و actualTeamId === latestTransfer.toTeamId
  *    - فیلدهای تایید: receivingLeadConfirmed: true، receivingLeadConfirmedAt، receivingLeadConfirmedBy
- * مسیر ۲: رفع انسداد مدیریتی توسط مدیر ارشد QC (Manager Override)
+ * مسیر 2: رفع انسداد مدیریتی توسط مدیر ارشد QC (Manager Override)
  *    - الزامات: user.role === 'QC_MANAGER' و ثبت فیلدهای متمایز لاگ ممیزی
  *    - الزامات فیلدها: isManagerOverride: true، managerOverrideReason (اجباری)، managerOverrideAt، managerOverrideByUserId، managerOverrideRole: 'QC_MANAGER'
  *    - صریحاً: receivingLeadConfirmed نباید true باشد تا تایید فیزیکی سرپرست جعل نگردد.
  * سایر موارد:
- *    - سوابق قبلی انتقال و اقلام صورت‌جلسه (handoverInventory) ۱۰۰٪ تغییرناپذیرند.
+ *    - سوابق قبلی انتقال و اقلام صورت‌جلسه (handoverInventory) 100٪ تغییرناپذیرند.
  *    - تایید مجدد انتقال حل‌شده (چه تایید قبلی سرپرست و چه رفع انسداد مدیر) با خطا رد می‌شود.
  */
 export function validateTeamTransferAcknowledgmentPatch(
@@ -136,7 +136,7 @@ export function validateTeamTransferAcknowledgmentPatch(
     throw new PermanentError('دسترسی غیرمجاز: تغییر تعداد یا حذف و اضافه رکوردهای انتقال مجاز نیست.');
   }
 
-  // سوابق قبلی انتقال باید ۱۰۰٪ بدون کوچک‌ترین تغییری حفظ شده باشند
+  // سوابق قبلی انتقال باید 100٪ بدون کوچک‌ترین تغییری حفظ شده باشند
   for (let i = 0; i < existingTransfers.length - 1; i++) {
     if (JSON.stringify(patchTeamTransfers[i]) !== JSON.stringify(existingTransfers[i])) {
       throw new PermanentError('دسترسی غیرمجاز: سوابق قبلی انتقال غیرقابل تغییر هستند.');
@@ -171,7 +171,7 @@ export function validateTeamTransferAcknowledgmentPatch(
   const isOverrideAttempt = patchLatest.isManagerOverride === true;
 
   if (isOverrideAttempt) {
-    // مسیر ۲: رفع انسداد مدیریتی مدیر QC
+    // مسیر 2: رفع انسداد مدیریتی مدیر QC
     if (user.role !== 'QC_MANAGER') {
       throw new PermanentError('دسترسی غیرمجاز: رفع انسداد مدیریتی انتقال منحصراً در صلاحیت مدیر ارشد QC است.');
     }
@@ -217,7 +217,7 @@ export function validateTeamTransferAcknowledgmentPatch(
         'دسترسی غیرمجاز: تایید دریافت فیزیکی سرپرست اکیپ نمی‌تواند همزمان ادعای رفع انسداد مدیریتی داشته باشد.'
       );
     }
-    // مسیر ۱: تایید دریافت توسط سرپرست رسمی اکیپ مقصد
+    // مسیر 1: تایید دریافت توسط سرپرست رسمی اکیپ مقصد
     const actualTeamId = userTeamId || user.teamId;
     const isStrictLead =
       user.id === project.leadTechnicianId &&
@@ -257,7 +257,7 @@ export function validateProjectPatchRoleGuards(
     throw new PermanentError('دسترسی غیرمجاز: امکان تغییر یا انتساب دستی پرچم سوابق تاریخی وجود ندارد.');
   }
 
-  // ۰. بررسی گیت تحویل رسمی واحد فنی (اعزام اکیپ و شروع کار در کارگاه منوط به تایید ورود کالا به انبار است)
+  // 0. بررسی گیت تحویل رسمی واحد فنی (اعزام اکیپ و شروع کار در کارگاه منوط به تایید ورود کالا به انبار است)
   const isDispatching =
     Boolean(patch.status && ['EN_ROUTE', 'IN_PROGRESS'].includes(patch.status));
 
@@ -265,7 +265,7 @@ export function validateProjectPatchRoleGuards(
     throw new PermanentError('دسترسی غیرمجاز: پروژه تا زمان ثبت و تأیید پیش‌نیاز تحویل و ورود کالا به انبار، قابل اعزام اکیپ و شروع کار نیست.');
   }
 
-  // ۰.۱. گیت اجرایی انتقال اکیپ: تا زمان تایید تحویل توسط سرپرست اکیپ جدید یا رفع انسداد مدیر QC، شروع یا ادامه کار ممنوع است
+  // 0.1. گیت اجرایی انتقال اکیپ: تا زمان تایید تحویل توسط سرپرست اکیپ جدید یا رفع انسداد مدیر QC، شروع یا ادامه کار ممنوع است
   if (patch.status && ['EN_ROUTE', 'IN_PROGRESS'].includes(patch.status)) {
     const latestTransfer = getLatestTeamTransfer(project);
     if (latestTransfer && !isTransferResolved(latestTransfer)) {
@@ -275,12 +275,12 @@ export function validateProjectPatchRoleGuards(
     }
   }
 
-  // ۰.۲. گارد اختصاصی تایید تحویل انتقال اکیپ (Phase P2.2)
+  // 0.2. گارد اختصاصی تایید تحویل انتقال اکیپ (Phase P2.2)
   if (patch.teamTransfers !== undefined) {
     validateTeamTransferAcknowledgmentPatch(user, project, patch.teamTransfers, userTeamId);
   }
 
-  // ۱. گارد امنیتی طرح اولیه نصب: طرح اولیه پس از قفل شدن یا زمان‌بندی تغییرناپذیر است (حتی برای مدیر QC)
+  // 1. گارد امنیتی طرح اولیه نصب: طرح اولیه پس از قفل شدن یا زمان‌بندی تغییرناپذیر است (حتی برای مدیر QC)
   if (patch.originalPlan !== undefined) {
     const isLocked =
       Boolean(project.originalPlan?.lockedAt) ||
@@ -297,7 +297,7 @@ export function validateProjectPatchRoleGuards(
     }
   }
 
-  // ۲. گارد امنیتی بازنگری‌های طرح (planAmendments):
+  // 2. گارد امنیتی بازنگری‌های طرح (planAmendments):
   if (patch.planAmendments !== undefined) {
     if (!Array.isArray(patch.planAmendments)) {
       throw new PermanentError('دسترسی غیرمجاز: لیست بازنگری‌های طرح باید آرایه معتبر باشد.');
@@ -344,8 +344,8 @@ export function validateProjectPatchRoleGuards(
     }
 
     // د) بررسی تایید اصلاحیه جدید:
-    // ۱. فقط مدیر QC مجاز به تایید بازنگری است (تغییر وضعیت به APPROVED)
-    // ۲. اعتبارسنجی همزمانی: previousQuantity اصلاحیه در حال تایید باید دقیقاً با سقف موثر مصوب جاری تطبیق داشته باشد
+    // 1. فقط مدیر QC مجاز به تایید بازنگری است (تغییر وضعیت به APPROVED)
+    // 2. اعتبارسنجی همزمانی: previousQuantity اصلاحیه در حال تایید باید دقیقاً با سقف موثر مصوب جاری تطبیق داشته باشد
     const existingApprovedIds = new Set(
       existingAmendments.filter((a) => a.status === 'APPROVED').map((a) => a.id)
     );
@@ -372,8 +372,8 @@ export function validateProjectPatchRoleGuards(
     }
   }
 
-  // ۳. گارد کنترل کیفی نهایی و مدیریت عدم‌انطباق‌ها (Phase P3)
-  // ۳.۱. تایید نهایی QC منحصراً در صلاحیت مدیر ارشد QC است و وجود هرگونه نقص بحرانی حل‌نشده مانع صدور تایید می‌شود
+  // 3. گارد کنترل کیفی نهایی و مدیریت عدم‌انطباق‌ها (Phase P3)
+  // 3.1. تایید نهایی QC منحصراً در صلاحیت مدیر ارشد QC است و وجود هرگونه نقص بحرانی حل‌نشده مانع صدور تایید می‌شود
   if (patch.qcStatus === 'APPROVED') {
     if (user.role === 'TECHNICIAN' || user.role === 'LEAD_TECHNICIAN') {
       throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط می‌تواند وضعیت QC را روی PENDING تنظیم کند.');
@@ -388,7 +388,7 @@ export function validateProjectPatchRoleGuards(
     }
   }
 
-  // ۳.۲. صیانت از سوابق بازرسی‌های کنترل کیفیت (qcInspections)
+  // 3.2. صیانت از سوابق بازرسی‌های کنترل کیفیت (qcInspections)
   if (patch.qcInspections !== undefined) {
     if (user.role !== 'QC_MANAGER') {
       throw new PermanentError('دسترسی غیرمجاز: ثبت رسمی برگه بازرسی کنترل کیفی منحصراً در صلاحیت مدیر ارشد QC است.');
@@ -407,7 +407,7 @@ export function validateProjectPatchRoleGuards(
     }
   }
 
-  // ۳.۳. گارد چرخه عمر عیوب و عدم‌انطباق‌ها (qcDefects)
+  // 3.3. گارد چرخه عمر عیوب و عدم‌انطباق‌ها (qcDefects)
   if (patch.qcDefects !== undefined) {
     if (!Array.isArray(patch.qcDefects)) {
       throw new PermanentError('دسترسی غیرمجاز: لیست عیوب کیفی باید آرایه معتبر باشد.');
@@ -471,7 +471,7 @@ export function validateProjectPatchRoleGuards(
     return;
   }
 
-  // ۱. بررسی تخصیص پروژه به کاربر یا اکیپ او
+  // 1. بررسی تخصیص پروژه به کاربر یا اکیپ او
   const isDirectlyAssigned =
     project.leadTechnicianId === user.id ||
     (project.assignedTechnicianIds || []).includes(user.id);
@@ -482,7 +482,7 @@ export function validateProjectPatchRoleGuards(
     throw new PermanentError('دسترسی غیرمجاز: شما مسئول یا تکنسین تخصیص‌یافته به این پروژه نیستید.');
   }
 
-  // ۲. بررسی کلیدهای مجاز برای تکنسین
+  // 2. بررسی کلیدهای مجاز برای تکنسین
   for (const key of Object.keys(patch)) {
     if (key === 'teamTransfers') {
       // این کلید قبلاً به طور سخت‌گیرانه در validateTeamTransferAcknowledgmentPatch اعتبارسنجی شده است
@@ -493,7 +493,7 @@ export function validateProjectPatchRoleGuards(
     }
   }
 
-  // ۳. بررسی وضعیت QC: فقط PENDING و فقط همراه با status = COMPLETED
+  // 3. بررسی وضعیت QC: فقط PENDING و فقط همراه با status = COMPLETED
   if (patch.qcStatus !== undefined) {
     if (patch.qcStatus !== 'PENDING') {
       throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط می‌تواند وضعیت QC را روی PENDING تنظیم کند.');
@@ -506,7 +506,7 @@ export function validateProjectPatchRoleGuards(
     }
   }
 
-  // ۴. بررسی مسیرهای مجاز انتقال وضعیت
+  // 4. بررسی مسیرهای مجاز انتقال وضعیت
   if (patch.status && patch.status !== project.status) {
     if (!isValidStatusTransition(project.status, patch.status)) {
       throw new PermanentError(
@@ -515,7 +515,7 @@ export function validateProjectPatchRoleGuards(
     }
   }
 
-  // ۵. بررسی تغییرات stuckIncidents: تکنسین فقط می‌تواند دقیقاً یک رویداد جدید با resolutionStatus = 'OPEN' الصاق کند
+  // 5. بررسی تغییرات stuckIncidents: تکنسین فقط می‌تواند دقیقاً یک رویداد جدید با resolutionStatus = 'OPEN' الصاق کند
   if (patch.stuckIncidents !== undefined) {
     if (!Array.isArray(patch.stuckIncidents)) {
       throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند.');
@@ -544,7 +544,7 @@ export function validateProjectPatchRoleGuards(
     }
   }
 
-  // ۶. بررسی dailyLogs: فقط الحاق مجاز است (append-only) و توسط کاربر جاری
+  // 6. بررسی dailyLogs: فقط الحاق مجاز است (append-only) و توسط کاربر جاری
   if (patch.dailyLogs !== undefined) {
     if (!Array.isArray(patch.dailyLogs)) {
       throw new PermanentError('دسترسی غیرمجاز: لاگ روزانه باید آرایه باشد.');
@@ -583,7 +583,7 @@ export function validateProjectPatchRoleGuards(
     }
   }
 
-  // ۷. بررسی workSessions: الحاق جلسه جدید (با هویت خود کاربر) یا بستن جلسه‌ی باز آخر
+  // 7. بررسی workSessions: الحاق جلسه جدید (با هویت خود کاربر) یا بستن جلسه‌ی باز آخر
   if (patch.workSessions !== undefined) {
     if (!Array.isArray(patch.workSessions)) {
       throw new PermanentError('دسترسی غیرمجاز: جلسات کاری باید آرایه باشد.');
@@ -667,7 +667,7 @@ export function validateTicketRoleGuards(
     return;
   }
 
-  // ۱. بررسی تخصیص پروژه به کاربر یا اکیپ او
+  // 1. بررسی تخصیص پروژه به کاربر یا اکیپ او
   if (project) {
     const isAssigned =
       project.leadTechnicianId === user.id ||
@@ -680,7 +680,7 @@ export function validateTicketRoleGuards(
     }
   }
 
-  // ۲. تکنسین اجازه حل کردن تیکت را ندارد
+  // 2. تکنسین اجازه حل کردن تیکت را ندارد
   if (ticket.status === 'RESOLVED') {
     throw new PermanentError(
       'دسترسی غیرمجاز: تنها مدیر ارشد QC می‌تواند وضعیت تیکت را به حل‌شده (RESOLVED) تغییر دهد.'

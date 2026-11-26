@@ -1,8 +1,9 @@
 import type { InstallationTeam } from '../types';
 
-const toPersianDigits = (n: number) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+// ارقام برنامه لاتین است (تصمیم سپهر)
+const toPersianDigits = (n: number) => String(n);
 
-/** «اکیپ نصب ۳» for TEAM_3; anything else keeps its code visible. */
+/** «اکیپ نصب 3» for TEAM_3; anything else keeps its code visible. */
 export function defaultTeamName(code?: string | null): string {
   const m = /^TEAM_(\d+)$/.exec(String(code || '').trim());
   if (m) return `اکیپ نصب ${toPersianDigits(Number(m[1]))}`;

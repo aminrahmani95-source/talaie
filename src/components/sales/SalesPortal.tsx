@@ -169,8 +169,8 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
   }, [bookings, searchQuery, repFilter, systemFilter, currentUser.id]);
 
   // کنترل سطح دسترسی ویرایش:
-  // ۱. مدیرعامل و مدیر QC دسترسی مدیریتی کامل دارند (isFullAdmin).
-  // ۲. هر کارشناس فروش (یا هر نقش دیگری) صرفاً و منحصراً پروژه‌های ثبت‌شده توسط خودش را می‌تواند ویرایش کند.
+  // 1. مدیرعامل و مدیر QC دسترسی مدیریتی کامل دارند (isFullAdmin).
+  // 2. هر کارشناس فروش (یا هر نقش دیگری) صرفاً و منحصراً پروژه‌های ثبت‌شده توسط خودش را می‌تواند ویرایش کند.
   const canEditBooking = (b: SalesProjectBooking) => {
     if (isFullAdmin) return true;
     // with an owner id only the id counts; partial name matching let «علی» edit «علی رضایی»'s bookings
@@ -208,7 +208,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
       return;
     }
     if (!editCustomerPhone.trim() || editCustomerPhone.length < 10) {
-      setEditFormError('شماره تماس معتبر ۱۰ یا ۱۱ رقمی وارد نمایید.');
+      setEditFormError('شماره تماس معتبر 10 یا 11 رقمی وارد نمایید.');
       return;
     }
     if (!editAddress.trim()) {
@@ -278,7 +278,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
     setSuccessToast(`رزرو پروژه «${name}» با موفقیت حذف و ظرفیت ${laths} لت در تقویم آزاد گردید.`);
   };
 
-  // دریافت ظرفیت‌های ۳ ماهه
+  // دریافت ظرفیت‌های 3 ماهه
   const threeMonthCapacities = useMemo(() => {
     return getThreeMonthCapacities(90);
   }, [bookings]);
@@ -374,7 +374,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
     setProposalMissing(false);
   };
 
-  // تفکیک ماه‌ها در تقویم (۳ ماه آینده با شروع قطعی از آذر)
+  // تفکیک ماه‌ها در تقویم (3 ماه آینده با شروع قطعی از آذر)
   const monthGroups = useMemo(() => {
     const groups: { monthName: string; days: typeof threeMonthCapacities }[] = [];
     threeMonthCapacities.forEach((dayCap) => {
@@ -443,7 +443,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
     return activeMonthGroup.days;
   }, [activeMonthGroup, calendarFilter]);
 
-  // ۳۰ روز آینده با وضعیت ظرفیت برای فرم ثبت
+  // 30 روز آینده با وضعیت ظرفیت برای فرم ثبت
   const upcoming30Days = useMemo(() => {
     return upcomingDays.slice(0, 30).map((day) => {
       const cap = getDailyCapacity(day.dateKey, bookings);
@@ -592,7 +592,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
         </div></Portal>
       )}
 
-      {/* ================= تب ۲: مدیریت و اصلاح پروژه‌ها (ویرایش برای همه، حذف فقط برای مدیر QC) ================= */}
+      {/* ================= تب 2: مدیریت و اصلاح پروژه‌ها (ویرایش برای همه، حذف فقط برای مدیر QC) ================= */}
       {activeTab === 'all-bookings' && (
         <div className="space-y-5">
           {/* نوار جستجو و فیلترها */}
@@ -869,7 +869,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
         </div>
       )}
 
-      {/* ================= تب ۱: تقویم زنده ۳ ماهه ظرفیت و ثبت پروژه ================= */}
+      {/* ================= تب 1: تقویم زنده 3 ماهه ظرفیت و ثبت پروژه ================= */}
       {activeTab === 'calendar' && (
         <div className="space-y-6">
           {/* ماه و فیلتر وضعیت (یک ردیف) */}
@@ -1047,7 +1047,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                 </button>
               </div>
 
-              {/* وضعیت ظرفیت ۲ اکیپ در این روز */}
+              {/* وضعیت ظرفیت 2 اکیپ در این روز */}
               <div className="bg-canvas border border-line rounded-xl p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-ink">
@@ -1127,7 +1127,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                       <Phone className="w-4 h-4 text-ink-3 absolute right-3 top-3" />
                       <input
                         type="text"
-                        placeholder="۰۹۱۲..."
+                        placeholder="0912..."
                         dir="ltr"
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
@@ -1146,7 +1146,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                     <MapPin className="w-4 h-4 text-ink-3 absolute right-3 top-3" />
                     <input
                       type="text"
-                      placeholder="مثال: نیاوران، خیابان یاسر، پلاک ۱۲، زنگ ۴"
+                      placeholder="مثال: نیاوران، خیابان یاسر، پلاک 12، زنگ 4"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       className="w-full bg-canvas border border-line-strong/80 rounded-xl pr-9 pl-3 py-2 text-xs text-ink placeholder-ink-3 focus:border-brand focus:outline-none transition"
@@ -1213,7 +1213,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                       شیوه تخصیص اکیپ‌ها:
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {/* گزینه ۱: پخش در روز */}
+                      {/* گزینه 1: پخش در روز */}
                       <div
                         onClick={() =>
                           bookingOptions.spreadOption.isAvailable &&
@@ -1247,7 +1247,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                         </p>
                       </div>
 
-                      {/* گزینه ۲: رزرو متوالی یک اکیپ */}
+                      {/* گزینه 2: رزرو متوالی یک اکیپ */}
                       <div
                         onClick={() =>
                           bookingOptions.consecutiveOption.isAvailable &&

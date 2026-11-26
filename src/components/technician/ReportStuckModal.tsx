@@ -181,7 +181,7 @@ export const ReportStuckModal: React.FC<Props> = ({
         {/* Category */}
         <div>
           <span className="block text-xs font-bold text-ink mb-2">
-            ۱. علت توقف <span className="text-rose-400">*</span>
+            1. علت توقف <span className="text-rose-400">*</span>
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {CATEGORIES.map((cat) => {
@@ -212,7 +212,7 @@ export const ReportStuckModal: React.FC<Props> = ({
         {/* Description */}
         <div>
           <label htmlFor="stuck-description" className="block text-xs font-bold text-ink mb-1.5">
-            ۲. توضیح مانع <span className="text-rose-400">*</span>
+            2. توضیح مانع <span className="text-rose-400">*</span>
           </label>
           <textarea
             id="stuck-description"
@@ -222,14 +222,14 @@ export const ReportStuckModal: React.FC<Props> = ({
               setDescription(e.target.value);
               setError('');
             }}
-            placeholder="مثلاً: ابعاد ۲ شید سالن با پنجره نمی‌خواند و باید اصلاح شود."
+            placeholder="مثلاً: ابعاد 2 شید سالن با پنجره نمی‌خواند و باید اصلاح شود."
             className={fieldCls}
           />
         </div>
 
         {/* Handover Details for next team */}
         <div className="p-3 bg-sunken rounded-lg border border-line space-y-3">
-          <span className="text-xs font-bold text-ink block">۳. تحویل به اکیپ بعدی</span>
+          <span className="text-xs font-bold text-ink block">3. تحویل به اکیپ بعدی</span>
 
           <div>
             <label htmlFor="stuck-completed" className="block text-[12px] font-semibold text-ink-2 mb-1">
@@ -254,7 +254,7 @@ export const ReportStuckModal: React.FC<Props> = ({
               rows={2}
               value={remainingWork}
               onChange={(e) => setRemainingWork(e.target.value)}
-              placeholder="مثلاً: آویزان کردن ۲ شید اصلاحی، تنظیم لیمیت موتور و ریموت."
+              placeholder="مثلاً: آویزان کردن 2 شید اصلاحی، تنظیم لیمیت موتور و ریموت."
               className={fieldCls}
             />
           </div>
@@ -268,7 +268,7 @@ export const ReportStuckModal: React.FC<Props> = ({
               type="text"
               value={requiredParts}
               onChange={(e) => setRequiredParts(e.target.value)}
-              placeholder="مثلاً: ۲ شید اصلاحی عرض ۲.۴۵ + ۲ ریموت تک‌کانال"
+              placeholder="مثلاً: 2 شید اصلاحی عرض 2.45 + 2 ریموت تک‌کانال"
               className={fieldCls}
             />
           </div>
@@ -276,7 +276,7 @@ export const ReportStuckModal: React.FC<Props> = ({
 
         {/* Photos */}
         <div>
-          <span className="block text-xs font-bold text-ink mb-2">۴. عکس وضعیت فعلی (توصیه می‌شود)</span>
+          <span className="block text-xs font-bold text-ink mb-2">4. عکس وضعیت فعلی (توصیه می‌شود)</span>
           <div className="flex flex-wrap items-center gap-2">
             <PhotoSourceButtons onChange={handlePhotoUpload} busy={isProcessingPhotos} />
             {photos.map((p, i) => (

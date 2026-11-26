@@ -15,7 +15,7 @@ export interface User {
   role: UserRole;
   avatar?: string;
   active: boolean;
-  teamId?: string; // شناسه اکیپ منتسب (در صورت عضویت در یکی از ۲ اکیپ)
+  teamId?: string; // شناسه اکیپ منتسب (در صورت عضویت در یکی از 2 اکیپ)
   updatedAt?: string;
 }
 
@@ -118,7 +118,7 @@ export interface QCInspectionRecord {
   createdAt: string;
 }
 
-// ساختار ۲ اکیپ نصب (هر اکیپ: ۱ سرپرست + ۲ تکنسین = ۶ نفر)
+// ساختار 2 اکیپ نصب (هر اکیپ: 1 سرپرست + 2 تکنسین = 6 نفر)
 export interface InstallationTeam {
   id: string;
   name: string; // نام اکیپ (مثلاً «اکیپ نصب 1»)
@@ -516,7 +516,7 @@ export interface Project {
   scheduledTime: string; // مثلاً 09:30 یا 14:00
   
   // اکیپ نصب
-  assignedTeamId?: string; // شناسه یکی از ۲ اکیپ نصب
+  assignedTeamId?: string; // شناسه یکی از 2 اکیپ نصب
   assignedTeamName?: string; // نام اکیپ منتسب
   leadTechnicianId?: string; // شناسه سرپرست اکیپ نصب
   assignedTechnicianIds: string[]; // تمام اعضای اکیپ
@@ -750,8 +750,8 @@ export interface SystemSettings {
   defaultTools: string[];
   defaultTeamDailyCapacityHours?: number | null; // ظرفیت کاری پیش‌فرض روزانه اکیپ‌ها به ساعت (تعیین توسط مدیر QC)
   workingDaysPerWeek?: number[]; // روزهای کاری مجاز هفته (پیش‌فرض: [0, 1, 2, 3, 4, 6] بدون جمعه)
-  installationTeamCount?: number; // تعداد اکیپ‌های نصب برای محاسبه ظرفیت فروش (پیش‌فرض ۲)
-  lathsPerTeamPerDay?: number; // ظرفیت روزانه هر اکیپ به لت (پیش‌فرض ۲۰)
+  installationTeamCount?: number; // تعداد اکیپ‌های نصب برای محاسبه ظرفیت فروش (پیش‌فرض 2)
+  lathsPerTeamPerDay?: number; // ظرفیت روزانه هر اکیپ به لت (پیش‌فرض 20)
 }
 
 export interface ProjectAuditRecord {
@@ -891,7 +891,7 @@ export interface SalesProjectBooking {
   isSmart: boolean; // هوشمند/موتوردار یا مکانیکی/دستی
   notes: string;
   requestedDate: string; // YYYY-MM-DD
-  jalaliDate: string; // تاریخ شمسی مانند ۱۴۰۵/۰۹/۱۵
+  jalaliDate: string; // تاریخ شمسی مانند 1405/09/15
   allocationMode: SalesAllocationMode;
   allocatedTeams: string[]; // شناسه اکیپ‌ها مثلاً ['TEAM_1', 'TEAM_2']
   allocatedDaysCount: number; // تعداد روزهای تخصیص
@@ -912,14 +912,14 @@ export interface TeamDayAllocation {
   teamId: string;
   teamName: string;
   bookedLaths: number;
-  maxLaths: number; // معمولاً ۲۰ لت برای هر اکیپ در روز
+  maxLaths: number; // معمولاً 20 لت برای هر اکیپ در روز
 }
 
 export interface DailyLathCapacity {
   date: string; // YYYY-MM-DD
   jalaliDate: string;
   dayName: string; // شنبه، یکشنبه، ...
-  maxLaths: number; // ۴۰ لت (۲ اکیپ × ۲۰)
+  maxLaths: number; // 40 لت (2 اکیپ × 20)
   bookedLaths: number;
   remainingLaths: number;
   teams: TeamDayAllocation[];

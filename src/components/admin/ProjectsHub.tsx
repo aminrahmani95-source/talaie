@@ -32,7 +32,7 @@ export const ProjectsHub: React.FC<{
     return [
       { label: 'کل پروژه‌های ثبت‌شده', value: toPersianDigits(projects.length) },
       { label: 'تأیید نهایی QC', value: toPersianDigits(projects.filter((p) => p.qcStatus === 'APPROVED').length), tone: 'text-emerald-600 dark:text-emerald-300' },
-      { label: 'رضایت مشتری', value: avg > 0 ? `${toPersianDigits(avg)} از ۵` : '—' },
+      { label: 'رضایت مشتری', value: avg > 0 ? `${toPersianDigits(avg)} از 5` : '—' },
       { label: 'تیکت‌های حل‌شده در مهلت', value: `${toPersianDigits(sla.onTimeRate)}٪`, tone: 'text-emerald-600 dark:text-emerald-300' },
       { label: 'تیکت‌های عقب‌افتاده', value: toPersianDigits(sla.openOverdue), tone: sla.openOverdue ? 'text-rose-600 dark:text-rose-300' : undefined },
       {

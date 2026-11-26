@@ -1,7 +1,12 @@
 /** خروجی مشترک گزارش‌ها: CSV فارسی برای اکسل و چاپ / PDF بدون پنجره‌ی جدید */
 
+import { toEnglishDigits } from './jalali';
+
+/** ارقام فارسی/عربی داده‌ها (آدرس، یادداشت) در خروجی هم لاتین شوند */
+const latinDigits = (s: string) => toEnglishDigits(s);
+
 const csvCell = (v: unknown) => {
-  const str = v === undefined || v === null ? '' : String(v);
+  const str = v === undefined || v === null ? '' : latinDigits(String(v));
   return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 };
 
@@ -23,7 +28,7 @@ export function downloadCsv(fileBaseName: string, csv: string) {
 }
 
 export const escapeHtml = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  latinDigits(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 export interface PrintSection {
   title?: string;

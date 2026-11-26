@@ -2,10 +2,33 @@ import { createClient, SupabaseClient, User as SupabaseAuthUser } from '@supabas
 import { Project, Ticket, User, SystemSettings, PersonnelEvaluation, ProjectAuditRecord, InstallationTeam, TeamMember, MaterialRequest } from '../types';
 import { toEnglishDigits } from './jalali';
 import { Outbox, OutboxOperation, PendingUpload, PermanentError } from './offlineQueue';
+import { configureErrorReporter, reportClientError, describeError, ClientErrorRow, ErrorSendResult } from './errorReporter';
 
 export { PermanentError };
 
 export type RealtimeConnectionStatus = 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED';
+
+export interface ClientErrorReport {
+  id: string;
+  created_at: string;
+  occurred_at: string | null;
+  user_id: string;
+  user_name: string | null;
+  user_role: string | null;
+  project_id: string | null;
+  context: string;
+  message: string;
+  details: Record<string, any> | null;
+  app_version: string | null;
+  user_agent: string | null;
+}
+
+/** جدول هنوز روی سرور ساخته نشده */
+function isMissingTableError(error: any): boolean {
+  const code = String(error?.code || '');
+  const msg = String(error?.message || '').toLowerCase();
+  return code === '42P01' || code === 'PGRST205' || code === 'PGRST202' || msg.includes('does not exist') || msg.includes('could not find the table');
+}
 
 const CACHED_PROFILE_KEY = 'talaie_cached_profile';
 
@@ -171,7 +194,7 @@ export const SupabaseSyncService = {
       throw new Error('تنظیمات اتصال به سرور Supabase یافت نشد.');
     }
 
-    // Persian digits first, then strip: /\D/ also removes «۰۹۱۲…», which emptied the
+    // Persian digits first, then strip: /\D/ also removes «0912…», which emptied the
     // number for anyone typing on a Persian keyboard and always failed the login.
     const digits = toEnglishDigits(phone).replace(/\D/g, '');
     const cleanPassword = toEnglishDigits(password);
@@ -593,7 +616,7 @@ export const SupabaseSyncService = {
   },
 
   // =========================================================================
-  // INSTALLATION TEAMS (۲ اکیپ نصب و اعضای آن‌ها)
+  // INSTALLATION TEAMS (2 اکیپ نصب و اعضای آن‌ها)
   // =========================================================================
 
   async fetchInstallationTeams(): Promise<InstallationTeam[]> {
@@ -1097,7 +1120,7 @@ export const SupabaseSyncService = {
 
     if (!error) return;
 
-    // اگر مایگریشن ۰۰۸ هنوز اجرا نشده باشد، تابع وجود ندارد → حذف مستقیم (روش قبلی)
+    // اگر مایگریشن 008 هنوز اجرا نشده باشد، تابع وجود ندارد → حذف مستقیم (روش قبلی)
     const missingFn = (error as any).code === 'PGRST202' || status === 404;
     if (!missingFn) {
       (error as any).status = status;
@@ -1567,7 +1590,7 @@ export const SupabaseSyncService = {
 
         if (rpcError) {
           if (rpcError.code === '42883' || rpcError.message.includes('function') || rpcError.message.includes('does not exist')) {
-            const err = new Error('تابع ثبت درخواست متریال در سرور در انتظار اجرای مایگریشن ۰۱۴ است.');
+            const err = new Error('تابع ثبت درخواست متریال در سرور در انتظار اجرای مایگریشن 014 است.');
             (err as any).code = 'FEATURE_NOT_IMPLEMENTED_ON_SERVER';
             (err as any).isExpectedOffline = true;
             throw err;
@@ -1591,7 +1614,7 @@ export const SupabaseSyncService = {
 
         if (rpcError) {
           if (rpcError.code === '42883' || rpcError.message.includes('function') || rpcError.message.includes('does not exist')) {
-            const err = new Error('تابع به‌روزرسانی درخواست متریال در سرور در انتظار اجرای مایگریشن ۰۱۴ است.');
+            const err = new Error('تابع به‌روزرسانی درخواست متریال در سرور در انتظار اجرای مایگریشن 014 است.');
             (err as any).code = 'FEATURE_NOT_IMPLEMENTED_ON_SERVER';
             (err as any).isExpectedOffline = true;
             throw err;
@@ -1607,7 +1630,7 @@ export const SupabaseSyncService = {
         const { error } = await client.from('material_requests').delete().eq('id', id);
         if (error) {
           if (error.code === '42P01' || error.message.includes('does not exist')) {
-            const err = new Error('جدول درخواست‌های متریال در سرور در انتظار اجرای مایگریشن ۰۱۴ است.');
+            const err = new Error('جدول درخواست‌های متریال در سرور در انتظار اجرای مایگریشن 014 است.');
             (err as any).code = 'FEATURE_NOT_IMPLEMENTED_ON_SERVER';
             (err as any).isExpectedOffline = true;
             throw err;
@@ -1643,7 +1666,16 @@ export const SupabaseSyncService = {
             .eq('id', projectId)
             .maybeSingle();
 
-          if (error || !data) return null;
+          if (error || !data) {
+            const d = error ? describeError(error) : { message: 'پروژه روی سرور پیدا نشد یا دسترسی به آن نیست.' };
+            reportClientError({
+              context: 'SYNC_CHECK_PROJECT',
+              projectId,
+              message: d.message,
+              details: { code: (d as any).code, status: (d as any).status },
+            });
+            return null;
+          }
           const projData = data.data || {};
           return {
             status: projData.status,
@@ -1680,12 +1712,51 @@ export const SupabaseSyncService = {
             // Already uploaded in previous attempt before connection lost; unique path guarantees it is the same file
             return storagePath;
           }
+          const d = describeError(error);
+          reportClientError({
+            context: 'UPLOAD_PHOTO',
+            projectId: upload.orderingKey.startsWith('project:') ? upload.orderingKey.slice('project:'.length) : null,
+            message: d.message,
+            details: {
+              code: d.code,
+              status: d.status || errCode || undefined,
+              file: upload.fileName,
+              kb: Math.round((upload.blob?.size || 0) / 1024),
+              mime: upload.mimeType,
+              blobType: upload.blob?.type,
+              target: upload.targets?.[0]?.path?.join('.'),
+              key: upload.orderingKey,
+            },
+          });
           throw error;
         }
         return storagePath;
       },
       executeMutation: async (op: OutboxOperation, signal?: AbortSignal) => {
-        await this.executeOfflineOperation(op, signal);
+        try {
+          await this.executeOfflineOperation(op, signal);
+        } catch (err) {
+          const d = describeError(err);
+          if (d.name !== 'AbortError') {
+            const patch = op.payload?.patch || (op.type === 'CREATE_PROJECT' ? op.payload : null);
+            reportClientError({
+              context: `SYNC_${op.type}`,
+              projectId:
+                op.orderingKey.startsWith('project:') ? op.orderingKey.slice('project:'.length) : op.payload?.projectId || null,
+              message: d.message,
+              details: {
+                code: d.code,
+                status: d.status,
+                name: d.name,
+                retry: op.retryCount,
+                fields: patch && typeof patch === 'object' ? Object.keys(patch).slice(0, 25) : undefined,
+                hint: (err as any)?.hint,
+                pgDetails: (err as any)?.details,
+              },
+            });
+          }
+          throw err;
+        }
       },
       refreshSession: async () => {
         try {
@@ -1714,6 +1785,42 @@ export const SupabaseSyncService = {
       return { requeuedCount: 0, requeuedIds: [] };
     }
     return await Outbox.requeueUnsupportedMaterialOperations(targetUserId.trim());
+  },
+
+  // =========================================================================
+  // گزارش خطاهای گوشی‌ها (جدول client_error_reports، مایگریشن ۰۲۶)
+  // =========================================================================
+
+  /** فقط برای مدیران؛ unavailable یعنی مایگریشن ۰۲۶ هنوز روی سرور اجرا نشده */
+  async listClientErrorReports(sinceIso: string): Promise<
+    { status: 'ok'; rows: ClientErrorReport[] } | { status: 'unavailable' } | { status: 'failed'; message: string }
+  > {
+    const client = this.getClient();
+    if (!client) return { status: 'failed', message: 'اتصال به سرور برقرار نیست.' };
+    try {
+      const { data, error } = await client
+        .from('client_error_reports')
+        .select('id, created_at, occurred_at, user_id, user_name, user_role, project_id, context, message, details, app_version, user_agent')
+        .gte('created_at', sinceIso)
+        .order('created_at', { ascending: false })
+        .limit(300);
+      if (error) {
+        if (isMissingTableError(error)) return { status: 'unavailable' };
+        return { status: 'failed', message: error.message };
+      }
+      return { status: 'ok', rows: (data || []) as ClientErrorReport[] };
+    } catch (err) {
+      return { status: 'failed', message: describeError(err).message };
+    }
+  },
+
+  /** پاک کردن گزارش‌های بررسی‌شده (فقط مدیر QC) */
+  async deleteClientErrorReports(ids: string[]): Promise<void> {
+    const client = this.getClient();
+    if (!client) throw new Error('اتصال به سرور برقرار نیست.');
+    if (ids.length === 0) return;
+    const { error } = await client.from('client_error_reports').delete().in('id', ids);
+    if (error) throw new Error(error.message);
   },
 
   subscribeSettings(onUpdate: (settings: SystemSettings) => void): (() => void) {
@@ -1805,6 +1912,12 @@ export const SupabaseSyncService = {
       if (isDuplicate) {
         return storagePath;
       }
+      reportClientError({
+        context: 'UPLOAD_PHOTO_DIRECT',
+        projectId,
+        message: error.message,
+        details: { status: errCode || undefined, kb: Math.round(blob.size / 1024), blobType: blob.type },
+      });
       throw new Error(`خطا در آپلود عکس به فضای ابری: ${error.message}`);
     }
 
@@ -1828,6 +1941,12 @@ export const SupabaseSyncService = {
       .from('talaie-photos')
       .upload(storagePath, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
     if (error) {
+      const d = describeError(error);
+      reportClientError({
+        context: 'UPLOAD_PROPOSAL',
+        message: d.message,
+        details: { booking: bookingId, status: d.status, kb: Math.round(blob.size / 1024), blobType: blob.type },
+      });
       throw new Error(`خطا در آپلود عکس پروپوزال: ${error.message}`);
     }
     return storagePath;
@@ -1882,6 +2001,12 @@ export const SupabaseSyncService = {
       if (isDuplicate) {
         return storagePath;
       }
+      reportClientError({
+        context: 'UPLOAD_SIGNATURE_DIRECT',
+        projectId,
+        message: error.message,
+        details: { status: errCode || undefined, kb: Math.round(blob.size / 1024) },
+      });
       throw new Error(`خطا در آپلود امضای کارفرما به فضای ابری: ${error.message}`);
     }
 
@@ -2082,9 +2207,9 @@ export const SupabaseSyncService = {
    */
   getSetupSqlScript(): string {
     return `-- لطفاً دستورات موجود در پوشه supabase/migrations را اجرا فرمایید:
--- 001_security.sql (فاز ۱: امنیت و profiles)
--- 002_tables.sql (فاز ۲: جدول‌های projects و tickets و باکت تصاویر)
--- 003_migrate_user_ids.sql (فاز ۲: مهاجرت شناسه‌های پرسنل به UUID)
+-- 001_security.sql (فاز 1: امنیت و profiles)
+-- 002_tables.sql (فاز 2: جدول‌های projects و tickets و باکت تصاویر)
+-- 003_migrate_user_ids.sql (فاز 2: مهاجرت شناسه‌های پرسنل به UUID)
 `;
   },
 
@@ -2243,3 +2368,22 @@ if (typeof window !== 'undefined') {
     SupabaseSyncService.processOfflineQueue();
   });
 }
+
+configureErrorReporter({
+  getUser: () => {
+    const p = getCachedProfile();
+    return p ? { name: p.name, role: p.role } : null;
+  },
+  send: async (rows: ClientErrorRow[]): Promise<ErrorSendResult> => {
+    const client = SupabaseSyncService.getClient();
+    if (!client || !getCachedProfile()) return 'failed';
+    try {
+      const { error } = await client.from('client_error_reports').insert(rows);
+      if (!error) return 'ok';
+      if (isMissingTableError(error)) return 'unavailable';
+      return 'failed';
+    } catch {
+      return 'failed';
+    }
+  },
+});

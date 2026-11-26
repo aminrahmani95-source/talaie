@@ -17,7 +17,12 @@ export function serviceWorkerPlugin(): Plugin {
       publicDir = config.publicDir;
     },
     generateBundle(_options, bundle) {
-      const files = new Set<string>(Object.keys(bundle).filter((f) => !f.endsWith('.map')));
+      // کتابخانه‌ی سنگین اکسل (حدود ۱ مگابایت) فقط برای گزارش مدیرهاست؛ پیش‌بارگذاری نمی‌شود تا گوشی
+      // اکیپ‌ها با هر به‌روزرسانی آن را دانلود نکنند. بار اول که گزارش گرفته شود، کش می‌شود.
+      const ON_DEMAND_ONLY = /exceljs/i;
+      const files = new Set<string>(
+        Object.keys(bundle).filter((f) => !f.endsWith('.map') && !ON_DEMAND_ONLY.test(f))
+      );
       if (publicDir && existsSync(publicDir)) {
         const walk = (dir: string) => {
           for (const name of readdirSync(dir)) {

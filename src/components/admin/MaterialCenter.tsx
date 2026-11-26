@@ -1528,7 +1528,7 @@ export const MaterialCenter: React.FC<Props> = ({
                     : 'bg-canvas border-line text-ink-2'
                 }`}
               >
-                ۱. ارسال با پیک / اسنپ
+                1. ارسال با پیک / اسنپ
               </button>
               <button
                 type="button"
@@ -1539,7 +1539,7 @@ export const MaterialCenter: React.FC<Props> = ({
                     : 'bg-canvas border-line text-ink-2'
                 }`}
               >
-                ۲. تامین از انبار
+                2. تامین از انبار
               </button>
               <button
                 type="button"
@@ -1550,7 +1550,7 @@ export const MaterialCenter: React.FC<Props> = ({
                     : 'bg-canvas border-line text-ink-2'
                 }`}
               >
-                ۳. اعلام تاخیر در تامین
+                3. اعلام تاخیر در تامین
               </button>
             </div>
 
@@ -1612,7 +1612,7 @@ export const MaterialCenter: React.FC<Props> = ({
                       type="text"
                       value={ticketEstimatedDate}
                       onChange={(e) => setTicketEstimatedDate(e.target.value)}
-                      placeholder="مثال: فردا ساعت ۱۱ صبح / پس‌فردا"
+                      placeholder="مثال: فردا ساعت 11 صبح / پس‌فردا"
                       className="w-full text-xs p-2.5 rounded-xl border border-line bg-canvas text-ink focus:border-amber-500 focus:outline-none"
                     />
                   </div>

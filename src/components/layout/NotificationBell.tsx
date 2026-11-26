@@ -108,7 +108,7 @@ export const NotificationBell: React.FC<{ userId: string }> = ({ userId }) => {
         <Bell className="w-4 h-4" />
         {unread > 0 && (
           <span className="absolute -top-0.5 -left-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[11px] font-black flex items-center justify-center tabular-nums">
-            {unread > 99 ? '۹۹+' : toPersianDigits(unread)}
+            {unread > 99 ? '99+' : toPersianDigits(unread)}
           </span>
         )}
         {support === 'default' && unread === 0 && (

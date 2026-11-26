@@ -19,14 +19,13 @@ import {
   filterHistory,
   historyRangeBounds,
   HistoryRange,
-  historyToCsv,
   summarizeHistory,
   WAREHOUSE_EVENT_LABELS,
   WarehouseEvent,
   WarehouseEventKind,
 } from '../../utils/warehouseHistory';
 import { triggerToast } from '../Toast';
-import { downloadCsv, printHtmlReport } from '../../utils/reportExport';
+import { printHtmlReport } from '../../utils/reportExport';
 
 type KindGroup = 'ALL' | 'IN' | 'LOAD' | 'MATERIAL';
 
@@ -97,12 +96,32 @@ export const WarehouseHistory: React.FC<{
     `پاسخ به ارجاع‌های انبار: ${toPersianDigits(summary.byKind.TICKET_SUPPLY)}`,
   ];
 
-  const exportCsv = () => {
+  const [exporting, setExporting] = useState(false);
+  // فایل اکسل واقعی: خلاصه، همه‌ی رویدادها، ریز اقلام متریال، تحویل به اکیپ‌ها
+  const exportExcel = async () => {
     if (!events.length) {
       triggerToast('info', 'در این بازه موردی برای خروجی نیست.');
       return;
     }
-    downloadCsv(`گزارش-انبار-${bounds.label}`, historyToCsv(events));
+    setExporting(true);
+    try {
+      const { loadExcel, buildWarehouseWorkbook, downloadWorkbook } = await import('../../utils/xlsxReports');
+      const ExcelJS = await loadExcel();
+      const wb = buildWarehouseWorkbook(ExcelJS, {
+        title: `گزارش انبار — گالری طلایی${group !== 'ALL' ? ` — ${KIND_GROUPS[group].label}` : ''}`,
+        rangeLabel: bounds.label,
+        from: bounds.from,
+        to: bounds.to,
+        events,
+        summary,
+      });
+      await downloadWorkbook(wb, `گزارش-انبار-${bounds.label}`);
+      triggerToast('success', 'فایل اکسل گزارش انبار ساخته شد.');
+    } catch (err: any) {
+      triggerToast('error', `فایل اکسل ساخته نشد: ${err?.message || err}`);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const printReport = () => {
@@ -185,11 +204,12 @@ export const WarehouseHistory: React.FC<{
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={exportCsv}
-              className="flex-1 sm:flex-none min-h-[42px] px-3 rounded-lg border border-line bg-canvas hover:bg-raised text-ink text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              onClick={() => void exportExcel()}
+              disabled={exporting}
+              className="flex-1 sm:flex-none min-h-[42px] px-3 rounded-lg border border-emerald-600/50 bg-emerald-600/10 hover:bg-emerald-600/20 text-ink text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-              <span>خروجی اکسل</span>
+              <span>{exporting ? 'در حال ساخت…' : 'فایل اکسل'}</span>
             </button>
             <button
               type="button"

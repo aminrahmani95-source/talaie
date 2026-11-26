@@ -147,8 +147,8 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
       teamsWithMembers && teamsWithMembers.length > 0
         ? teamsWithMembers
         : [
-            { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
-            { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
+            { id: 'TEAM_1', name: 'اکیپ نصب 1', code: 'TEAM_1', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
+            { id: 'TEAM_2', name: 'اکیپ نصب 2', code: 'TEAM_2', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
           ];
     const rank = (p: Project) =>
       p.status === 'STUCK' ? 0 : p.status === 'IN_PROGRESS' || p.status === 'EN_ROUTE' ? 1 : p.status === 'PAUSED' ? 2 : 3;

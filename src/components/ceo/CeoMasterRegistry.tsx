@@ -395,7 +395,7 @@ const CeoMasterRegistryContent: React.FC<Props> = ({ currentUser, projects, user
                       className="px-3.5 py-1.5 bg-raised hover:bg-hover text-ink hover:text-brand-ink border border-line-strong hover:border-brand/40 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-xs"
                     >
                       <FileText className="w-3.5 h-3.5 text-brand-ink" />
-                      <span>مدارک و پرونده ۳۶۰°</span>
+                      <span>مدارک و پرونده 360°</span>
                     </button>
 
                     {/* Print Button (Gated strictly to QC approved + completed projects) */}
@@ -449,7 +449,7 @@ const CeoMasterRegistryContent: React.FC<Props> = ({ currentUser, projects, user
                   {/* Quality & Sign-off info */}
                   <div className="bg-canvas p-3 rounded-xl border border-line space-y-1">
                     <span className="text-ink-3 font-bold block">کیفیت و امضای مشتری:</span>
-                    {/* امتیاز فقط بعد از تأیید QC معنی دارد؛ قبلاً پروژه‌ی بررسی‌نشده ۵ از ۵ نشان داده می‌شد */}
+                    {/* امتیاز فقط بعد از تأیید QC معنی دارد؛ قبلاً پروژه‌ی بررسی‌نشده 5 از 5 نشان داده می‌شد */}
                     {p.qcStatus === 'APPROVED' && p.qcScore ? (
                       <div className="flex items-center gap-1">
                         {[1, 2, 3, 4, 5].map((s) => (
@@ -458,7 +458,7 @@ const CeoMasterRegistryContent: React.FC<Props> = ({ currentUser, projects, user
                             className={`w-3.5 h-3.5 ${p.qcScore! >= s ? 'text-brand-ink fill-brand' : 'text-ink-3'}`}
                           />
                         ))}
-                        <span className="font-bold text-ink mr-1">{toPersianDigits(p.qcScore)} از ۵</span>
+                        <span className="font-bold text-ink mr-1">{toPersianDigits(p.qcScore)} از 5</span>
                       </div>
                     ) : (
                       <p className="text-ink-3">هنوز ارزیابی QC نشده</p>

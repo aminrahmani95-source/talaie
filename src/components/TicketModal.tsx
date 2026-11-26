@@ -230,7 +230,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
 
         {/* Ticket Type Picker */}
         <div>
-          <span className="block text-xs font-bold text-ink mb-2">۱. نوع ایراد</span>
+          <span className="block text-xs font-bold text-ink mb-2">1. نوع ایراد</span>
           <div className="grid grid-cols-2 gap-1.5">
             {TICKET_TYPES.map((t) => {
               const isSelected = selectedType === t.type;
@@ -267,7 +267,7 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
         {/* Description */}
         <div>
           <label htmlFor="ticket-description" className="block text-xs font-bold text-ink mb-1.5">
-            ۲. چه شده؟ <span className="text-rose-400">*</span>
+            2. چه شده؟ <span className="text-rose-400">*</span>
           </label>
           <textarea
             id="ticket-description"
@@ -277,14 +277,14 @@ export const TicketModal: React.FC<Props> = ({ project, currentUser, onClose, on
               setDescription(e.target.value);
               setTicketError(null);
             }}
-            placeholder="مثلاً: پارچه شید لت سوم ۵ سانت پارگی دارد / ریل پنجره سمت راست ۱۵ سانت کوتاه است."
+            placeholder="مثلاً: پارچه شید لت سوم 5 سانت پارگی دارد / ریل پنجره سمت راست 15 سانت کوتاه است."
             className="w-full text-sm p-3 rounded-md border border-line bg-canvas text-ink placeholder:text-ink-3 focus:outline-none focus:border-brand transition"
           />
         </div>
 
         {/* Photo attachments */}
         <div>
-          <span className="block text-xs font-bold text-ink mb-2">۳. عکس (توصیه می‌شود)</span>
+          <span className="block text-xs font-bold text-ink mb-2">3. عکس (توصیه می‌شود)</span>
           <div className="flex flex-wrap gap-2 items-center">
             <PhotoSourceButtons onChange={handlePhotoUpload} busy={isProcessingPhotos} />
             {photos.map((p, idx) => (

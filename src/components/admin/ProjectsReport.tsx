@@ -13,11 +13,10 @@ import {
   REPORT_ROW_HEADERS,
   ReportGroup,
   reportRowCells,
-  reportToCsv,
   STUCK_CATEGORY_LABELS,
   summarizeReport,
 } from '../../utils/projectsReport';
-import { downloadCsv, printHtmlReport } from '../../utils/reportExport';
+import { printHtmlReport } from '../../utils/reportExport';
 import { StatusPill } from '../ui/StatusPill';
 import { triggerToast } from '../Toast';
 
@@ -27,7 +26,7 @@ const GROUPS: ReportGroup[] = ['ALL', 'DONE', 'STUCK', 'ACTIVE', 'PLANNED', 'CAN
 const PAGE = 30;
 
 function rangeBounds(r: Range, todayKey: string): { from?: string; to?: string; label: string } {
-  if (r === 'NEXT_7D') return { from: todayKey, to: addDaysToKey(todayKey, 6), label: '۷ روز آینده' };
+  if (r === 'NEXT_7D') return { from: todayKey, to: addDaysToKey(todayKey, 6), label: '7 روز آینده' };
   if (r === 'ALL') return { label: 'همه‌ی زمان‌ها' };
   return historyRangeBounds(r, todayKey);
 }
@@ -84,16 +83,45 @@ export const ProjectsReport: React.FC<{
       summary.stuckByCategory.length ? ` (${summary.stuckByCategory.map((c) => `${c.label} ${toPersianDigits(c.count)}`).join('، ')})` : ''
     }`,
     ...(summary.satisfactionCount
-      ? [`رضایت مشتری: ${toPersianDigits(summary.avgSatisfaction)} از ۵ (${toPersianDigits(summary.satisfactionCount)} نظر)`]
+      ? [`رضایت مشتری: ${toPersianDigits(summary.avgSatisfaction)} از 5 (${toPersianDigits(summary.satisfactionCount)} نظر)`]
       : []),
   ];
 
-  const exportCsv = () => {
+  const [exporting, setExporting] = useState(false);
+  // فایل اکسل واقعی با ۵ برگه: خلاصه، اکیپ‌ها، پروژه‌ها، توقف‌ها، روزبه‌روز
+  const exportExcel = async () => {
     if (!rows.length) {
       triggerToast('info', 'در این بازه پروژه‌ای برای خروجی نیست.');
       return;
     }
-    downloadCsv(title, reportToCsv(rows));
+    setExporting(true);
+    try {
+      const { loadExcel, buildProjectsWorkbook, downloadWorkbook } = await import('../../utils/xlsxReports');
+      const ExcelJS = await loadExcel();
+      const teamName = teamKey !== 'ALL' ? teamOptions.find(([k]) => k === teamKey)?.[1] : '';
+      const filtersText = [
+        group !== 'ALL' ? `وضعیت: ${REPORT_GROUP_LABELS[group]}` : '',
+        teamName ? `اکیپ: ${teamName}` : '',
+        query.trim() ? `جستجو: ${query.trim()}` : '',
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      const wb = buildProjectsWorkbook(ExcelJS, {
+        title: 'گزارش کلی پروژه‌ها — گالری طلایی',
+        rangeLabel: bounds.label,
+        from: bounds.from,
+        to: bounds.to,
+        filtersText,
+        rows,
+        summary,
+      });
+      await downloadWorkbook(wb, title);
+      triggerToast('success', 'فایل اکسل گزارش ساخته شد.');
+    } catch (err: any) {
+      triggerToast('error', `فایل اکسل ساخته نشد: ${err?.message || err}`);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const print = () => {
@@ -192,11 +220,12 @@ export const ProjectsReport: React.FC<{
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={exportCsv}
-              className="flex-1 sm:flex-none min-h-[42px] px-3 rounded-lg border border-line bg-canvas hover:bg-raised text-ink text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              onClick={() => void exportExcel()}
+              disabled={exporting}
+              className="flex-1 sm:flex-none min-h-[42px] px-3 rounded-lg border border-emerald-600/50 bg-emerald-600/10 hover:bg-emerald-600/20 text-ink text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-              <span>خروجی اکسل</span>
+              <span>{exporting ? 'در حال ساخت…' : 'فایل اکسل'}</span>
             </button>
             <button
               type="button"
@@ -271,7 +300,7 @@ export const ProjectsReport: React.FC<{
             )}
             {summary.satisfactionCount > 0 && (
               <p className="text-xs text-ink-2 pt-1 border-t border-line">
-                رضایت مشتری: <strong className="text-ink">{toPersianDigits(summary.avgSatisfaction)} از ۵</strong> ({toPersianDigits(summary.satisfactionCount)} نظر)
+                رضایت مشتری: <strong className="text-ink">{toPersianDigits(summary.avgSatisfaction)} از 5</strong> ({toPersianDigits(summary.satisfactionCount)} نظر)
               </p>
             )}
           </div>

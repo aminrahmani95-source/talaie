@@ -3,8 +3,9 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-body: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: 'TalaeiDigits', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-body: 'TalaeiDigits', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'TalaeiDigits', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
 /* ==========================================================================
@@ -141,6 +142,46 @@ html:not(.dark) {
   --color-fuchsia-950: oklch(97.7% 0.017 320.058);
 }
 
+
+/* همه‌ی ارقام برنامه لاتین نمایش داده می‌شوند، حتی عددهایی که با کیبورد فارسی تایپ و ذخیره شده‌اند
+   (آدرس، نام اکیپ‌های قدیمی، یادداشت‌ها). این فونت کوچک فقط برای ارقام فارسی/عربی (۰-۹ و ٠-٩) است
+   و شکل ارقام لاتین Vazirmatn را نشان می‌دهد؛ بقیه‌ی حروف از Vazirmatn می‌آیند. داده عوض نمی‌شود. */
+@font-face {
+  font-family: 'TalaeiDigits';
+  src: url('./assets/fonts/LatinDigits-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0660-0669, U+06F0-06F9;
+}
+
+@font-face {
+  font-family: 'TalaeiDigits';
+  src: url('./assets/fonts/LatinDigits-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0660-0669, U+06F0-06F9;
+}
+
+@font-face {
+  font-family: 'TalaeiDigits';
+  src: url('./assets/fonts/LatinDigits-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0660-0669, U+06F0-06F9;
+}
+
+@font-face {
+  font-family: 'TalaeiDigits';
+  src: url('./assets/fonts/LatinDigits-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0660-0669, U+06F0-06F9;
+}
+
 /* Official Vazirmatn Typeface - Local Bundled Fonts */
 @font-face {
   font-family: 'Vazirmatn';
@@ -180,11 +221,11 @@ html:not(.dark) {
   }
 
   *, ::before, ::after {
-    font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'TalaeiDigits', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   }
 
   html, body, button, input, select, textarea, div, span, p, h1, h2, h3, h4, h5, h6, table, tr, th, td, label {
-    font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    font-family: 'TalaeiDigits', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
     font-feature-settings: normal !important;
   }
 }
@@ -207,14 +248,14 @@ html {
 }
 
 html {
-  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-family: 'TalaeiDigits', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
   font-feature-settings: normal !important;
   direction: rtl;
   height: 100%;
 }
 
 body {
-  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-family: 'TalaeiDigits', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
   font-feature-settings: normal !important;
   margin: 0;
   padding: 0;

@@ -16,11 +16,11 @@ import {
  * توجه: این ضرایب ساختار شفاف اولیه هستند و تصویب نهایی آنها منوط به تایید مدیریت ارشد است.
  */
 export const PROVISIONAL_SCORING_WEIGHTS = {
-  LEVELING: 0.25,     // ۲۵٪ تراز و شاقول بودن
-  FABRIC_FINISH: 0.25, // ۲۵٪ کیفیت پارچه، عدم چروک و اتوکشی
-  MECHANICS: 0.20,    // ۲۰٪ حرکت مکانیکی، موتور و ریموت
-  CLEANLINESS: 0.15,  // ۱۵٪ نظافت کارگاه و حفاظت کف
-  COMPLIANCE: 0.15,   // ۱۵٪ انطباق با استاندارد و طرح مصوب
+  LEVELING: 0.25,     // 25٪ تراز و شاقول بودن
+  FABRIC_FINISH: 0.25, // 25٪ کیفیت پارچه، عدم چروک و اتوکشی
+  MECHANICS: 0.20,    // 20٪ حرکت مکانیکی، موتور و ریموت
+  CLEANLINESS: 0.15,  // 15٪ نظافت کارگاه و حفاظت کف
+  COMPLIANCE: 0.15,   // 15٪ انطباق با استاندارد و طرح مصوب
 } as const;
 
 /**
@@ -30,7 +30,7 @@ export const DEFAULT_QC_CHECKLIST_ITEMS: Omit<QCInspectionChecklistItem, 'passed
   {
     id: 'chk-leveling',
     category: 'LEVELING',
-    title: 'تراز لیزری ۳۶۰ درجه ریل، پایه‌ها و شاقول بودن کامل لت‌های پرده و شید',
+    title: 'تراز لیزری 360 درجه ریل، پایه‌ها و شاقول بودن کامل لت‌های پرده و شید',
   },
   {
     id: 'chk-fabric',
@@ -138,9 +138,9 @@ export function hasUnresolvedCriticalDefects(
 /**
  * بررسی انطباق پروژه با وضعیت «در انتظار بررسی کنترل کیفیت (QC)»
  * شرط یکپارچه و واحد در سراسر سامانه (میز کار، اعلان‌ها، میز کیفی و شناسنامه):
- * ۱. پروژه نباید لغو شده باشد (status !== 'CANCELLED')
- * ۲. نباید قبلاً تایید یا رد قطعی شده باشد (qcStatus !== 'APPROVED' && qcStatus !== 'REJECTED')
- * ۳. وضعیت عملیاتی آن اتمام‌یافته باشد یا پرچم کیفی آن در انتظار بررسی باشد (status === 'COMPLETED' || qcStatus === 'PENDING')
+ * 1. پروژه نباید لغو شده باشد (status !== 'CANCELLED')
+ * 2. نباید قبلاً تایید یا رد قطعی شده باشد (qcStatus !== 'APPROVED' && qcStatus !== 'REJECTED')
+ * 3. وضعیت عملیاتی آن اتمام‌یافته باشد یا پرچم کیفی آن در انتظار بررسی باشد (status === 'COMPLETED' || qcStatus === 'PENDING')
  */
 export function isAwaitingQc(p: Partial<Project> | null | undefined): boolean {
   if (!p || p.status === 'CANCELLED') return false;

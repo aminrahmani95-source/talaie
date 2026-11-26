@@ -15,11 +15,11 @@ const USERS_STORAGE_KEY = APP_STORAGE_KEYS.USERS;
 // مقادیر پیش‌فرض (فقط وقتی مدیر QC در تنظیمات چیزی تعیین نکرده باشد)
 export const MAX_LATHS_PER_TEAM = 20;
 export const TOTAL_INSTALLATION_TEAMS = 2;
-export const MAX_DAILY_COMPANY_LATHS = 40; // ۲ اکیپ × ۲۰ لت
+export const MAX_DAILY_COMPANY_LATHS = 40; // 2 اکیپ × 20 لت
 
 export const INSTALLATION_TEAMS = [
-  { id: 'TEAM_1', name: 'اکیپ نصب ۱', lead: '' },
-  { id: 'TEAM_2', name: 'اکیپ نصب ۲', lead: '' },
+  { id: 'TEAM_1', name: 'اکیپ نصب 1', lead: '' },
+  { id: 'TEAM_2', name: 'اکیپ نصب 2', lead: '' },
 ];
 
 // ============================================================================
@@ -34,7 +34,7 @@ export interface SalesCapacityConfig {
   lathsPerTeam: number;
   /** نام نمایشی اکیپ‌ها بر اساس شناسه (اختیاری؛ از فهرست اکیپ‌های واقعی) */
   teamNames?: Record<string, string>;
-  /** روزهای کاری هفته به شماره Date.getDay() (۵ = جمعه). همان تنظیمی که برنامه‌ریزی نصب استفاده می‌کند */
+  /** روزهای کاری هفته به شماره Date.getDay() (5 = جمعه). همان تنظیمی که برنامه‌ریزی نصب استفاده می‌کند */
   workingDays?: number[];
 }
 
@@ -48,7 +48,8 @@ export interface ResolvedSalesCapacity {
   teams: { id: string; name: string }[];
 }
 
-const PERSIAN_NUM = (n: number) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+// ارقام برنامه لاتین است (تصمیم سپهر)
+const PERSIAN_NUM = (n: number) => String(n);
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   const n = Math.round(Number(value));
@@ -325,7 +326,7 @@ export function getDailyCapacity(
 }
 
 /**
- * وضعیت ظرفیت روزانه از امروز تا ۹۰ روز آینده
+ * وضعیت ظرفیت روزانه از امروز تا 90 روز آینده
  */
 export function getThreeMonthCapacities(daysCount = 90): DailyLathCapacity[] {
   const upcomingDays = getUpcomingDays(daysCount);
@@ -357,8 +358,8 @@ export function calculateBookingOptions(
 
   // --------------------------------------------------------------------------
   // حالت اول: پخش بین چند اکیپ (SPREAD_DAILY)
-  // اگر تعداد لت <= ۴۰ باشد: در ۱ روز انجام می‌شود.
-  // اگر تعداد لت > ۴۰ باشد (مانند ۱۱۵ لت): بین اکیپ‌ها با سقف ۴۰ لت در روز پخش می‌شود.
+  // اگر تعداد لت <= 40 باشد: در 1 روز انجام می‌شود.
+  // اگر تعداد لت > 40 باشد (مانند 115 لت): بین اکیپ‌ها با سقف 40 لت در روز پخش می‌شود.
   // --------------------------------------------------------------------------
   let spreadOption: BookingOption;
 
@@ -389,7 +390,7 @@ export function calculateBookingOptions(
 
     spreadOption = {
       mode: 'SPREAD_DAILY',
-      title: `پخش همزمان بین ${spreadTeams.length > 1 ? `${spreadTeams.length} اکیپ` : 'اکیپ نصب'} در ۱ روز`,
+      title: `پخش همزمان بین ${spreadTeams.length > 1 ? `${spreadTeams.length} اکیپ` : 'اکیپ نصب'} در 1 روز`,
       description: isSpreadAvailable
         ? `انجام کامل کار در روز ${currentCapacity.dayName} با همکاری ${spreadTeams.map((t) => t.teamName).join(' و ')}`
         : `ظرفیت خالی این روز (${currentCapacity.remainingLaths} لت) کمتر از ${lathsCount} لت درخواستی است.`,
@@ -405,7 +406,7 @@ export function calculateBookingOptions(
       ],
     };
   } else {
-    // سناریوی لت‌های بالا (> ۴۰ لت، مانند ۱۱۵ لت) با بسیج اکیپ‌ها و سقف روزانه ۴۰ لت
+    // سناریوی لت‌های بالا (> 40 لت، مانند 115 لت) با بسیج اکیپ‌ها و سقف روزانه 40 لت
     const spreadDaysNeeded = Math.ceil(lathsCount / cap.dailyTotal);
     let remLaths = lathsCount;
     let spreadMultiFit = true;
@@ -557,8 +558,8 @@ export function createSalesBooking(
 
 /**
  * بررسی دسترسی ویرایش رزرو فروش:
- * ۱. مدیرعامل دسترسی کامل دارد.
- * ۲. کارشناس فروش فقط مجاز به ویرایش رزروهای ثبت‌شده توسط خودش می‌باشد.
+ * 1. مدیرعامل دسترسی کامل دارد.
+ * 2. کارشناس فروش فقط مجاز به ویرایش رزروهای ثبت‌شده توسط خودش می‌باشد.
  */
 export function canEditSalesBooking(user: User, booking: SalesProjectBooking): boolean {
   if (!user || !user.active) return false;

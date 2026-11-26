@@ -29,7 +29,7 @@ export const capacityUnits = (c: Partial<ProductCounts>) =>
       (c.curtain || 0) * CAPACITY_WEIGHTS.curtain
   );
 
-/** خلاصه‌ی خوانا مثل «۱۰ شید • ۲ ریل • ۴ پرده» (صفرها نمایش داده نمی‌شوند) */
+/** خلاصه‌ی خوانا مثل «10 شید • 2 ریل • 4 پرده» (صفرها نمایش داده نمی‌شوند) */
 export function formatProductCounts(c: Partial<ProductCounts>): string {
   const parts: string[] = [];
   if (c.shade) parts.push(`${toPersianDigits(c.shade)} شید`);

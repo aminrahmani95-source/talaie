@@ -104,10 +104,10 @@ export const COMMON_MATERIAL_SUGGESTIONS: Array<{ title: string; category: Mater
   { title: 'براکت دوبل شید و تور', category: 'HARDWARE', unit: 'عدد' },
   { title: 'گیربکس دستی شید با زنجیر', category: 'HARDWARE', unit: 'عدد' },
   { title: 'زنجیر فلزی استیل یدک', category: 'HARDWARE', unit: 'متر' },
-  { title: 'موتور ۳۵ سامفی برقی', category: 'MOTOR', unit: 'دستگاه' },
-  { title: 'موتور ۴۵ کرکره / شید سنگین', category: 'MOTOR', unit: 'دستگاه' },
+  { title: 'موتور 35 سامفی برقی', category: 'MOTOR', unit: 'دستگاه' },
+  { title: 'موتور 45 کرکره / شید سنگین', category: 'MOTOR', unit: 'دستگاه' },
   { title: 'ریموت تک‌کاناله سامفی', category: 'MOTOR', unit: 'دستگاه' },
-  { title: 'ریموت ۵ کاناله سامفی', category: 'MOTOR', unit: 'دستگاه' },
+  { title: 'ریموت 5 کاناله سامفی', category: 'MOTOR', unit: 'دستگاه' },
   { title: 'ریل آلومینیومی باریک', category: 'PROFILE_TRACK', unit: 'شاخه' },
   { title: 'ریل گریبر گری استاندارد', category: 'PROFILE_TRACK', unit: 'شاخه' },
   { title: 'نوار سربی پرده (وزنه پایین)', category: 'ACCESSORY', unit: 'متر' },
@@ -237,7 +237,7 @@ export interface ConfirmReceiptOptions {
 /**
  * مجوز تایید دریافت اقلام در محل کارگاه
  * اصل امنیتی Fail-Closed: تایید تحویل فیزیکی اقلام منحصراً متعلق به تکنسین‌های حاضر در کارگاه است.
- * مدیران تنها در صورت تعیین صریح isManagementOverride و ذکر دلیل معتبر (حداقل ۵ کاراکتر) مجاز به تایید هستند.
+ * مدیران تنها در صورت تعیین صریح isManagementOverride و ذکر دلیل معتبر (حداقل 5 کاراکتر) مجاز به تایید هستند.
  */
 export function canConfirmMaterialReceipt(
   user: User,
@@ -580,7 +580,7 @@ export function cancelMaterialRequestPayload(
 
   const trimmedReason = reason.trim();
   if (!trimmedReason || trimmedReason.length < 3) {
-    throw new Error('علت لغو درخواست باید حداقل شامل ۳ کاراکتر باشد.');
+    throw new Error('علت لغو درخواست باید حداقل شامل 3 کاراکتر باشد.');
   }
 
   const now = new Date().toISOString();

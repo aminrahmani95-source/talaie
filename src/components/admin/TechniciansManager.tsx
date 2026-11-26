@@ -362,10 +362,10 @@ export const TechniciansManager: React.FC<Props> = ({
   };
 
   const defaultTeams: InstallationTeam[] = [
-    { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', createdAt: '', updatedAt: '' },
-    { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', createdAt: '', updatedAt: '' },
-    { id: 'TEAM_3', name: 'اکیپ نصب ۳', code: 'TEAM_3', createdAt: '', updatedAt: '' },
-    { id: 'TEAM_4', name: 'اکیپ نصب ۴', code: 'TEAM_4', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_1', name: 'اکیپ نصب 1', code: 'TEAM_1', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_2', name: 'اکیپ نصب 2', code: 'TEAM_2', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_3', name: 'اکیپ نصب 3', code: 'TEAM_3', createdAt: '', updatedAt: '' },
+    { id: 'TEAM_4', name: 'اکیپ نصب 4', code: 'TEAM_4', createdAt: '', updatedAt: '' },
   ];
   // Sample teams only without a server: on a server their made-up ids cannot take members,
   // so an empty list there shows the «اکیپ جدید» button instead.
@@ -479,7 +479,7 @@ export const TechniciansManager: React.FC<Props> = ({
           {onCreateTeam && !readOnly && (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-ink-3">
-                {toPersianDigits(effectiveTeams.length)} اکیپ تعریف شده · هر اکیپ یک سرپرست و حداکثر ۲ تکنسین
+                {toPersianDigits(effectiveTeams.length)} اکیپ تعریف شده · هر اکیپ یک سرپرست و حداکثر 2 تکنسین
               </p>
               <Button
                 variant="secondary"

@@ -504,7 +504,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
                                 />
                               ))}
                             </div>
-                            <span className="font-bold text-ink font-mono">{toPersianDigits(project.qcScore)} از ۵</span>
+                            <span className="font-bold text-ink font-mono">{toPersianDigits(project.qcScore)} از 5</span>
                           </>
                         ) : (
                           <span className="text-ink-3">هنوز ارزیابی نشده</span>
@@ -637,7 +637,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
                       date: project.qcReviewedAt,
                       done: isQcApprovedAndCompleted,
                       desc: isQcApprovedAndCompleted
-                        ? `تایید رسمی کنترل کیفی${project.qcScore ? ` با امتیاز ${toPersianDigits(project.qcScore)} از ۵` : ''}`
+                        ? `تایید رسمی کنترل کیفی${project.qcScore ? ` با امتیاز ${toPersianDigits(project.qcScore)} از 5` : ''}`
                         : 'در صف بررسی و تایید کیفی مدیر QC',
                     },
                   ].map((step, sIdx) => (

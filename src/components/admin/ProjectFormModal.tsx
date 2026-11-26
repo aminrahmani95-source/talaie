@@ -610,7 +610,7 @@ export const ProjectFormModal: React.FC<Props> = ({
           className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4"
           noValidate
         >
-          {/* ۱. مشتری و محل نصب */}
+          {/* 1. مشتری و محل نصب */}
           <section className={sectionCls}>
             <h4 className={sectionTitleCls}>
               {stepBadge(1)}
@@ -733,7 +733,7 @@ export const ProjectFormModal: React.FC<Props> = ({
             </div>
           </section>
 
-          {/* ۲. زمان و اکیپ */}
+          {/* 2. زمان و اکیپ */}
           <section className={sectionCls}>
             <h4 className={sectionTitleCls}>
               {stepBadge(2)}
@@ -946,7 +946,7 @@ export const ProjectFormModal: React.FC<Props> = ({
             </div>
           </section>
 
-          {/* ۳. مشخصات فنی و مدارک */}
+          {/* 3. مشخصات فنی و مدارک */}
           <section className={sectionCls}>
             <h4 className={sectionTitleCls}>
               {stepBadge(3)}
@@ -1087,7 +1087,7 @@ export const ProjectFormModal: React.FC<Props> = ({
             </div>
           </section>
 
-          {/* ۴. انبار — وضعیت زنده‌ی همان پروژه در میز انبار */}
+          {/* 4. انبار — وضعیت زنده‌ی همان پروژه در میز انبار */}
           {(() => {
             const formCounts = { shade: Number(shadePanels) || 0, rail: Number(railCount) || 0, curtain: Number(curtainPanels) || 0 };
             const prep = liveProject?.warehousePrep;
@@ -1209,7 +1209,7 @@ export const ProjectFormModal: React.FC<Props> = ({
             );
           })()}
 
-          {/* ۵. ابزار — پیش‌فرض فول ابزار است؛ فقط در صورت نیاز باز می‌شود */}
+          {/* 5. ابزار — پیش‌فرض فول ابزار است؛ فقط در صورت نیاز باز می‌شود */}
           <details className="group bg-sunken border border-line rounded-lg">
             <summary className="list-none cursor-pointer p-4 flex items-center justify-between gap-2 select-none">
               <span className={sectionTitleCls}>

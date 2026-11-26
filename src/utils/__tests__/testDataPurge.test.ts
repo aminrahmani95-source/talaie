@@ -97,7 +97,7 @@ describe('Clean Production Slate & Test Data Purge Verification', () => {
 
     INSTALLATION_TEAMS.forEach((t) => {
       expect(t.lead).toBe('');
-      expect(t.name).toMatch(/^اکیپ نصب [۱-۲]/);
+      expect(t.name).toMatch(/^اکیپ نصب [1-2]/);
     });
   });
 

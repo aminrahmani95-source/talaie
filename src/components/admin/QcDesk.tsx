@@ -704,7 +704,7 @@ export const QcDesk: React.FC<Props> = ({
                       {acceptance?.representativeRole ? ` (${acceptance.representativeRole})` : ''}
                     </div>
                     {selectedProject.customerSatisfaction ? (
-                      <div className="flex items-center gap-0.5" aria-label={`رضایت ${selectedProject.customerSatisfaction} از ۵`}>
+                      <div className="flex items-center gap-0.5" aria-label={`رضایت ${selectedProject.customerSatisfaction} از 5`}>
                         {[1, 2, 3, 4, 5].map((s) => (
                           <Star
                             key={s}
@@ -1082,10 +1082,10 @@ export const QcDesk: React.FC<Props> = ({
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-ink flex items-center gap-1.5">
                   <SlidersHorizontal className="w-3.5 h-3.5 text-brand-ink" />
-                  <span>امتیاز کیفیت (۱ تا ۵):</span>
+                  <span>امتیاز کیفیت (1 تا 5):</span>
                 </label>
                 <div className="text-xs bg-sunken px-2.5 py-1 rounded-lg border border-brand/30 font-bold text-brand-ink">
-                  نمره: {toPersianDigits(calculateQualityScore(qualityCriteria).overallScore)} از ۵
+                  نمره: {toPersianDigits(calculateQualityScore(qualityCriteria).overallScore)} از 5
                 </div>
               </div>
 

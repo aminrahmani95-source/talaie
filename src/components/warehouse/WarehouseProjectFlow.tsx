@@ -652,7 +652,7 @@ export const WarehouseProjectFlow: React.FC<Props> = ({
             type="text"
             value={shelf}
             onChange={(e) => setShelf(e.target.value)}
-            placeholder="جای کالا در انبار (اختیاری)، مثلاً ردیف B قفسه ۴"
+            placeholder="جای کالا در انبار (اختیاری)، مثلاً ردیف B قفسه 4"
             aria-label="جای کالا در انبار"
             className={inputCls}
           />
@@ -660,7 +660,7 @@ export const WarehouseProjectFlow: React.FC<Props> = ({
             rows={2}
             value={receiptNotes}
             onChange={(e) => setReceiptNotes(e.target.value)}
-            placeholder={hasShortage ? 'بقیه‌ی بار کی می‌رسد؟ (برای تأیید با کسری الزامی)' : 'یادداشت (اختیاری)، مثلاً ۲ کارتن ریل + ۳ بسته پارچه'}
+            placeholder={hasShortage ? 'بقیه‌ی بار کی می‌رسد؟ (برای تأیید با کسری الزامی)' : 'یادداشت (اختیاری)، مثلاً 2 کارتن ریل + 3 بسته پارچه'}
             aria-label="یادداشت ورود کالا"
             className={`${inputCls} resize-none`}
           />
@@ -783,7 +783,7 @@ export const WarehouseProjectFlow: React.FC<Props> = ({
             type="text"
             value={packNotes}
             onChange={(e) => setPackNotes(e.target.value)}
-            placeholder="یادداشت بار (اختیاری)، مثلاً ۳ کارتن + ریل جدا"
+            placeholder="یادداشت بار (اختیاری)، مثلاً 3 کارتن + ریل جدا"
             aria-label="یادداشت بار"
             className={inputCls}
           />

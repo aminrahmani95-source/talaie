@@ -31,7 +31,7 @@ export function missingBeforeDispatch(p: Project): string[] {
   ].filter(Boolean);
 }
 
-/** مهلت ۷۲ ساعته‌ی آخرین توقف باز */
+/** مهلت 72 ساعته‌ی آخرین توقف باز */
 export function stuckSla(p: Project, now = Date.now()): { hoursLeft: number; overdue: boolean; text: string } | null {
   const list = stuckIncidentsOf(p);
   const inc = list[list.length - 1];

@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { defaultTeamName, nextTeamCode } from './teamNaming';
 
 describe('teamNaming', () => {
-  it('names TEAM_n teams with Persian digits', () => {
-    expect(defaultTeamName('TEAM_3')).toBe('اکیپ نصب ۳');
-    expect(defaultTeamName('TEAM_12')).toBe('اکیپ نصب ۱۲');
+  it('names TEAM_n teams with Latin digits', () => {
+    expect(defaultTeamName('TEAM_3')).toBe('اکیپ نصب 3');
+    expect(defaultTeamName('TEAM_12')).toBe('اکیپ نصب 12');
   });
   it('keeps unknown codes visible', () => {
     expect(defaultTeamName('NORTH')).toBe('اکیپ نصب (NORTH)');

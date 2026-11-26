@@ -191,7 +191,7 @@ export function formatDuration(startedAt?: string, completedAt?: string): string
   return `${toPersianDigits(hours)} ساعت و ${toPersianDigits(minutes)} دقیقه`;
 }
 
-// Format time only (e.g. 09:30 -> ۰۹:۳۰) from ISO timestamp
+// Format time only (e.g. 09:30 -> 09:30) from ISO timestamp
 export function formatTimeOnly(isoOrDate?: string | Date): string {
   if (!isoOrDate) return '';
   const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;
@@ -201,7 +201,7 @@ export function formatTimeOnly(isoOrDate?: string | Date): string {
   return toPersianDigits(`${h}:${m}`);
 }
 
-// Format full Jalali date and time (e.g. ۱۴۰۵/۰۸/۰۸ ۰۹:۳۰)
+// Format full Jalali date and time (e.g. 1405/08/08 09:30)
 export function formatJalaliDateTime(isoOrDate?: string | Date, fallback = '—'): string {
   if (!isoOrDate) return fallback;
   const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;

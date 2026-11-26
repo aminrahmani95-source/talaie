@@ -54,6 +54,8 @@ export interface WarehouseEvent {
   counts?: WarehouseCounts;
   /** تعداد اقلام متریال ارسالی (جمع عددها) */
   materialQty?: number;
+  /** ریز اقلام ارسال متریال (برای برگه‌ی اکسل) */
+  items?: Array<{ title: string; qty: number; unit: string }>;
   notes?: string;
   /** وضعیت تکمیلی، مثل «تحویل در کارگاه تأیید شد» */
   status?: string;
@@ -168,6 +170,11 @@ export function buildWarehouseHistory(
           .map((i) => `${titleOf(i.itemId, i.title)} ${i.dispatchedQty}${unitOf(i.itemId, i.unit) ? ` ${unitOf(i.itemId, i.unit)}` : ''}`)
           .join('، '),
         materialQty: d.items.reduce((s, i) => s + (Number(i.dispatchedQty) || 0), 0),
+        items: d.items.map((i) => ({
+          title: titleOf(i.itemId, i.title),
+          qty: Number(i.dispatchedQty) || 0,
+          unit: unitOf(i.itemId, i.unit),
+        })),
         notes: d.notes || r.notes || undefined,
         status: d.receivedAtSiteConfirmed ? 'تحویل در کارگاه تأیید شد' : 'در مسیر کارگاه',
         warn: !d.receivedAtSiteConfirmed,
@@ -223,7 +230,7 @@ export function historyRangeBounds(range: HistoryRange, todayKey: string): { fro
     case 'TODAY':
       return { from: todayKey, to: todayKey, label: `امروز ${formatJalali(todayKey)}` };
     case '7D':
-      return { from: addDaysToKey(todayKey, -6), to: todayKey, label: '۷ روز اخیر' };
+      return { from: addDaysToKey(todayKey, -6), to: todayKey, label: '7 روز اخیر' };
     case 'MONTH':
       return { ...jalaliMonthBounds(jy, jm), label: `${PERSIAN_MONTH_NAMES[jm - 1]} ${jy}` };
     case 'PREV_MONTH': {

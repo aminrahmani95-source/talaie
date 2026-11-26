@@ -637,7 +637,7 @@ describe('Material Requests Domain Logic (Phase P2.3-R1 Hardened)', () => {
       });
 
       expect(() => cancelMaterialRequestPayload(req, mockTechUser, 'نه')).toThrow(
-        /علت لغو درخواست باید حداقل شامل ۳ کاراکتر باشد/
+        /علت لغو درخواست باید حداقل شامل 3 کاراکتر باشد/
       );
     });
   });

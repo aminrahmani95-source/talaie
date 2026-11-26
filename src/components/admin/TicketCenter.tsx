@@ -237,7 +237,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
       {/* Page Header */}
       <PageHeader
         title="تیکت‌ها"
-        subtitle={`مهلت پاسخ ۷۲ ساعت${
+        subtitle={`مهلت پاسخ 72 ساعت${
           resolvedCount > 0
             ? ` · ${toPersianDigits(Math.round(slaMetrics.onTimeRate))}٪ در مهلت · میانگین حل ${toPersianDigits(slaMetrics.averageResolutionHours.toFixed(1))} ساعت`
             : ''
@@ -252,7 +252,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
           className="w-full text-right p-3 rounded-lg border border-rose-500/40 bg-rose-500/10 text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2 cursor-pointer"
         >
           <AlertOctagon className="w-4 h-4 shrink-0" />
-          {toPersianDigits(slaMetrics.openOverdue)} تیکت از مهلت ۷۲ ساعته گذشته است
+          {toPersianDigits(slaMetrics.openOverdue)} تیکت از مهلت 72 ساعته گذشته است
         </button>
       )}
 
@@ -516,7 +516,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                               setReferralNoteText(e.target.value);
                               if (referralError) setReferralError('');
                             }}
-                            placeholder="مثال: کسری ۲ عدد براکت و رول پارچه - لطفاً سریعاً با پیک اسنپ به آدرس پروژه ارسال شود..."
+                            placeholder="مثال: کسری 2 عدد براکت و رول پارچه - لطفاً سریعاً با پیک اسنپ به آدرس پروژه ارسال شود..."
                             className="w-full text-xs p-2.5 rounded-md border border-line bg-canvas text-ink focus:border-purple-500 focus:outline-none"
                           />
                           {referralError && (

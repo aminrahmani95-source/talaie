@@ -20,8 +20,8 @@ export const TEST_USERS: User[] = [
 ];
 
 export const DEFAULT_TEAMS: InstallationTeam[] = [
-  { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
-  { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+  { id: 'TEAM_1', name: 'اکیپ نصب 1', code: 'TEAM_1', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+  { id: 'TEAM_2', name: 'اکیپ نصب 2', code: 'TEAM_2', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
 ];
 
 export const DEFAULT_TEAM_MEMBERS: TeamMember[] = [];

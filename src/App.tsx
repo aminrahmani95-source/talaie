@@ -61,6 +61,7 @@ import {
 } from './utils/materialRequests';
 import { createDefectResolutionPayload } from './utils/qcWorkflow';
 import { getDisplayName } from './utils/technicianName';
+import { reportClientError, describeError } from './utils/errorReporter';
 import { buildWarehousePatch, WarehouseAction } from './utils/warehouseStatus';
 import { autoResolveStuckPatch } from './utils/stuck';
 import { localDateKey, toPersianDigits } from './utils/jalali';
@@ -966,6 +967,12 @@ export const App: React.FC = () => {
           try {
             validateProjectPatchRoleGuards(currentUser, currentProject, patch, currentUser.teamId);
           } catch (err: any) {
+            reportClientError({
+              context: 'BLOCKED_PATCH_PROJECT',
+              projectId,
+              message: err?.message || 'خطای عدم دسترسی نقش.',
+              details: { role: currentUser.role, status: currentProject.status, fields: Object.keys(patch || {}).slice(0, 25) },
+            });
             showToast('error', err.message || 'خطای عدم دسترسی نقش.');
             return false;
           }
@@ -1056,6 +1063,13 @@ export const App: React.FC = () => {
       return true;
     } catch (err: any) {
       console.error('Outbox commit error:', err);
+      const d = describeError(err);
+      reportClientError({
+        context: `LOCAL_SAVE_${mutation.type}`,
+        projectId: mutation.orderingKey.startsWith('project:') ? mutation.orderingKey.slice('project:'.length) : null,
+        message: d.message,
+        details: { name: d.name, code: d.code },
+      });
       showToast('error', 'خطا در ذخیره‌سازی محلی تغییرات. لطفاً مجدداً تلاش نمایید.');
       throw err;
     }
