@@ -33,7 +33,7 @@ import { PageHeader } from '../ui/PageHeader';
 import { Button } from '../ui/Button';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { StatusPill } from '../ui/StatusPill';
-import { isProjectScheduledOnDate, getMultiDayProgress, isProjectMultiDay } from '../../utils/multiDay';
+import { isProjectScheduledOnDate, getMultiDayProgress, isProjectMultiDay, isContiguousDays, hasCustomScheduleDays, getProjectScheduleDays, scheduleDayLabel } from '../../utils/multiDay';
 import {
   detectScheduleConflicts,
   calculateTeamDayLoad,
@@ -933,6 +933,12 @@ export const MonthPlanner: React.FC<Props> = ({
                 </select>
               </div>
 
+              {hasCustomScheduleDays(proposingProject) && (
+                <p className="text-[11px] leading-5 rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300 px-2 py-1.5">
+                  این پروژه در روزهای انتخابی اجرا می‌شود ({getProjectScheduleDays(proposingProject).map((d) => scheduleDayLabel(d)).join('، ')}). اگر تاریخ شروع یا پایان عوض شود، بعد از تأیید روزها پشت سر هم حساب می‌شوند و مدیر QC باید روزها را دوباره در فرم پروژه انتخاب کند.
+                </p>
+              )}
+
               {isProjectMultiDay(proposingProject) && (
                 <div>
                   <label className="block text-xs font-semibold text-ink mb-1">
@@ -1110,11 +1116,14 @@ export const MonthPlanner: React.FC<Props> = ({
             const booking = assigningBooking;
             const daysCount = Math.max(1, Number(booking.allocatedDaysCount) || 1);
             let endDate: string | undefined;
+            let scheduledDays: string[] | undefined;
             if (daysCount > 1) {
               // روزهای کاری، مثل تقویم فروش (کار دوروزه‌ای که پنجشنبه شروع می‌شود، جمعه تمام نمی‌شود)
               const span = workingDaysFrom(scheduledDate, daysCount);
               if (span.length) {
                 endDate = span[span.length - 1];
+                // اگر جمعه یا تعطیلی وسط کار افتاد، همان روزهای کاری ثبت می‌شود (جمعه جزو کار نیست)
+                if (!isContiguousDays(span)) scheduledDays = span;
               } else {
                 const end = new Date(scheduledDate + 'T00:00:00Z');
                 end.setUTCDate(end.getUTCDate() + daysCount - 1);
@@ -1141,6 +1150,7 @@ export const MonthPlanner: React.FC<Props> = ({
                 assignedTeamId: teamId,
                 assignedTeamName: teamName,
                 endDate,
+                scheduledDays,
                 status: 'SCHEDULED',
               },
               (project) => {

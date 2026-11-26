@@ -8,7 +8,7 @@ import {
 import {
   isProjectScheduledOnDate,
   isProjectMultiDay,
-  getMultiDayDateRange,
+  getProjectScheduleDays,
 } from './multiDay';
 
 const TEAM_DATE_SEP = '::';
@@ -160,8 +160,8 @@ export function getProjectDailyDurationHours(
     return project.scheduledDate === dateKey ? project.requiredDurationHours : 0;
   }
 
-  // Multi-day project:
-  const range = getMultiDayDateRange(project.scheduledDate, project.endDate);
+  // Multi-day project (روزهای پشت سر هم یا روزهای انتخابی):
+  const range = getProjectScheduleDays(project);
   if (!range.includes(dateKey)) {
     return 0;
   }
@@ -340,9 +340,7 @@ export function detectScheduleConflicts(
     }
 
     // Populate team assignments across the project dates
-    const dateRange = isMultiDayProject(p) && p.endDate
-      ? getMultiDayDateRange(p.scheduledDate, p.endDate)
-      : [p.scheduledDate];
+    const dateRange = getProjectScheduleDays(p);
 
     for (const d of dateRange) {
       if (!d) continue;

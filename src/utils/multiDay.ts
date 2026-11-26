@@ -1,12 +1,12 @@
 import { Project, WorkSession } from '../types';
-import { toPersianDigits, localDateKey } from './jalali';
+import { toPersianDigits, localDateKey, gregorianToJalali, PERSIAN_MONTH_NAMES, PERSIAN_WEEK_DAYS } from './jalali';
 
 /**
  * Checks if a project is configured as a multi-day installation.
  * A project is multi-day if it has an endDate and endDate > scheduledDate.
  */
 export function isProjectMultiDay(
-  project?: Pick<Project, 'scheduledDate' | 'endDate'> | null
+  project?: ScheduleLike | null
 ): boolean {
   if (!project || !project.endDate || !project.scheduledDate) return false;
   return project.endDate > project.scheduledDate;
@@ -43,25 +43,91 @@ export function getMultiDayDateRange(scheduledDate: string, endDate: string): st
  * Returns total days count for a project (1 for single-day, >= 2 for multi-day).
  */
 export function getMultiDayTotalDays(
-  scheduledDateOrProject: string | Pick<Project, 'scheduledDate' | 'endDate'>,
+  scheduledDateOrProject: string | ScheduleLike,
   endDate?: string
 ): number {
   if (typeof scheduledDateOrProject === 'object' && scheduledDateOrProject !== null) {
-    return getMultiDayTotalDays(scheduledDateOrProject.scheduledDate, scheduledDateOrProject.endDate);
+    return Math.max(1, getProjectScheduleDays(scheduledDateOrProject).length);
   }
   const scheduledDate = scheduledDateOrProject;
   if (!endDate || endDate <= scheduledDate) return 1;
   return Math.max(1, getCalendarDayDiff(scheduledDate, endDate) + 1);
 }
 
+// ---------------------------------------------------------------------------
+// روزهای انتخابی (غیرپشت‌سرهم): مثلاً شنبه و چهارشنبه، بدون یکشنبه تا سه‌شنبه
+// ---------------------------------------------------------------------------
+
+/** پروژه با فیلد اختیاری روزهای انتخابی */
+export type ScheduleLike = Pick<Project, 'scheduledDate' | 'endDate'> & { scheduledDays?: string[] | null };
+
+const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** فهرست مرتب و بدون تکرار از تاریخ‌های معتبر YYYY-MM-DD */
+export function normalizeScheduleDays(days: unknown): string[] {
+  if (!Array.isArray(days)) return [];
+  return [...new Set(days.filter((d): d is string => typeof d === 'string' && DATE_KEY.test(d)))].sort();
+}
+
+/** آیا روزها پشت سر هم‌اند (هیچ روز تقویمی بینشان جا نیفتاده) */
+export function isContiguousDays(days: string[]): boolean {
+  for (let i = 1; i < days.length; i++) {
+    if (getCalendarDayDiff(days[i - 1], days[i]) !== 1) return false;
+  }
+  return true;
+}
+
+/**
+ * روزهای انتخابی پروژه فقط وقتی معتبرند که با تاریخ شروع و پایان بخوانند. اگر تاریخ پروژه
+ * از راه دیگری عوض شود (درخواست تغییر برنامه، انتقال اکیپ)، روزهای قدیمی خودبه‌خود کنار
+ * می‌روند و پروژه به بازه‌ی پشت سر هم برمی‌گردد؛ هیچ‌وقت روزی نشان داده نمی‌شود که بیرون از
+ * تاریخ شروع و پایان ثبت‌شده باشد.
+ */
+function validCustomDays(project: ScheduleLike): string[] | null {
+  if (!project.scheduledDate) return null;
+  const custom = normalizeScheduleDays(project.scheduledDays);
+  if (custom.length < 2) return null;
+  const end = project.endDate && project.endDate > project.scheduledDate ? project.endDate : project.scheduledDate;
+  if (custom[0] !== project.scheduledDate || custom[custom.length - 1] !== end) return null;
+  return custom;
+}
+
+/** آیا پروژه روزهای انتخابی (با فاصله) دارد */
+export function hasCustomScheduleDays(project?: ScheduleLike | null): boolean {
+  if (!project) return false;
+  const custom = validCustomDays(project);
+  return Boolean(custom && !isContiguousDays(custom));
+}
+
+/** همه‌ی روزهای اجرای پروژه: روزهای انتخابی، یا بازه‌ی شروع تا پایان، یا فقط روز شروع */
+export function getProjectScheduleDays(project?: ScheduleLike | null): string[] {
+  if (!project?.scheduledDate) return [];
+  const custom = validCustomDays(project);
+  if (custom) return custom;
+  if (isProjectMultiDay(project)) return getMultiDayDateRange(project.scheduledDate, project.endDate as string);
+  return [project.scheduledDate];
+}
+
+/** «شنبه 8 آذر» برای یک تاریخ YYYY-MM-DD */
+export function scheduleDayLabel(key: string): string {
+  const d = new Date(`${key}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return key;
+  const { jm, jd } = gregorianToJalali(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
+  return `${PERSIAN_WEEK_DAYS[d.getUTCDay()]} ${jd} ${PERSIAN_MONTH_NAMES[jm - 1]}`;
+}
+
+/** روز اجرای بعدی بعد از یک تاریخ (برای «ادامه در ...») */
+export function nextScheduleDayAfter(project: ScheduleLike, dateKey: string): string | null {
+  return getProjectScheduleDays(project).find((d) => d > dateKey) || null;
+}
+
 /**
  * Determines whether a project should appear on a given dateKey (YYYY-MM-DD).
  */
-export function isProjectScheduledOnDate(
-  project: Pick<Project, 'scheduledDate' | 'endDate'>,
-  dateKey: string
-): boolean {
+export function isProjectScheduledOnDate(project: ScheduleLike, dateKey: string): boolean {
   if (!project.scheduledDate || !dateKey) return false;
+  const custom = validCustomDays(project);
+  if (custom) return custom.includes(dateKey);
   if (isProjectMultiDay(project)) {
     return dateKey >= project.scheduledDate && dateKey <= (project.endDate as string);
   }
@@ -78,12 +144,13 @@ export interface MultiDayProgress {
  * Computes the multi-day badge «روز 2 از 3» for a given view date or today.
  */
 export function getMultiDayProgress(
-  project: Pick<Project, 'scheduledDate' | 'endDate'>,
+  project: ScheduleLike,
   viewDateKey?: string
 ): MultiDayProgress | null {
   if (!isProjectMultiDay(project)) return null;
 
-  const totalDays = getMultiDayTotalDays(project.scheduledDate, project.endDate);
+  const days = getProjectScheduleDays(project);
+  const totalDays = Math.max(1, days.length);
   const refDate = viewDateKey || localDateKey();
 
   if (refDate > (project.endDate as string)) {
@@ -94,7 +161,8 @@ export function getMultiDayProgress(
     };
   }
 
-  const offset = getCalendarDayDiff(project.scheduledDate, refDate) + 1;
+  // روز چندم: تعداد روزهای اجرای تا امروز (روزهای بین روزهای انتخابی شمرده نمی‌شوند)
+  const offset = days.filter((d) => d <= refDate).length;
   const currentDay = Math.min(Math.max(1, offset), totalDays);
 
   return {

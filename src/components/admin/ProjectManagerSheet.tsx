@@ -37,7 +37,7 @@ import {
 } from '../../utils/managerActions';
 import { formatAuditDiff, getQcStatusPersianLabel, getStatusPersianLabel } from '../../utils/auditDiff';
 import { formatJalali, formatJalaliDateTime, toPersianDigits, getUpcomingDays, localDateKey } from '../../utils/jalali';
-import { calculateWorkSessionsSummary, getMultiDayTotalDays, isProjectMultiDay } from '../../utils/multiDay';
+import { calculateWorkSessionsSummary, getMultiDayTotalDays, isProjectMultiDay, hasCustomScheduleDays, getProjectScheduleDays, scheduleDayLabel } from '../../utils/multiDay';
 import { getDisplayName } from '../../utils/technicianName';
 import {
   calculateActivityProgress,
@@ -346,9 +346,14 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         <Row label="تاریخ اجرا">
           {formatJalali(project.scheduledDate)} {project.scheduledTime ? `— ${project.scheduledTime}` : ''}
         </Row>
-        {multiDay && (
+        {multiDay && !hasCustomScheduleDays(project) && (
           <Row label="تاریخ پایان">
             {formatJalali(project.endDate)} ({toPersianDigits(getMultiDayTotalDays(project))} روزه)
+          </Row>
+        )}
+        {hasCustomScheduleDays(project) && (
+          <Row label="روزهای اجرا">
+            {toPersianDigits(getMultiDayTotalDays(project))} روز: {getProjectScheduleDays(project).map((d) => scheduleDayLabel(d)).join('، ')}
           </Row>
         )}
         <Row label="سرپرست">{userName(project.leadTechnicianId)}</Row>

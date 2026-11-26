@@ -1,3 +1,4 @@
+import { normalizeScheduleDays } from './multiDay';
 import { Project, ProjectStatus, QCStatus } from '../types';
 import { formatJalali } from './jalali';
 
@@ -91,6 +92,16 @@ export function formatAuditDiff(
     } else {
       changes.push('حذف تاریخ پایان (تبدیل به پروژه یک‌روزه)');
     }
+  }
+
+  const oldDays = normalizeScheduleDays(oldP.scheduledDays).join(',');
+  const newDays = normalizeScheduleDays(newP.scheduledDays).join(',');
+  if (oldDays !== newDays) {
+    changes.push(
+      newDays
+        ? `تعیین روزهای اجرا: ${normalizeScheduleDays(newP.scheduledDays).map((d) => formatJalali(d)).join('، ')}`
+        : 'حذف روزهای انتخابی (اجرا در روزهای پشت سر هم)'
+    );
   }
 
   if (oldP.scheduledTime !== newP.scheduledTime && newP.scheduledTime) {

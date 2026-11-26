@@ -7,6 +7,7 @@
 // 4. اقلام باقیمانده کار محاسبه و در صورت‌جلسه تحویل ثبت می‌گردد.
 // ==============================================================================
 
+import { normalizeScheduleDays } from './multiDay';
 import { Project, User, InstallationTeam, TeamTransferRecord, HandoverInventoryItem } from '../types';
 import { calculateActivityProgress } from './planProgress';
 
@@ -256,6 +257,13 @@ export function createTeamTransferPayload(params: CreateTeamTransferParams): {
   }
   if (newDurationHours !== undefined) {
     patch.requiredDurationHours = newDurationHours;
+  }
+  // روزهای انتخابی (غیرپشت‌سرهم) فقط تا وقتی معتبرند که با تاریخ شروع و پایان جدید بخوانند
+  if ((newScheduledDate || newEndDate !== undefined) && project.scheduledDays?.length) {
+    const start = patch.scheduledDate || project.scheduledDate;
+    const end = (newEndDate !== undefined ? newEndDate : project.endDate) || start;
+    const kept = normalizeScheduleDays(project.scheduledDays).filter((d) => d >= start && d <= end);
+    patch.scheduledDays = kept.length >= 2 && kept[0] === start && kept[kept.length - 1] === end ? kept : null;
   }
 
   return { patch, transferRecord };

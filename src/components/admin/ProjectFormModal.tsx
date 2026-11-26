@@ -20,7 +20,16 @@ import {
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { getUpcomingDays, getTodayPersianString, toPersianDigits, toEnglishDigits, getDayInfoFromDateKey, DayInfo, formatJalaliDateTime } from '../../utils/jalali';
-import { getMultiDayTotalDays } from '../../utils/multiDay';
+import {
+  getMultiDayTotalDays,
+  getProjectScheduleDays,
+  hasCustomScheduleDays,
+  isContiguousDays,
+  scheduleDayLabel,
+  type ScheduleLike,
+} from '../../utils/multiDay';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { ScheduleDaysPicker } from './ScheduleDaysPicker';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { SupabaseSyncService } from '../../utils/supabase';
 import { CloudImage } from '../common/CloudImage';
@@ -92,9 +101,15 @@ export const ProjectFormModal: React.FC<Props> = ({
   useEscapeKey(requestClose);
   const isEditing = Boolean(project);
   const effective = project || initialData;
+  const effectiveDaysKey = Array.isArray(effective?.scheduledDays) ? effective.scheduledDays.join(',') : '';
   const days: DayInfo[] = useMemo(() => {
     const list: DayInfo[] = getUpcomingDays(365);
-    const customDates = [effective?.scheduledDate, effective?.endDate, defaultDate].filter(Boolean) as string[];
+    const customDates = [
+      effective?.scheduledDate,
+      effective?.endDate,
+      defaultDate,
+      ...(effectiveDaysKey ? effectiveDaysKey.split(',') : []),
+    ].filter(Boolean) as string[];
     for (const cd of customDates) {
       if (!list.some((d) => d.dateKey === cd)) {
         const info = getDayInfoFromDateKey(cd);
@@ -104,7 +119,7 @@ export const ProjectFormModal: React.FC<Props> = ({
       }
     }
     return list.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
-  }, [effective?.scheduledDate, effective?.endDate, defaultDate]);
+  }, [effective?.scheduledDate, effective?.endDate, defaultDate, effectiveDaysKey]);
 
   const defaultTeams: InstallationTeam[] = [
     { id: 'TEAM_1', name: 'اکیپ نصب 1', code: 'TEAM_1', createdAt: '', updatedAt: '' },
@@ -172,6 +187,61 @@ export const ProjectFormModal: React.FC<Props> = ({
     effective?.endDate || effective?.scheduledDate || defaultDate || days[0]?.dateKey || ''
   );
   const [scheduledTime, setScheduledTime] = useState(effective?.scheduledTime || '09:30');
+
+  // نحوه‌ی تعیین روزها: یک روز، چند روز پشت سر هم، یا روزهای انتخابی (مثلاً شنبه و چهارشنبه)
+  type ScheduleMode = 'SINGLE' | 'RANGE' | 'CUSTOM';
+  const initialSchedule = effective as ScheduleLike | undefined;
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(() =>
+    initialSchedule?.scheduledDate && hasCustomScheduleDays(initialSchedule)
+      ? 'CUSTOM'
+      : effective?.endDate && effective?.scheduledDate && effective.endDate > effective.scheduledDate
+      ? 'RANGE'
+      : 'SINGLE'
+  );
+  const [customDays, setCustomDays] = useState<string[]>(() =>
+    initialSchedule?.scheduledDate && hasCustomScheduleDays(initialSchedule) ? getProjectScheduleDays(initialSchedule) : []
+  );
+  /** روزهای اجرای فعلی فرم، هر حالتی که انتخاب شده باشد */
+  const formScheduleDays = useMemo(() => {
+    if (scheduleMode === 'CUSTOM') return customDays;
+    if (!scheduledDate) return [] as string[];
+    if (scheduleMode === 'RANGE' && endDate > scheduledDate) return getProjectScheduleDays({ scheduledDate, endDate });
+    return [scheduledDate];
+  }, [scheduleMode, customDays, scheduledDate, endDate]);
+  /** روزهای انتخابی فقط وقتی ذخیره می‌شوند که واقعاً فاصله داشته باشند؛ وگرنه همان بازه است */
+  const scheduledDaysToSave =
+    scheduleMode === 'CUSTOM' && customDays.length >= 2 && !isContiguousDays(customDays) ? customDays : undefined;
+  const endDateToSave =
+    scheduleMode === 'SINGLE'
+      ? undefined
+      : scheduleMode === 'CUSTOM'
+      ? customDays.length >= 2
+        ? customDays[customDays.length - 1]
+        : undefined
+      : endDate && endDate > scheduledDate
+      ? endDate
+      : undefined;
+
+  const changeScheduleMode = (mode: ScheduleMode) => {
+    if (mode === scheduleMode) return;
+    if (mode === 'CUSTOM') {
+      const seed = formScheduleDays.length ? formScheduleDays : scheduledDate ? [scheduledDate] : [];
+      setCustomDays(seed);
+    } else if (scheduleMode === 'CUSTOM' && customDays.length) {
+      setScheduledDate(customDays[0]);
+      setEndDate(mode === 'RANGE' ? customDays[customDays.length - 1] : customDays[0]);
+    }
+    if (mode === 'SINGLE') setEndDate(scheduleMode === 'CUSTOM' && customDays.length ? customDays[0] : scheduledDate);
+    setScheduleMode(mode);
+  };
+
+  const changeCustomDays = (next: string[]) => {
+    setCustomDays(next);
+    if (next.length) {
+      setScheduledDate(next[0]);
+      setEndDate(next[next.length - 1]);
+    }
+  };
 
   // Technician assignment
   // وقتی فرم با اکیپ از پیش انتخاب‌شده باز می‌شود (خانه اکیپ در تقویم یا رزرو فروش)،
@@ -303,6 +373,11 @@ export const ProjectFormModal: React.FC<Props> = ({
       return;
     }
 
+    if (scheduleMode === 'CUSTOM' && customDays.length === 0) {
+      setFormError('روزهای اجرا را از روی تقویم انتخاب کنید (حداقل یک روز).');
+      return;
+    }
+
     const phoneDigits = customerPhone.replace(/\D/g, '');
     if (phoneDigits && phoneDigits.length < 8) {
       setFormError('شماره تماس مشتری کامل نیست.');
@@ -398,7 +473,8 @@ export const ProjectFormModal: React.FC<Props> = ({
           specialNotes: specialNotes.trim(),
           proposalImages,
           scheduledDate,
-          endDate: endDate && endDate > scheduledDate ? endDate : undefined,
+          endDate: endDateToSave,
+          scheduledDays: scheduledDaysToSave,
           scheduledTime,
           assignedTechnicianIds: finalTechnicianIds,
           leadTechnicianId: effectiveLead,
@@ -453,7 +529,8 @@ export const ProjectFormModal: React.FC<Props> = ({
           specialNotes: specialNotes.trim(),
           proposalImages,
           scheduledDate,
-          endDate: endDate && endDate > scheduledDate ? endDate : undefined,
+          endDate: endDateToSave,
+          scheduledDays: scheduledDaysToSave,
           scheduledTime,
           assignedTechnicianIds: finalTechnicianIds,
           leadTechnicianId: effectiveLead,
@@ -516,21 +593,18 @@ export const ProjectFormModal: React.FC<Props> = ({
 
   // ---- هشدار تداخل: همان اکیپ یا همان سرپرست در بازه همین تاریخ‌ها مأموریت دیگری دارد ----
   const scheduleConflicts = useMemo(() => {
-    if (!projects || !scheduledDate) return [] as Project[];
-    const rangeEnd = endDate && endDate > scheduledDate ? endDate : scheduledDate;
+    if (!projects || formScheduleDays.length === 0) return [] as Project[];
+    const mine = new Set(formScheduleDays);
     return projects.filter((p) => {
       if (p.id === projectId) return false;
       if (p.status === 'CANCELLED' || p.status === 'COMPLETED') return false;
       const sameTeam = Boolean(assignedTeamId) && p.assignedTeamId === assignedTeamId;
       const sameLead = Boolean(leadTechnicianId) && p.leadTechnicianId === leadTechnicianId;
       if (!sameTeam && !sameLead) return false;
-      // هم‌پوشانی بازه‌ها
-      const pStart = p.scheduledDate;
-      const pEnd = p.endDate && p.endDate > p.scheduledDate ? p.endDate : p.scheduledDate;
-      if (!pStart) return false;
-      return pStart <= rangeEnd && pEnd >= scheduledDate;
+      // روز مشترک (روزهای انتخابی دو پروژه هم درست مقایسه می‌شوند)
+      return getProjectScheduleDays(p).some((d) => mine.has(d));
     });
-  }, [projects, scheduledDate, endDate, projectId, assignedTeamId, leadTechnicianId]);
+  }, [projects, formScheduleDays, projectId, assignedTeamId, leadTechnicianId]);
 
   const hasNoCrew = !assignedTeamId && !leadTechnicianId && assignedTechnicianIds.length === 0;
 
@@ -742,58 +816,112 @@ export const ProjectFormModal: React.FC<Props> = ({
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="scheduled-date" className={labelCls}>
-                  تاریخ شروع <span className="text-rose-400">*</span>
-                </label>
-                <select
-                  id="scheduled-date"
-                  value={scheduledDate}
-                  onChange={(e) => {
-                    const newStart = e.target.value;
-                    setScheduledDate(newStart);
-                    if (!endDate || endDate < newStart) {
-                      setEndDate(newStart);
-                    }
-                  }}
-                  className={`${inputCls} font-bold`}
-                >
-                  {days.map((d) => (
-                    <option key={d.dateKey} value={d.dateKey}>
-                      {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
-                      {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="end-date" className="block text-xs font-semibold text-ink-2">
-                    تاریخ پایان
-                  </label>
-                  {endDate && endDate > scheduledDate ? (
-                    <span className="text-[12px] bg-brand/20 text-brand-ink font-bold px-2 py-0.5 rounded-full">
-                      {toPersianDigits(getMultiDayTotalDays(scheduledDate, endDate))} روزه
-                    </span>
-                  ) : (
-                    <span className="text-[12px] text-ink-3">یک‌روزه</span>
-                  )}
+              <div className="sm:col-span-2 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="block text-xs font-semibold text-ink-2">
+                    روزهای اجرا <span className="text-rose-400">*</span>
+                  </span>
+                  <SegmentedControl<ScheduleMode>
+                    size="sm"
+                    ariaLabel="نحوه‌ی تعیین روزهای اجرا"
+                    value={scheduleMode}
+                    onChange={(m) => {
+                      markDirty();
+                      changeScheduleMode(m);
+                    }}
+                    options={[
+                      { value: 'SINGLE', label: 'یک روز' },
+                      { value: 'RANGE', label: 'چند روز پشت سر هم' },
+                      { value: 'CUSTOM', label: 'روزهای انتخابی' },
+                    ]}
+                  />
                 </div>
-                <select
-                  id="end-date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className={`${inputCls} font-bold`}
-                >
-                  {days
-                    .filter((d) => d.dateKey >= scheduledDate)
-                    .map((d) => (
-                      <option key={d.dateKey} value={d.dateKey}>
-                        {d.dateKey === scheduledDate ? 'همان روز (یک‌روزه)' : `${d.persianDayName} - ${d.persianDayNum} ${d.persianMonthName} (${toPersianDigits(d.persianDateStr)})`}
-                      </option>
-                    ))}
-                </select>
+
+                {scheduleMode === 'CUSTOM' ? (
+                  <div className="space-y-2">
+                    <p className="text-[12px] text-ink-3 leading-6">
+                      روزهایی را که اکیپ سر کار می‌رود روی تقویم بزنید؛ لازم نیست پشت سر هم باشند (مثلاً شنبه و چهارشنبه).
+                      پروژه فقط در همین روزها در تقویم و کارتابل اکیپ دیده می‌شود.
+                    </p>
+                    <ScheduleDaysPicker
+                      value={customDays}
+                      onChange={(next) => {
+                        markDirty();
+                        changeCustomDays(next);
+                      }}
+                    />
+                    {customDays.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
+                        <span className="bg-brand/20 text-brand-ink font-bold px-2 py-0.5 rounded-full">
+                          {toPersianDigits(customDays.length)} روز
+                        </span>
+                        {customDays.map((d) => (
+                          <span key={d} className="px-2 py-0.5 rounded-full border border-line bg-surface text-ink">
+                            {scheduleDayLabel(d)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="scheduled-date" className={labelCls}>
+                        {scheduleMode === 'RANGE' ? 'تاریخ شروع' : 'تاریخ اجرا'}
+                      </label>
+                      <select
+                        id="scheduled-date"
+                        value={scheduledDate}
+                        onChange={(e) => {
+                          const newStart = e.target.value;
+                          setScheduledDate(newStart);
+                          if (scheduleMode === 'SINGLE' || !endDate || endDate < newStart) {
+                            setEndDate(newStart);
+                          }
+                        }}
+                        className={`${inputCls} font-bold`}
+                      >
+                        {days.map((d) => (
+                          <option key={d.dateKey} value={d.dateKey}>
+                            {d.isToday ? 'امروز' : d.dayOffset === 1 ? 'فردا' : d.persianDayName} -{' '}
+                            {d.persianDayNum} {d.persianMonthName} ({toPersianDigits(d.persianDateStr)})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {scheduleMode === 'RANGE' && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label htmlFor="end-date" className="block text-xs font-semibold text-ink-2">
+                            تاریخ پایان
+                          </label>
+                          {endDate && endDate > scheduledDate ? (
+                            <span className="text-[12px] bg-brand/20 text-brand-ink font-bold px-2 py-0.5 rounded-full">
+                              {toPersianDigits(getMultiDayTotalDays(scheduledDate, endDate))} روزه
+                            </span>
+                          ) : (
+                            <span className="text-[12px] text-ink-3">یک‌روزه</span>
+                          )}
+                        </div>
+                        <select
+                          id="end-date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className={`${inputCls} font-bold`}
+                        >
+                          {days
+                            .filter((d) => d.dateKey >= scheduledDate)
+                            .map((d) => (
+                              <option key={d.dateKey} value={d.dateKey}>
+                                {d.dateKey === scheduledDate ? 'همان روز (یک‌روزه)' : `${d.persianDayName} - ${d.persianDayNum} ${d.persianMonthName} (${toPersianDigits(d.persianDateStr)})`}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1313,7 +1441,14 @@ export const ProjectFormModal: React.FC<Props> = ({
         {/* Sticky Modal Footer */}
         <div className="px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-line bg-surface shrink-0 space-y-2">
           <div className="text-[12px] text-ink-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span>📅 {dateLabel(scheduledDate)}{endDate && endDate > scheduledDate ? ` تا ${dateLabel(endDate)}` : ''}</span>
+            <span>
+              📅{' '}
+              {scheduleMode === 'CUSTOM'
+                ? customDays.length
+                  ? `${customDays.length} روز: ${customDays.map((d) => dateLabel(d)).join('، ')}`
+                  : 'روزی انتخاب نشده'
+                : `${dateLabel(scheduledDate)}${endDate && endDate > scheduledDate && scheduleMode === 'RANGE' ? ` تا ${dateLabel(endDate)}` : ''}`}
+            </span>
             <span>⏰ {toPersianDigits(scheduledTime || '—')}</span>
             <span>👷 {crewSummary}</span>
           </div>

@@ -1,6 +1,7 @@
 import type { MaterialRequest, Project, SalesProjectBooking, ScheduleChangeRequest, Ticket, User } from '../types';
 import { isAwaitingQc } from './qcWorkflow';
 import { formatJalali } from './jalali';
+import { getProjectScheduleDays, scheduleDayLabel } from './multiDay';
 
 /**
  * Which changes deserve a phone notification, per role.
@@ -83,6 +84,23 @@ export function computeNotificationEvents(
           entityKey: key,
           title: 'تغییر تاریخ مأموریت',
           body: `${label(p)} — تاریخ جدید: ${formatJalali(p.scheduledDate)}`,
+          urgent: true,
+        });
+      } else if (
+        mineNow &&
+        mineBefore &&
+        active &&
+        before &&
+        p.scheduledDate &&
+        getProjectScheduleDays(before).join(',') !== getProjectScheduleDays(p).join(',')
+      ) {
+        // تاریخ شروع همان است ولی روزهای اجرا (پایان یا روزهای انتخابی) عوض شده
+        const days = getProjectScheduleDays(p);
+        events.push({
+          id: `days:${p.id}:${days.join(',')}`,
+          entityKey: key,
+          title: 'تغییر روزهای اجرای مأموریت',
+          body: `${label(p)} — ${days.map((d) => scheduleDayLabel(d)).join('، ')}`,
           urgent: true,
         });
       } else if (mineBefore && !mineNow && before && before.status !== 'COMPLETED') {

@@ -27,7 +27,7 @@ import {
 import { toPersianDigits, localDateKey, getDayInfoFromDateKey } from '../../utils/jalali';
 import { ActiveJobTimer } from '../ActiveJobTimer';
 import { StatusPill } from '../ui/StatusPill';
-import { getMultiDayProgress } from '../../utils/multiDay';
+import { getMultiDayProgress, nextScheduleDayAfter, hasCustomScheduleDays, isProjectScheduledOnDate } from '../../utils/multiDay';
 import { calculateActivityProgress } from '../../utils/planProgress';
 import { getLatestTeamTransfer, isPendingTransferAcknowledgment, hasPendingTransfer } from '../../utils/teamTransfer';
 import { PreInstallPhotoModal } from './PreInstallPhotoModal';
@@ -126,6 +126,19 @@ export const ProjectCard: React.FC<Props> = ({
         `این مأموریت برای ${day ? `${day.persianDayName} ${toPersianDigits(day.persianDayNum)} ${day.persianMonthName}` : 'روز دیگری'} برنامه‌ریزی شده، نه امروز.`,
       );
     }
+    // روزهای انتخابی: امروز جزو روزهای اجرای این پروژه نیست
+    if (
+      project.scheduledDate &&
+      project.scheduledDate <= todayYmd &&
+      hasCustomScheduleDays(project) &&
+      !isProjectScheduledOnDate(project, todayYmd)
+    ) {
+      const nd = nextScheduleDayAfter(project, todayYmd);
+      const info = nd ? getDayInfoFromDateKey(nd) : null;
+      warnings.push(
+        `امروز جزو روزهای اجرای این پروژه نیست${info ? `؛ روز بعدی اجرا ${info.persianDayName} ${toPersianDigits(info.persianDayNum)} ${info.persianMonthName} است` : ''}.`,
+      );
+    }
     if (busyWith) {
       warnings.push(`کار «${busyWith.customerName || busyWith.id}» هنوز باز است (${busyWith.status === 'EN_ROUTE' ? 'در مسیر' : 'در حال نصب'}).`);
     }
@@ -133,6 +146,14 @@ export const ProjectCard: React.FC<Props> = ({
     onUpdateStatus(project.id, isPaused ? 'PAUSED' : 'SCHEDULED', 'EN_ROUTE');
   };
   const isBeforeEndDate = Boolean(project.endDate && todayYmd < project.endDate);
+  // روز اجرای بعدی (در روزهای انتخابی ممکن است چند روز بعد باشد، نه فردا)
+  const nextWorkDay = isBeforeEndDate ? nextScheduleDayAfter(project, todayYmd) : null;
+  const nextWorkDayText = nextWorkDay
+    ? (() => {
+        const info = getDayInfoFromDateKey(nextWorkDay);
+        return info ? `${info.persianDayName} ${toPersianDigits(info.persianDayNum)} ${info.persianMonthName}` : 'روز بعد';
+      })()
+    : 'روز بعد';
   const progressList = useMemo(() => calculateActivityProgress(project), [project]);
   const latestTransfer = getLatestTeamTransfer(project);
   const actualTeamId = currentUser.teamId;
@@ -831,7 +852,7 @@ export const ProjectCard: React.FC<Props> = ({
                       className="w-full py-2.5 px-4 bg-surface hover:bg-raised text-brand-ink border border-brand rounded-md text-xs sm:text-sm font-bold shadow-xs transition flex items-center justify-center gap-2 active:scale-[0.99] min-h-[44px] cursor-pointer"
                     >
                       <Moon className="w-4 h-4 text-brand-ink" />
-                      <span>پایان شیفت امروز (ثبت پیشرفت و ادامه در روز بعد)</span>
+                      <span>{`پایان شیفت امروز (ثبت پیشرفت و ادامه در ${nextWorkDayText})`}</span>
                     </button>
                     <button
                       type="button"

@@ -513,6 +513,11 @@ export interface Project {
   // زمان‌بندی
   scheduledDate: string; // YYYY-MM-DD (جلالی یا میلادی استاندارد)
   endDate?: string; // YYYY-MM-DD (برای پروژه‌های چندروزه: endDate > scheduledDate)
+  /**
+   * روزهای اجرای انتخابی و غیرپشت‌سرهم (مثلاً شنبه و چهارشنبه). اولی باید همان scheduledDate و
+   * آخری همان endDate باشد؛ در غیر این صورت نادیده گرفته می‌شود (utils/multiDay.getProjectScheduleDays).
+   */
+  scheduledDays?: string[] | null;
   scheduledTime: string; // مثلاً 09:30 یا 14:00
   
   // اکیپ نصب
