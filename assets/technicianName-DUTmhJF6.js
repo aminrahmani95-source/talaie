@@ -1,0 +1,1 @@
+var e=e=>e?e.replace(/\s*\([^)]*\)\s*$/,``).trim():``;export{e as t};
