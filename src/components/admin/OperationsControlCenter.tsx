@@ -11,7 +11,8 @@ import {
   SalesProjectBooking,
 } from '../../types';
 import { ManagerTab } from '../navigation/BottomNav';
-import { CheckCircle2, Users, ChevronLeft, Package, Phone, Plus, CalendarClock, Clock } from 'lucide-react';
+import { CheckCircle2, Users, ChevronLeft, Package, Phone, Plus, CalendarClock, Clock, ShieldCheck } from 'lucide-react';
+import { backupAgeDays, getLastBackup } from '../../utils/backup';
 import { toPersianDigits, getTodayPersianString, formatJalali } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
 import { isProjectMultiDay, isProjectScheduledOnDate } from '../../utils/multiDay';
@@ -108,6 +109,14 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   const todayPersian = useMemo(() => getTodayPersianString(), [todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const roleLabel =
     currentUser.role === 'QC_MANAGER' ? 'مدیر فنی و QC' : currentUser.role === 'CEO' ? 'مدیرعامل' : 'هماهنگی عملیات';
+  // یادآوری پشتیبان: فقط مدیر QC (تنها کسی که پشتیبان کامل از سرور می‌گیرد)، اگر هیچ‌وقت یا بیش از 7 روز پیش
+  const backupReminder = useMemo(() => {
+    if (currentUser.role !== 'QC_MANAGER') return '';
+    const age = backupAgeDays(getLastBackup());
+    if (age === null) return 'هنوز از اطلاعات سرور پشتیبان نگرفته‌اید. یک کلیک در تنظیمات.';
+    if (age >= 7) return `${toPersianDigits(age)} روز از آخرین پشتیبان گذشته است.`;
+    return '';
+  }, [currentUser.role]);
 
   // ---------------------------------------------------------------- صف اقدام
   const actionQueue = useMemo(() => buildActionQueue(projects, tickets, salesBookings), [projects, tickets, salesBookings, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -531,6 +540,28 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
               })}
             </div>
           </section>
+
+          {backupReminder && (
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  sessionStorage.setItem('talaie_focus_backup', '1');
+                } catch {
+                  /* ignore */
+                }
+                onNavigateTab('settings');
+              }}
+              className="w-full rounded-xl bg-surface border border-line border-r-4 border-r-sky-500 p-3 flex items-center gap-3 text-right cursor-pointer hover:bg-raised min-h-[48px]"
+            >
+              <ShieldCheck className="w-5 h-5 text-sky-500 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-black text-ink">پشتیبان اطلاعات</span>
+                <span className="block text-xs text-ink-2">{backupReminder}</span>
+              </span>
+              <ChevronLeft className="w-4 h-4 text-ink-3 shrink-0" aria-hidden="true" />
+            </button>
+          )}
 
           {warehouseAlerts.length > 0 && (
             <section className="rounded-xl bg-surface border border-line border-r-4 border-r-amber-500 p-3 space-y-2">

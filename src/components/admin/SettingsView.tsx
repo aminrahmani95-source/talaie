@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Project, SystemSettings } from '../../types';
 import {
   Layers,
@@ -23,6 +23,7 @@ import { StorageService } from '../../utils/storage';
 import { SupabaseSyncService, RealtimeConnectionStatus } from '../../utils/supabase';
 import { toPersianDigits } from '../../utils/jalali';
 import { CapacitySettingsCard } from './CapacitySettingsCard';
+import { ServerBackupCard } from './ServerBackupCard';
 
 interface Props {
   settings: SystemSettings;
@@ -52,6 +53,18 @@ export const SettingsView: React.FC<Props> = ({
   canEdit = true,
   definedTeamCount,
 }) => {
+  // یادآوری «پشتیبان» در پیشخوان مستقیم به همین بخش می‌آورد
+  const backupRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('talaie_focus_backup')) {
+        sessionStorage.removeItem('talaie_focus_backup');
+        setTimeout(() => backupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
   const [companyName, setCompanyName] = useState(settings.companyName);
   const [visibilityDays, setVisibilityDays] = useState(settings.visibilityWindowDays);
   const [defaultCapacityHours, setDefaultCapacityHours] = useState<string>(
@@ -500,24 +513,28 @@ export const SettingsView: React.FC<Props> = ({
       </form>
 
       {/* Section 4: Backup & Restore */}
-      <div className="bg-surface rounded-3xl p-6 border border-line shadow-xs space-y-4">
+      <div ref={backupRef} id="settings-backup" className="bg-surface rounded-3xl p-6 border border-line shadow-xs space-y-4 scroll-mt-20">
         <h3 className="font-bold text-sm text-ink flex items-center gap-2">
           <Download className="w-4 h-4 text-brand-ink" aria-hidden="true" />
-          پشتیبان‌گیری (Backup) و بازیابی اطلاعات
+          پشتیبان‌گیری از اطلاعات
         </h3>
 
-        <p className="text-xs text-ink-3 leading-relaxed">
-          می‌توانید تمام پروژه‌ها، لیست تکنسین‌ها، تیکت‌ها و ارزیابی‌های QC را به عنوان فایل پشتیبان JSON دانلود کنید تا هیچ‌وقت اطلاعات شما از بین نرود.
-        </p>
+        {SupabaseSyncService.getClient() && canEdit ? (
+          <ServerBackupCard />
+        ) : (
+          <p className="text-xs text-ink-3 leading-relaxed">
+            از اطلاعاتی که روی همین دستگاه هست می‌توانید فایل پشتیبان بگیرید. پشتیبان کامل از سرور (همراه عکس‌ها) فقط برای مدیر QC است.
+          </p>
+        )}
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
           <button
             type="button"
             onClick={handleExportBackup}
-            className="flex items-center gap-2 px-5 py-2.5 bg-brand text-on-brand rounded-full text-xs font-bold transition border border-brand/30 active:scale-95 min-h-[44px] cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 border border-line-strong hover:bg-raised text-ink-2 rounded-full text-xs font-bold transition active:scale-95 min-h-[44px] cursor-pointer"
           >
             <Download className="w-4 h-4" aria-hidden="true" />
-            دانلود فایل پشتیبان کامل (JSON Backup)
+            پشتیبان از اطلاعات همین دستگاه
           </button>
 
           {/* with the server connected, a restore would only change this device and be overwritten on the next sync */}

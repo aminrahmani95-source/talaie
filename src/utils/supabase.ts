@@ -1788,6 +1788,53 @@ export const SupabaseSyncService = {
   },
 
   // =========================================================================
+  // پشتیبان کامل از سرور (فقط خواندن)
+  // =========================================================================
+
+  /**
+   * همه‌ی ردیف‌های یک جدول، صفحه‌به‌صفحه (هر بار 1000 ردیف). جدولی که روی سرور نیست
+   * `missing` برمی‌گرداند تا پشتیبان بقیه‌ی جدول‌ها را بگیرد.
+   */
+  async fetchTableForBackup(
+    table: string,
+    orderBy = 'id'
+  ): Promise<{ status: 'ok'; rows: any[] } | { status: 'missing' } | { status: 'failed'; message: string }> {
+    const client = this.getClient();
+    if (!client) return { status: 'failed', message: 'اتصال به سرور برقرار نیست.' };
+    const pageSize = 1000;
+    const rows: any[] = [];
+    try {
+      for (let from = 0; from < 200000; from += pageSize) {
+        let q = client.from(table).select('*');
+        if (orderBy) q = q.order(orderBy, { ascending: true });
+        const { data, error } = await q.range(from, from + pageSize - 1);
+        if (error) {
+          if (isMissingTableError(error)) return { status: 'missing' };
+          // جدولی که ستون id ندارد (مثل talaie_sync): بدون مرتب‌سازی دوباره
+          if (orderBy && /column .* does not exist|42703/i.test(`${error.code} ${error.message}`)) {
+            return this.fetchTableForBackup(table, '');
+          }
+          return { status: 'failed', message: error.message };
+        }
+        rows.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+      }
+      return { status: 'ok', rows };
+    } catch (err) {
+      return { status: 'failed', message: describeError(err).message };
+    }
+  },
+
+  /** فایل یک عکس از فضای ابری (برای پشتیبان) */
+  async downloadStorageFile(path: string): Promise<Blob> {
+    const client = this.getClient();
+    if (!client) throw new Error('اتصال به سرور برقرار نیست.');
+    const { data, error } = await client.storage.from('talaie-photos').download(path);
+    if (error || !data) throw new Error(error?.message || 'فایل دریافت نشد.');
+    return data;
+  },
+
+  // =========================================================================
   // گزارش خطاهای گوشی‌ها (جدول client_error_reports، مایگریشن ۰۲۶)
   // =========================================================================
 

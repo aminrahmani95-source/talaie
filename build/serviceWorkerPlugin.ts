@@ -19,7 +19,7 @@ export function serviceWorkerPlugin(): Plugin {
     generateBundle(_options, bundle) {
       // کتابخانه‌ی سنگین اکسل (حدود ۱ مگابایت) فقط برای گزارش مدیرهاست؛ پیش‌بارگذاری نمی‌شود تا گوشی
       // اکیپ‌ها با هر به‌روزرسانی آن را دانلود نکنند. بار اول که گزارش گرفته شود، کش می‌شود.
-      const ON_DEMAND_ONLY = /exceljs/i;
+      const ON_DEMAND_ONLY = /exceljs|jszip/i;
       const files = new Set<string>(
         Object.keys(bundle).filter((f) => !f.endsWith('.map') && !ON_DEMAND_ONLY.test(f))
       );
