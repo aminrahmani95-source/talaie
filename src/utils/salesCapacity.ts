@@ -90,7 +90,7 @@ export function isSalesWorkingDay(dateKey: string): boolean {
  * چند روز کاری پشت‌سرهم از تاریخ شروع (روزهای تعطیل رد می‌شوند).
  * اگر خود تاریخ شروع تعطیل باشد، فهرست خالی برمی‌گردد.
  */
-function workingDaysFrom(startKey: string, count: number): string[] {
+export function workingDaysFrom(startKey: string, count: number): string[] {
   if (!isSalesWorkingDay(startKey)) return [];
   const out: string[] = [];
   const d = dateFromKey(startKey);

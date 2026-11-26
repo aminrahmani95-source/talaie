@@ -12,7 +12,6 @@ import {
 import {
   Plus,
   Edit2,
-  Settings2,
   ChevronRight,
   ChevronLeft,
   AlertTriangle,
@@ -41,7 +40,9 @@ import {
   getProjectDailyDurationHours,
   getTeamDailyCapacity,
 } from '../../utils/capacity';
-import { linkBookingToInstallationProject } from '../../utils/salesCapacity';
+import { linkBookingToInstallationProject, isSalesWorkingDay, workingDaysFrom } from '../../utils/salesCapacity';
+import { useToday } from '../../hooks/useToday';
+import type { ScheduleConflict } from '../../utils/capacity';
 import { useSalesBookings } from '../../hooks/useSalesBookings';
 import { isBookingAwaitingAssignment } from '../../utils/actionQueue';
 import { AssignSalesBookingModal } from './AssignSalesBookingModal';
@@ -79,6 +80,10 @@ interface Props {
     decision: 'APPROVED' | 'REJECTED',
     notes?: string
   ) => Promise<void>;
+  /** از پیشخوان: فرم تخصیص همین رزرو فوراً باز شود */
+  focusBookingId?: string | null;
+  /** از پیشخوان: فهرست هشدارها و درخواست‌های تغییر برنامه باز باشد */
+  openAlertsOnMount?: boolean;
 }
 
 export const MonthPlanner: React.FC<Props> = ({
@@ -95,16 +100,37 @@ export const MonthPlanner: React.FC<Props> = ({
   onOpenPreInspection,
   onProposeScheduleChange,
   onReviewScheduleChange,
+  focusBookingId,
+  openAlertsOnMount = false,
 }) => {
-  const days = useMemo(() => getUpcomingDays(365), []);
+  // نیمه‌شب خودش جلو می‌رود (قبلاً صفحه‌ی بازمانده «امروز» را دیروز نشان می‌داد)
+  const todayTick = useToday();
+  const days = useMemo(() => getUpcomingDays(365), [todayTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const isCeo = currentUser?.role === 'CEO';
   const isQcManager = currentUser?.role === 'QC_MANAGER';
   const canEditSchedule = !isCeo && Boolean(onNewProject);
 
   // View modes: '4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'
-  const [viewMode, setViewMode] = useState<'4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'>('4DAYS');
+  // روی گوشی پیش‌فرض «روزانه» است (۴ روز زیر هم بیش از ۲۰۰۰ پیکسل می‌شد)؛ انتخاب کاربر یادش می‌ماند
+  const [viewMode, setViewModeState] = useState<'1DAY' | '4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'>(() => {
+    try {
+      const saved = localStorage.getItem('talaei_planner_view');
+      if (saved === '1DAY' || saved === '4DAYS' || saved === '7DAYS' || saved === 'TIMELINE' || saved === 'FULL_MONTH') return saved;
+    } catch {
+      // ignore
+    }
+    return typeof window !== 'undefined' && window.innerWidth < 700 ? '1DAY' : '4DAYS';
+  });
+  const setViewMode = (v: typeof viewMode) => {
+    setViewModeState(v);
+    try {
+      localStorage.setItem('talaei_planner_view', v);
+    } catch {
+      // ignore
+    }
+  };
   const [startIndex, setStartIndex] = useState(0);
-  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
+  const [isAlertsOpen, setIsAlertsOpen] = useState(openAlertsOnMount);
 
   // Modal states for schedule change proposal and review
   const [proposingProject, setProposingProject] = useState<Project | null>(null);
@@ -128,16 +154,36 @@ export const MonthPlanner: React.FC<Props> = ({
   // استخر رزروهای فروش برای تخصیص به نصاب‌ها
   const [isSalesTrayOpen, setIsSalesTrayOpen] = useState(false);
   const [assigningBooking, setAssigningBooking] = useState<SalesProjectBooking | null>(null);
+  const focusedBookingHandled = React.useRef<string | null>(null);
 
   // استخراج رزروهای فعال فروش که هنوز به پروژه اجرایی متصل نشده‌اند
   // live list: a booking made on a sales rep's phone appears here without reloading
   const allSalesBookings = useSalesBookings();
   const unassignedSalesBookings = useMemo(
-    () => allSalesBookings.filter((b) => isBookingAwaitingAssignment(b, projects)),
+    () =>
+      allSalesBookings
+        .filter((b) => isBookingAwaitingAssignment(b, projects))
+        // به ترتیب تاریخ اجرای درخواستی (نزدیک‌ترین اول)، نه تاریخ ثبت؛ بدون تاریخ آخر
+        .sort(
+          (a, b) =>
+            String(a.requestedDate || '9999').localeCompare(String(b.requestedDate || '9999')) ||
+            String(a.createdAt || '').localeCompare(String(b.createdAt || ''))
+        ),
     [allSalesBookings, projects],
   );
+  // «تخصیص در تقویم» از پیشخوان: فرم همان رزرو باز شود (قبلاً تقویم با سینی بسته باز می‌شد)
+  React.useEffect(() => {
+    if (!focusBookingId || focusedBookingHandled.current === focusBookingId) return;
+    const b = allSalesBookings.find((x) => x.id === focusBookingId);
+    if (b) {
+      focusedBookingHandled.current = focusBookingId;
+      if (canEditSchedule) setAssigningBooking(b);
+      else setIsSalesTrayOpen(true);
+    }
+  }, [focusBookingId, allSalesBookings, canEditSchedule]);
 
   const displayedDays = useMemo(() => {
+    if (viewMode === '1DAY') return days.slice(startIndex, startIndex + 1);
     if (viewMode === '4DAYS') return days.slice(startIndex, startIndex + 4);
     if (viewMode === '7DAYS') return days.slice(startIndex, startIndex + 7);
     if (viewMode === 'TIMELINE') return days.slice(startIndex, startIndex + 5);
@@ -147,9 +193,35 @@ export const MonthPlanner: React.FC<Props> = ({
   const todayKey = days.find((d) => d.isToday)?.dateKey || localDateKey();
 
   // Detect schedule conflicts
+  // ظرفیت با «لت» تعیین می‌شود، نه ساعت؛ هشدارهای «فاقد تخمین ساعات» و «سقف ساعت نامشخص» فقط شلوغی بودند
+  // و تداخل‌های واقعی را زیر خودشان گم می‌کردند. به‌جایش کار روی روز تعطیل هشدار می‌دهد.
   const conflicts = useMemo(() => {
-    return detectScheduleConflicts(projects, teams, settings);
-  }, [projects, teams, settings]);
+    const base = detectScheduleConflicts(projects, teams, settings).filter(
+      (c) => c.type !== 'MISSING_WORKLOAD_ESTIMATE' && c.type !== 'UNCONFIGURED_CAPACITY'
+    );
+    const holidays = projects
+      .filter(
+        (p) =>
+          (p.status === 'SCHEDULED' || p.status === 'MEASUREMENT_PENDING') &&
+          p.scheduledDate &&
+          p.scheduledDate >= todayTick &&
+          !isSalesWorkingDay(p.scheduledDate)
+      )
+      .map(
+        (p) =>
+          ({
+            id: `conf-holiday-${p.id}`,
+            type: 'UNASSIGNED_TEAM',
+            severity: 'WARNING',
+            projectId: p.id,
+            projectCode: p.code,
+            projectTitle: `${p.code} ${p.title}`,
+            dateKey: p.scheduledDate,
+            message: 'روز تعطیل است (طبق روزهای کاری تنظیمات).',
+          }) as ScheduleConflict
+      );
+    return [...base, ...holidays];
+  }, [projects, teams, settings, todayTick]);
 
   const pendingRequests = useMemo(() => {
     return scheduleChangeRequests.filter((r) => r.status === 'PENDING');
@@ -211,8 +283,9 @@ export const MonthPlanner: React.FC<Props> = ({
           <div className="flex flex-wrap items-center gap-2">
             <SegmentedControl
               options={[
+                { id: '1DAY', label: 'روزانه' },
                 { id: 'TIMELINE', label: 'خط سیر اکیپ‌ها' },
-                { id: '4DAYS', label: '4 روزه' },
+                { id: '4DAYS', label: '۴ روزه' },
                 { id: '7DAYS', label: 'هفتگی' },
                 { id: 'FULL_MONTH', label: '30 روزه' },
               ]}
@@ -225,7 +298,7 @@ export const MonthPlanner: React.FC<Props> = ({
             />
 
             {(() => {
-              const pageSize = viewMode === '4DAYS' ? 4 : viewMode === '7DAYS' ? 7 : viewMode === 'TIMELINE' ? 5 : 30;
+              const pageSize = viewMode === '1DAY' ? 1 : viewMode === '4DAYS' ? 4 : viewMode === '7DAYS' ? 7 : viewMode === 'TIMELINE' ? 5 : 30;
               const step = viewMode === 'FULL_MONTH' ? 30 : 1;
               return (
                 <div className="flex items-center gap-1 bg-sunken rounded-md p-1 border border-line">
@@ -233,15 +306,23 @@ export const MonthPlanner: React.FC<Props> = ({
                     type="button"
                     disabled={startIndex === 0}
                     onClick={() => setStartIndex((i) => Math.max(0, i - step))}
-                    className="p-1.5 hover:bg-raised text-ink-2 hover:text-ink rounded disabled:opacity-30 transition cursor-pointer"
+                    className="w-10 h-10 flex items-center justify-center hover:bg-raised text-ink-2 hover:text-ink rounded disabled:opacity-30 transition cursor-pointer"
                     title="روزهای قبلی"
                     aria-label="روزهای قبلی"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                   <span className="text-xs px-2 text-brand-ink font-bold tabular-nums">
-                    {toPersianDigits(startIndex + 1)} تا{' '}
-                    {toPersianDigits(Math.min(days.length, startIndex + pageSize))}
+                    {pageSize === 1 ? (
+                      <>
+                        {days[startIndex]?.isToday ? 'امروز · ' : ''}
+                        {days[startIndex]?.persianDayName} {days[startIndex]?.persianDayNum} {days[startIndex]?.persianMonthName}
+                      </>
+                    ) : (
+                      <>
+                        {toPersianDigits(startIndex + 1)} تا {toPersianDigits(Math.min(days.length, startIndex + pageSize))}
+                      </>
+                    )}
                   </span>
                   <button
                     type="button"
@@ -249,7 +330,7 @@ export const MonthPlanner: React.FC<Props> = ({
                     onClick={() =>
                       setStartIndex((i) => Math.min(days.length - pageSize, i + step))
                     }
-                    className="p-1.5 hover:bg-raised text-ink-2 hover:text-ink rounded disabled:opacity-30 transition cursor-pointer"
+                    className="w-10 h-10 flex items-center justify-center hover:bg-raised text-ink-2 hover:text-ink rounded disabled:opacity-30 transition cursor-pointer"
                     title="روزهای بعدی"
                     aria-label="روزهای بعدی"
                   >
@@ -546,9 +627,7 @@ export const MonthPlanner: React.FC<Props> = ({
                                         {toPersianDigits(dailyHours)} ساعت
                                       </span>
                                     ) : (
-                                      <span className="text-rose-400 font-bold bg-rose-500/10 px-1 rounded">
-                                        بدون تخمین
-                                      </span>
+                                      <span className="text-ink-3">{formatProductCounts(projectProductCounts(p)) || ''}</span>
                                     )}
 
                                     {multiProg ? (
@@ -570,12 +649,12 @@ export const MonthPlanner: React.FC<Props> = ({
                                 onClick={() =>
                                   onNewProject(day.dateKey, { assignedTeamId: team.id, assignedTeamName: dynamicTeamName })
                                 }
-                                aria-label={`افزودن مأموریت برای ${dynamicTeamName} در ${day.persianDayName}`}
+                                aria-label={`افزودن پروژه برای ${dynamicTeamName} در ${day.persianDayName}`}
                                 className={`w-full border border-dashed border-line hover:border-brand rounded-md flex items-center justify-center text-ink-3 hover:text-brand-ink text-xs transition cursor-pointer ${
                                   load.assignedProjects.length === 0 ? 'h-12' : 'h-8'
                                 }`}
                               >
-                                {load.assignedProjects.length === 0 ? '+ تخصیص' : '+ مأموریت دیگر'}
+                                {load.assignedProjects.length === 0 ? '+ تخصیص' : '+ پروژه‌ی دیگر'}
                               </button>
                             )}
                           </div>
@@ -610,7 +689,9 @@ export const MonthPlanner: React.FC<Props> = ({
         /* ===================== VIEW B: COLUMN GRID VIEWS (4DAYS, 7DAYS, FULL_MONTH) ===================== */
         <div
           className={`grid gap-3 ${
-            viewMode === '4DAYS'
+            viewMode === '1DAY'
+              ? 'grid-cols-1'
+              : viewMode === '4DAYS'
               ? 'grid-cols-1 sm:grid-cols-2 @min-[900px]:grid-cols-4'
               : viewMode === '7DAYS'
               ? 'grid-cols-1 sm:grid-cols-2 @min-[900px]:grid-cols-7'
@@ -627,12 +708,15 @@ export const MonthPlanner: React.FC<Props> = ({
               0
             );
 
+            const isHoliday = !isSalesWorkingDay(day.dateKey);
             return (
               <div
                 key={day.dateKey}
-                className={`rounded-lg border flex flex-col min-h-[300px] transition-all duration-150 ${
+                className={`rounded-lg border flex flex-col ${viewMode === '1DAY' ? 'min-h-[160px]' : 'min-h-[300px]'} transition-all duration-150 ${
                   day.isToday
                     ? 'border-brand bg-surface shadow-none ring-1 ring-brand/40'
+                    : isHoliday
+                    ? 'border-line bg-sunken/60 opacity-80'
                     : 'border-line bg-surface'
                 }`}
               >
@@ -653,6 +737,7 @@ export const MonthPlanner: React.FC<Props> = ({
 
                   <div className="text-left tabular-nums">
                     <span className="text-[12px] text-brand-ink font-medium block">{day.persianMonthName}</span>
+                    {isHoliday && <span className="text-[11px] font-bold text-rose-600 dark:text-rose-300 block">تعطیل</span>}
                     {totalWorkload > 0 && (
                       <span className="text-[11px] text-amber-400 font-semibold">
                         {toPersianDigits(totalWorkload.toFixed(1))} س کار
@@ -672,6 +757,13 @@ export const MonthPlanner: React.FC<Props> = ({
                         key={proj.id}
                         className="p-3 space-y-2 rounded-md border border-line bg-sunken hover:border-brand shadow-none transition"
                       >
+                        {/* کل کارت پرونده را باز می‌کند؛ قبلاً فقط دو آیکن ۲۶ پیکسلی */}
+                        <button
+                          type="button"
+                          onClick={() => onManageProject(proj)}
+                          className="w-full text-right space-y-2 cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                          aria-label={`پرونده‌ی ${proj.code} ${proj.title}`}
+                        >
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-mono font-bold text-xs bg-raised text-brand-soft px-2 py-0.5 rounded">
                             {proj.code}
@@ -709,55 +801,41 @@ export const MonthPlanner: React.FC<Props> = ({
                           <span className="font-medium text-ink">
                             {proj.assignedTeamName || 'بدون اکیپ'}
                           </span>
-                          {durationHours > 0 ? (
+                          {durationHours > 0 && (
                             <span className="font-semibold text-brand-ink tabular-nums">
                               {toPersianDigits(durationHours)} ساعت
                             </span>
-                          ) : (
-                            <span className="text-[11px] text-rose-400 font-bold bg-rose-500/10 px-1 rounded">
-                              بدون تخمین
-                            </span>
+                          )}
+                          {formatProductCounts(projectProductCounts(proj)) && (
+                            <span className="text-ink-3">{formatProductCounts(projectProductCounts(proj))}</span>
                           )}
                         </div>
+                        </button>
 
-                        {/* اکشن‌ها */}
-                        <div className="flex items-center justify-between pt-1 border-t border-line text-xs">
-                          {canEditSchedule && onProposeScheduleChange ? (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenProposeModal(proj)}
-                              className="text-brand-ink hover:underline font-semibold text-[12px] flex items-center gap-1 cursor-pointer"
-                            >
-                              <ArrowRightLeft className="w-3 h-3" />
-                              تغییر برنامه
-                            </button>
-                          ) : (
-                            <span className="text-[11px] text-ink-3 font-mono">
-                              {proj.status === 'COMPLETED' ? 'تکمیل‌شده' : 'مأموریت مصوب'}
-                            </span>
-                          )}
-
-                          <div className="flex items-center gap-1">
-                            {canEditSchedule && onEditProject && (
+                        {/* اکشن‌ها: مدیر QC خودش تاریخ و اکیپ را عوض می‌کند (قبلاً برای خودش درخواست می‌فرستاد) */}
+                        {canEditSchedule && proj.status !== 'COMPLETED' && proj.status !== 'CANCELLED' && (
+                          <div className="flex items-center gap-2 pt-1 border-t border-line text-xs">
+                            {isQcManager && onEditProject ? (
                               <button
                                 type="button"
                                 onClick={() => onEditProject(proj)}
-                                className="p-1.5 text-ink-2 hover:text-ink rounded cursor-pointer"
-                                title="ویرایش"
+                                className="flex-1 min-h-[40px] rounded-md border border-line bg-canvas hover:bg-raised text-ink font-bold flex items-center justify-center gap-1.5 cursor-pointer"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
+                                تغییر تاریخ یا اکیپ
                               </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => onManageProject(proj)}
-                              className="p-1.5 text-ink-2 hover:text-brand-ink rounded cursor-pointer"
-                              title="مدیریت کامل"
-                            >
-                              <Settings2 className="w-3.5 h-3.5" />
-                            </button>
+                            ) : onProposeScheduleChange ? (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenProposeModal(proj)}
+                                className="flex-1 min-h-[40px] rounded-md border border-line bg-canvas hover:bg-raised text-brand-ink font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <ArrowRightLeft className="w-3.5 h-3.5" />
+                                درخواست تغییر برنامه
+                              </button>
+                            ) : null}
                           </div>
-                        </div>
+                        )}
                       </div>
                     );
                   })}
@@ -787,12 +865,12 @@ export const MonthPlanner: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => onNewProject(day.dateKey)}
-                      aria-label={`افزودن مأموریت برای ${day.persianDayName}`}
+                      aria-label={`افزودن پروژه برای ${day.persianDayName}`}
                       className={`w-full border border-dashed border-line hover:border-brand rounded-md flex items-center justify-center text-ink-3 hover:text-brand-ink text-xs transition cursor-pointer ${
                         dayProjects.length === 0 && dayBookings.length === 0 ? 'py-5' : 'py-2.5'
                       }`}
                     >
-                      {dayProjects.length === 0 && dayBookings.length === 0 ? '+ افزودن مأموریت' : '+ مأموریت دیگر'}
+                      {dayProjects.length === 0 && dayBookings.length === 0 ? '+ افزودن پروژه' : '+ پروژه‌ی دیگر'}
                     </button>
                   )}
                 </div>
@@ -1033,9 +1111,15 @@ export const MonthPlanner: React.FC<Props> = ({
             const daysCount = Math.max(1, Number(booking.allocatedDaysCount) || 1);
             let endDate: string | undefined;
             if (daysCount > 1) {
-              const end = new Date(scheduledDate + 'T00:00:00Z');
-              end.setUTCDate(end.getUTCDate() + daysCount - 1);
-              endDate = end.toISOString().slice(0, 10);
+              // روزهای کاری، مثل تقویم فروش (کار دوروزه‌ای که پنجشنبه شروع می‌شود، جمعه تمام نمی‌شود)
+              const span = workingDaysFrom(scheduledDate, daysCount);
+              if (span.length) {
+                endDate = span[span.length - 1];
+              } else {
+                const end = new Date(scheduledDate + 'T00:00:00Z');
+                end.setUTCDate(end.getUTCDate() + daysCount - 1);
+                endDate = end.toISOString().slice(0, 10);
+              }
             }
 
             // فرم ثبت مأموریت با اطلاعات رزرو پر می‌شود. پیوند رزرو فقط «بعد از» ثبت واقعی

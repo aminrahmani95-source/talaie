@@ -547,8 +547,13 @@ export function computeProjectDiff(original: Project, updated: Partial<Project>)
     if (key === 'id' || key === 'createdAt' || key === '__fromCache') continue;
     const oldVal = (original as any)[key];
 
-    // Do not include empty strings in patch
-    if (newVal === '') continue;
+    // پاک کردن یک فیلد: '' یا undefined به null تبدیل می‌شود تا سرور هم پاکش کند.
+    // قبلاً از patch حذف می‌شد، سرور مقدار قبلی را نگه می‌داشت و بعد از همگام‌سازی برمی‌گشت.
+    if (newVal === '' || newVal === undefined || newVal === null) {
+      const hadValue = oldVal !== undefined && oldVal !== null && oldVal !== '';
+      if (hadValue) diff[key as keyof Project] = null as any;
+      continue;
+    }
 
     // Check equality for arrays
     if (Array.isArray(newVal)) {

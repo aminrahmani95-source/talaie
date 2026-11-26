@@ -114,7 +114,6 @@ export const SettingsView: React.FC<Props> = ({
       defaultTools: tools,
       defaultTeamDailyCapacityHours: capNum && !isNaN(capNum) && capNum > 0 ? capNum : null,
     });
-    alert('تنظیمات سامانه با موفقیت ذخیره شد.');
   };
 
   // Export JSON file
@@ -204,7 +203,7 @@ export const SettingsView: React.FC<Props> = ({
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-sm text-ink flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-brand-ink" aria-hidden="true" />
-            حالت نمایشی سامانه (Theme Mode)
+            حالت نمایش (روز / شب)
           </h3>
           <span className="text-xs text-brand-ink font-bold">
             {isDarkMode ? 'حالت شب فعال است' : 'حالت روز فعال است'}
@@ -386,7 +385,7 @@ export const SettingsView: React.FC<Props> = ({
             <div className="flex items-center gap-2">
               <Cloud className="w-5 h-5 text-brand-ink" aria-hidden="true" />
               <h3 className="font-bold text-sm text-ink">
-                وضعیت شبکه ابری و همگام‌سازی زنده (Supabase Realtime)
+                وضعیت اتصال و همگام‌سازی زنده
               </h3>
             </div>
 
@@ -421,7 +420,7 @@ export const SettingsView: React.FC<Props> = ({
                 className="px-3.5 py-2 min-h-[44px] bg-brand hover:bg-brand-hover text-on-brand rounded-md text-xs font-bold transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
               >
                 {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedSql ? 'دستورات SQL کپی شد!' : 'کپی دستورات SQL ساخت جدول‌ها'}</span>
+                <span>{copiedSql ? 'دستورات راه‌اندازی سرور کپی شد' : 'کپی دستورات راه‌اندازی سرور (فنی)'}</span>
               </button>
               <a
                 href="https://supabase.com/dashboard"

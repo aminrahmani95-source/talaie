@@ -33,7 +33,7 @@ export function SegmentedControl<T extends string = string>({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`inline-flex items-center bg-sunken rounded-md border border-line select-none max-w-full overflow-x-auto scrollbar-none ${sizeClasses} ${className}`}
+      className={`inline-flex flex-wrap items-center gap-0.5 bg-sunken rounded-md border border-line select-none max-w-full ${sizeClasses} ${className}`}
     >
       {options.map((opt) => {
         const optVal = (opt.value ?? opt.id) as T;

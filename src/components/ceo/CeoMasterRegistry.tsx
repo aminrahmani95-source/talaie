@@ -1,3 +1,4 @@
+import { isStuckOpen } from '../../utils/navCounts';
 import React, { useState, useMemo } from 'react';
 import { formatProductCounts, projectProductCounts } from '../../utils/productCounts';
 import { Project, User, ProjectAuditRecord } from '../../types';
@@ -80,9 +81,8 @@ const CeoMasterRegistryContent: React.FC<Props> = ({ currentUser, projects, user
         inProgress++;
       } else if (p.status === 'SCHEDULED' || p.status === 'MEASUREMENT_PENDING') {
         scheduled++;
-      } else if (p.status === 'STUCK') {
-        stuck++;
       }
+      if (isStuckOpen(p)) stuck++;
     }
 
     return {
@@ -106,7 +106,7 @@ const CeoMasterRegistryContent: React.FC<Props> = ({ currentUser, projects, user
       if (statusFilter === 'SCHEDULED' && p.status !== 'SCHEDULED' && p.status !== 'MEASUREMENT_PENDING') {
         return false;
       }
-      if (statusFilter === 'STUCK' && p.status !== 'STUCK') {
+      if (statusFilter === 'STUCK' && !isStuckOpen(p)) {
         return false;
       }
 
@@ -449,19 +449,20 @@ const CeoMasterRegistryContent: React.FC<Props> = ({ currentUser, projects, user
                   {/* Quality & Sign-off info */}
                   <div className="bg-canvas p-3 rounded-xl border border-line space-y-1">
                     <span className="text-ink-3 font-bold block">کیفیت و امضای مشتری:</span>
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star
-                          key={s}
-                          className={`w-3.5 h-3.5 ${
-                            (p.qcScore || 5) >= s ? 'text-brand-ink fill-brand' : 'text-ink-3'
-                          }`}
-                        />
-                      ))}
-                      <span className="font-bold text-ink mr-1">
-                        {toPersianDigits(p.qcScore || 5)} از 5
-                      </span>
-                    </div>
+                    {/* امتیاز فقط بعد از تأیید QC معنی دارد؛ قبلاً پروژه‌ی بررسی‌نشده ۵ از ۵ نشان داده می‌شد */}
+                    {p.qcStatus === 'APPROVED' && p.qcScore ? (
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={`w-3.5 h-3.5 ${p.qcScore! >= s ? 'text-brand-ink fill-brand' : 'text-ink-3'}`}
+                          />
+                        ))}
+                        <span className="font-bold text-ink mr-1">{toPersianDigits(p.qcScore)} از ۵</span>
+                      </div>
+                    ) : (
+                      <p className="text-ink-3">هنوز ارزیابی QC نشده</p>
+                    )}
                     <p className="text-ink-2">
                       امضای کارفرما: <strong className={p.customerSignature ? 'text-emerald-400' : 'text-ink-3'}>
                         {p.customerSignature ? 'ثبت و تایید شده ✅' : 'در انتظار ثبت'}

@@ -26,6 +26,7 @@ import { Project, ProjectAuditRecord, ProjectStatus, QCStatus, Ticket, User, Ins
 import { Sheet, Button, StatusPill, SegmentedControl, Badge } from '../ui';
 import { WarehouseStageBadge } from '../warehouse/WarehouseStageBadge';
 import { getWarehouseStage, warehouseAlert } from '../../utils/warehouseStatus';
+import { getNextStep } from '../../utils/nextStep';
 import { CloudImage } from '../common/CloudImage';
 import {
   canRevertOneStep,
@@ -50,7 +51,8 @@ import {
   createTeamTransferPayload,
 } from '../../utils/teamTransfer';
 
-type TabId = 'info' | 'status' | 'docs' | 'history';
+export type ProjectSheetTab = 'info' | 'status' | 'docs' | 'history';
+type TabId = ProjectSheetTab;
 type PhotoField = 'beforePhotos' | 'afterPhotos' | 'completionPhotos';
 
 const ALL_STATUSES: ProjectStatus[] = [
@@ -80,6 +82,11 @@ export interface ProjectManagerSheetProps {
   onOpenCertificate: (project: Project) => void;
   onViewProposal: (project: Project) => void;
   fetchAudit: (projectId: string) => Promise<ProjectAuditRecord[]>;
+  /** تبی که برگه با آن باز می‌شود (پیش‌فرض: اطلاعات) */
+  initialTab?: ProjectSheetTab;
+  /** «قدم بعدی»: رفتن به رفع توقف یا بررسی QC همین پروژه */
+  onOpenStuck?: (project: Project) => void;
+  onOpenQc?: (project: Project) => void;
 }
 
 const sectionCls =
@@ -108,8 +115,11 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
   onOpenCertificate,
   onViewProposal,
   fetchAudit,
+  initialTab = 'info',
+  onOpenStuck,
+  onOpenQc,
 }) => {
-  const [tab, setTab] = useState<TabId>('status');
+  const [tab, setTab] = useState<TabId>(initialTab);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -296,8 +306,37 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
   );
 
   // ----------------------------------------------------------------- tabs
+  const next = getNextStep(project);
+  const nextAction =
+    next.action === 'EDIT'
+      ? () => onEditInfo(project)
+      : next.action === 'QC' && onOpenQc
+        ? () => onOpenQc(project)
+        : next.action === 'STUCK' && onOpenStuck
+          ? () => onOpenStuck(project)
+          : next.action === 'CERT' && project.qcStatus === 'APPROVED'
+            ? () => onOpenCertificate(project)
+            : undefined;
+  const nextTone = {
+    danger: 'border-rose-500/40 bg-rose-500/10 text-rose-800 dark:text-rose-200',
+    warn: 'border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100',
+    info: 'border-sky-500/40 bg-sky-500/10 text-sky-900 dark:text-sky-100',
+    ok: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100',
+  }[next.tone];
+
   const infoTab = (
     <div className="space-y-4">
+      <div className={`rounded-lg border p-3 flex flex-col sm:flex-row sm:items-center gap-2.5 ${nextTone}`}>
+        <div className="min-w-0 grow">
+          <div className="text-[12px] font-bold opacity-80">قدم بعدی</div>
+          <div className="text-sm font-bold leading-6">{next.text}</div>
+        </div>
+        {nextAction && next.actionLabel && (
+          <Button size="sm" onClick={nextAction} className="shrink-0">
+            {next.actionLabel}
+          </Button>
+        )}
+      </div>
       <div className={sectionCls}>
         <Row label="کد پروژه">{project.code}</Row>
         <Row label="عنوان">{project.title}</Row>
@@ -561,7 +600,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-ink-3">وضعیت فعلی:</span>
         <StatusPill status={project.status} size="md" />
-        <StatusPill status={project.status} qcStatus={project.qcStatus} size="md" />
+        {project.qcStatus !== 'NOT_STARTED' && <StatusPill status={project.status} qcStatus={project.qcStatus} size="md" />}
       </div>
 
       {reasonBox(false)}
@@ -649,12 +688,12 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         )}
       </div>
 
-      {/* Team Transfer Section (Phase P2.2) */}
+      {/* انتقال به اکیپ دیگر */}
       {canTransferProjectTeam(currentUser) && (
         <div className={sectionCls}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 font-bold text-sm">
-              <ArrowRightLeft className="w-4 h-4 text-brand-ink" /> انتقال رسمی به اکیپ دیگر (فاز P2.2)
+              <ArrowRightLeft className="w-4 h-4 text-brand-ink" /> انتقال رسمی به اکیپ دیگر
             </div>
             <Button
               variant={showTransferForm ? 'ghost' : 'secondary'}
@@ -673,7 +712,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
           {showTransferForm && (
             <div className="rounded-md border border-brand/40 bg-sunken p-3 space-y-3">
               <div className="text-xs font-bold text-ink">
-                انتقال رسمی پروژه و صورت‌جلسه تحویل اقلام باقیمانده (فاز P2.2)
+                انتقال رسمی پروژه و صورت‌جلسه تحویل اقلام باقیمانده
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <label className="space-y-1">
@@ -785,6 +824,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         </div>
       )}
 
+      {project.status === 'COMPLETED' && (
       <div className={sectionCls}>
         <div className="flex items-center gap-2 font-bold text-sm">
           <ShieldCheck className="w-4 h-4 text-brand-ink" /> کنترل کیفی (QC)
@@ -819,37 +859,16 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
             >
               لغو تایید QC
             </Button>
-          ) : (
-            <Button
-              icon={<ShieldCheck className="w-4 h-4" />}
-              disabled={busy}
-              onClick={() => {
-                const updates: Partial<Project> = {
-                  qcStatus: 'APPROVED',
-                  qcReviewedAt: new Date().toISOString(),
-                  qcReviewedBy: getDisplayName(currentUser.name) || 'مسئول QC',
-                };
-                if (project.status !== 'COMPLETED') {
-                  updates.status = 'COMPLETED';
-                  updates.completedAt = project.completedAt || new Date().toISOString();
-                }
-                run(
-                  updates,
-                  project.status === 'COMPLETED'
-                    ? 'پروژه با موفقیت تایید QC شد.'
-                    : 'عملیات پروژه تکمیل و تایید نهایی QC ثبت گردید.',
-                  'تایید QC توسط مدیر'
-                );
-              }}
-            >
-              تایید QC
+          ) : onOpenQc ? (
+            // تأیید فقط از «کنترل کیفیت»: آنجا عکس، امضا، امتیاز و ایرادهای باز بررسی و برگه‌ی بازرسی ثبت می‌شود
+            <Button icon={<ShieldCheck className="w-4 h-4" />} onClick={() => onOpenQc(project)}>
+              بررسی و تأیید در کنترل کیفیت
             </Button>
-          )}
+          ) : null}
         </div>
-        {project.status !== 'COMPLETED' && project.qcStatus !== 'APPROVED' && (
-          <p className="text-[12px] text-ink-3">تایید QC فقط برای پروژه‌ی «اتمام کار» فعال است. برای امتیازدهی از «میز QC» استفاده کنید.</p>
-        )}
+        <p className="text-[12px] text-ink-3">برای امتیازدهی و ثبت ایرادها از «کنترل کیفیت» استفاده کنید.</p>
       </div>
+      )}
 
       <details className={sectionCls}>
         <summary className="cursor-pointer font-bold text-sm select-none">تغییر دستی وضعیت (پیشرفته)</summary>
@@ -906,6 +925,26 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
           اعمال وضعیت
         </Button>
       </details>
+
+      {onDeleteProject && (
+        <div className="rounded-lg border border-rose-500/40 p-4 space-y-2">
+          <div className="flex items-center gap-2 font-bold text-sm text-rose-700 dark:text-rose-300">
+            <AlertTriangle className="w-4 h-4" /> منطقه‌ی خطر
+          </div>
+          <p className="text-xs text-ink-3">حذف همیشگی پروژه با همه‌ی سوابقش. فقط برای پروژه‌ای که اشتباهی ثبت شده.</p>
+          <Button
+            variant="ghost"
+            className="text-rose-600"
+            icon={<Trash2 className="w-4 h-4" />}
+            onClick={() => {
+              setShowDelete(true);
+              setReason('');
+            }}
+          >
+            حذف کامل پروژه
+          </Button>
+        </div>
+      )}
     </div>
   );
 
@@ -1187,18 +1226,13 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
     <Sheet
       isOpen
       onClose={onClose}
-      title="مدیریت کامل پروژه"
+      title="مدیریت پروژه"
       subtitle={`${project.code} — ${project.title}`}
       size="xl"
       footer={
         showDelete ? undefined : (
-          <div className="flex items-center justify-between gap-2 w-full">
-            {onDeleteProject && (
-              <Button variant="ghost" className="text-rose-600" icon={<Trash2 className="w-4 h-4" />} onClick={() => { setShowDelete(true); setReason(''); }}>
-                حذف کامل پروژه
-              </Button>
-            )}
-            <Button variant="secondary" onClick={onClose} className={!onDeleteProject ? 'mr-auto' : undefined}>
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button variant="secondary" onClick={onClose}>
               بستن
             </Button>
           </div>
@@ -1216,8 +1250,8 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
             className="w-full"
             options={[
               { value: 'info', label: 'اطلاعات', icon: <Info className="w-4 h-4" /> },
-              { value: 'status', label: 'وضعیت و QC', icon: <Activity className="w-4 h-4" /> },
-              { value: 'docs', label: 'گزارش و مدارک', icon: <FileText className="w-4 h-4" /> },
+              { value: 'status', label: 'وضعیت', icon: <Activity className="w-4 h-4" /> },
+              { value: 'docs', label: 'مدارک', icon: <FileText className="w-4 h-4" /> },
               { value: 'history', label: 'تاریخچه', icon: <History className="w-4 h-4" /> },
             ]}
           />

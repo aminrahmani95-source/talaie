@@ -26,6 +26,12 @@ export const TechniciansManager = React.lazy(() =>
 export const SettingsView = React.lazy(() =>
   import('../components/admin/SettingsView').then((m) => ({ default: m.SettingsView }))
 );
+export const IssuesDesk = React.lazy(() =>
+  import('../components/admin/IssuesDesk').then((m) => ({ default: m.IssuesDesk }))
+);
+export const ProjectsHub = React.lazy(() =>
+  import('../components/admin/ProjectsHub').then((m) => ({ default: m.ProjectsHub }))
+);
 export const StuckProjectsDesk = React.lazy(() =>
   import('../components/admin/StuckProjectsDesk').then((m) => ({ default: m.StuckProjectsDesk }))
 );

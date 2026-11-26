@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { formatProductCounts, projectProductCounts, bookingProductCounts } from '../../utils/productCounts';
 import {
   Project,
@@ -11,49 +11,48 @@ import {
   SalesProjectBooking,
 } from '../../types';
 import { ManagerTab } from '../navigation/BottomNav';
-import {
-  Activity,
-  CheckCircle2,
-  Users,
-  ChevronLeft,
-  Flame,
-  FileText,
-  BarChart3,
-  Star,
-  Package,
-  Phone,
-  Plus,
-  Search,
-  Lock,
-  Printer,
-  FileCheck2,
-  CalendarClock,
-} from 'lucide-react';
-import { toPersianDigits, getTodayPersianString, localDateKey, formatJalali } from '../../utils/jalali';
+import { CheckCircle2, Users, ChevronLeft, Package, Phone, Plus, CalendarClock, Clock } from 'lucide-react';
+import { toPersianDigits, getTodayPersianString, formatJalali } from '../../utils/jalali';
 import { getDisplayName } from '../../utils/technicianName';
 import { isProjectMultiDay, isProjectScheduledOnDate } from '../../utils/multiDay';
-import { computeSlaMetrics } from '../../utils/sla';
 import { getHandoverEvidence } from '../../utils/qcWorkflow';
-import { buildActionQueue, isBookingAwaitingAssignment, isBookingDueSoon, type ActionKind } from '../../utils/actionQueue';
-import { ProjectDossierModal } from '../ceo/ProjectDossierModal';
-import { ProjectPassportPrint } from '../common/ProjectPassportPrint';
-import { triggerToast } from '../Toast';
+import {
+  ACTION_GROUP,
+  buildActionQueue,
+  isBookingAwaitingAssignment,
+  isBookingDueSoon,
+  type ActionGroup,
+  type ActionItem,
+  type ActionKind,
+} from '../../utils/actionQueue';
 import { getWarehouseStage, warehouseAlert } from '../../utils/warehouseStatus';
 import { WarehouseStageBadge } from '../warehouse/WarehouseStageBadge';
+import { addDaysToKey } from '../../utils/warehouseLists';
+import { missingBeforeDispatch, qcWaitingDays, stuckSla } from '../../utils/nextStep';
+import { STUCK_CATEGORY_LABELS, stuckIncidentsOf } from '../../utils/projectsReport';
+import { useToday } from '../../hooks/useToday';
 
 const ACTION_META: Record<ActionKind, { label: string; chip: string; stripe: string; button: string }> = {
   STUCK: { label: 'توقف کار', chip: 'bg-rose-600 text-white', stripe: 'border-r-rose-500', button: 'bg-rose-600 hover:bg-rose-500 text-white' },
-  TICKET: { label: 'تیکت باز', chip: 'bg-amber-500/20 text-amber-600 dark:text-amber-300', stripe: 'border-r-amber-500', button: 'bg-raised hover:bg-hover text-ink border border-line-strong' },
+  TICKET: { label: 'تیکت باز', chip: 'bg-amber-500/20 text-amber-700 dark:text-amber-300', stripe: 'border-r-amber-500', button: 'bg-raised hover:bg-hover text-ink border border-line-strong' },
   QC: { label: 'منتظر QC', chip: 'bg-purple-600 text-white', stripe: 'border-r-purple-500', button: 'bg-purple-600 hover:bg-purple-500 text-white' },
-  INCOMING: { label: 'کار جدید', chip: 'bg-amber-500 text-on-brand', stripe: 'border-r-brand', button: 'bg-brand hover:bg-brand-hover text-on-brand' },
+  OVERDUE: { label: 'عقب‌افتاده', chip: 'bg-rose-500/15 text-rose-700 dark:text-rose-300', stripe: 'border-r-rose-400', button: 'bg-brand hover:bg-brand-hover text-on-brand' },
+  INCOMING: { label: 'منتظر برنامه', chip: 'bg-amber-500 text-on-brand', stripe: 'border-r-brand', button: 'bg-brand hover:bg-brand-hover text-on-brand' },
   BOOKING: { label: 'رزرو فروش', chip: 'bg-sky-600 text-white', stripe: 'border-r-sky-500', button: 'bg-brand hover:bg-brand-hover text-on-brand' },
 };
 
+const GROUP_META: Record<ActionGroup, { label: string; chipLabel: string }> = {
+  ISSUES: { label: 'موانع: توقف و تیکت', chipLabel: 'موانع' },
+  QC: { label: 'منتظر بررسی QC', chipLabel: 'QC' },
+  PLAN: { label: 'منتظر برنامه‌ریزی', chipLabel: 'منتظر برنامه' },
+};
+const GROUP_ORDER: ActionGroup[] = ['ISSUES', 'QC', 'PLAN'];
+
 const TEAM_STATUS = {
-  ON_MISSION: { label: 'در حال نصب', dot: 'bg-amber-500 animate-pulse', text: 'text-amber-500' },
-  STANDBY: { label: 'برنامه دارد', dot: 'bg-blue-500', text: 'text-blue-500' },
-  AVAILABLE: { label: 'آزاد', dot: 'bg-emerald-500', text: 'text-emerald-500' },
-  STUCK: { label: 'متوقف', dot: 'bg-rose-500', text: 'text-rose-500' },
+  ON_MISSION: { label: 'در حال نصب', dot: 'bg-amber-500 animate-pulse', text: 'text-amber-600 dark:text-amber-400' },
+  STANDBY: { label: 'برنامه دارد', dot: 'bg-blue-500', text: 'text-blue-600 dark:text-blue-400' },
+  AVAILABLE: { label: 'آزاد', dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
+  STUCK: { label: 'متوقف', dot: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400' },
 } as const;
 
 export interface OperationsControlCenterProps {
@@ -68,121 +67,120 @@ export interface OperationsControlCenterProps {
   salesBookings?: SalesProjectBooking[];
   settings?: SystemSettings | null;
   onNavigateTab: (tab: ManagerTab) => void;
+  /** برگه‌ی مدیریت پروژه */
   onOpenProject: (project: Project) => void;
   onOpenQcProject?: (project: Project) => void;
+  /** «رفع توقف» / «رسیدگی»: صفحه‌ی توقف و تیکت با همین پروژه */
+  onOpenIssue?: (tab: 'stuck' | 'tickets', projectId?: string | null) => void;
+  /** «تخصیص اکیپ و تاریخ»: فرم ویرایش پروژه */
+  onEditProject?: (project: Project) => void;
   onOpenScheduleRequests?: () => void;
-  onReviewScheduleRequest?: (request: ScheduleChangeRequest) => void;
+  /** «تخصیص در تقویم»: تقویم با فرم تخصیص همین رزرو */
+  onOpenBooking?: (bookingId: string) => void;
   onNewProject?: () => void;
 }
 
+type Filter = 'ALL' | ActionGroup;
+
+/**
+ * پیشخوان مدیر: یک صف اقدام (هر پروژه یک ردیف) به ترتیب فوریت، و کنارش اکیپ‌های امروز و فردا
+ * و هشدارهای انبار. هر دکمه دقیقاً همان کاری را باز می‌کند که رویش نوشته شده.
+ */
 export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = ({
   currentUser,
   projects,
-  users: _users,
   tickets,
   teamsWithMembers,
   scheduleChangeRequests = [],
-  materialRequests = [],
   salesBookings = [],
-  settings: _settings,
   onNavigateTab,
   onOpenProject,
   onOpenQcProject,
+  onOpenIssue,
+  onEditProject,
   onOpenScheduleRequests,
-  onReviewScheduleRequest: _onReviewScheduleRequest,
+  onOpenBooking,
   onNewProject,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'ACTIONS' | 'REGISTRY' | 'ANALYTICS'>('ACTIONS');
-  const [activeUrgentCategory, setActiveUrgentCategory] = useState<'ALL' | 'STUCK' | 'INCOMING' | 'QC'>('ALL');
+  const [filter, setFilter] = useState<Filter>('ALL');
+  const todayKey = useToday();
+  const tomorrowKey = addDaysToKey(todayKey, 1);
+  const todayPersian = useMemo(() => getTodayPersianString(), [todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const roleLabel =
+    currentUser.role === 'QC_MANAGER' ? 'مدیر فنی و QC' : currentUser.role === 'CEO' ? 'مدیرعامل' : 'هماهنگی عملیات';
 
-  // استیت‌های جستجو و فیلتر بخش شناسنامه و سوابق پروژه‌ها
-  const [searchQuery, setSearchQuery] = useState('');
-  const [registryStatusFilter, setRegistryStatusFilter] = useState<'ALL' | 'APPROVED' | 'IN_PROGRESS' | 'SCHEDULED' | 'STUCK'>('ALL');
-  const [dossierProject, setDossierProject] = useState<Project | null>(null);
-  const [printingProject, setPrintingProject] = useState<Project | null>(null);
-
-  const handlePrintCertificate = (project: Project) => {
-    const isQcApproved = project.status === 'COMPLETED' && project.qcStatus === 'APPROVED';
-    if (!isQcApproved) {
-      triggerToast(
-        'warning',
-        'چاپ شناسنامه رسمی منحصراً پس از اتمام کامل پروژه و صدور تأییدیه نهایی کنترل کیفی (QC) مجاز می‌باشد.'
-      );
-      return;
-    }
-    setPrintingProject(project);
-  };
-
-  // پروژه‌های فیلترشده در تب شناسنامه و آرشیو
-  const filteredRegistryProjects = useMemo(() => {
-    return projects.filter((p) => {
-      if (registryStatusFilter === 'APPROVED' && !(p.status === 'COMPLETED' && p.qcStatus === 'APPROVED')) {
-        return false;
-      }
-      if (registryStatusFilter === 'IN_PROGRESS' && p.status !== 'IN_PROGRESS' && p.status !== 'EN_ROUTE') {
-        return false;
-      }
-      if (registryStatusFilter === 'SCHEDULED' && p.status !== 'SCHEDULED' && p.status !== 'MEASUREMENT_PENDING') {
-        return false;
-      }
-      if (registryStatusFilter === 'STUCK' && p.status !== 'STUCK') {
-        return false;
-      }
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = (p.title || '').toLowerCase().includes(q);
-        const matchCustomer = (p.customerName || '').toLowerCase().includes(q);
-        const matchCode = (p.code || '').toLowerCase().includes(q);
-        const matchAddress = (p.address || '').toLowerCase().includes(q);
-        const matchTeam = (p.assignedTeamName || '').toLowerCase().includes(q);
-        if (!matchTitle && !matchCustomer && !matchCode && !matchAddress && !matchTeam) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [projects, registryStatusFilter, searchQuery]);
-
-  const isQcManager = currentUser.role === 'QC_MANAGER';
-  const isCeo = currentUser.role === 'CEO';
-  const todayKey = useMemo(() => localDateKey(new Date()), []);
-  const todayPersian = useMemo(() => getTodayPersianString(), []);
-
-  // ================= 1. صف نیازمند اقدام فوری (ACTION INBOX) =================
-
-  // یک صف واحد، هر پروژه یک ردیف (همان منبعی که نشان منوی «پیشخوان» را می‌شمارد)
-  const actionQueue = useMemo(
-    () => buildActionQueue(projects, tickets, salesBookings),
-    [projects, tickets, salesBookings],
-  );
-  const pendingScheduleRequests = scheduleChangeRequests.filter((r) => r.status === 'PENDING').length;
-  // bookings for later days: one summary line instead of a row each
-  const laterBookings = useMemo(
-    () => salesBookings.filter((b) => isBookingAwaitingAssignment(b, projects) && !isBookingDueSoon(b)),
-    [salesBookings, projects],
-  );
-  const queueCounts = useMemo(() => {
-    const c: Record<ActionKind, number> = { STUCK: 0, TICKET: 0, QC: 0, INCOMING: 0, BOOKING: 0 };
-    for (const i of actionQueue) c[i.kind]++;
+  // ---------------------------------------------------------------- صف اقدام
+  const actionQueue = useMemo(() => buildActionQueue(projects, tickets, salesBookings), [projects, tickets, salesBookings, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const groupCounts = useMemo(() => {
+    const c: Record<ActionGroup, number> = { ISSUES: 0, QC: 0, PLAN: 0 };
+    for (const i of actionQueue) c[ACTION_GROUP[i.kind]]++;
     return c;
   }, [actionQueue]);
-  const visibleQueue = useMemo(
-    () =>
-      actionQueue.filter((i) =>
-        activeUrgentCategory === 'ALL'
-          ? true
-          : activeUrgentCategory === 'STUCK'
-          ? i.kind === 'STUCK' || i.kind === 'TICKET'
-          : activeUrgentCategory === 'INCOMING'
-          ? i.kind === 'INCOMING' || i.kind === 'BOOKING'
-          : i.kind === activeUrgentCategory,
-      ),
-    [actionQueue, activeUrgentCategory],
+  const pendingScheduleRequests = scheduleChangeRequests.filter((r) => r.status === 'PENDING').length;
+  const laterBookings = useMemo(
+    () => salesBookings.filter((b) => isBookingAwaitingAssignment(b, projects) && !isBookingDueSoon(b)),
+    [salesBookings, projects]
   );
 
-  // هشدارهای انبار: کالا برای نصب نزدیک نرسیده، یا تعداد بعد از ثبت انبار عوض شده
+  // داخل هر گروه: عقب‌افتاده‌ترین اول
+  const sortedQueue = useMemo(() => {
+    const urgency = (i: ActionItem): number => {
+      const p = i.project;
+      if (i.kind === 'STUCK' && p) return stuckSla(p)?.hoursLeft ?? 999;
+      if (i.kind === 'QC' && p) return -(qcWaitingDays(p, todayKey) ?? 0);
+      if (i.kind === 'TICKET') return i.tickets[0]?.isBlocking ? -1 : 0;
+      return 0;
+    };
+    return GROUP_ORDER.flatMap((g) =>
+      actionQueue
+        .filter((i) => ACTION_GROUP[i.kind] === g)
+        .map((i, idx) => ({ i, idx, u: urgency(i) }))
+        .sort((a, b) => a.u - b.u || a.idx - b.idx)
+        .map((x) => x.i)
+    );
+  }, [actionQueue, todayKey]);
+  const visibleQueue = filter === 'ALL' ? sortedQueue : sortedQueue.filter((i) => ACTION_GROUP[i.kind] === filter);
+
+  // ---------------------------------------------------------------- اکیپ‌ها امروز و فردا
+  const liveTeams = useMemo(() => {
+    const targetTeams: InstallationTeamWithMembers[] =
+      teamsWithMembers && teamsWithMembers.length > 0
+        ? teamsWithMembers
+        : [
+            { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
+            { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
+          ];
+    const rank = (p: Project) =>
+      p.status === 'STUCK' ? 0 : p.status === 'IN_PROGRESS' || p.status === 'EN_ROUTE' ? 1 : p.status === 'PAUSED' ? 2 : 3;
+
+    return targetTeams.map((team) => {
+      const open = projects.filter(
+        (p) => p.assignedTeamId === team.id && p.status !== 'COMPLETED' && p.status !== 'CANCELLED'
+      );
+      const today = open
+        .filter(
+          (p) =>
+            p.scheduledDate === todayKey ||
+            isProjectScheduledOnDate(p, todayKey) ||
+            p.status === 'IN_PROGRESS' ||
+            p.status === 'EN_ROUTE' ||
+            p.status === 'STUCK'
+        )
+        .sort((a, b) => rank(a) - rank(b));
+      const tomorrow = open.filter((p) => p.scheduledDate === tomorrowKey || isProjectScheduledOnDate(p, tomorrowKey));
+      const activeProject = today[0] || null;
+      const status: keyof typeof TEAM_STATUS = !activeProject
+        ? 'AVAILABLE'
+        : activeProject.status === 'STUCK'
+          ? 'STUCK'
+          : activeProject.status === 'IN_PROGRESS' || activeProject.status === 'EN_ROUTE'
+            ? 'ON_MISSION'
+            : 'STANDBY';
+      const teamName = team.supervisorName ? `اکیپ ${getDisplayName(team.supervisorName)}` : team.name;
+      return { team, teamName, activeProject, todayCount: today.length, tomorrow, status };
+    });
+  }, [teamsWithMembers, projects, todayKey, tomorrowKey]);
+
   const warehouseAlerts = useMemo(
     () =>
       projects
@@ -193,95 +191,199 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             (a.alert.level === 'urgent' ? 0 : 1) - (b.alert.level === 'urgent' ? 0 : 1) ||
             String(a.p.scheduledDate || '9999').localeCompare(String(b.p.scheduledDate || '9999'))
         ),
-    [projects, todayKey],
+    [projects, todayKey]
   );
 
-  // ================= 2. وضعیت زنده ۲ اکیپ نصب در امروز =================
-  const liveTeams = useMemo(() => {
-    // اطمینان از وجود ۲ اکیپ
-    const targetTeams: InstallationTeamWithMembers[] = teamsWithMembers && teamsWithMembers.length > 0
-      ? teamsWithMembers
-      : [
-          { id: 'TEAM_1', name: 'اکیپ نصب ۱', code: 'TEAM_1', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
-          { id: 'TEAM_2', name: 'اکیپ نصب ۲', code: 'TEAM_2', technicians: [], totalMembers: 0, createdAt: '', updatedAt: '' },
-        ];
+  // ---------------------------------------------------------------- یک ردیف صف
+  const renderRow = (item: ActionItem) => {
+    const p = item.project;
+    const meta = ACTION_META[item.kind];
+    const b = item.booking;
+    const code = p?.code || item.tickets[0]?.projectCode || '';
+    const title = p?.title || item.tickets[0]?.projectTitle || b?.customerName || '';
+    const phone = item.kind === 'BOOKING' ? b?.customerPhone : p?.customerPhone;
+    const isWarehouse = item.tickets.some((t) => t.assignedRole === 'WAREHOUSE' || Boolean(t.referralNote));
 
-    return targetTeams.map((team) => {
-      // پروژه‌های این اکیپ برای امروز
-      const teamProjects = projects.filter((p) => {
-        if (p.assignedTeamId !== team.id) return false;
-        if (p.status === 'COMPLETED' || p.status === 'CANCELLED') return false;
-        return (
-          p.scheduledDate === todayKey ||
-          isProjectScheduledOnDate(p, todayKey) ||
-          p.status === 'IN_PROGRESS' ||
-          p.status === 'EN_ROUTE'
-        );
-      });
+    let detail: React.ReactNode = null;
+    let timing: { text: string; tone: string } | null = null;
+    let primary: { label: string; onClick: () => void } = { label: 'باز کردن', onClick: () => p && onOpenProject(p) };
 
-      const activeProject = teamProjects[0] || null;
-
-      let status: 'ON_MISSION' | 'STANDBY' | 'AVAILABLE' | 'STUCK' = 'AVAILABLE';
-      if (activeProject) {
-        if (activeProject.status === 'STUCK') {
-          status = 'STUCK';
-        } else if (activeProject.status === 'IN_PROGRESS' || activeProject.status === 'EN_ROUTE') {
-          status = 'ON_MISSION';
-        } else {
-          status = 'STANDBY';
-        }
+    if (item.kind === 'STUCK' && p) {
+      const list = stuckIncidentsOf(p);
+      const inc = list[list.length - 1];
+      detail = (
+        <>
+          {inc ? STUCK_CATEGORY_LABELS[inc.category] || 'توقف' : 'توقف'}
+          {inc?.description ? `: ${inc.description}` : ''}
+          {item.tickets.length > 0 && <span className="text-ink-3"> · {toPersianDigits(item.tickets.length)} تیکت مرتبط</span>}
+        </>
+      );
+      const sla = stuckSla(p);
+      if (sla) {
+        timing = {
+          text: sla.text,
+          tone: sla.overdue ? 'text-rose-600 dark:text-rose-300' : sla.hoursLeft < 24 ? 'text-amber-700 dark:text-amber-300' : 'text-ink-3',
+        };
       }
-
-      const isWarehouseReady = Boolean(activeProject?.warehousePrep?.isPackedAndReady);
-      const packedBy = activeProject?.warehousePrep?.packedByUserName;
-
-      return {
-        team,
-        activeProject,
-        status,
-        isWarehouseReady,
-        packedBy,
-        technicians: team.technicians || [],
+      primary = { label: 'رفع توقف', onClick: () => (onOpenIssue ? onOpenIssue('stuck', p.id) : onNavigateTab('stuck')) };
+    } else if (item.kind === 'TICKET') {
+      const first = item.tickets[0];
+      detail = (
+        <>
+          {first?.blockingReason || first?.description}
+          {item.tickets.length > 1 && <span className="text-ink-3"> · {toPersianDigits(item.tickets.length - 1)} تیکت دیگر</span>}
+        </>
+      );
+      if (first?.isBlocking) timing = { text: 'مسدودکننده‌ی کار', tone: 'text-rose-600 dark:text-rose-300' };
+      primary = {
+        label: 'رسیدگی',
+        onClick: () => (onOpenIssue ? onOpenIssue('tickets', first?.projectId) : onNavigateTab('tickets')),
       };
-    });
-  }, [teamsWithMembers, projects, todayKey]);
+    } else if (item.kind === 'QC' && p) {
+      const ev = getHandoverEvidence(p);
+      const ok = ev.exempt || (ev.hasPhotos && ev.hasAcceptance);
+      detail = (
+        <>
+          {p.assignedTeamName || 'اکیپ نامشخص'} ·{' '}
+          <span className={ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-300'}>
+            {ok ? 'عکس و امضا ثبت شده' : [!ev.hasPhotos && 'بدون عکس', !ev.hasAcceptance && 'بدون امضا'].filter(Boolean).join(' و ')}
+          </span>
+        </>
+      );
+      const days = qcWaitingDays(p, todayKey);
+      if (days !== null) {
+        timing = {
+          text: days === 0 ? 'امروز تمام شد' : `${toPersianDigits(days)} روز منتظر QC`,
+          tone: days >= 3 ? 'text-rose-600 dark:text-rose-300' : days >= 1 ? 'text-amber-700 dark:text-amber-300' : 'text-ink-3',
+        };
+      }
+      primary = { label: 'بررسی QC', onClick: () => (onOpenQcProject ? onOpenQcProject(p) : onNavigateTab('qc')) };
+    } else if (item.kind === 'OVERDUE' && p) {
+      detail = (
+        <>
+          {p.assignedTeamName || 'بدون اکیپ'} · {formatProductCounts(projectProductCounts(p)) || '—'}
+        </>
+      );
+      timing = { text: `تاریخ ${formatJalali(p.scheduledDate)} گذشته و کار شروع نشده`, tone: 'text-rose-600 dark:text-rose-300' };
+      primary = { label: 'برنامه‌ریزی دوباره', onClick: () => (onEditProject ? onEditProject(p) : onOpenProject(p)) };
+    } else if (item.kind === 'BOOKING' && b) {
+      detail = (
+        <>
+          {formatProductCounts(bookingProductCounts(b)) || `${toPersianDigits(b.lathsCount)} لت`}
+          {b.isSmart ? ' · هوشمند' : ''}
+          {b.salesRepName ? ` · فروش: ${b.salesRepName}` : ''}
+        </>
+      );
+      if (b.jalaliDate || b.requestedDate) {
+        timing = {
+          text: `درخواست برای ${b.jalaliDate ? toPersianDigits(b.jalaliDate) : formatJalali(b.requestedDate)}`,
+          tone: 'text-ink-3',
+        };
+      }
+      primary = { label: 'تخصیص در تقویم', onClick: () => (onOpenBooking ? onOpenBooking(b.id) : onNavigateTab('planner')) };
+    } else if (item.kind === 'INCOMING' && p) {
+      const missing = missingBeforeDispatch(p);
+      const onlyWarehouse = missing.length === 1 && missing[0] === 'ورود کالا به انبار';
+      detail = (
+        <>
+          {formatProductCounts(projectProductCounts(p)) || '—'}
+          {p.salesRepName ? ` · ${p.salesRepName}` : ''}
+        </>
+      );
+      if (missing.length) timing = { text: `مانده: ${missing.join('، ')}`, tone: 'text-amber-700 dark:text-amber-300' };
+      primary = onlyWarehouse
+        ? { label: 'پرونده', onClick: () => onOpenProject(p) }
+        : { label: 'تخصیص اکیپ و تاریخ', onClick: () => (onEditProject ? onEditProject(p) : onOpenProject(p)) };
+    }
 
-  // ================= 3. شاخص‌های آماری و کلان =================
-  const slaMetrics = useMemo(() => computeSlaMetrics(tickets), [tickets]);
+    const body = (
+      <>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className={`px-1.5 py-0.5 rounded text-[11px] font-black ${meta.chip}`}>
+            {item.kind === 'TICKET' && item.tickets[0]?.isBlocking ? 'تیکت مسدودکننده' : meta.label}
+          </span>
+          {isWarehouse && (
+            <span className="px-1.5 py-0.5 rounded text-[11px] font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300 flex items-center gap-1">
+              <Package className="w-3 h-3" aria-hidden="true" />
+              در دست انبار
+            </span>
+          )}
+          {code && <span className="font-mono text-[12px] text-ink-3">{code}</span>}
+          <span className="text-sm font-bold text-ink truncate">{title}</span>
+        </div>
+        {detail && <p className="text-xs text-ink-2 mt-1 line-clamp-2">{detail}</p>}
+        {timing && (
+          <p className={`text-[12px] font-bold mt-1 flex items-center gap-1 ${timing.tone}`}>
+            <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            {timing.text}
+          </p>
+        )}
+      </>
+    );
 
-  const approvedQcCount = useMemo(() => {
-    return projects.filter((p) => p.qcStatus === 'APPROVED').length;
-  }, [projects]);
+    return (
+      <div
+        key={item.key}
+        className={`rounded-xl bg-surface border border-line border-r-4 ${meta.stripe} p-3 flex flex-col @min-[560px]:flex-row @min-[560px]:items-center gap-2.5 @min-[560px]:gap-3`}
+      >
+        {p ? (
+          <button
+            type="button"
+            onClick={() => onOpenProject(p)}
+            className="min-w-0 grow text-right cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            aria-label={`پرونده‌ی ${code} ${title}`}
+          >
+            {body}
+          </button>
+        ) : (
+          <div className="min-w-0 grow">{body}</div>
+        )}
 
-  const activeSitesCount = useMemo(() => {
-    return projects.filter((p) => p.status === 'IN_PROGRESS' || p.status === 'EN_ROUTE').length;
-  }, [projects]);
+        <div className="flex items-center gap-2 shrink-0 self-end @min-[560px]:self-auto">
+          {phone && (
+            <a
+              href={`tel:${phone}`}
+              aria-label={`تماس با ${p?.customerName || b?.customerName || 'کارفرما'}`}
+              className="w-11 h-11 rounded-lg border border-line text-ink-2 hover:text-ink hover:bg-raised flex items-center justify-center"
+            >
+              <Phone className="w-4 h-4" />
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={primary.onClick}
+            className={`px-3.5 rounded-lg font-bold text-xs transition flex items-center gap-1 cursor-pointer active:scale-95 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${meta.button}`}
+          >
+            {primary.label}
+            <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
-  const ratedProjects = useMemo(() => {
-    return projects.filter((p) => p.customerSatisfaction && p.customerSatisfaction > 0);
-  }, [projects]);
-
-  const avgSatisfaction = useMemo(() => {
-    if (ratedProjects.length === 0) return 0;
-    const sum = ratedProjects.reduce((acc, p) => acc + (p.customerSatisfaction || 0), 0);
-    return Number((sum / ratedProjects.length).toFixed(1));
-  }, [ratedProjects]);
+  const chips: Array<{ key: Filter; label: string; count: number; on: string }> = [
+    { key: 'ALL', label: 'همه', count: actionQueue.length, on: 'bg-brand text-on-brand' },
+    { key: 'ISSUES', label: GROUP_META.ISSUES.chipLabel, count: groupCounts.ISSUES, on: 'bg-rose-600 text-white' },
+    { key: 'QC', label: GROUP_META.QC.chipLabel, count: groupCounts.QC, on: 'bg-purple-600 text-white' },
+    { key: 'PLAN', label: GROUP_META.PLAN.chipLabel, count: groupCounts.PLAN, on: 'bg-amber-500 text-black' },
+  ];
 
   return (
-    <div className="space-y-4 sm:space-y-5 pb-20 animate-in fade-in duration-200">
-      {/* ================= سربرگ فشرده ================= */}
-      <header className="flex items-start justify-between gap-3">
+    <div className="space-y-4 animate-in fade-in duration-200">
+      {/* سربرگ */}
+      <header className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-ink-3 tabular-nums">
-            {todayPersian} · {isQcManager ? 'مدیر فنی و QC' : isCeo ? 'مدیرعامل' : 'هماهنگی عملیات'}
+            {todayPersian} · {roleLabel}
           </p>
-          <h1 className="text-lg sm:text-xl font-black text-ink tracking-tight mt-0.5">پیشخوان عملیات</h1>
+          <h1 className="text-lg sm:text-xl font-black text-ink tracking-tight mt-0.5">پیشخوان</h1>
         </div>
         {onNewProject && (
           <button
             type="button"
             onClick={() => onNewProject()}
-            className="shrink-0 px-3.5 py-2 rounded-lg bg-brand hover:bg-brand-hover text-on-brand font-black text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer min-h-[40px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="shrink-0 px-3.5 rounded-lg bg-brand hover:bg-brand-hover text-on-brand font-black text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer min-h-[44px] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             پروژه جدید
@@ -289,621 +391,195 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
         )}
       </header>
 
-      {/* ================= نبض روز: کاشی‌ها همان فیلترهای صف اقدام‌اند ================= */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-3">
-        {[
-          { key: 'ALL' as const, label: 'نیازمند اقدام', value: actionQueue.length, tone: actionQueue.length > 0 ? 'text-rose-400' : 'text-emerald-400', ring: 'ring-brand' },
-          { key: 'STUCK' as const, label: 'توقف و تیکت', value: queueCounts.STUCK + queueCounts.TICKET, tone: 'text-rose-400', ring: 'ring-rose-500' },
-          { key: 'QC' as const, label: 'منتظر QC', value: queueCounts.QC, tone: 'text-purple-400', ring: 'ring-purple-500' },
-          { key: 'INCOMING' as const, label: 'کار جدید', value: queueCounts.INCOMING + queueCounts.BOOKING, tone: 'text-amber-400', ring: 'ring-amber-500' },
-        ].map((tile) => {
-          const isActive = activeSubTab === 'ACTIONS' && activeUrgentCategory === tile.key;
-          return (
-            <button
-              key={tile.key}
-              type="button"
-              aria-pressed={isActive}
-              onClick={() => {
-                setActiveSubTab('ACTIONS');
-                setActiveUrgentCategory(tile.key);
-              }}
-              className={`text-right p-2.5 sm:p-3.5 rounded-xl bg-surface border transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                isActive ? `border-transparent ring-2 ${tile.ring}` : 'border-line hover:border-line-strong'
-              }`}
-            >
-              <div className={`text-xl sm:text-2xl font-black tabular-nums leading-none ${tile.value > 0 ? tile.tone : 'text-ink-3'}`}>
-                {toPersianDigits(tile.value)}
-              </div>
-              <div className="text-[12px] sm:text-xs font-bold text-ink-2 mt-1.5 leading-tight">{tile.label}</div>
-            </button>
-          );
-        })}
-      </div>
+      {pendingScheduleRequests > 0 && onOpenScheduleRequests && (
+        <button
+          type="button"
+          onClick={onOpenScheduleRequests}
+          className="w-full rounded-xl bg-surface border border-line border-r-4 border-r-sky-500 p-3 flex items-center justify-between gap-3 text-right cursor-pointer hover:bg-raised min-h-[48px]"
+        >
+          <span className="flex items-center gap-2 text-sm font-bold text-ink">
+            <CalendarClock className="w-4 h-4 text-sky-500" aria-hidden="true" />
+            {toPersianDigits(pendingScheduleRequests)} درخواست تغییر برنامه منتظر بررسی
+          </span>
+          <span className="text-xs font-bold text-brand-ink flex items-center gap-1 shrink-0">
+            تقویم
+            <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
+          </span>
+        </button>
+      )}
 
-      {/* ================= تب‌ها ================= */}
-      <div role="tablist" className="flex items-center gap-1 p-1 rounded-xl bg-sunken border border-line w-full sm:w-auto sm:inline-flex">
-        {(
-          [
-            { key: 'ACTIONS' as const, label: 'صف اقدام', icon: Activity, show: true },
-            { key: 'REGISTRY' as const, label: 'شناسنامه پروژه‌ها', icon: FileText, show: isCeo },
-            { key: 'ANALYTICS' as const, label: 'گزارش‌ها', icon: BarChart3, show: true },
-          ]
-        )
-          .filter((t) => t.show)
-          .map((t) => {
-            const Icon = t.icon;
-            const selected = activeSubTab === t.key;
-            return (
+      <div className="grid grid-cols-1 @min-[900px]:grid-cols-3 gap-4 items-start">
+        {/* ================= صف اقدام ================= */}
+        <section className="@min-[900px]:col-span-2 space-y-3" aria-label="صف اقدام">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
+            {chips.map((c) => (
               <button
-                key={t.key}
+                key={c.key}
                 type="button"
-                role="tab"
-                aria-selected={selected}
-                onClick={() => setActiveSubTab(t.key)}
-                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                  selected ? 'bg-surface text-ink shadow-sm border border-line' : 'text-ink-2 hover:text-ink'
+                aria-pressed={filter === c.key}
+                onClick={() => setFilter(c.key)}
+                className={`shrink-0 min-h-[40px] px-3 rounded-full text-xs font-bold flex items-center gap-1.5 cursor-pointer transition ${
+                  filter === c.key ? c.on : 'bg-surface border border-line text-ink-2 hover:text-ink'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${selected ? 'text-brand-ink' : ''}`} />
-                {t.label}
+                {c.label}
+                <span
+                  className={`min-w-5 h-5 px-1 rounded-full text-[11px] tabular-nums flex items-center justify-center ${
+                    filter === c.key ? 'bg-black/15' : c.count > 0 && c.key === 'ISSUES' ? 'bg-rose-600 text-white' : 'bg-sunken'
+                  }`}
+                >
+                  {toPersianDigits(c.count)}
+                </span>
               </button>
-            );
-          })}
-      </div>
+            ))}
+          </div>
 
-      {activeSubTab === 'ACTIONS' ? (
-        <>
-          {/* ================= صف اقدام: هر پروژه یک ردیف، یک دکمه‌ی اصلی ================= */}
-          <section className="space-y-2" aria-label="صف اقدام">
-            {pendingScheduleRequests > 0 && onOpenScheduleRequests && currentUser.role === 'QC_MANAGER' && (
+          {visibleQueue.length === 0 ? (
+            <div className="flex items-center gap-3 p-4 rounded-xl border border-dashed border-line bg-sunken/50">
+              <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
+              <p className="text-sm font-bold text-ink">
+                {actionQueue.length === 0 ? 'همه‌چیز روی روال است؛ کار فوری‌ای نیست.' : 'در این دسته موردی نیست.'}
+              </p>
+            </div>
+          ) : filter === 'ALL' ? (
+            GROUP_ORDER.filter((g) => groupCounts[g] > 0).map((g) => (
+              <div key={g} className="space-y-2">
+                <h2 className="text-xs font-black text-ink-2 px-1 flex items-center justify-between">
+                  <span>{GROUP_META[g].label}</span>
+                  <span className="text-ink-3 font-bold tabular-nums">{toPersianDigits(groupCounts[g])}</span>
+                </h2>
+                {visibleQueue.filter((i) => ACTION_GROUP[i.kind] === g).map(renderRow)}
+              </div>
+            ))
+          ) : (
+            <div className="space-y-2">{visibleQueue.map(renderRow)}</div>
+          )}
+
+          {laterBookings.length > 0 && (filter === 'ALL' || filter === 'PLAN') && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab('planner')}
+              className="w-full rounded-xl border border-dashed border-line p-3 flex items-center justify-between gap-3 text-right cursor-pointer hover:bg-raised min-h-[48px]"
+            >
+              <span className="text-xs font-bold text-ink-2">
+                {toPersianDigits(laterBookings.length)} رزرو فروش برای روزهای بعد در تقویم منتظر تخصیص است
+              </span>
+              <ChevronLeft className="w-4 h-4 text-ink-3 shrink-0" aria-hidden="true" />
+            </button>
+          )}
+        </section>
+
+        {/* ================= ستون کناری: امروز و فردا، انبار ================= */}
+        <aside className="space-y-4">
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-black text-ink flex items-center gap-2">
+                <Users className="w-4 h-4 text-brand-ink" />
+                اکیپ‌ها امروز و فردا
+              </h2>
               <button
                 type="button"
-                onClick={onOpenScheduleRequests}
-                className="w-full rounded-xl bg-surface border border-line border-r-4 border-r-sky-500 p-3 flex items-center justify-between gap-3 text-right cursor-pointer hover:bg-raised"
+                onClick={() => onNavigateTab('planner')}
+                className="text-xs font-bold text-brand-ink hover:underline flex items-center gap-1 cursor-pointer min-h-[40px] px-1"
               >
-                <span className="flex items-center gap-2 text-sm font-bold text-ink">
-                  <CalendarClock className="w-4 h-4 text-sky-500" aria-hidden="true" />
-                  {toPersianDigits(pendingScheduleRequests)} درخواست تغییر برنامه منتظر بررسی شما
-                </span>
-                <span className="text-xs font-bold text-brand-ink flex items-center gap-1">
-                  بررسی در تقویم
-                  <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
-                </span>
+                تقویم
+                <ChevronLeft className="w-3.5 h-3.5" />
               </button>
-            )}
-            {warehouseAlerts.length > 0 && (
-              <div className="rounded-xl bg-surface border border-line border-r-4 border-r-amber-500 p-3 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 text-sm font-bold text-ink">
-                    <Package className="w-4 h-4 text-amber-500" aria-hidden="true" />
-                    {toPersianDigits(warehouseAlerts.length)} هشدار انبار
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onNavigateTab('materials')}
-                    className="text-xs font-bold text-brand-ink hover:underline flex items-center gap-1 cursor-pointer min-h-[32px]"
-                  >
-                    انبار و متریال
-                    <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
-                  </button>
-                </div>
-                <ul className="space-y-1">
-                  {warehouseAlerts.slice(0, 5).map(({ p, alert }) => (
-                    <li key={p.id}>
+            </div>
+            <div className="rounded-xl bg-surface border border-line divide-y divide-line">
+              {liveTeams.map(({ team, teamName, activeProject, todayCount, tomorrow, status }) => {
+                const st = TEAM_STATUS[status];
+                return (
+                  <div key={team.id} className="p-3 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${st.dot}`} aria-hidden="true" />
+                      <span className="text-sm font-bold text-ink">{teamName}</span>
+                      <span className={`text-[11px] font-bold ${st.text}`}>{st.label}</span>
+                    </div>
+                    {activeProject ? (
                       <button
                         type="button"
-                        onClick={() => onOpenProject(p)}
-                        className="w-full text-right flex items-center gap-2 text-xs rounded-lg px-2 py-1.5 hover:bg-raised cursor-pointer min-h-[36px]"
+                        onClick={() => onOpenProject(activeProject)}
+                        className="w-full text-right text-xs text-ink-2 rounded-md hover:bg-raised px-1 -mx-1 py-1 cursor-pointer min-h-[36px]"
                       >
+                        <span className="font-mono text-ink-3">{activeProject.code}</span> · {activeProject.title}
+                        {isProjectMultiDay(activeProject) && <span className="text-teal-600 dark:text-teal-400"> · چندروزه</span>}
+                        {todayCount > 1 && <span className="text-ink-3"> · +{toPersianDigits(todayCount - 1)} کار دیگر</span>}
+                        {getWarehouseStage(activeProject) !== 'NONE' && (
+                          <WarehouseStageBadge project={activeProject} size="xs" withPrefix className="mr-1.5 align-middle" />
+                        )}
+                      </button>
+                    ) : (
+                      <p className="text-xs text-ink-3">امروز کاری ندارد.</p>
+                    )}
+                    <p className="text-[12px] text-ink-3">
+                      فردا:{' '}
+                      {tomorrow.length === 0 ? (
+                        'کاری ندارد'
+                      ) : (
+                        <>
+                          {tomorrow.map((t) => t.code).join('، ')}
+                          {tomorrow.some((t) => {
+                            const s = getWarehouseStage(t);
+                            return s === 'AWAITING' || s === 'PARTIAL';
+                          }) && <span className="text-rose-600 dark:text-rose-300 font-bold"> · کالا نرسیده</span>}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {warehouseAlerts.length > 0 && (
+            <section className="rounded-xl bg-surface border border-line border-r-4 border-r-amber-500 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-sm font-black text-ink">
+                  <Package className="w-4 h-4 text-amber-500" aria-hidden="true" />
+                  {toPersianDigits(warehouseAlerts.length)} هشدار انبار
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('materials')}
+                  className="text-xs font-bold text-brand-ink hover:underline flex items-center gap-1 cursor-pointer min-h-[40px] px-1"
+                >
+                  انبار
+                  <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
+                </button>
+              </div>
+              <ul className="space-y-1">
+                {warehouseAlerts.slice(0, 5).map(({ p, alert }) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenProject(p)}
+                      className="w-full text-right text-xs rounded-lg px-2 py-1.5 hover:bg-raised cursor-pointer min-h-[40px] space-y-0.5"
+                    >
+                      <span className="flex items-center gap-2">
                         <span
                           className={`w-2 h-2 rounded-full shrink-0 ${alert.level === 'urgent' ? 'bg-rose-500' : 'bg-amber-500'}`}
                           aria-hidden="true"
                         />
                         <span className="font-mono text-ink-3 shrink-0">{p.code}</span>
                         <span className="font-bold text-ink truncate">{p.title}</span>
-                        <span className={`truncate ${alert.level === 'urgent' ? 'text-rose-600 dark:text-rose-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                          · {alert.text}
-                        </span>
                         {p.scheduledDate && <span className="text-ink-3 shrink-0 mr-auto">{formatJalali(p.scheduledDate)}</span>}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {visibleQueue.map((item) => {
-              const p = item.project;
-              const meta = ACTION_META[item.kind];
-              const isWarehouse = item.tickets.some((t) => t.assignedRole === 'WAREHOUSE' || Boolean(t.referralNote));
-              const b = item.booking;
-              const code = p?.code || item.tickets[0]?.projectCode || '';
-              const title = p?.title || item.tickets[0]?.projectTitle || b?.customerName || '';
-              const phone =
-                item.kind === 'STUCK' || item.kind === 'INCOMING'
-                  ? p?.customerPhone
-                  : item.kind === 'BOOKING'
-                  ? b?.customerPhone
-                  : undefined;
-
-              const stuckReason = (
-                p?.stuckIncident?.description ||
-                p?.stuckIncidents?.[p.stuckIncidents.length - 1]?.description ||
-                ''
-              ).trim();
-              const extraTickets = item.tickets.filter((t) => {
-                const d = (t.description || '').trim();
-                return d && !(stuckReason && (stuckReason.includes(d) || d.includes(stuckReason)));
-              });
-
-              let detail: React.ReactNode = null;
-              let primary: { label: string; onClick: () => void } = { label: 'باز کردن', onClick: () => p && onOpenProject(p) };
-
-              if (item.kind === 'STUCK' && p) {
-                detail = <>علت: {stuckReason || 'علت توقف ثبت نشده'}</>;
-                primary = { label: 'رفع توقف', onClick: () => onOpenProject(p) };
-              } else if (item.kind === 'TICKET') {
-                const first = item.tickets[0];
-                detail = (
-                  <>
-                    {first?.blockingReason || first?.description}
-                    {item.tickets.length > 1 && (
-                      <span className="text-ink-3"> · {toPersianDigits(item.tickets.length - 1)} تیکت دیگر</span>
-                    )}
-                  </>
-                );
-                primary = { label: 'رسیدگی', onClick: () => onNavigateTab('tickets') };
-              } else if (item.kind === 'QC' && p) {
-                const ev = getHandoverEvidence(p);
-                const ok = ev.exempt || (ev.hasPhotos && ev.hasAcceptance);
-                detail = (
-                  <>
-                    {p.assignedTeamName || 'اکیپ نامشخص'} ·{' '}
-                    <span className={ok ? 'text-emerald-500' : 'text-amber-500'}>
-                      {ok
-                        ? 'عکس و امضا ثبت شده'
-                        : [!ev.hasPhotos && 'بدون عکس', !ev.hasAcceptance && 'بدون امضا'].filter(Boolean).join(' و ')}
-                    </span>
-                  </>
-                );
-                primary = {
-                  label: 'بررسی QC',
-                  onClick: () => (onOpenQcProject ? onOpenQcProject(p) : onNavigateTab('qc')),
-                };
-              } else if (item.kind === 'BOOKING' && b) {
-                detail = (
-                  <>
-                    {formatProductCounts(bookingProductCounts(b)) || `${toPersianDigits(b.lathsCount)} لت`}{b.isSmart ? ' · هوشمند' : ''}
-                    {(b.jalaliDate || b.requestedDate) &&
-                      ` · درخواست برای ${b.jalaliDate ? toPersianDigits(b.jalaliDate) : formatJalali(b.requestedDate)}`}
-                    {b.salesRepName ? ` · فروش: ${b.salesRepName}` : ''}
-                  </>
-                );
-                primary = { label: 'تخصیص در تقویم', onClick: () => onNavigateTab('planner') };
-              } else if (item.kind === 'INCOMING' && p) {
-                // what still stands between this job and a team on site
-                const missing = [
-                  p.status === 'MEASUREMENT_PENDING' && !p.secondMeasurementDetails?.isReadinessApproved && 'اندازه‌گیری دوم',
-                  p.technicalHandover && !p.technicalHandover.warehouseConfirmation?.confirmed && 'ورود کالا به انبار',
-                  !p.assignedTeamId && 'اکیپ',
-                  !p.scheduledDate && 'تاریخ',
-                ].filter(Boolean);
-                detail = (
-                  <>
-                    {formatProductCounts(projectProductCounts(p)) || '—'}
-                    {p.salesRepName ? ` · ${p.salesRepName}` : ''}
-                    {missing.length > 0 && <span className="text-amber-500"> · مانده: {missing.join('، ')}</span>}
-                  </>
-                );
-                primary = { label: 'تخصیص اکیپ و تاریخ', onClick: () => onOpenProject(p) };
-              }
-
-              return (
-                <div
-                  key={item.key}
-                  className={`rounded-xl bg-surface border border-line border-r-4 ${meta.stripe} p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4`}
-                >
-                  <div className="min-w-0 grow">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-black ${meta.chip}`}>
-                        {item.kind === 'TICKET' && item.tickets[0]?.isBlocking ? 'تیکت مسدودکننده' : meta.label}
                       </span>
-                      {isWarehouse && (
-                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-500/15 text-purple-400 flex items-center gap-1">
-                          <Package className="w-3 h-3" aria-hidden="true" />
-                          در دست انبار
-                        </span>
-                      )}
-                      <span className="font-mono text-[12px] text-ink-3">{code}</span>
-                      <span className="text-sm font-bold text-ink truncate">{title}</span>
-                    </div>
-                    {detail && <p className="text-xs text-ink-2 mt-1 line-clamp-2">{detail}</p>}
-                    {/* tickets that only repeat the stop reason are not listed again */}
-                    {item.kind === 'STUCK' && extraTickets.length > 0 && (
-                      <p className="text-[12px] text-ink-3 mt-1 truncate">
-                        تیکت باز: {extraTickets.map((t) => t.description).join(' · ')}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-                    {phone && (
-                      <a
-                        href={`tel:${phone}`}
-                        aria-label={`تماس با ${p?.customerName || 'کارفرما'}`}
-                        className="w-9 h-9 rounded-lg border border-line text-ink-2 hover:text-ink hover:bg-raised flex items-center justify-center"
+                      <span
+                        className={`block pr-4 ${
+                          alert.level === 'urgent' ? 'text-rose-600 dark:text-rose-300' : 'text-amber-700 dark:text-amber-300'
+                        }`}
                       >
-                        <Phone className="w-4 h-4" />
-                      </a>
-                    )}
-                    {isWarehouse && (
-                      <button
-                        type="button"
-                        onClick={() => onNavigateTab('materials')}
-                        className="px-3 py-2 rounded-lg border border-line text-ink-2 hover:text-ink hover:bg-raised text-xs font-bold cursor-pointer min-h-[36px]"
-                      >
-                        انبار
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={primary.onClick}
-                      className={`px-3.5 py-2 rounded-lg font-bold text-xs transition flex items-center gap-1 cursor-pointer active:scale-95 min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${meta.button}`}
-                    >
-                      {primary.label}
-                      <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
+                        {alert.text}
+                      </span>
                     </button>
-                  </div>
-                </div>
-              );
-            })}
-
-            {laterBookings.length > 0 && (activeUrgentCategory === 'ALL' || activeUrgentCategory === 'INCOMING') && (
-              <button
-                type="button"
-                onClick={() => onNavigateTab('planner')}
-                className="w-full rounded-xl border border-dashed border-line bg-sunken/50 p-3 flex items-center justify-between gap-3 text-right cursor-pointer hover:bg-raised"
-              >
-                <span className="text-sm text-ink-2">
-                  <span className="font-bold text-ink">{toPersianDigits(laterBookings.length)} رزرو فروش</span> برای روزهای بعد
-                  منتظر تخصیص است
-                </span>
-                <span className="text-xs font-bold text-brand-ink flex items-center gap-1 shrink-0">
-                  تقویم
-                  <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
-                </span>
-              </button>
-            )}
-
-            {visibleQueue.length === 0 && (
-              <div className="flex items-center gap-3 p-4 rounded-xl border border-dashed border-line bg-sunken/50">
-                <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
-                <p className="text-sm font-bold text-ink">
-                  {actionQueue.length === 0 ? 'همه‌چیز روی روال است؛ مورد فوری‌ای وجود ندارد.' : 'در این دسته موردی نیست.'}
-                </p>
-              </div>
-            )}
-          </section>
-
-          {/* ================= اکیپ‌ها امروز: هر اکیپ یک ردیف ================= */}
-          <section className="space-y-2 pt-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-black text-ink flex items-center gap-2">
-                <Users className="w-4 h-4 text-brand-ink" />
-                اکیپ‌ها امروز
-              </h2>
-              <button
-                type="button"
-                onClick={() => onNavigateTab('planner')}
-                className="text-xs font-bold text-brand-ink hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                تقویم
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="rounded-xl bg-surface border border-line divide-y divide-line">
-              {liveTeams.map(({ team, activeProject, status }) => {
-                const st = TEAM_STATUS[status];
-                const teamName = team.supervisorName ? `اکیپ ${getDisplayName(team.supervisorName)}` : team.name;
-                return (
-                  <div key={team.id} className="p-3 flex items-center gap-3">
-                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${st.dot}`} aria-hidden="true" />
-                    <div className="min-w-0 grow">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-ink">{teamName}</span>
-                        <span className={`text-[11px] font-bold ${st.text}`}>{st.label}</span>
-                      </div>
-                      <p className="text-xs text-ink-2 mt-0.5 truncate">
-                        {activeProject ? (
-                          <>
-                            <span className="font-mono text-ink-3">{activeProject.code}</span> · {activeProject.title}
-                            {isProjectMultiDay(activeProject) && <span className="text-teal-500"> · چندروزه</span>}
-                            {getWarehouseStage(activeProject) !== 'NONE' && (
-                              <WarehouseStageBadge project={activeProject} size="xs" withPrefix className="mr-1.5 align-middle" />
-                            )}
-                          </>
-                        ) : (
-                          'بدون مأموریت برای امروز'
-                        )}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => (activeProject ? onOpenProject(activeProject) : onNavigateTab('planner'))}
-                      className="shrink-0 px-3 py-2 rounded-lg border border-line text-xs font-bold text-ink-2 hover:text-ink hover:bg-raised cursor-pointer min-h-[36px]"
-                    >
-                      {activeProject ? 'پرونده' : 'تخصیص'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        </>
-      ) : activeSubTab === 'REGISTRY' ? (
-        !isCeo ? (
-          <div className="bg-surface border border-rose-500/30 rounded-2xl p-8 text-center text-rose-400 space-y-2">
-            <p className="font-bold">دسترسی غیرمجاز</p>
-            <p className="text-xs text-ink-2">
-              مشاهده شناسنامه رسمی و سوابق پروژه‌ها منحصراً در اختیار مدیرعامل (CEO) می‌باشد.
-            </p>
-          </div>
-        ) : (
-          /* ================= نمای شناسنامه و سوابق جامع پروژه‌ها (MASTER REGISTRY) ================= */
-          <div className="space-y-5 animate-in fade-in duration-200">
-          {/* باکس جستجو و فیلترها */}
-          <div className="bg-surface rounded-2xl p-4 sm:p-5 border border-line space-y-4">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-ink-3 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="جستجوی سریع پروژه، نام کارفرما، کد رهگیری، نشانی یا اکیپ نصب..."
-                  className="w-full bg-canvas text-ink border border-line rounded-xl pr-10 pl-4 py-2.5 text-xs placeholder:text-ink-3 focus:outline-none focus:border-brand transition shadow-inner"
-                />
-              </div>
-
-              {/* فیلتر وضعیت */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {(['ALL', 'APPROVED', 'IN_PROGRESS', 'SCHEDULED', 'STUCK'] as const).map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => setRegistryStatusFilter(st)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                      registryStatusFilter === st
-                        ? 'bg-brand text-on-brand'
-                        : 'bg-canvas text-ink-2 hover:text-ink border border-line'
-                    }`}
-                  >
-                    {st === 'ALL' && 'همه پروژه‌ها'}
-                    {st === 'APPROVED' && 'تایید کیفی QC'}
-                    {st === 'IN_PROGRESS' && 'در حال نصب'}
-                    {st === 'SCHEDULED' && 'برنامه‌ریزی‌شده'}
-                    {st === 'STUCK' && 'متوقف در کارگاه'}
-                  </button>
+                  </li>
                 ))}
-              </div>
-            </div>
-          </div>
-
-          {/* لیست کارت‌های پروژه‌ها */}
-          {filteredRegistryProjects.length === 0 ? (
-            <div className="bg-surface rounded-2xl p-12 text-center border border-line text-xs text-ink-2 space-y-2">
-              <FileCheck2 className="w-8 h-8 text-ink-3 mx-auto opacity-50" />
-              <h4 className="font-bold text-ink">پروژه‌ای مطابق با فیلتر انتخابی یافت نشد</h4>
-            </div>
-          ) : (
-            <div className="space-y-3.5">
-              {filteredRegistryProjects.map((p) => {
-                const isApproved = p.status === 'COMPLETED' && p.qcStatus === 'APPROVED';
-                const isStuck = p.status === 'STUCK';
-                const isInProgress = p.status === 'IN_PROGRESS' || p.status === 'EN_ROUTE';
-
-                return (
-                  <div
-                    key={p.id}
-                    className={`bg-surface rounded-2xl p-4 sm:p-5 border transition space-y-3.5 ${
-                      isApproved
-                        ? 'border-emerald-500/40 ring-1 ring-emerald-500/20'
-                        : isStuck
-                        ? 'border-rose-500/50'
-                        : isInProgress
-                        ? 'border-brand/50'
-                        : 'border-line'
-                    }`}
-                  >
-                    {/* Header Row */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-line pb-3">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-xs font-black bg-canvas text-brand-ink border border-line-strong px-2.5 py-0.5 rounded">
-                            {p.code}
-                          </span>
-                          {p.isForceMajeure && (
-                            <span className="flex items-center gap-1 text-[12px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded border border-rose-500/30">
-                              <Flame className="w-3 h-3 text-rose-400" />
-                              فورس‌ماژور
-                            </span>
-                          )}
-                          <span className="text-xs text-ink-2 font-bold">
-                            تاریخ نصب: {formatJalali(p.scheduledDate)}
-                          </span>
-                          {p.assignedTeamName && (
-                            <span className="text-xs text-brand-ink font-bold">
-                              • {p.assignedTeamName}
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-sm sm:text-base font-black text-ink mt-1">{p.title}</h3>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
-                        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
-                          isApproved
-                            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                            : isStuck
-                            ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-                            : isInProgress
-                            ? 'bg-brand/15 text-brand-ink border-brand/30'
-                            : 'bg-raised text-ink-2 border-line-strong'
-                        }`}>
-                          {isApproved ? 'تایید نهایی QC ✅' :
-                           isStuck ? 'متوقف در کارگاه ⚠️' :
-                           isInProgress ? 'در حال اجرا' : 'زمان‌بندی‌شده'}
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() => setDossierProject(p)}
-                          className="px-3.5 py-1.5 bg-raised hover:bg-hover text-ink hover:text-brand-ink border border-line-strong rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-xs"
-                        >
-                          <FileText className="w-3.5 h-3.5 text-brand-ink" />
-                          <span>پرونده ۳۶۰°</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handlePrintCertificate(p)}
-                          className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-sm active:scale-95 cursor-pointer ${
-                            isApproved
-                              ? 'bg-brand hover:bg-brand-hover text-on-brand'
-                              : 'bg-raised hover:bg-hover text-ink-2 border border-line-strong'
-                          }`}
-                        >
-                          {isApproved ? (
-                            <Printer className="w-3.5 h-3.5" />
-                          ) : (
-                            <Lock className="w-3.5 h-3.5 text-amber-400" />
-                          )}
-                          <span>شناسنامه A4</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* مشخصات کارفرما و اقلام */}
-                    <div className="grid grid-cols-1 @min-[700px]:grid-cols-3 gap-3 text-xs">
-                      <div className="bg-canvas p-2.5 rounded-xl border border-line space-y-1">
-                        <span className="text-ink-3 font-bold block">کارفرما و نشانی:</span>
-                        <p className="font-bold text-ink">{p.customerName}</p>
-                        <p className="text-ink-2 font-mono">{p.customerPhone || 'بدون شماره'}</p>
-                        <p className="text-ink-2 line-clamp-1">{p.address}</p>
-                      </div>
-
-                      <div className="bg-canvas p-2.5 rounded-xl border border-line space-y-1">
-                        <span className="text-ink-3 font-bold block">مشخصات فنی و مقادیر:</span>
-                        <p className="font-bold text-brand-ink">
-                          {formatProductCounts(projectProductCounts(p))}
-                        </p>
-                        <p className="text-ink-2">{p.mechanismType || 'مکانیزم استاندارد'}</p>
-                      </div>
-
-                      <div className="bg-canvas p-2.5 rounded-xl border border-line space-y-1">
-                        <span className="text-ink-3 font-bold block">کیفیت و امتیاز:</span>
-                        <div className="flex items-center gap-1">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className={`w-3.5 h-3.5 ${
-                                (p.qcScore || 5) >= s ? 'text-brand-ink fill-brand' : 'text-ink-3'
-                              }`}
-                            />
-                          ))}
-                          <span className="font-bold text-ink mr-1">
-                            {toPersianDigits(p.qcScore || 5)} از 5
-                          </span>
-                        </div>
-                        {p.customerSatisfaction && (
-                          <p className="text-ink-2">رضایت مشتری: {toPersianDigits(p.customerSatisfaction)} ستاره</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+              </ul>
+            </section>
           )}
-        </div>
-        )
-      ) : (
-        /* ================= نمای گزارش آماری و هوش عملیاتی (ANALYTICS) ================= */
-        <div className="space-y-6 animate-in fade-in duration-200">
-          <div className="p-5 rounded-xl bg-surface border border-line space-y-4">
-            <h3 className="text-sm font-black text-ink flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-brand-ink" />
-              شاخص‌های عملکرد
-            </h3>
-
-            {/* کارت‌های خلاصه KPI */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-              <div className="p-3.5 rounded-lg bg-sunken border border-line">
-                <span className="text-[12px] text-ink-2 block mb-1">کارگاه‌های فعال امروز</span>
-                <span className="text-xl font-bold text-ink tabular-nums">{toPersianDigits(activeSitesCount)}</span>
-              </div>
-              <div className="p-3.5 rounded-lg bg-sunken border border-line">
-                <span className="text-[12px] text-ink-2 block mb-1">تایید نهایی QC</span>
-                <span className="text-xl font-bold text-emerald-400 tabular-nums">{toPersianDigits(approvedQcCount)}</span>
-              </div>
-              <div className="p-3.5 rounded-lg bg-sunken border border-line">
-                <span className="text-[12px] text-ink-2 block mb-1">رضایت کارفرمایان</span>
-                <span className="text-xl font-bold text-ink tabular-nums">
-                  {avgSatisfaction > 0 ? `${toPersianDigits(avgSatisfaction)} از ۵` : '—'}
-                </span>
-              </div>
-              <div className="p-3.5 rounded-lg bg-sunken border border-line">
-                <span className="text-[12px] text-ink-2 block mb-1">کل پروژه‌های ثبت‌شده</span>
-                <span className="text-xl font-bold text-ink tabular-nums">
-                  {toPersianDigits(projects.length)}
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-lg bg-sunken border border-line">
-                <span className="text-[12px] text-ink-2 block mb-1">حل تیکت‌ها در موعد SLA</span>
-                <span className="text-xl font-bold text-emerald-400 tabular-nums">
-                  {toPersianDigits(slaMetrics.onTimeRate)}٪
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-lg bg-sunken border border-line">
-                <span className="text-[12px] text-ink-2 block mb-1">تیکت‌های بحرانی باقیمانده</span>
-                <span className="text-xl font-bold text-rose-400 tabular-nums">
-                  {toPersianDigits(slaMetrics.openOverdue)}
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-lg bg-sunken border border-line">
-                <span className="text-[12px] text-ink-2 block mb-1">متریال تحویل‌شده به کارگاه</span>
-                <span className="text-xl font-bold text-brand-ink tabular-nums">
-                  {toPersianDigits(
-                    materialRequests.filter((r) => r.status === 'DELIVERED_CONFIRMED').length
-                  )}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* مودال مشاهده پرونده و سوابق جامع ۳۶۰ درجه */}
-      {dossierProject && (
-        <ProjectDossierModal
-          project={dossierProject}
-          users={_users}
-          onClose={() => setDossierProject(null)}
-          onPrintCertificate={() => handlePrintCertificate(dossierProject)}
-        />
-      )}
-
-      {/* مودال چاپ شناسنامه رسمی */}
-      {printingProject && (
-        <ProjectPassportPrint
-          project={printingProject}
-          onClose={() => setPrintingProject(null)}
-        />
-      )}
+        </aside>
+      </div>
     </div>
   );
 };

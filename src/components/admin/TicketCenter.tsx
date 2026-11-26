@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Portal } from '../ui/Portal';
 import { Ticket, User } from '../../types';
 import {
@@ -30,12 +30,24 @@ interface Props {
   currentUser?: User;
   users?: User[];
   onNavigateTab?: (tab: any) => void;
+  /** از پیشخوان: تیکت‌های همین پروژه بالا و برجسته نشان داده شوند */
+  focusProjectId?: string | null;
+  /** داخل صفحه‌ی «توقف و تیکت»: عنوان کوتاه‌تر */
+  embedded?: boolean;
 }
 
-type TicketStatusFilter = 'ALL' | 'OPEN' | 'CRITICAL' | 'RESOLVED';
+type TicketStatusFilter = 'ACTIVE' | 'ALL' | 'OPEN' | 'CRITICAL' | 'RESOLVED';
 
-export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, currentUser, users, onNavigateTab }) => {
-  const [filter, setFilter] = useState<TicketStatusFilter>('ALL');
+export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, currentUser, users, onNavigateTab, focusProjectId }) => {
+  // پیش‌فرض: همه‌ی تیکت‌های باز (قبلاً «همه» بود و حل‌شده‌ها هم قاطی بودند)
+  const [filter, setFilter] = useState<TicketStatusFilter>('ACTIVE');
+  const focusRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!focusProjectId) return;
+    setFilter('ACTIVE');
+    const t = setTimeout(() => focusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+    return () => clearTimeout(t);
+  }, [focusProjectId]);
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [resolvingId, setResolvingId] = useState<string | null>(null);
@@ -76,7 +88,9 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
       const isCritical = t.isBlocking || getTicketSlaStatus(t) === 'OPEN_OVERDUE';
 
       // Status filter
-      if (filter === 'OPEN') {
+      if (filter === 'ACTIVE') {
+        if (t.status !== 'OPEN') return false;
+      } else if (filter === 'OPEN') {
         if (t.status !== 'OPEN' || isCritical) return false;
       } else if (filter === 'CRITICAL') {
         if (t.status !== 'OPEN' || !isCritical) return false;
@@ -102,8 +116,16 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
       }
 
       return true;
+    }).sort((a, b) => {
+      // تیکت‌های پروژه‌ای که از پیشخوان باز شده اول
+      if (focusProjectId) {
+        const fa = a.projectId === focusProjectId ? 0 : 1;
+        const fb = b.projectId === focusProjectId ? 0 : 1;
+        if (fa !== fb) return fa - fb;
+      }
+      return 0;
     });
-  }, [tickets, filter, categoryFilter, searchQuery]);
+  }, [tickets, filter, categoryFilter, searchQuery, focusProjectId]);
 
   const handleResolve = (ticket: Ticket) => {
     if (!resolutionNote.trim()) {
@@ -237,12 +259,13 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
       {/* Filter and Search Bar */}
       <div className="bg-surface rounded-lg p-4 border border-line space-y-3">
         {/* Status Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
           {[
-            { id: 'ALL', label: 'همه تیکت‌ها', count: tickets.length },
-            { id: 'OPEN', label: 'باز در مهلت', count: openInSlaCount },
-            { id: 'CRITICAL', label: 'بحرانی و مسدودکننده', count: criticalCount, alert: true },
+            { id: 'ACTIVE', label: 'باز', count: openInSlaCount + criticalCount },
+            { id: 'CRITICAL', label: 'بحرانی', count: criticalCount, alert: true },
+            { id: 'OPEN', label: 'در مهلت', count: openInSlaCount },
             { id: 'RESOLVED', label: 'حل‌شده', count: resolvedCount },
+            { id: 'ALL', label: 'همه', count: tickets.length },
           ].map((tab) => {
             const isActive = filter === tab.id;
             return (
@@ -250,7 +273,7 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
                 key={tab.id}
                 type="button"
                 onClick={() => setFilter(tab.id as TicketStatusFilter)}
-                className={`px-3 py-1.5 rounded-md font-bold whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 min-h-[38px] rounded-md font-bold whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
                   isActive
                     ? 'bg-brand text-on-brand shadow-xs'
                     : 'bg-sunken border border-line text-ink-2 hover:bg-raised hover:text-ink'
@@ -324,7 +347,8 @@ export const TicketCenter: React.FC<Props> = ({ tickets, onUpdateTicket, current
             return (
               <div
                 key={t.id}
-                className={`bg-surface rounded-lg p-4 border  space-y-3.5 transition ${
+                ref={focusProjectId && t.projectId === focusProjectId && t === filteredTickets.find((x) => x.projectId === focusProjectId) ? focusRef : undefined}
+                className={`bg-surface rounded-lg p-4 border  space-y-3.5 transition ${focusProjectId && t.projectId === focusProjectId ? 'ring-2 ring-brand ' : ''}${
                   slaStatus === 'OPEN_OVERDUE'
                     ? 'border-rose-400 dark:border-rose-800 ring-2 ring-rose-500/15'
                     : t.isBlocking

@@ -69,8 +69,11 @@ interface Props {
   users: User[];
   currentUser?: User;
   selectedProjectId?: string | null;
+  /** از پیشخوان باز شده: جزئیات پروژه‌ی انتخاب‌شده فوراً نشان داده شود (روی گوشی) */
+  autoOpenDetail?: boolean;
   onSelectProject?: (id: string) => void;
-  onPatchProject: (id: string, patch: Partial<Project>) => void;
+  /** اگر ذخیره نشود خطا می‌دهد */
+  onPatchProject: (id: string, patch: Partial<Project>) => Promise<void> | void;
   onViewProposal: (project: Project) => void;
   onOpenCertificate?: (project: Project) => void;
   onOpenEvaluation?: (project: Project) => void;
@@ -90,6 +93,7 @@ export const QcDesk: React.FC<Props> = ({
   onOpenCertificate,
   onOpenEvaluation,
   onManageProject,
+  autoOpenDetail = false,
 }) => {
   const [filter, setFilter] = useState<FilterTab>('PENDING');
   const [internalSelectedProjectId, setInternalSelectedProjectId] = useState<string | null>(null);
@@ -98,6 +102,15 @@ export const QcDesk: React.FC<Props> = ({
 
   // Sync external/internal selection
   const selectedProjectId = externalSelectedProjectId ?? internalSelectedProjectId;
+  // از پیشخوان با «بررسی QC» آمده: روی گوشی ستون جزئیات پنهان است، پس برگه‌ی جزئیات را باز کن
+  useEffect(() => {
+    if (!autoOpenDetail || !externalSelectedProjectId) return;
+    const t = setTimeout(() => {
+      if (!detailPaneRef.current || !detailPaneRef.current.offsetParent) setIsMobileDetailOpen(true);
+    }, 50);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenDetail]);
   const setSelectedProjectId = (id: string | null) => {
     setInternalSelectedProjectId(id);
     if (id && externalOnSelectProject) {
@@ -180,7 +193,8 @@ export const QcDesk: React.FC<Props> = ({
 
   const isQcManager = currentUser?.role === 'QC_MANAGER';
   const isCeo = currentUser?.role === 'CEO';
-  const canApproveRole = isQcManager || isCeo;
+  // سرور فقط به مدیر QC اجازه‌ی تأیید نهایی می‌دهد؛ دکمه هم همین را نشان دهد
+  const canApproveRole = isQcManager;
 
   const unresolvedCriticalDefects = useMemo(() => {
     if (!selectedProject || !Array.isArray(selectedProject.qcDefects)) return [];
@@ -271,7 +285,7 @@ export const QcDesk: React.FC<Props> = ({
     setNewDefectLocation('');
   };
 
-  const handleApprove = (e?: React.FormEvent) => {
+  const handleApprove = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!selectedProject || !currentUser) {
       triggerToast('error', 'پروژه یا کاربر جهت تایید مشخص نشده است.');
@@ -307,7 +321,12 @@ export const QcDesk: React.FC<Props> = ({
       notes: qcNotes.trim() || defaultNote,
     });
 
-    onPatchProject(selectedProject.id, patch);
+    try {
+      await onPatchProject(selectedProject.id, patch);
+    } catch {
+      // پیام خطا را خود ذخیره نشان داده؛ تبریک و بستن فقط بعد از ذخیره‌ی واقعی
+      return;
+    }
     setIsEditingApproved(false);
     setIsMobileDetailOpen(false);
     triggerToast('success', `تایید نهایی QC پروژه «${selectedProject.code || selectedProject.title}» با موفقیت ثبت شد.`);
@@ -329,7 +348,7 @@ export const QcDesk: React.FC<Props> = ({
     setIsRejectModalOpen(true);
   };
 
-  const handleRejectSubmit = (reason: string, newScheduledDate?: string) => {
+  const handleRejectSubmit = async (reason: string, newScheduledDate?: string) => {
     if (!selectedProject || !currentUser) return;
 
     const checklistItems = DEFAULT_QC_CHECKLIST_ITEMS.map((item) => ({
@@ -352,9 +371,17 @@ export const QcDesk: React.FC<Props> = ({
       reworkScheduledDate: newScheduledDate,
     });
 
-    onPatchProject(selectedProject.id, patch);
+    try {
+      await onPatchProject(selectedProject.id, patch);
+    } catch {
+      return;
+    }
     setIsRejectModalOpen(false);
     setIsMobileDetailOpen(false);
+    triggerToast(
+      'info',
+      `QC پروژه «${selectedProject.code || selectedProject.title}» رد شد و برای اصلاح به اکیپ برگشت${newScheduledDate ? ` (تاریخ اصلاح: ${formatJalali(newScheduledDate)})` : ''}.`
+    );
   };
 
   const handleVerifyDefect = (defectId: string) => {
@@ -366,7 +393,7 @@ export const QcDesk: React.FC<Props> = ({
         user: currentUser,
         verificationNotes: 'تایید راستی‌آزمایی رفع نقص توسط مسئول QC',
       });
-      onPatchProject(selectedProject.id, patch);
+      void Promise.resolve(onPatchProject(selectedProject.id, patch)).catch(() => undefined);
     } catch (err: any) {
       alert(err.message || 'خطا در تایید رفع نقص');
     }
@@ -391,10 +418,12 @@ export const QcDesk: React.FC<Props> = ({
     };
 
     const nextDefects = [...(selectedProject.qcDefects || []), newDefect];
-    onPatchProject(selectedProject.id, {
-      qcDefects: nextDefects,
-      updatedAt: new Date().toISOString(),
-    });
+    void Promise.resolve(
+      onPatchProject(selectedProject.id, {
+        qcDefects: nextDefects,
+        updatedAt: new Date().toISOString(),
+      })
+    ).catch(() => undefined);
 
     setNewDefectDesc('');
     setNewDefectLocation('');
@@ -408,7 +437,7 @@ export const QcDesk: React.FC<Props> = ({
       completedAt: new Date().toISOString(),
       completionNotes: p.completionNotes || 'تکمیل نصب تایید شده توسط مسئول QC جهت بررسی نهایی.',
     };
-    onPatchProject(p.id, patch);
+    void Promise.resolve(onPatchProject(p.id, patch)).catch(() => undefined);
   };
 
   const getUser = (id?: string) => {

@@ -2,7 +2,18 @@ import type { Project, SalesProjectBooking, Ticket } from '../types';
 import { isAwaitingQc } from './qcWorkflow';
 import { isStuckOpen } from './navCounts';
 
-export type ActionKind = 'STUCK' | 'TICKET' | 'INCOMING' | 'QC' | 'BOOKING';
+export type ActionKind = 'STUCK' | 'TICKET' | 'INCOMING' | 'QC' | 'BOOKING' | 'OVERDUE';
+
+/** گروه‌های پیشخوان: موانع، QC، برنامه‌ریزی */
+export type ActionGroup = 'ISSUES' | 'QC' | 'PLAN';
+export const ACTION_GROUP: Record<ActionKind, ActionGroup> = {
+  STUCK: 'ISSUES',
+  TICKET: 'ISSUES',
+  QC: 'QC',
+  OVERDUE: 'PLAN',
+  INCOMING: 'PLAN',
+  BOOKING: 'PLAN',
+};
 
 export interface ActionItem {
   kind: ActionKind;
@@ -20,6 +31,17 @@ const isClosed = (p: Project) => p.status === 'COMPLETED' || p.status === 'CANCE
 export function needsScheduling(p: Project): boolean {
   if (isAwaitingQc(p) || isClosed(p) || isStuckOpen(p)) return false;
   return p.status === 'MEASUREMENT_PENDING' || !p.assignedTeamId || !p.scheduledDate;
+}
+
+/**
+ * کاری که تاریخش گذشته ولی اکیپ هیچ‌وقت راه نیفتاده (یا در مسیر مانده): هیچ‌جا دیده نمی‌شد،
+ * چون تقویم از امروز شروع می‌شود.
+ */
+export function isOverdueUnstarted(p: Project, todayKey: string = dayKeyAfter(0)): boolean {
+  if (p.status !== 'SCHEDULED' && p.status !== 'EN_ROUTE') return false;
+  if (!p.scheduledDate) return false;
+  const last = p.endDate && p.endDate > p.scheduledDate ? p.endDate : p.scheduledDate;
+  return last < todayKey;
 }
 
 /** bookings for the next few days are action items; later ones wait in the calendar */
@@ -73,20 +95,31 @@ export function buildActionQueue(
   }
 
   const projectById = new Map(projects.map((p) => [p.id, p]));
+  // تیکت پروژه‌ی حذف‌شده ردیف بی‌صاحب می‌ساخت؛ فقط تیکت‌های پروژه‌های موجود
   const ticketGroups = [...ticketsByProject.entries()]
-    .filter(([projectId]) => !used.has(projectId))
+    .filter(([projectId]) => !used.has(projectId) && projectById.has(projectId))
     .map(([projectId, list]) => ({ projectId, list: sortTickets(list) }))
     .sort((a, b) => Number(Boolean(b.list[0]?.isBlocking)) - Number(Boolean(a.list[0]?.isBlocking)));
   for (const g of ticketGroups) {
     items.push({ kind: 'TICKET', key: `ticket-${g.projectId}`, project: projectById.get(g.projectId), tickets: g.list });
+    used.add(g.projectId);
   }
 
-  for (const p of projects.filter(isAwaitingQc)) {
+  // هر پروژه فقط یک ردیف (قبلاً پروژه‌ی دارای تیکت دوباره به‌عنوان QC یا کار جدید هم می‌آمد)
+  for (const p of projects.filter((x) => isAwaitingQc(x) && !used.has(x.id))) {
     items.push({ kind: 'QC', key: `qc-${p.id}`, project: p, tickets: [] });
+    used.add(p.id);
   }
 
-  for (const p of projects.filter(needsScheduling)) {
+  const todayKey = dayKeyAfter(0);
+  for (const p of projects.filter((x) => !used.has(x.id) && isOverdueUnstarted(x, todayKey))) {
+    items.push({ kind: 'OVERDUE', key: `late-${p.id}`, project: p, tickets: [] });
+    used.add(p.id);
+  }
+
+  for (const p of projects.filter((x) => needsScheduling(x) && !used.has(x.id))) {
     items.push({ kind: 'INCOMING', key: `in-${p.id}`, project: p, tickets: [] });
+    used.add(p.id);
   }
 
   // sold by a sales rep, waiting for the manager to give it a team and a date. Only the ones due

@@ -55,3 +55,32 @@ describe('buildActionQueue', () => {
     expect(q.map((i) => i.key)).toEqual(['in-NEW', 'booking-B-WAIT', 'booking-B-GONE']);
   });
 });
+
+import { computeProjectDiff } from './offlineQueue';
+import { isOverdueUnstarted } from './actionQueue';
+
+describe('dashboard audit fixes', () => {
+  it('lists each project only once and drops tickets of deleted projects', () => {
+    const q = buildActionQueue(
+      [
+        proj('T+NEW', { assignedTeamId: undefined }),
+        proj('T+QC', { status: 'COMPLETED', qcStatus: 'PENDING' } as Partial<Project>),
+        proj('DONE-STUCK', { status: 'COMPLETED', qcStatus: 'PENDING', stuckIncidents: [{ id: 's', resolutionStatus: 'OPEN' }] } as any),
+      ],
+      [ticket('a', 'T+NEW'), ticket('b', 'T+QC'), ticket('orphan', 'GONE')],
+    );
+    expect(q.map((i) => `${i.kind}:${i.project?.id}`)).toEqual(['TICKET:T+NEW', 'TICKET:T+QC', 'QC:DONE-STUCK']);
+  });
+
+  it('flags scheduled jobs whose date passed without starting', () => {
+    expect(isOverdueUnstarted(proj('L', { scheduledDate: '2026-11-01' }), '2026-11-26')).toBe(true);
+    expect(isOverdueUnstarted(proj('M', { scheduledDate: '2026-11-20', endDate: '2026-11-30' }), '2026-11-26')).toBe(false);
+    expect(isOverdueUnstarted(proj('R', { scheduledDate: '2026-11-01', status: 'IN_PROGRESS' }), '2026-11-26')).toBe(false);
+  });
+
+  it('sends null for cleared fields so the server clears them too', () => {
+    const orig = proj('P', { endDate: '2026-12-03', customerPhone: '0912' } as Partial<Project>);
+    const diff = computeProjectDiff(orig, { endDate: undefined, customerPhone: '', address: '' } as Partial<Project>);
+    expect(diff).toEqual({ endDate: null, customerPhone: null });
+  });
+});

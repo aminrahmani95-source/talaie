@@ -39,7 +39,7 @@ import { useLatestRef } from './hooks/useLatestRef';
 import { OfflineBanner } from './components/layout/OfflineBanner';
 import { SplashScreen } from './components/layout/SplashScreen';
 import { ImpersonationBanner } from './components/layout/ImpersonationBanner';
-import { computeNavCounts } from './utils/navCounts';
+import { computeNavCounts, isStuckOpen } from './utils/navCounts';
 import { Outbox, OutboxMutation, OfflineQueue, OPERATION_FAILED_EVENT, SERVER_COPY_EVENT, getLastServerWriteAt } from './utils/offlineQueue';
 import {
   validateProjectPatchRoleGuards,
@@ -62,6 +62,7 @@ import {
 import { createDefectResolutionPayload } from './utils/qcWorkflow';
 import { getDisplayName } from './utils/technicianName';
 import { buildWarehousePatch, WarehouseAction } from './utils/warehouseStatus';
+import { autoResolveStuckPatch } from './utils/stuck';
 import { localDateKey, toPersianDigits } from './utils/jalali';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
@@ -76,11 +77,11 @@ import {
   OperationsControlCenter,
   MonthPlanner,
   QcDesk,
-  TicketCenter,
   MaterialCenter,
   TechniciansManager,
   SettingsView,
-  StuckProjectsDesk,
+  IssuesDesk,
+  ProjectsHub,
   PreInstallationModal,
   PersonnelEvaluationModal,
   FailedOperationsModal,
@@ -746,7 +747,38 @@ export const App: React.FC = () => {
   }, [settings.installationTeamCount, settings.lathsPerTeamPerDay, settings.workingDaysPerWeek, teamsWithMembers]);
 
   // Navigation tab for QC Manager / Coordinator - default to Operational Command Center ('control')
-  const [activeTab, setActiveTab] = useState<ManagerTab>('control');
+  const [activeTab, setActiveTabState] = useState<ManagerTab>('control');
+  // «توقف و تیکت» یک صفحه است؛ 'stuck' و 'tickets' (اعلان‌ها، لینک‌های قدیمی) به تب خودش در همان صفحه می‌رسند
+  const [issuesTab, setIssuesTab] = useState<'stuck' | 'tickets' | undefined>(undefined);
+  const [issuesFocusProjectId, setIssuesFocusProjectId] = useState<string | null>(null);
+  const [issuesNonce, setIssuesNonce] = useState(0);
+  // QC از پیشخوان باز شده: روی گوشی جزئیات همان پروژه فوراً باز شود
+  const [qcAutoOpen, setQcAutoOpen] = useState(false);
+  // تقویم از پیشخوان: فرم یک رزرو یا فهرست درخواست‌های تغییر برنامه باز شود
+  const [plannerFocus, setPlannerFocus] = useState<{ bookingId?: string; alerts?: boolean; nonce: number }>({ nonce: 0 });
+  const setActiveTab = useCallback((tab: ManagerTab) => {
+    setQcAutoOpen(false);
+    setPlannerFocus((f) => (f.bookingId || f.alerts ? { nonce: f.nonce + 1 } : f));
+    if (tab === 'stuck' || tab === 'tickets') {
+      setIssuesTab(tab);
+      setIssuesFocusProjectId(null);
+      setIssuesNonce((n) => n + 1);
+      setActiveTabState('issues');
+      return;
+    }
+    if (tab === 'issues') {
+      setIssuesTab(undefined);
+      setIssuesFocusProjectId(null);
+      setIssuesNonce((n) => n + 1);
+    }
+    setActiveTabState(tab);
+  }, []);
+  const openIssue = useCallback((tab: 'stuck' | 'tickets', projectId?: string | null) => {
+    setIssuesTab(tab);
+    setIssuesFocusProjectId(projectId || null);
+    setIssuesNonce((n) => n + 1);
+    setActiveTabState('issues');
+  }, []);
 
   // Each section opens at the top (otherwise the previous page's scroll position was kept)
   useEffect(() => {
@@ -814,6 +846,10 @@ export const App: React.FC = () => {
     if (currentUser?.role === 'CEO' && !['registry', 'planner', 'sales'].includes(activeTab)) {
       setActiveTab('registry');
     }
+    // شناسنامه برای مدیر QC حالا داخل «پروژه‌ها و گزارش» است
+    if (currentUser && currentUser.role !== 'CEO' && activeTab === 'registry') {
+      setActiveTab('projects');
+    }
   }, [currentUser?.role, activeTab]);
 
   // Theme (dark by default; light only when chosen) — see hooks/useTheme
@@ -856,11 +892,19 @@ export const App: React.FC = () => {
     return () => window.removeEventListener(TOAST_EVENT, handleToastEvent);
   }, []);
 
-  // Lightweight local storage caching (scoped to authenticated user session)
+  // Lightweight local storage caching (scoped to authenticated user session).
+  // نوشتن کل فهرست پروژه‌ها در حافظه‌ی مرورگر کند است (با صدها پروژه چند مگابایت)؛ پس از یک مکث کوتاه
+  // و یک بار به ازای چند تغییر پشت‌سرهم انجام می‌شود، و هنگام بستن صفحه هم حتماً ذخیره می‌شود.
   useEffect(() => {
-    if (currentUser?.id) {
-      StorageService.saveProjects(projects, currentUser.id);
-    }
+    if (!currentUser?.id) return;
+    const userId = currentUser.id;
+    const save = () => StorageService.saveProjects(projects, userId);
+    const t = setTimeout(save, 400);
+    window.addEventListener('pagehide', save);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('pagehide', save);
+    };
   }, [projects, currentUser?.id]);
 
   useEffect(() => {
@@ -1030,12 +1074,17 @@ export const App: React.FC = () => {
           ? 'ویرایش پروژه‌ها بدون اتصال به سرور ممکن نیست. پس از وصل شدن اینترنت دوباره تلاش کنید.'
           : 'اطلاعات در حال دریافت از سرور است، لطفاً چند لحظه صبر کنید.'
       );
-      return;
+      // فرم باز می‌ماند تا چیزی که تایپ شده از دست نرود (قبلاً فرم بسته می‌شد و تغییرات گم می‌شد)
+      throw new Error(
+        isOfflineMode
+          ? 'بدون اینترنت ویرایش ذخیره نمی‌شود. فرم را باز نگه دارید و بعد از اتصال دوباره «ذخیره» بزنید.'
+          : 'هنوز اطلاعات از سرور نرسیده. چند ثانیه صبر کنید و دوباره «ذخیره» بزنید.'
+      );
     }
 
     if (data.type === 'CREATE_PROJECT') {
       const newProj = data.project;
-      await commit(
+      const created = await commit(
         {
           type: 'CREATE_PROJECT',
           orderingKey: `project:${newProj.id}`,
@@ -1050,6 +1099,7 @@ export const App: React.FC = () => {
           setProjectFormInitialData(null);
         }
       );
+      if (!created) throw new Error('پروژه ثبت نشد. پیام خطا را ببینید و دوباره تلاش کنید.');
       const createdHook = projectCreatedHookRef.current;
       projectCreatedHookRef.current = null;
       if (createdHook) {
@@ -1062,7 +1112,7 @@ export const App: React.FC = () => {
       showToast(
         'success',
         canQueueOffline
-          ? 'مأموریت ذخیره شد و پس از اتصال به اینترنت به سرور ارسال می‌شود.'
+          ? 'پروژه ذخیره شد و پس از اتصال به اینترنت به سرور ارسال می‌شود.'
           : 'پروژه جدید با موفقیت ثبت شد.'
       );
     } else {
@@ -1073,7 +1123,7 @@ export const App: React.FC = () => {
         return;
       }
       const cleanPatch = { ...patch, updatedAt: new Date().toISOString() };
-      await commit(
+      const saved = await commit(
         {
           type: 'PATCH_PROJECT',
           orderingKey: `project:${id}`,
@@ -1090,14 +1140,16 @@ export const App: React.FC = () => {
           setProjectFormInitialData(null);
         }
       );
+      if (!saved) throw new Error('تغییرات ذخیره نشد. پیام خطا را ببینید و دوباره تلاش کنید.');
       showToast('success', 'تغییرات پروژه با موفقیت ذخیره شد.');
     }
   };
 
+  // اگر ذخیره نشود (نقش، اتصال) خطا می‌دهد تا صفحه‌ها پیام موفقیت نشان ندهند
   const handlePatchProject = async (projectId: string, patch: Partial<Project>) => {
     if (!currentUser) return;
     const cleanPatch = { ...patch, updatedAt: new Date().toISOString() };
-    await commit(
+    const ok = await commit(
       {
         type: 'PATCH_PROJECT',
         orderingKey: `project:${projectId}`,
@@ -1111,6 +1163,7 @@ export const App: React.FC = () => {
         projectsRef.current = next;
       }
     );
+    if (!ok) throw new Error('تغییر ثبت نشد.');
   };
 
   // ---- Manager / Coordinator control ----
@@ -1125,7 +1178,15 @@ export const App: React.FC = () => {
       setManagedProjectId(null);
       return;
     }
-    const cleanPatch: Record<string, unknown> = { ...patch, updatedAt: new Date().toISOString() };
+    const target = projectsRef.current.find((p) => p.id === projectId)!;
+    // تغییر وضعیت پروژه‌ی متوقف از برگه‌ی مدیریت: توقف باز هم بسته شود
+    const resolveStuck = autoResolveStuckPatch(
+      target,
+      typeof patch.status === 'string' ? patch.status : undefined,
+      getDisplayName(currentUser.name) || currentUser.name,
+      (typeof patch._auditReason === 'string' && patch._auditReason) || 'وضعیت توسط مدیر تغییر کرد'
+    );
+    const cleanPatch: Record<string, unknown> = { ...patch, ...(resolveStuck || {}), updatedAt: new Date().toISOString() };
     const { _auditReason: _reason, ...localPatch } = cleanPatch;
     const ok = await commit(
       {
@@ -1232,14 +1293,22 @@ export const App: React.FC = () => {
   ) => {
     try {
       await SupabaseSyncService.reviewScheduleChange(requestId, decision, notes || '');
+      const fetchStartedAt = Date.now();
       const [reqs, updatedProjects] = await Promise.all([
         SupabaseSyncService.fetchScheduleChangeRequests(),
         SupabaseSyncService.fetchProjects(),
       ]);
       setScheduleChangeRequests(reqs);
-      if (updatedProjects && updatedProjects.length > 0) {
-        setProjects(updatedProjects);
-        projectsRef.current = updatedProjects;
+      if (updatedProjects && updatedProjects.length > 0 && currentUser) {
+        // همان ادغام بارگذاری اصلی: تغییرهای ارسال‌نشده‌ی این دستگاه از صفحه پاک نشوند
+        const merged = keepNewerLocal(
+          await Outbox.applyPendingToProjects(updatedProjects, undefined, currentUser.id),
+          projectsRef.current,
+          'project',
+          fetchStartedAt,
+        );
+        setProjects(merged);
+        projectsRef.current = merged;
       }
       showToast(
         decision === 'APPROVED' ? 'success' : 'info',
@@ -2564,6 +2633,21 @@ export const App: React.FC = () => {
   };
 
   // Splash screen while checking persistent session
+  // شمارنده‌های منو (یک منبع برای سایدبار، نوار پایین و پیشخوان). فقط وقتی داده عوض شود دوباره حساب می‌شود؛
+  // قبلاً در هر رندر App کل صف اقدام از نو ساخته می‌شد.
+  const navBadgeCounts = useMemo(() => {
+    const base = computeNavCounts(projects, tickets, materialRequests);
+    // «موانع»: هر پروژه یک بار، چه توقف باز داشته باشد چه تیکت باز
+    const keys = new Set<string>();
+    for (const p of projects) if (isStuckOpen(p)) keys.add(p.id);
+    for (const t of tickets) if (t.status === 'OPEN') keys.add(t.projectId || t.id);
+    return {
+      ...base,
+      actionQueueCount: buildActionQueue(projects, tickets, salesBookings).length,
+      issuesCount: keys.size,
+    };
+  }, [projects, tickets, materialRequests, salesBookings]);
+
   if (authChecking) {
     return <SplashScreen />;
   }
@@ -2580,13 +2664,7 @@ export const App: React.FC = () => {
     );
   }
 
-  // Badge counters (single source for sidebar, bottom bar and dashboard)
-  const { openTicketCount, openStuckCount, pendingQcCount, pendingMaterialCount } = computeNavCounts(
-    projects,
-    tickets,
-    materialRequests
-  );
-  const actionQueueCount = buildActionQueue(projects, tickets, salesBookings).length;
+  const { openTicketCount, openStuckCount, pendingQcCount, pendingMaterialCount, actionQueueCount, issuesCount } = navBadgeCounts;
 
   const isQcManager = currentUser.role === 'QC_MANAGER';
   const isCoordinator = currentUser.role === 'SCHEDULING_COORDINATOR';
@@ -2631,7 +2709,10 @@ export const App: React.FC = () => {
       {/* Main Body */}
       <main key={homeNonce} id="main-content" className="@container flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 focus:outline-none">
         <ServerSetupBanner missing={missingMigrations} />
-        {!impersonatorCeo && currentUser.role !== 'CEO' && <NotificationPrompt userId={currentUser.id} />}
+        {/* پیشنهاد روشن کردن اعلان فقط در صفحه‌ی اصلی؛ قبلاً بالای همه‌ی صفحه‌ها جا می‌گرفت */}
+        {!impersonatorCeo && currentUser.role !== 'CEO' && (!isManagerOrCoordinator || activeTab === 'control') && (
+          <NotificationPrompt userId={currentUser.id} />
+        )}
         {currentUser.role === 'MEASUREMENT_LEAD' ? (
           // ================= 2ND MEASUREMENT & SITE READINESS DESK =================
           <React.Suspense fallback={<DashboardSkeleton />}>
@@ -2676,6 +2757,7 @@ export const App: React.FC = () => {
               openTicketCount={openTicketCount}
               pendingMaterialCount={pendingMaterialCount}
               actionQueueCount={actionQueueCount}
+              issuesCount={issuesCount}
             />
 
             {/* sized by the space left next to the sidebar, not by the window (see CLAUDE.md) */}
@@ -2715,14 +2797,27 @@ export const App: React.FC = () => {
                     onOpenQcProject={(p) => {
                       setSelectedQcProjectId(p.id);
                       setActiveTab('qc');
+                      setQcAutoOpen(true);
                     }}
-                    onOpenScheduleRequests={() => setActiveTab('planner')}
+                    onOpenIssue={openIssue}
+                    onEditProject={isCeo ? undefined : handleOpenEditProject}
+                    onOpenScheduleRequests={() => {
+                      setActiveTab('planner');
+                      setPlannerFocus((f) => ({ alerts: true, nonce: f.nonce + 1 }));
+                    }}
+                    onOpenBooking={(bookingId) => {
+                      setActiveTab('planner');
+                      setPlannerFocus((f) => ({ bookingId, nonce: f.nonce + 1 }));
+                    }}
                     onNewProject={handleOpenNewProject}
                   />
                 )}
 
                 {activeTab === 'planner' && (
                   <MonthPlanner
+                    key={plannerFocus.nonce}
+                    focusBookingId={plannerFocus.bookingId}
+                    openAlertsOnMount={Boolean(plannerFocus.alerts)}
                     projects={projects}
                     users={usersWithTeams}
                     teams={teamsWithMembers}
@@ -2753,26 +2848,37 @@ export const App: React.FC = () => {
                     onOpenCertificate={(p) => setCertificateModalProject(p)}
                     onOpenEvaluation={(p) => setEvaluationProject(p)}
                     onManageProject={(p) => setManagedProjectId(p.id)}
+                    autoOpenDetail={qcAutoOpen}
                   />
                 )}
 
-                {activeTab === 'stuck' && (
-                  <StuckProjectsDesk
+                {activeTab === 'issues' && (
+                  <IssuesDesk
+                    key={issuesNonce}
                     projects={projects}
+                    tickets={tickets}
+                    users={usersWithTeams}
                     currentUser={currentUser}
+                    initialTab={issuesTab}
+                    focusProjectId={issuesFocusProjectId}
                     onPatchProject={handlePatchProject}
                     onManageProject={(p) => setManagedProjectId(p.id)}
                     onReferToWarehouse={handleReferProjectToWarehouse}
+                    onUpdateTicket={handleUpdateTicket}
+                    onNavigateTab={(tab) => setActiveTab(tab)}
                   />
                 )}
 
-                {activeTab === 'tickets' && (
-                  <TicketCenter
-                    tickets={tickets}
-                    currentUser={currentUser || undefined}
+                {activeTab === 'projects' && (
+                  <ProjectsHub
+                    currentUser={currentUser}
+                    projects={projects}
                     users={usersWithTeams}
-                    onUpdateTicket={handleUpdateTicket}
-                    onNavigateTab={(tab) => setActiveTab(tab)}
+                    tickets={tickets}
+                    materialRequests={materialRequests}
+                    canSeeRegistry={isQcManager || isCeo}
+                    fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}
+                    onOpenProject={(p) => setManagedProjectId(p.id)}
                   />
                 )}
 
@@ -2813,7 +2919,21 @@ export const App: React.FC = () => {
                   <SettingsView
                     settings={settings}
                     projects={projects}
-                    onUpdateProjects={setProjects}
+                    onUpdateProjects={(migrated) => {
+                      // انتقال عکس‌ها چند دقیقه طول می‌کشد؛ فقط فیلدهای عکس از نتیجه برداشته می‌شود تا
+                      // تغییرهایی که در این فاصله رسیده‌اند (و صف ارسال) از روی صفحه پاک نشوند.
+                      const byId = new Map(migrated.map((p) => [p.id, p]));
+                      const photoKeys = ['beforePhotos', 'afterPhotos', 'completionPhotos', 'proposalImages', 'unavailabilityPhotos'] as const;
+                      const next = projectsRef.current.map((p) => {
+                        const m = byId.get(p.id);
+                        if (!m) return p;
+                        const patch: Partial<Project> = {};
+                        for (const k of photoKeys) if (k in m) (patch as any)[k] = (m as any)[k];
+                        return { ...p, ...patch };
+                      });
+                      setProjects(next);
+                      projectsRef.current = next;
+                    }}
                     isDarkMode={isDarkMode}
                     onToggleDarkMode={handleToggleDarkMode}
                     onUpdateSettings={handleUpdateSettings}
@@ -2839,6 +2959,7 @@ export const App: React.FC = () => {
               openTicketCount={openTicketCount}
               pendingMaterialCount={pendingMaterialCount}
               actionQueueCount={actionQueueCount}
+              issuesCount={issuesCount}
             />
           </div>
         ) : (
@@ -2977,6 +3098,24 @@ export const App: React.FC = () => {
               onOpenCertificate={(p) => setCertificateModalProject(p)}
               onViewProposal={(p) => setProposalModalProject(p)}
               fetchAudit={(id) => SupabaseSyncService.fetchProjectAudit(id)}
+              onOpenStuck={
+                isCeo
+                  ? undefined
+                  : (p) => {
+                      setManagedProjectId(null);
+                      openIssue('stuck', p.id);
+                    }
+              }
+              onOpenQc={
+                isCeo
+                  ? undefined
+                  : (p) => {
+                      setManagedProjectId(null);
+                      setSelectedQcProjectId(p.id);
+                      setActiveTab('qc');
+                      setQcAutoOpen(true);
+                    }
+              }
             />
           );
         })()}

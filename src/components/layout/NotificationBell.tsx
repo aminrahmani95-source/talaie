@@ -178,30 +178,34 @@ export const NotificationPrompt: React.FC<{ userId: string }> = ({ userId }) => 
   const { support } = useNotificationState(userId);
   const [dismissed, setDismissed] = useState(() => isPromptDismissed());
   if (dismissed || (support !== 'default' && support !== 'ios-install')) return null;
+  // یک خط جمع‌وجور؛ قبلاً یک کارت بزرگ بالای صفحه جای اولین کار را می‌گرفت
   return (
-    <div className="mb-4 rounded-xl border border-brand/40 bg-brand/10 p-3.5 flex flex-col sm:flex-row sm:items-center gap-3">
-      <div className="grow">
-        <p className="text-sm font-black text-ink flex items-center gap-2">
-          <BellRing className="w-4 h-4 text-brand-ink" />
-          اعلان‌های گوشی را روشن کنید
-        </p>
-        <p className="text-xs text-ink-2 mt-1">مأموریت جدید، توقف کار، تیکت و درخواست متریال فوراً روی گوشی خبر داده می‌شود.</p>
-      </div>
-      <div className="flex items-center gap-2 sm:w-72">
-        <div className="grow">
-          <PermissionHelp support={support} compact />
-        </div>
+    <div className="mb-3 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2 flex items-center gap-2 flex-wrap">
+      <BellRing className="w-4 h-4 text-brand-ink shrink-0" />
+      <p className="text-xs font-bold text-ink grow min-w-0">اعلان گوشی برای توقف، تیکت و کار جدید خاموش است.</p>
+      {support === 'default' ? (
         <button
           type="button"
-          onClick={() => {
-            dismissPrompt();
-            setDismissed(true);
-          }}
-          className="shrink-0 px-3 py-2 text-xs font-bold text-ink-3 hover:text-ink cursor-pointer"
+          onClick={() => void requestNotificationPermission()}
+          className="shrink-0 px-3 rounded-md bg-brand hover:bg-brand-hover text-on-brand text-xs font-black cursor-pointer min-h-[36px]"
         >
-          بعداً
+          روشن کن
         </button>
-      </div>
+      ) : (
+        <div className="w-full">
+          <PermissionHelp support={support} compact />
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          dismissPrompt();
+          setDismissed(true);
+        }}
+        className="shrink-0 px-2 text-xs font-bold text-ink-3 hover:text-ink cursor-pointer min-h-[36px]"
+      >
+        بعداً
+      </button>
     </div>
   );
 };

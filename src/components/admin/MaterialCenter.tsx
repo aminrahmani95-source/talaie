@@ -29,6 +29,7 @@ import {
   MapPin,
   Eye,
   Loader2,
+  History,
 } from 'lucide-react';
 import { PageHeader } from '../ui/PageHeader';
 import { toPersianDigits, formatJalaliDateTime, localDateKey } from '../../utils/jalali';
@@ -51,6 +52,7 @@ import { getUpcomingDispatchProjects, needsWarehouseReceipt, DISPATCH_HORIZON_DA
 import { getWarehouseStage, WarehouseAction } from '../../utils/warehouseStatus';
 import { WarehouseProjectFlow, WarehouseFlowState } from '../warehouse/WarehouseProjectFlow';
 import { WarehouseStageBadge } from '../warehouse/WarehouseStageBadge';
+import { WarehouseHistory } from '../warehouse/WarehouseHistory';
 
 interface Props {
   materialRequests: MaterialRequest[];
@@ -77,7 +79,7 @@ interface Props {
 }
 
 type FilterTab = 'OPEN' | 'ALL' | 'PENDING' | 'IN_TRANSIT' | 'DELIVERED' | 'REJECTED';
-type HubTab = 'REFERRALS' | 'REQUESTS' | 'GOODS_RECEIPT' | 'PACKING';
+type HubTab = 'REFERRALS' | 'REQUESTS' | 'GOODS_RECEIPT' | 'PACKING' | 'HISTORY';
 
 export const MaterialCenter: React.FC<Props> = ({
   materialRequests,
@@ -106,7 +108,7 @@ export const MaterialCenter: React.FC<Props> = ({
 
   const [hubTab, setHubTab] = useState<HubTab>(() => {
     if (warehouseTickets.length > 0) return 'REFERRALS';
-    if (materialRequests.some((r) => r.status !== 'DELIVERED_CONFIRMED' && r.status !== 'REJECTED')) return 'REQUESTS';
+    if (materialRequests.some((r) => r.status !== 'DELIVERED_CONFIRMED' && r.status !== 'REJECTED' && r.status !== 'CANCELLED')) return 'REQUESTS';
     if ((projects || []).some(needsWarehouseReceipt)) return 'GOODS_RECEIPT';
     return 'REQUESTS';
   });
@@ -183,7 +185,7 @@ export const MaterialCenter: React.FC<Props> = ({
       else if (r.status === 'PARTIALLY_DISPATCHED' || r.status === 'DISPATCHED') inTransit++;
       else if (r.status === 'DELIVERED_CONFIRMED') delivered++;
 
-      if (r.urgency === 'CRITICAL_BLOCKING' && r.status !== 'DELIVERED_CONFIRMED' && r.status !== 'REJECTED') {
+      if (r.urgency === 'CRITICAL_BLOCKING' && r.status !== 'DELIVERED_CONFIRMED' && r.status !== 'REJECTED' && r.status !== 'CANCELLED') {
         critical++;
       }
     }
@@ -201,7 +203,7 @@ export const MaterialCenter: React.FC<Props> = ({
   const filteredRequests = useMemo(() => {
     return materialRequests.filter((r) => {
       // Tab filter
-      if (filterTab === 'OPEN' && (r.status === 'DELIVERED_CONFIRMED' || r.status === 'REJECTED')) return false;
+      if (filterTab === 'OPEN' && (r.status === 'DELIVERED_CONFIRMED' || r.status === 'REJECTED' || r.status === 'CANCELLED')) return false;
       if (filterTab === 'PENDING' && r.status !== 'SUBMITTED' && r.status !== 'IN_PROCUREMENT') return false;
       if (filterTab === 'IN_TRANSIT' && r.status !== 'PARTIALLY_DISPATCHED' && r.status !== 'DISPATCHED') return false;
       if (filterTab === 'DELIVERED' && r.status !== 'DELIVERED_CONFIRMED') return false;
@@ -226,7 +228,7 @@ export const MaterialCenter: React.FC<Props> = ({
       return true;
     }).sort((a, b) => {
       // کارهای باز اول، بعد بحرانی ← فوری ← عادی، بعد جدیدترین
-      const closed = (r: MaterialRequest) => (r.status === 'DELIVERED_CONFIRMED' || r.status === 'REJECTED' ? 1 : 0);
+      const closed = (r: MaterialRequest) => (r.status === 'DELIVERED_CONFIRMED' || r.status === 'REJECTED' || r.status === 'CANCELLED' ? 1 : 0);
       const urg = (r: MaterialRequest) => (r.urgency === 'CRITICAL_BLOCKING' ? 0 : r.urgency === 'URGENT' ? 1 : 2);
       return (
         closed(a) - closed(b) ||
@@ -489,12 +491,37 @@ export const MaterialCenter: React.FC<Props> = ({
         })}
       </div>
 
+      {/* سوابق همه‌ی ورود و خروج‌های انبار + گزارش (اکسل / چاپ) */}
+      <button
+        type="button"
+        aria-pressed={hubTab === 'HISTORY'}
+        onClick={() => setHubTab('HISTORY')}
+        className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border bg-surface transition cursor-pointer min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+          hubTab === 'HISTORY' ? 'border-transparent ring-2 ring-brand' : 'border-line hover:border-line-strong'
+        }`}
+      >
+        <span className="flex items-center gap-2 text-sm font-bold text-ink">
+          <History className={`w-4 h-4 ${hubTab === 'HISTORY' ? 'text-brand-ink' : 'text-ink-3'}`} />
+          سوابق ارسال‌ها و گزارش‌گیری
+        </span>
+        <span className="text-[12px] text-ink-3">ورود، بار، تحویل اکیپ، متریال</span>
+      </button>
+
+      {hubTab === 'HISTORY' && (
+        <WarehouseHistory
+          projects={projects}
+          materialRequests={materialRequests}
+          tickets={tickets}
+          onOpenProject={openProject}
+        />
+      )}
+
       {/* ===================== TAB 1: LOGISTICS REFERRALS & TICKETS ===================== */}
       {hubTab === 'REFERRALS' && (
         <div className="space-y-4">
           {/* Filters & Search */}
           <div className="bg-surface p-4 rounded-xl border border-line flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2 overflow-x-auto">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setReferralFilter('OPEN')}
@@ -799,7 +826,7 @@ export const MaterialCenter: React.FC<Props> = ({
       {/* Filter Tabs & Search */}
       <div className="bg-surface p-4 rounded-lg border border-line space-y-4">
         {/* Main Status Tabs */}
-        <div className="flex items-center gap-2 border-b border-line pb-3 overflow-x-auto no-scrollbar -mx-1 px-1">
+        <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3">
           {[
             { id: 'OPEN' as const, label: 'باز', count: metrics.pending + metrics.inTransit },
             { id: 'PENDING' as const, label: 'در انتظار تامین', count: metrics.pending },

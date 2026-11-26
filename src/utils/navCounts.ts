@@ -11,6 +11,8 @@ export interface NavBadgeCounts {
 /** پروژه متوقف باز: وضعیت STUCK یا آخرین رویداد توقف هنوز رفع نشده */
 export function isStuckOpen(p: Project): boolean {
   if (p.status === 'STUCK') return true;
+  // کار تمام‌شده یا لغوشده دیگر «متوقف» نیست، حتی اگر آخرین توقفش رسماً بسته نشده باشد
+  if (p.status === 'COMPLETED' || p.status === 'CANCELLED') return false;
   const latest =
     p.stuckIncidents && p.stuckIncidents.length > 0
       ? p.stuckIncidents[p.stuckIncidents.length - 1]

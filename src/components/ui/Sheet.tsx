@@ -4,6 +4,22 @@ import { X } from 'lucide-react';
 import { IconButton } from './IconButton';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
+// قفل اسکرول صفحه با شمارنده: اگر دو برگه روی هم باز باشند و اولی زودتر بسته شود،
+// اسکرول صفحه‌ی زیرین نباید باز شود (قبلاً هر برگه مقدار قبلی را برمی‌گرداند).
+let scrollLocks = 0;
+let savedOverflow = '';
+function lockBodyScroll() {
+  if (scrollLocks === 0) {
+    savedOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+  scrollLocks++;
+}
+function unlockBodyScroll() {
+  scrollLocks = Math.max(0, scrollLocks - 1);
+  if (scrollLocks === 0) document.body.style.overflow = savedOverflow;
+}
+
 export interface SheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -33,12 +49,8 @@ export const Sheet: React.FC<SheetProps> = ({
   // Close on Escape & Lock body scroll
   useEffect(() => {
     if (!isOpen) return;
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
+    lockBodyScroll();
+    return unlockBodyScroll;
   }, [isOpen]);
   useEscapeKey(onClose, isOpen);
 

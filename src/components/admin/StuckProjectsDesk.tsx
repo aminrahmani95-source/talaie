@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Project, StuckIncident, FmeaRootCause, User, ProjectStatus } from '../../types';
 import {
   Clock,
@@ -21,6 +21,10 @@ interface Props {
   onPatchProject: (id: string, patch: Partial<Project>) => void;
   onManageProject?: (project: Project) => void;
   onReferToWarehouse?: (project: Project, note: string) => Promise<void> | void;
+  /** از پیشخوان: همین پروژه انتخاب و فرم رفع توقفش نشان داده شود */
+  focusProjectId?: string | null;
+  /** داخل صفحه‌ی «توقف و تیکت»: سربرگ صفحه تکرار نشود */
+  embedded?: boolean;
 }
 
 export const StuckProjectsDesk: React.FC<Props> = ({
@@ -29,8 +33,28 @@ export const StuckProjectsDesk: React.FC<Props> = ({
   onPatchProject,
   onManageProject,
   onReferToWarehouse,
+  focusProjectId,
+  embedded = false,
 }) => {
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(focusProjectId || null);
+  const detailRef = useRef<HTMLDivElement>(null);
+  // روی گوشی فرم رفع توقف زیر فهرست است؛ بعد از انتخاب، تا آن پایین برو
+  const revealDetail = () => {
+    requestAnimationFrame(() => {
+      const el = detailRef.current;
+      if (el && el.getBoundingClientRect().top > window.innerHeight * 0.5) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  };
+  useEffect(() => {
+    if (focusProjectId) {
+      setSelectedProjectId(focusProjectId);
+      setFilter('OPEN');
+      revealDetail();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusProjectId]);
   const [resolutionNote, setResolutionNote] = useState('');
   const [newScheduledDate, setNewScheduledDate] = useState('');
   const [fmeaRootCause, setFmeaRootCause] = useState<FmeaRootCause>('SUPPLIER_DEFECT');
@@ -133,8 +157,11 @@ export const StuckProjectsDesk: React.FC<Props> = ({
         ? incidents.map((inc, idx) => (idx === lastIndex ? resolvedIncident : inc))
         : [...incidents, resolvedIncident];
 
-    const targetStatus: ProjectStatus =
-      resolvedIncident.previousStatus && project.startedAt
+    // کار تمام‌شده یا لغوشده با رفع توقف دوباره باز نمی‌شود (قبلاً پروژه‌ی تأییدشده «برنامه‌ریزی‌شده» می‌شد)
+    const isClosedProject = project.status === 'COMPLETED' || project.status === 'CANCELLED';
+    const targetStatus: ProjectStatus = isClosedProject
+      ? project.status
+      : resolvedIncident.previousStatus && project.startedAt
         ? resolvedIncident.previousStatus
         : project.startedAt
         ? 'IN_PROGRESS'
@@ -220,7 +247,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({
     <div className="space-y-5 pb-10">
       {/* Page Header */}
       <PageHeader
-        title="پروژه‌های متوقف"
+        title={embedded ? 'توقف‌ها' : 'پروژه‌های متوقف'}
         subtitle={`مهلت رفع هر توقف: ۷۲ ساعت${allIncidents.length > 0 ? ` · ${toPersianDigits(complianceRate)}٪ در مهلت حل شده` : ''}`}
         actions={
           <SegmentedControl
@@ -269,7 +296,10 @@ export const StuckProjectsDesk: React.FC<Props> = ({
               return (
                 <div
                   key={p.id}
-                  onClick={() => setSelectedProjectId(p.id)}
+                  onClick={() => {
+                    setSelectedProjectId(p.id);
+                    revealDetail();
+                  }}
                   className={`p-3.5 rounded-lg border transition cursor-pointer text-right space-y-2 select-none ${
                     isSelected
                       ? 'border-brand bg-raised ring-2 ring-brand/30 '
@@ -330,7 +360,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({
         </div>
 
         {/* Right Column: Detail and Resolution Form */}
-        <div className="@min-[900px]:col-span-7">
+        <div ref={detailRef} className="@min-[900px]:col-span-7 scroll-mt-20">
           {selectedProject ? (
             <div className="bg-surface rounded-lg p-5 border border-line  space-y-4">
               <div className="flex items-start justify-between border-b border-line pb-3">
@@ -380,7 +410,7 @@ export const StuckProjectsDesk: React.FC<Props> = ({
               </div>
 
               {/* Action Form if open */}
-              {activeIncident?.resolutionStatus !== 'RESOLVED' ? (
+              {activeIncident?.resolutionStatus !== 'RESOLVED' || selectedProject.status === 'STUCK' ? (
                 <div className="space-y-3 pt-2">
                   <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />

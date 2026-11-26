@@ -58,7 +58,8 @@ interface Props {
   /** کاربر فعلی؛ ثبت دستی ورود کالا به نام او ثبت می‌شود */
   currentUser?: User | null;
   onClose: () => void;
-  onSave: (data: ProjectFormSaveData) => void;
+  /** اگر ذخیره نشود خطا می‌دهد و فرم باز می‌ماند */
+  onSave: (data: ProjectFormSaveData) => Promise<void> | void;
 }
 
 export const ProjectFormModal: React.FC<Props> = ({
@@ -484,7 +485,7 @@ export const ProjectFormModal: React.FC<Props> = ({
       }
       onClose();
     } catch (err: any) {
-      setFormError(err.message || 'خطا در ثبت اطلاعات مأموریت.');
+      setFormError(err.message || 'خطا در ثبت اطلاعات پروژه.');
     } finally {
       setIsSubmitting(false);
     }
@@ -578,7 +579,7 @@ export const ProjectFormModal: React.FC<Props> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 id="project-modal-title" className="font-bold text-sm sm:text-base text-ink truncate">
-                  {isEditing ? 'ویرایش مأموریت' : 'ثبت مأموریت جدید'}
+                  {isEditing ? 'ویرایش پروژه' : 'ثبت پروژه‌ی جدید'}
                 </h3>
                 {projectCode && (
                   <span className="text-xs bg-brand text-black font-mono font-bold px-2 py-0.5 rounded-md">
@@ -920,7 +921,7 @@ export const ProjectFormModal: React.FC<Props> = ({
 
                 {hasNoCrew && (
                   <p className="text-[12px] font-semibold text-amber-700 dark:text-amber-300">
-                    بدون اکیپ و سرپرست، این مأموریت در کارتابل هیچ نصابی دیده نمی‌شود.
+                    بدون اکیپ و سرپرست، این پروژه در کارتابل هیچ نصابی دیده نمی‌شود.
                   </p>
                 )}
               </div>
@@ -929,7 +930,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                 <div className="sm:col-span-2 p-3 rounded-md border border-amber-500/40 bg-amber-500/10 text-xs text-amber-900 dark:text-amber-200 space-y-1">
                   <div className="font-bold flex items-center gap-1.5">
                     <AlertCircle className="w-4 h-4 shrink-0" />
-                    این اکیپ/سرپرست در همین تاریخ مأموریت دیگری هم دارد:
+                    این اکیپ/سرپرست در همین تاریخ کار دیگری هم دارد:
                   </div>
                   <ul className="list-disc pr-5 space-y-0.5">
                     {scheduleConflicts.slice(0, 4).map((p) => (
@@ -1342,7 +1343,7 @@ export const ProjectFormModal: React.FC<Props> = ({
               className="flex-[2]"
               icon={<CheckCircle2 className="w-4 h-4" />}
             >
-              {isEditing ? 'ذخیره تغییرات' : 'ثبت مأموریت'}
+              {isEditing ? 'ذخیره تغییرات' : 'ثبت پروژه'}
             </Button>
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
   Settings,
   FileCheck2,
   Trophy,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -27,7 +28,11 @@ export type ManagerTab =
   | 'technicians'
   | 'settings'
   | 'registry'
-  | 'sales';
+  | 'sales'
+  /** توقف‌ها + تیکت‌ها در یک صفحه («موانع») — 'stuck' و 'tickets' همچنان به همین صفحه می‌رسند */
+  | 'issues'
+  /** همه‌ی پروژه‌ها (شناسنامه) + گزارش دوره‌ای */
+  | 'projects';
 
 export interface NavCounts {
   pendingQcCount?: number;
@@ -36,6 +41,8 @@ export interface NavCounts {
   pendingMaterialCount?: number;
   /** ردیف‌های صف اقدام پیشخوان (همان عدد کاشی «نیازمند اقدام») */
   actionQueueCount?: number;
+  /** پروژه‌های دارای توقف باز یا تیکت باز (هر پروژه یک بار) */
+  issuesCount?: number;
 }
 
 export type BadgeTone = 'danger' | 'brand' | 'info';
@@ -65,6 +72,8 @@ const ITEM: Record<ManagerTab, Omit<NavItem, 'badge' | 'badgeTone'>> = {
   materials: { id: 'materials', label: 'انبار و متریال', shortLabel: 'انبار', hint: 'درخواست، بسته‌بندی و ارسال', icon: Package },
   technicians: { id: 'technicians', label: 'پرسنل و اکیپ‌ها', shortLabel: 'پرسنل', hint: 'نصابان، سرپرستان و تیم‌ها', icon: Users },
   registry: { id: 'registry', label: 'شناسنامه پروژه‌ها', shortLabel: 'شناسنامه', hint: 'سوابق کامل و چاپ شناسنامه', icon: FileCheck2 },
+  issues: { id: 'issues', label: 'توقف و تیکت', shortLabel: 'موانع', hint: 'رفع توقف‌ها (۷۲ ساعت) و تیکت‌ها', icon: AlertOctagon },
+  projects: { id: 'projects', label: 'پروژه‌ها و گزارش', shortLabel: 'پروژه‌ها', hint: 'همه‌ی پروژه‌ها، شناسنامه و گزارش دوره‌ای', icon: BarChart3 },
   settings: { id: 'settings', label: 'تنظیمات', shortLabel: 'تنظیمات', hint: 'پیکربندی و ابزارهای سیستم', icon: Settings },
 };
 
@@ -82,6 +91,7 @@ function withBadges(id: ManagerTab, c: NavCounts): NavItem {
   if (id === 'stuck') set(c.openStuckCount, 'danger');
   if (id === 'tickets') set(c.openTicketCount, 'danger');
   if (id === 'materials') set(c.pendingMaterialCount, 'info');
+  if (id === 'issues') set(c.issuesCount ?? (c.openStuckCount || 0) + (c.openTicketCount || 0), 'danger');
   return base;
 }
 
@@ -91,25 +101,24 @@ export function getNavSections(role: string | undefined, counts: NavCounts): Nav
   if (role === 'CEO') {
     return [{ title: 'مدیریت', items: mk(['registry', 'planner', 'sales']) }];
   }
-  if (role === 'QC_MANAGER') {
-    return [
-      { title: 'عملیات', items: mk(['control', 'planner', 'qc', 'stuck', 'tickets']) },
-      { title: 'تدارکات و فروش', items: mk(['materials', 'sales']) },
-      { title: 'مدیریت', items: mk(['technicians', 'registry', 'settings']) },
-    ];
-  }
-  // هماهنگ‌کننده زمان‌بندی و سایر مدیران عملیاتی
+  // مدیر QC و هماهنگ‌کننده: کار روزانه اول، بعد تدارکات، بعد پروژه‌ها و تیم
   return [
-    { title: 'عملیات', items: mk(['control', 'planner', 'qc', 'stuck', 'tickets']) },
+    { title: 'کار روزانه', items: mk(['control', 'planner', 'qc', 'issues']) },
     { title: 'تدارکات و فروش', items: mk(['materials', 'sales']) },
-    { title: 'مدیریت', items: mk(['technicians', 'settings']) },
+    { title: 'پروژه‌ها و تیم', items: mk(['projects', 'technicians', 'settings']) },
   ];
+}
+
+/** شناسه‌های قدیمی که حالا داخل یک صفحه‌ی ادغام‌شده‌اند */
+export function canonicalTab(tab: ManagerTab): ManagerTab {
+  if (tab === 'stuck' || tab === 'tickets') return 'issues';
+  return tab;
 }
 
 /** آیتم‌های ثابت نوار پایین موبایل؛ بقیه در شیت «بیشتر» قرار می‌گیرند */
 export function getBottomBarIds(role: string | undefined): ManagerTab[] {
   if (role === 'CEO') return ['registry', 'planner', 'sales'];
-  return ['control', 'planner', 'qc', 'materials'];
+  return ['control', 'planner', 'qc', 'issues'];
 }
 
 export const BADGE_TONE_CLASS: Record<BadgeTone, string> = {

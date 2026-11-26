@@ -494,21 +494,21 @@ export const ProjectDossierModal: React.FC<Props> = ({
                     <div className="space-y-1">
                       <span className="text-ink-3 font-bold block">امتیاز کیفیت کارفرما:</span>
                       <div className="flex items-center gap-1.5">
-                        <div className="flex items-center gap-0.5">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className={`w-4 h-4 ${
-                                s <= (project.qcScore || 5)
-                                  ? 'text-brand-ink fill-brand'
-                                  : 'text-ink-3'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="font-bold text-ink font-mono">
-                          {toPersianDigits(project.qcScore || 5)} از ۵
-                        </span>
+                        {project.qcScore ? (
+                          <>
+                            <div className="flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className={`w-4 h-4 ${s <= project.qcScore! ? 'text-brand-ink fill-brand' : 'text-ink-3'}`}
+                                />
+                              ))}
+                            </div>
+                            <span className="font-bold text-ink font-mono">{toPersianDigits(project.qcScore)} از ۵</span>
+                          </>
+                        ) : (
+                          <span className="text-ink-3">هنوز ارزیابی نشده</span>
+                        )}
                       </div>
                     </div>
 
@@ -637,7 +637,7 @@ export const ProjectDossierModal: React.FC<Props> = ({
                       date: project.qcReviewedAt,
                       done: isQcApprovedAndCompleted,
                       desc: isQcApprovedAndCompleted
-                        ? `تایید رسمی کنترل کیفی با امتیاز ${toPersianDigits(project.qcScore || 5)} از ۵`
+                        ? `تایید رسمی کنترل کیفی${project.qcScore ? ` با امتیاز ${toPersianDigits(project.qcScore)} از ۵` : ''}`
                         : 'در صف بررسی و تایید کیفی مدیر QC',
                     },
                   ].map((step, sIdx) => (
