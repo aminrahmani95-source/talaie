@@ -223,6 +223,24 @@ export interface HandoverPrerequisite {
   notes?: string;
   evidenceUrl?: string;
   shelfLocation?: string; // موقعیت چیدمان و قفسه در انبار مرکزی
+  /** شمارش انبار هنگام ورود کالا (شید / ریل / پرده) */
+  receivedCounts?: WarehouseCounts;
+  /** تعداد سفارش پروژه در لحظه‌ی ثبت؛ برای تشخیص تغییر تعداد بعد از تأیید انبار */
+  expectedCounts?: WarehouseCounts;
+  /** ورود ناقص: بخشی از بار رسیده، بقیه در راه است (گیت هنوز بسته است) */
+  isPartial?: boolean;
+  /** تأیید با وجود کسری (به تصمیم انبار/مدیر، اکیپ می‌تواند حرکت کند) */
+  shortageAccepted?: boolean;
+  /** ثبت دستی از فرم مأموریت توسط مدیر یا هماهنگ‌کننده، نه از میز انبار */
+  manualEntry?: boolean;
+  confirmedByUserId?: string;
+}
+
+/** تعداد سه محصول برای چک‌لیست انبار */
+export interface WarehouseCounts {
+  shade: number;
+  rail: number;
+  curtain: number;
 }
 
 export interface ProjectTechnicalHandover {
@@ -475,6 +493,16 @@ export interface Project {
     packedByUserId?: string;
     packedByUserName?: string;
     notes?: string;
+    /** اقلامی که بار زده شد (چک‌لیست بسته‌بندی) */
+    packedCounts?: WarehouseCounts;
+    /** تعداد سفارش پروژه در لحظه‌ی بسته‌بندی */
+    expectedCounts?: WarehouseCounts;
+    toolsPacked?: boolean;
+    /** تحویل بار به اکیپ (توسط انبار یا با تأیید سرپرست) */
+    handedOverAt?: string;
+    handedOverToName?: string;
+    handedOverByName?: string;
+    handedOverVia?: 'WAREHOUSE' | 'LEAD';
   };
 
   // زیرساخت آماده برای مشخصات فنی آینده (بدون تحمیل به رابط کاربری فعلی)

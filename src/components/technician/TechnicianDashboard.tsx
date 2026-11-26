@@ -23,6 +23,8 @@ interface Props {
   materialRequests?: MaterialRequest[];
   onOpenMaterialModal?: (project: Project) => void;
   onConfirmMaterialReceipt?: (request: MaterialRequest, dispatchId: string) => void;
+  /** سرپرست تحویل بار از انبار را تأیید می‌کند */
+  onConfirmLoadPickup?: (project: Project) => Promise<void> | void;
   onResolveDefect?: (projectId: string, defectId: string, resolutionNotes: string, photos?: string[]) => void;
   tickets?: Ticket[];
   inFlightTransitions?: Set<string>;
@@ -45,6 +47,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
   materialRequests = [],
   onOpenMaterialModal,
   onConfirmMaterialReceipt,
+  onConfirmLoadPickup,
   onResolveDefect,
   tickets = [],
   inFlightTransitions,
@@ -256,6 +259,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 materialRequests={materialRequests}
                 onOpenMaterialModal={onOpenMaterialModal}
                 onConfirmMaterialReceipt={onConfirmMaterialReceipt}
+                onConfirmLoadPickup={onConfirmLoadPickup}
                 onResolveDefect={onResolveDefect}
                 tickets={tickets}
                 isTransitioning={inFlightTransitions?.has(proj.id)}
@@ -364,6 +368,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
               materialRequests={materialRequests}
               onOpenMaterialModal={onOpenMaterialModal}
               onConfirmMaterialReceipt={onConfirmMaterialReceipt}
+                onConfirmLoadPickup={onConfirmLoadPickup}
               onResolveDefect={onResolveDefect}
               tickets={tickets}
               isTransitioning={inFlightTransitions?.has(proj.id)}

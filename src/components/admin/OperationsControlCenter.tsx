@@ -38,6 +38,8 @@ import { buildActionQueue, isBookingAwaitingAssignment, isBookingDueSoon, type A
 import { ProjectDossierModal } from '../ceo/ProjectDossierModal';
 import { ProjectPassportPrint } from '../common/ProjectPassportPrint';
 import { triggerToast } from '../Toast';
+import { getWarehouseStage, warehouseAlert } from '../../utils/warehouseStatus';
+import { WarehouseStageBadge } from '../warehouse/WarehouseStageBadge';
 
 const ACTION_META: Record<ActionKind, { label: string; chip: string; stripe: string; button: string }> = {
   STUCK: { label: 'توقف کار', chip: 'bg-rose-600 text-white', stripe: 'border-r-rose-500', button: 'bg-rose-600 hover:bg-rose-500 text-white' },
@@ -178,6 +180,20 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
           : i.kind === activeUrgentCategory,
       ),
     [actionQueue, activeUrgentCategory],
+  );
+
+  // هشدارهای انبار: کالا برای نصب نزدیک نرسیده، یا تعداد بعد از ثبت انبار عوض شده
+  const warehouseAlerts = useMemo(
+    () =>
+      projects
+        .map((p) => ({ p, alert: warehouseAlert(p, todayKey) }))
+        .filter((x) => x.alert.level)
+        .sort(
+          (a, b) =>
+            (a.alert.level === 'urgent' ? 0 : 1) - (b.alert.level === 'urgent' ? 0 : 1) ||
+            String(a.p.scheduledDate || '9999').localeCompare(String(b.p.scheduledDate || '9999'))
+        ),
+    [projects, todayKey],
   );
 
   // ================= 2. وضعیت زنده ۲ اکیپ نصب در امروز =================
@@ -354,6 +370,46 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                   <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
                 </span>
               </button>
+            )}
+            {warehouseAlerts.length > 0 && (
+              <div className="rounded-xl bg-surface border border-line border-r-4 border-r-amber-500 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 text-sm font-bold text-ink">
+                    <Package className="w-4 h-4 text-amber-500" aria-hidden="true" />
+                    {toPersianDigits(warehouseAlerts.length)} هشدار انبار
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab('materials')}
+                    className="text-xs font-bold text-brand-ink hover:underline flex items-center gap-1 cursor-pointer min-h-[32px]"
+                  >
+                    انبار و متریال
+                    <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
+                  </button>
+                </div>
+                <ul className="space-y-1">
+                  {warehouseAlerts.slice(0, 5).map(({ p, alert }) => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        onClick={() => onOpenProject(p)}
+                        className="w-full text-right flex items-center gap-2 text-xs rounded-lg px-2 py-1.5 hover:bg-raised cursor-pointer min-h-[36px]"
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${alert.level === 'urgent' ? 'bg-rose-500' : 'bg-amber-500'}`}
+                          aria-hidden="true"
+                        />
+                        <span className="font-mono text-ink-3 shrink-0">{p.code}</span>
+                        <span className="font-bold text-ink truncate">{p.title}</span>
+                        <span className={`truncate ${alert.level === 'urgent' ? 'text-rose-600 dark:text-rose-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                          · {alert.text}
+                        </span>
+                        {p.scheduledDate && <span className="text-ink-3 shrink-0 mr-auto">{formatJalali(p.scheduledDate)}</span>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
             {visibleQueue.map((item) => {
               const p = item.project;
@@ -546,7 +602,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
             </div>
 
             <div className="rounded-xl bg-surface border border-line divide-y divide-line">
-              {liveTeams.map(({ team, activeProject, status, isWarehouseReady }) => {
+              {liveTeams.map(({ team, activeProject, status }) => {
                 const st = TEAM_STATUS[status];
                 const teamName = team.supervisorName ? `اکیپ ${getDisplayName(team.supervisorName)}` : team.name;
                 return (
@@ -562,9 +618,9 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
                           <>
                             <span className="font-mono text-ink-3">{activeProject.code}</span> · {activeProject.title}
                             {isProjectMultiDay(activeProject) && <span className="text-teal-500"> · چندروزه</span>}
-                            <span className={isWarehouseReady ? 'text-emerald-500' : 'text-amber-500'}>
-                              {' '}· {isWarehouseReady ? 'بار آماده ✓' : 'بار آماده نیست'}
-                            </span>
+                            {getWarehouseStage(activeProject) !== 'NONE' && (
+                              <WarehouseStageBadge project={activeProject} size="xs" withPrefix className="mr-1.5 align-middle" />
+                            )}
                           </>
                         ) : (
                           'بدون مأموریت برای امروز'

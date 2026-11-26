@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { WarehouseStageBadge } from '../warehouse/WarehouseStageBadge';
 import { Portal } from '../ui/Portal';
 import { formatProductCounts, projectProductCounts, capacityUnits, bookingProductCounts } from '../../utils/productCounts';
 import {
@@ -685,17 +686,7 @@ export const MonthPlanner: React.FC<Props> = ({
                               <span>🔥 فورس‌ماژور</span>
                             </span>
                           )}
-                          {proj.warehousePrep?.isPackedAndReady ? (
-                            <span className="text-[11px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                              <span>بار انبار آماده ✅</span>
-                            </span>
-                          ) : (
-                            <span className="text-[11px] bg-raised text-ink-2 font-medium px-1.5 py-0.5 rounded border border-line-strong/50 flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                              <span>در انتظار بارگیری انبار</span>
-                            </span>
-                          )}
+                          <WarehouseStageBadge project={proj} size="xs" withPrefix />
                           {proj.specialTools && proj.specialTools.length > 0 && (
                             <span className="text-[11px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
                               <Wrench className="w-3 h-3 text-amber-400" />

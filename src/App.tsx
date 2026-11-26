@@ -16,7 +16,6 @@ import {
   ScheduleChangeRequest,
   MaterialRequest,
   CustomerAcceptanceRecord,
-  ProjectTechnicalHandover,
   UserRole,
 } from './types';
 import { StorageService } from './utils/storage';
@@ -62,6 +61,7 @@ import {
 } from './utils/materialRequests';
 import { createDefectResolutionPayload } from './utils/qcWorkflow';
 import { getDisplayName } from './utils/technicianName';
+import { buildWarehousePatch, WarehouseAction } from './utils/warehouseStatus';
 import { localDateKey, toPersianDigits } from './utils/jalali';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
@@ -1819,89 +1819,14 @@ export const App: React.FC = () => {
     showToast('success', 'تاییدیه اندازه‌گیری دوم و ارزیابی بستر فضا با موفقیت ذخیره شد.');
   };
 
-  // Warehouse: Confirm packing ready
-  const handleConfirmWarehousePacking = async (projectId: string, notes?: string) => {
+  // انبار: یک مسیر واحد برای همه‌ی اقدام‌ها (ورود کالا، ورود ناقص، لغو، بستن بار، تحویل به اکیپ).
+  // patch از utils/warehouseStatus ساخته می‌شود تا میز انبار، فرم مأموریت و کارت سرپرست یک داده را بنویسند.
+  const handleWarehouseAction = async (projectId: string, action: WarehouseAction) => {
     if (!currentUser) return;
     const current = projectsRef.current.find((p) => p.id === projectId);
     if (!current) return;
-
-    const prep = {
-      isPackedAndReady: true,
-      packedAt: new Date().toISOString(),
-      packedByUserId: currentUser.id,
-      packedByUserName: currentUser.name,
-      notes: notes || '',
-    };
-
-    const patch: Partial<Project> = {
-      warehousePrep: prep,
-      updatedAt: new Date().toISOString(),
-    };
-
-    await commit(
-      {
-        type: 'PATCH_PROJECT',
-        orderingKey: `project:${projectId}`,
-        payload: { id: projectId, patch },
-      },
-      () => {
-        const next = projectsRef.current.map((p) =>
-          p.id === projectId ? { ...p, ...patch } : p
-        );
-        setProjects(next);
-        projectsRef.current = next;
-      }
-    );
-    showToast('success', `بسته‌بندی پروژه ${current.code || current.title} تایید شد و پرچم «بار آماده ✅» در تقویم مدیریت فعال گردید.`);
-  };
-
-  // Warehouse: Confirm arrival of goods into central warehouse (Official Handover Gate)
-  const handleConfirmWarehouseReceipt = async (
-    projectId: string,
-    params: {
-      confirmed: boolean;
-      notes?: string;
-      shelfLocation?: string;
-    }
-  ) => {
-    if (!currentUser) return;
-    const current = projectsRef.current.find((p) => p.id === projectId);
-    if (!current) return;
-
-    const existingHandover = current.technicalHandover || {
-      isHandoverComplete: false,
-      warehouseConfirmation: { confirmed: false },
-    };
-
-    const isConfirmed = params.confirmed;
-    const newIsHandoverComplete = isConfirmed;
-
-    const updatedHandover: ProjectTechnicalHandover = {
-      ...existingHandover,
-      warehouseConfirmation: {
-        confirmed: isConfirmed,
-        confirmedBy: isConfirmed ? (getDisplayName(currentUser.name) || currentUser.name) : undefined,
-        confirmedAt: isConfirmed ? new Date().toISOString() : undefined,
-        notes: params.notes?.trim() || undefined,
-        shelfLocation: params.shelfLocation?.trim() || undefined,
-      },
-      isHandoverComplete: newIsHandoverComplete,
-      officialHandoverDate: newIsHandoverComplete
-        ? (existingHandover.officialHandoverDate || new Date().toISOString())
-        : undefined,
-      unlockedAt: newIsHandoverComplete
-        ? (existingHandover.unlockedAt || new Date().toISOString())
-        : undefined,
-    };
-
-    if ('isHistoricalMigration' in updatedHandover && !current.technicalHandover?.isHistoricalMigration) {
-      delete (updatedHandover as any).isHistoricalMigration;
-    }
-
-    const patch: Partial<Project> = {
-      technicalHandover: updatedHandover,
-      updatedAt: new Date().toISOString(),
-    };
+    const displayName = getDisplayName(currentUser.name) || currentUser.name;
+    const patch = buildWarehousePatch(current, action, currentUser, displayName, new Date().toISOString());
 
     await commit(
       {
@@ -1918,10 +1843,25 @@ export const App: React.FC = () => {
       }
     );
 
-    if (isConfirmed) {
-      showToast('success', `ورود کالا به انبار تایید شد. گیت تحویل فنی پروژه ${current.code || current.title} باز شد و آماده زمان‌بندی نصب است.`);
-    } else {
-      showToast('info', `تاییدیه ورود کالا به انبار برای پروژه ${current.code || current.title} لغو شد.`);
+    const name = current.code || current.title;
+    switch (action.kind) {
+      case 'RECEIPT':
+        if (action.partial) showToast('info', `ورود ناقص ${name} ثبت شد؛ پروژه منتظر بقیه‌ی بار می‌ماند.`);
+        else if (action.acceptShortage) showToast('warning', `کالای ${name} با کسری تأیید شد؛ اکیپ می‌تواند اعزام شود.`);
+        else showToast('success', `ورود کالای ${name} تأیید شد؛ اکیپ می‌تواند اعزام شود.`);
+        break;
+      case 'REVOKE_RECEIPT':
+        showToast('info', `تأیید ورود کالای ${name} لغو شد.`);
+        break;
+      case 'PACK':
+        showToast('success', `بار ${name} آماده شد.`);
+        break;
+      case 'UNPACK':
+        showToast('info', `بار ${name} باز شد.`);
+        break;
+      case 'HAND_OVER':
+        showToast('success', action.via === 'LEAD' ? `تحویل بار ${name} ثبت شد.` : `بار ${name} تحویل اکیپ شد.`);
+        break;
     }
   };
 
@@ -2713,8 +2653,7 @@ export const App: React.FC = () => {
               projects={projects}
               onUpdateMaterialRequest={handleUpdateMaterialRequest}
               onResolveTicket={handleResolveWarehouseTicket}
-              onConfirmPacking={handleConfirmWarehousePacking}
-              onConfirmGoodsReceipt={handleConfirmWarehouseReceipt}
+              onWarehouseAction={handleWarehouseAction}
               onViewProposal={(p) => setProposalModalProject(p)}
               onOpenTicketModal={(p) => setTicketModalProject(p)}
               onNavigateTab={(tab) => setActiveTab(tab)}
@@ -2846,8 +2785,7 @@ export const App: React.FC = () => {
                     projects={projects}
                     onUpdateMaterialRequest={handleUpdateMaterialRequest}
                     onResolveTicket={handleResolveWarehouseTicket}
-                    onConfirmPacking={handleConfirmWarehousePacking}
-                    onConfirmGoodsReceipt={handleConfirmWarehouseReceipt}
+                    onWarehouseAction={handleWarehouseAction}
                     onViewProposal={(p) => setProposalModalProject(p)}
                     onOpenTicketModal={(p) => setTicketModalProject(p)}
                     onNavigateTab={(tab) => setActiveTab(tab)}
@@ -2924,6 +2862,7 @@ export const App: React.FC = () => {
               materialRequests={materialRequests}
               onOpenMaterialModal={(p) => setMaterialModalProject(p)}
               onConfirmMaterialReceipt={handleConfirmMaterialReceipt}
+              onConfirmLoadPickup={(p) => handleWarehouseAction(p.id, { kind: 'HAND_OVER', via: 'LEAD' })}
               onResolveDefect={handleResolveDefect}
               tickets={tickets}
             />
@@ -2943,6 +2882,7 @@ export const App: React.FC = () => {
             teamMembers={teamMembers}
             settings={settings}
             projects={projects}
+            currentUser={currentUser}
             onClose={() => {
               projectCreatedHookRef.current = null;
               setIsProjectFormOpen(false);

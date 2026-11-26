@@ -19,7 +19,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { getUpcomingDays, getTodayPersianString, toPersianDigits, toEnglishDigits, getDayInfoFromDateKey, DayInfo } from '../../utils/jalali';
+import { getUpcomingDays, getTodayPersianString, toPersianDigits, toEnglishDigits, getDayInfoFromDateKey, DayInfo, formatJalaliDateTime } from '../../utils/jalali';
 import { getMultiDayTotalDays } from '../../utils/multiDay';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { SupabaseSyncService } from '../../utils/supabase';
@@ -30,6 +30,16 @@ import { computeProjectDiff } from '../../utils/offlineQueue';
 import { Button } from '../ui/Button';
 import { getDisplayName } from '../../utils/technicianName';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { isHandoverGatePassed } from '../../utils/roleGuards';
+import {
+  buildWarehousePatch,
+  countsChangedSinceReceipt,
+  diffCounts,
+  formatCountDiffs,
+  receiptShortages,
+} from '../../utils/warehouseStatus';
+import { formatProductCounts } from '../../utils/productCounts';
+import { WarehouseStageBadge } from '../warehouse/WarehouseStageBadge';
 
 export type ProjectFormSaveData =
   | { type: 'CREATE_PROJECT'; project: Project }
@@ -43,8 +53,10 @@ interface Props {
   teams?: InstallationTeam[];
   teamMembers?: TeamMember[];
   settings: SystemSettings;
-  /** برای هشدار تداخل برنامه اکیپ/سرپرست در همان روز (اختیاری) */
+  /** برای هشدار تداخل برنامه اکیپ/سرپرست در همان روز و وضعیت زنده‌ی انبار (اختیاری) */
   projects?: Project[];
+  /** کاربر فعلی؛ ثبت دستی ورود کالا به نام او ثبت می‌شود */
+  currentUser?: User | null;
   onClose: () => void;
   onSave: (data: ProjectFormSaveData) => void;
 }
@@ -58,6 +70,7 @@ export const ProjectFormModal: React.FC<Props> = ({
   teamMembers,
   settings,
   projects,
+  currentUser,
   onClose,
   onSave,
 }) => {
@@ -100,16 +113,20 @@ export const ProjectFormModal: React.FC<Props> = ({
   ];
   const effectiveTeams = teams && teams.length > 0 ? teams : defaultTeams;
 
-  // Gating & Technical Handover states (solely based on Warehouse Confirmation)
-  const [whConfirmed, setWhConfirmed] = useState<boolean>(
+  // وضعیت انبار همیشه از نسخه‌ی زنده‌ی پروژه خوانده می‌شود؛ اگر انبار وسط ویرایش فرم کالا را تأیید کند،
+  // فرم آن را می‌بیند و با ذخیره رویش نمی‌نویسد.
+  const liveProject: Project | null | undefined = project
+    ? (projects || []).find((p) => p.id === project.id) || project
+    : null;
+  const liveWc = liveProject?.technicalHandover?.warehouseConfirmation;
+  const liveGatePassed = liveProject ? isHandoverGatePassed(liveProject) : false;
+  // ثبت دستی/لغو از فرم فقط وقتی ذخیره می‌شود که کاربر واقعاً تیک را عوض کرده باشد
+  const [whTouched, setWhTouched] = useState(false);
+  const [whManualConfirmed, setWhManualConfirmed] = useState<boolean>(
     Boolean(effective?.technicalHandover?.warehouseConfirmation?.confirmed)
   );
-  const [whConfirmedBy, setWhConfirmedBy] = useState<string>(
-    effective?.technicalHandover?.warehouseConfirmation?.confirmedBy || ''
-  );
-  const [whNotes, setWhNotes] = useState<string>(
-    effective?.technicalHandover?.warehouseConfirmation?.notes || ''
-  );
+  const whConfirmed = whTouched ? whManualConfirmed : project ? liveGatePassed : whManualConfirmed;
+  const [whNotes, setWhNotes] = useState<string>('');
 
   // Teams & Workload states
   const [assignedTeamId, setAssignedTeamId] = useState<string>(
@@ -329,24 +346,37 @@ export const ProjectFormModal: React.FC<Props> = ({
       return;
     }
 
-    const technicalHandover: ProjectTechnicalHandover = {
-      isHandoverComplete: whConfirmed,
-      warehouseConfirmation: {
-        confirmed: whConfirmed,
-        confirmedBy: whConfirmed ? (whConfirmedBy.trim() || 'مسئول انبار مرکزی') : undefined,
-        confirmedAt: whConfirmed
-          ? project?.technicalHandover?.warehouseConfirmation?.confirmedAt || new Date().toISOString()
-          : undefined,
-        notes: whNotes.trim() || undefined,
-        shelfLocation: project?.technicalHandover?.warehouseConfirmation?.shelfLocation,
-      },
-      officialHandoverDate: whConfirmed
-        ? project?.technicalHandover?.officialHandoverDate || new Date().toISOString()
-        : undefined,
-      unlockedAt: whConfirmed
-        ? project?.technicalHandover?.unlockedAt || new Date().toISOString()
-        : undefined,
-    };
+    // ثبت دستی ورود کالا از فرم: به نام همین کاربر و با همان patch میز انبار (utils/warehouseStatus)
+    const nowIso = new Date().toISOString();
+    const actorName = currentUser ? getDisplayName(currentUser.name) || currentUser.name : 'مدیریت';
+    const formCounts = { shade: Number(shadePanels) || 0, rail: Number(railCount) || 0, curtain: Number(curtainPanels) || 0 };
+    const baseForWarehouse = {
+      ...(liveProject || ({} as Project)),
+      shadePanels: formCounts.shade,
+      railCount: formCounts.rail,
+      curtainPanels: formCounts.curtain,
+    } as Project;
+    let warehousePatch: Partial<Project> = {};
+    if (!project || whTouched) {
+      if (whConfirmed) {
+        warehousePatch = buildWarehousePatch(
+          baseForWarehouse,
+          { kind: 'RECEIPT', notes: whNotes },
+          { id: currentUser?.id || '', name: actorName },
+          actorName,
+          nowIso
+        );
+        warehousePatch.technicalHandover!.warehouseConfirmation.manualEntry = true;
+      } else if (project) {
+        warehousePatch = buildWarehousePatch(baseForWarehouse, { kind: 'REVOKE_RECEIPT' }, { id: currentUser?.id || '', name: actorName }, actorName, nowIso);
+      } else {
+        warehousePatch = {
+          technicalHandover: { isHandoverComplete: false, warehouseConfirmation: { confirmed: false } },
+        };
+      }
+      delete warehousePatch.updatedAt;
+    }
+    const technicalHandover: ProjectTechnicalHandover | undefined = warehousePatch.technicalHandover;
 
     setFormError('');
     setIsSubmitting(true);
@@ -376,7 +406,7 @@ export const ProjectFormModal: React.FC<Props> = ({
           estimatedWorkload: estimatedWorkload ? Number(estimatedWorkload) : undefined,
           requiredDurationHours: requiredDurationHours ? Number(requiredDurationHours) : undefined,
           secondMeasurementDoc: secondMeasurementDoc.trim() || undefined,
-          technicalHandover,
+          ...warehousePatch,
           isFullTools,
           toolsRequired,
           customToolsNotes: customToolsNotes.trim(),
@@ -431,7 +461,7 @@ export const ProjectFormModal: React.FC<Props> = ({
           estimatedWorkload: estimatedWorkload ? Number(estimatedWorkload) : undefined,
           requiredDurationHours: requiredDurationHours ? Number(requiredDurationHours) : undefined,
           secondMeasurementDoc: secondMeasurementDoc.trim() || undefined,
-          technicalHandover,
+          technicalHandover: technicalHandover!,
           isFullTools,
           toolsRequired,
           customToolsNotes: customToolsNotes.trim(),
@@ -1056,64 +1086,127 @@ export const ProjectFormModal: React.FC<Props> = ({
             </div>
           </section>
 
-          {/* ۴. ورود کالا به انبار */}
-          <section className={`${sectionCls} ${whConfirmed ? 'border-emerald-500/40' : 'border-brand/40'}`}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h4 className={sectionTitleCls}>
-                {stepBadge(4)}
-                <CheckSquare className="w-4 h-4 text-brand-ink" />
-                <span>ورود کالا به انبار</span>
-              </h4>
-              <span
-                className={`text-[12px] font-bold px-2.5 py-0.5 rounded-full ${
-                  whConfirmed
-                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                    : 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30'
-                }`}
-              >
-                {whConfirmed ? '✓ کالا در انبار است' : '📦 منتظر تأیید انبار'}
-              </span>
-            </div>
+          {/* ۴. انبار — وضعیت زنده‌ی همان پروژه در میز انبار */}
+          {(() => {
+            const formCounts = { shade: Number(shadePanels) || 0, rail: Number(railCount) || 0, curtain: Number(curtainPanels) || 0 };
+            const prep = liveProject?.warehousePrep;
+            const shortages = liveProject ? receiptShortages({ ...liveProject, shadePanels: formCounts.shade, railCount: formCounts.rail, curtainPanels: formCounts.curtain } as Project) : [];
+            // تغییر تعداد نسبت به شمارش انبار: هم تغییرهای قبلی و هم همین الان در فرم
+            const changedVsWarehouse =
+              liveWc?.expectedCounts && (liveWc.confirmed || liveWc.isPartial)
+                ? diffCounts(liveWc.expectedCounts, formCounts)
+                : prep?.isPackedAndReady && prep.expectedCounts
+                  ? diffCounts(prep.expectedCounts, formCounts)
+                  : [];
+            const liveChanged = liveProject ? countsChangedSinceReceipt(liveProject) : [];
+            const recordedByWarehouse = Boolean(liveWc?.confirmed || liveWc?.isPartial);
+            return (
+              <section className={`${sectionCls} ${whConfirmed ? 'border-emerald-500/40' : 'border-brand/40'}`}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className={sectionTitleCls}>
+                    {stepBadge(4)}
+                    <CheckSquare className="w-4 h-4 text-brand-ink" />
+                    <span>انبار</span>
+                  </h4>
+                  {liveProject && !whTouched ? (
+                    <WarehouseStageBadge project={liveProject} />
+                  ) : (
+                    <span
+                      className={`text-[12px] font-bold px-2.5 py-0.5 rounded-full border ${
+                        whConfirmed
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                          : 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/30'
+                      }`}
+                    >
+                      {whConfirmed ? '✓ کالا در انبار است' : '📦 منتظر تأیید انبار'}
+                    </span>
+                  )}
+                </div>
 
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={whConfirmed}
-                onChange={(e) => {
-                  const val = e.target.checked;
-                  setWhConfirmed(val);
-                  if (val && !whConfirmedBy) {
-                    setWhConfirmedBy('مسئول انبار مرکزی');
-                  }
-                }}
-                className="mt-0.5 w-4 h-4 rounded accent-brand"
-              />
-              <span className="text-xs text-ink-2 leading-6">
-                <span className="font-bold text-ink">کالا همین حالا در انبار تحویل شده است.</span>{' '}
-                اگر تیک نزنید، پروژه در کارتابل انبار می‌ماند و اکیپ تا تأیید انبار نمی‌تواند حرکت کند.
-              </span>
-            </label>
-            {whConfirmed && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  aria-label="تحویل‌گیرنده انبار"
-                  placeholder="نام یا سمت تحویل‌گیرنده انبار"
-                  value={whConfirmedBy}
-                  onChange={(e) => setWhConfirmedBy(e.target.value)}
-                  className={inputCls}
-                />
-                <input
-                  type="text"
-                  aria-label="یادداشت انبار"
-                  placeholder="شماره قفسه، حواله یا یادداشت تحویل"
-                  value={whNotes}
-                  onChange={(e) => setWhNotes(e.target.value)}
-                  className={inputCls}
-                />
-              </div>
-            )}
-          </section>
+                {/* آنچه انبار ثبت کرده (فقط خواندنی) */}
+                {liveProject && (recordedByWarehouse || prep?.packedAt || prep?.handedOverAt) && (
+                  <div className="text-xs text-ink-2 bg-canvas border border-line rounded-md p-2.5 space-y-1 leading-6">
+                    {recordedByWarehouse && (
+                      <div>
+                        {liveWc?.confirmed ? 'ورود کالا' : 'ورود ناقص'}: <strong className="text-ink">{liveWc?.confirmedBy || '—'}</strong> ·{' '}
+                        {formatJalaliDateTime(liveWc?.confirmedAt)}
+                        {liveWc?.manualEntry ? ' · ثبت دستی' : ''}
+                        {liveWc?.receivedCounts ? ` · شمارش: ${formatProductCounts(liveWc.receivedCounts) || '—'}` : ''}
+                        {liveWc?.shelfLocation ? ` · قفسه ${liveWc.shelfLocation}` : ''}
+                        {liveWc?.notes ? ` · ${liveWc.notes}` : ''}
+                      </div>
+                    )}
+                    {shortages.length > 0 && (
+                      <div className="font-bold text-rose-600 dark:text-rose-300">
+                        کسری: {formatCountDiffs(shortages, 'shortage')}
+                        {liveWc?.shortageAccepted ? ' (با کسری تأیید شد)' : ''}
+                      </div>
+                    )}
+                    {prep?.packedAt && (
+                      <div>
+                        بار: {prep.isPackedAndReady || prep.handedOverAt ? 'بسته شد' : 'باز شد'} · {prep.packedByUserName || '—'} ·{' '}
+                        {formatJalaliDateTime(prep.packedAt)}
+                        {prep.notes ? ` · ${prep.notes}` : ''}
+                      </div>
+                    )}
+                    {prep?.handedOverAt && (
+                      <div>
+                        تحویل اکیپ{prep.handedOverToName ? ` به ${prep.handedOverToName}` : ''} · {formatJalaliDateTime(prep.handedOverAt)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(changedVsWarehouse.length > 0 || liveChanged.length > 0) && (
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-200 bg-amber-500/10 border border-amber-500/40 rounded-md p-2.5 leading-6">
+                    تعداد با شمارش انبار نمی‌خواند ({formatCountDiffs(changedVsWarehouse.length ? changedVsWarehouse : liveChanged, 'change')}). بعد از ذخیره، انبار در کارتابلش هشدار
+                    می‌بیند و باید دوباره بشمارد.
+                  </p>
+                )}
+
+                {/* ثبت دستی یا لغو — فقط وقتی انبار در دسترس نیست */}
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={whConfirmed}
+                    onChange={(e) => {
+                      setWhTouched(true);
+                      setWhManualConfirmed(e.target.checked);
+                    }}
+                    className="mt-0.5 w-4 h-4 rounded accent-brand"
+                  />
+                  <span className="text-xs text-ink-2 leading-6">
+                    {liveProject && liveGatePassed && !whTouched ? (
+                      <>
+                        <span className="font-bold text-ink">کالا در انبار تأیید شده است.</span> برداشتن تیک یعنی لغو تأیید انبار (اکیپ تا تأیید
+                        دوباره نمی‌تواند حرکت کند).
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-bold text-ink">ثبت دستی: کالا همین حالا در انبار است.</span> معمولاً انبار از کارتابل خودش
+                        ثبت می‌کند؛ این تیک به نام {currentUser ? getDisplayName(currentUser.name) || currentUser.name : 'شما'} ثبت می‌شود.
+                      </>
+                    )}
+                  </span>
+                </label>
+                {whTouched && whConfirmed && (
+                  <input
+                    type="text"
+                    aria-label="یادداشت انبار"
+                    placeholder="یادداشت (اختیاری)، مثلاً شماره حواله یا جای کالا"
+                    value={whNotes}
+                    onChange={(e) => setWhNotes(e.target.value)}
+                    className={inputCls}
+                  />
+                )}
+                {whTouched && !whConfirmed && liveGatePassed && (
+                  <p className="text-[12px] text-rose-600 dark:text-rose-300 font-bold">
+                    با ذخیره، تأیید انبار لغو می‌شود{prep?.isPackedAndReady ? ' و بار بسته‌شده هم باز می‌شود' : ''}.
+                  </p>
+                )}
+              </section>
+            );
+          })()}
 
           {/* ۵. ابزار — پیش‌فرض فول ابزار است؛ فقط در صورت نیاز باز می‌شود */}
           <details className="group bg-sunken border border-line rounded-lg">

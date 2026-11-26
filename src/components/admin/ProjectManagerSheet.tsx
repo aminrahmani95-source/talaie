@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { Project, ProjectAuditRecord, ProjectStatus, QCStatus, Ticket, User, InstallationTeam } from '../../types';
 import { Sheet, Button, StatusPill, SegmentedControl, Badge } from '../ui';
+import { WarehouseStageBadge } from '../warehouse/WarehouseStageBadge';
+import { getWarehouseStage, warehouseAlert } from '../../utils/warehouseStatus';
 import { CloudImage } from '../common/CloudImage';
 import {
   canRevertOneStep,
@@ -33,7 +35,7 @@ import {
   ResetMode,
 } from '../../utils/managerActions';
 import { formatAuditDiff, getQcStatusPersianLabel, getStatusPersianLabel } from '../../utils/auditDiff';
-import { formatJalali, formatJalaliDateTime, toPersianDigits, getUpcomingDays } from '../../utils/jalali';
+import { formatJalali, formatJalaliDateTime, toPersianDigits, getUpcomingDays, localDateKey } from '../../utils/jalali';
 import { calculateWorkSessionsSummary, getMultiDayTotalDays, isProjectMultiDay } from '../../utils/multiDay';
 import { getDisplayName } from '../../utils/technicianName';
 import {
@@ -314,9 +316,18 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         <Row label="اکیپ">
           {(project.assignedTechnicianIds || []).map((id) => userName(id)).join('، ') || '—'}
         </Row>
-        <Row label="لت‌ها">
+        <Row label="اقلام">
           {formatProductCounts(projectProductCounts(project)) || '—'}
         </Row>
+        {getWarehouseStage(project) !== 'NONE' && (
+          <Row label="انبار">
+            <WarehouseStageBadge project={project} size="xs" />
+            {(() => {
+              const a = warehouseAlert(project, localDateKey());
+              return a.level ? <span className="text-amber-700 dark:text-amber-300 text-xs mr-1.5">{a.text}</span> : null;
+            })()}
+          </Row>
+        )}
         <Row label="تیکت‌ها">{toPersianDigits(projectTickets.length)}</Row>
       </div>
       <div className="flex flex-wrap gap-2">

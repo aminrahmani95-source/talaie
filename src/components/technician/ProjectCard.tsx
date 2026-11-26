@@ -32,6 +32,9 @@ import { calculateActivityProgress } from '../../utils/planProgress';
 import { getLatestTeamTransfer, isPendingTransferAcknowledgment, hasPendingTransfer } from '../../utils/teamTransfer';
 import { PreInstallPhotoModal } from './PreInstallPhotoModal';
 import { CloudImage } from '../common/CloudImage';
+import { LeadWarehouseStrip } from './LeadWarehouseStrip';
+import { isHandoverGatePassed } from '../../utils/roleGuards';
+import { triggerToast } from '../Toast';
 
 interface Props {
   project: Project;
@@ -50,6 +53,8 @@ interface Props {
   onOpenMaterialModal?: (project: Project) => void;
   onConfirmMaterialReceipt?: (request: MaterialRequest, dispatchId: string) => void;
   onResolveDefect?: (projectId: string, defectId: string, resolutionNotes: string, photos?: string[]) => void;
+  /** سرپرست تحویل بار از انبار را تأیید می‌کند */
+  onConfirmLoadPickup?: (project: Project) => Promise<void> | void;
   tickets?: Ticket[];
   isTransitioning?: boolean;
   /** another job of this person that is already en route / in progress */
@@ -73,6 +78,7 @@ export const ProjectCard: React.FC<Props> = ({
   onOpenMaterialModal,
   onConfirmMaterialReceipt,
   onResolveDefect,
+  onConfirmLoadPickup,
   tickets = [],
   isTransitioning = false,
   busyWith,
@@ -108,6 +114,11 @@ export const ProjectCard: React.FC<Props> = ({
   // One tap used to start a mission planned for another day, or a second job while
   // the first was still open. Ask first in those two cases; a normal start is still one tap.
   const handleStartTravel = () => {
+    // همان گیت سرور: بدون تأیید ورود کالا به انبار، حرکت ثبت نمی‌شود (قبلاً خطای سرور بعد از کلیک می‌آمد)
+    if (isScheduled && !isHandoverGatePassed(project)) {
+      triggerToast('warning', 'کالای این کار هنوز در انبار تأیید نشده؛ با انبار یا مدیر هماهنگ کنید.');
+      return;
+    }
     const warnings: string[] = [];
     if (isScheduled && project.scheduledDate && project.scheduledDate > todayYmd) {
       const day = getDayInfoFromDateKey(project.scheduledDate);
@@ -715,11 +726,21 @@ export const ProjectCard: React.FC<Props> = ({
           <>
             {(isScheduled || isPaused) && (
               <div className="space-y-2">
+                {isScheduled && (
+                  <LeadWarehouseStrip
+                    project={project}
+                    canConfirmPickup={currentUser.id === project.leadTechnicianId}
+                    onConfirmPickup={onConfirmLoadPickup}
+                  />
+                )}
                 <button
                   type="button"
                   disabled={isTransitioning}
                   onClick={handleStartTravel}
-                  className="w-full py-3.5 px-4 bg-surface hover:bg-raised disabled:opacity-50 text-brand-ink rounded-md text-sm font-bold shadow-xs transition flex items-center justify-center gap-2.5 border border-brand active:scale-[0.99] min-h-[48px] cursor-pointer"
+                  aria-disabled={isScheduled && !isHandoverGatePassed(project)}
+                  className={`w-full py-3.5 px-4 bg-surface hover:bg-raised disabled:opacity-50 text-brand-ink rounded-md text-sm font-bold shadow-xs transition flex items-center justify-center gap-2.5 border border-brand active:scale-[0.99] min-h-[48px] cursor-pointer ${
+                    isScheduled && !isHandoverGatePassed(project) ? 'opacity-50' : ''
+                  }`}
                 >
                   {isTransitioning ? (
                     <Loader2 className="w-5 h-5 animate-spin" />

@@ -48,6 +48,9 @@ import {
 } from '../../utils/materialRequests';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { getUpcomingDispatchProjects, needsWarehouseReceipt, DISPATCH_HORIZON_DAYS } from '../../utils/warehouseLists';
+import { getWarehouseStage, WarehouseAction } from '../../utils/warehouseStatus';
+import { WarehouseProjectFlow, WarehouseFlowState } from '../warehouse/WarehouseProjectFlow';
+import { WarehouseStageBadge } from '../warehouse/WarehouseStageBadge';
 
 interface Props {
   materialRequests: MaterialRequest[];
@@ -66,15 +69,8 @@ interface Props {
       estimatedAvailableDate?: string;
     }
   ) => Promise<void>;
-  onConfirmPacking?: (projectId: string, notes?: string) => Promise<void>;
-  onConfirmGoodsReceipt?: (
-    projectId: string,
-    params: {
-      confirmed: boolean;
-      notes?: string;
-      shelfLocation?: string;
-    }
-  ) => Promise<void>;
+  /** همه‌ی اقدام‌های انبار روی پروژه (ورود کالا، بستن بار، تحویل به اکیپ) */
+  onWarehouseAction?: (projectId: string, action: WarehouseAction) => Promise<void>;
   onViewProposal?: (project: Project) => void;
   onOpenTicketModal?: (project: Project) => void;
   onNavigateTab?: (tab: any) => void;
@@ -91,8 +87,7 @@ export const MaterialCenter: React.FC<Props> = ({
   projects = [],
   onUpdateMaterialRequest,
   onResolveTicket,
-  onConfirmPacking,
-  onConfirmGoodsReceipt,
+  onWarehouseAction,
   onViewProposal,
   onOpenTicketModal,
   onNavigateTab,
@@ -116,6 +111,12 @@ export const MaterialCenter: React.FC<Props> = ({
     return 'REQUESTS';
   });
 
+  // برگه‌ی جزئیات/فرم‌های انبار یک پروژه (مشترک بین ورود کالا، بارگیری، درخواست‌ها و ارجاعات)
+  const [flow, setFlow] = useState<WarehouseFlowState | null>(null);
+  const openProject = (projectId?: string) => {
+    if (projectId && projects.some((p) => p.id === projectId)) setFlow({ projectId, view: 'DETAILS' });
+  };
+
   // Referrals filter & search
   const [referralFilter, setReferralFilter] = useState<'OPEN' | 'BLOCKING' | 'RESOLVED'>('OPEN');
   const [referralSearchQuery, setReferralSearchQuery] = useState('');
@@ -137,9 +138,11 @@ export const MaterialCenter: React.FC<Props> = ({
 
   const upcomingDispatchCount = useMemo(() => {
     if (!projects) return 0;
-    return getUpcomingDispatchProjects(projects, localDateKey(), DISPATCH_HORIZON_DAYS).filter(
-      (p) => !p.warehousePrep?.isPackedAndReady
-    ).length;
+    // کارهایی که بارشان هنوز به اکیپ نرسیده (بسته‌نشده یا بسته‌شده ولی تحویل‌نشده)
+    return getUpcomingDispatchProjects(projects, localDateKey(), DISPATCH_HORIZON_DAYS).filter((p) => {
+      const st = getWarehouseStage(p);
+      return st !== 'HANDED_OVER' && st !== 'NONE';
+    }).length;
   }, [projects]);
 
   // پیش‌فرض: فقط درخواست‌هایی که هنوز کاری دارند
@@ -725,14 +728,14 @@ export const MaterialCenter: React.FC<Props> = ({
                           <span>اعلام تاخیر در تامین</span>
                         </button>
 
-                        {proj && proj.proposalImages && proj.proposalImages.length > 0 && onViewProposal && (
+                        {proj && (
                           <button
                             type="button"
-                            onClick={() => onViewProposal(proj)}
-                            className="py-1.5 px-3 rounded-lg font-medium text-xs bg-raised hover:bg-line text-brand-ink flex items-center gap-1 transition cursor-pointer"
+                            onClick={() => openProject(proj.id)}
+                            className="py-1.5 px-3 rounded-lg font-medium text-xs bg-raised hover:bg-line text-brand-ink flex items-center gap-1 transition cursor-pointer min-h-[36px]"
                           >
                             <Eye className="w-3.5 h-3.5" />
-                            <span>تصاویر سفارش</span>
+                            <span>جزئیات پروژه</span>
                           </button>
                         )}
                       </div>
@@ -753,11 +756,8 @@ export const MaterialCenter: React.FC<Props> = ({
           currentUser={currentUser}
           projects={projects || []}
           tickets={tickets || []}
-          onConfirmPacking={onConfirmPacking || (async () => {})}
           onResolveTicket={onResolveTicket || (async () => {})}
-          onConfirmGoodsReceipt={onConfirmGoodsReceipt}
-          onViewProposal={onViewProposal}
-          onOpenTicketModal={onOpenTicketModal}
+          onOpenFlow={(projectId, view) => setFlow({ projectId, view })}
         />
       )}
 
@@ -769,11 +769,8 @@ export const MaterialCenter: React.FC<Props> = ({
           currentUser={currentUser}
           projects={projects || []}
           tickets={tickets || []}
-          onConfirmPacking={onConfirmPacking || (async () => {})}
           onResolveTicket={onResolveTicket || (async () => {})}
-          onConfirmGoodsReceipt={onConfirmGoodsReceipt}
-          onViewProposal={onViewProposal}
-          onOpenTicketModal={onOpenTicketModal}
+          onOpenFlow={(projectId, view) => setFlow({ projectId, view })}
         />
       )}
 
@@ -907,6 +904,10 @@ export const MaterialCenter: React.FC<Props> = ({
                         {req.projectCode}
                       </span>
                       <h3 className="font-bold text-sm sm:text-base text-ink">{req.projectTitle}</h3>
+                      {(() => {
+                        const rp = projects.find((p) => p.id === req.projectId);
+                        return rp ? <WarehouseStageBadge project={rp} size="xs" /> : null;
+                      })()}
                       {req.urgency !== 'NORMAL' && (
                         <span className={`text-[12px] px-2 py-0.5 rounded-md ${urgencyConfig.badgeClass}`}>
                           {urgencyConfig.label}
@@ -1003,6 +1004,17 @@ export const MaterialCenter: React.FC<Props> = ({
                     >
                       تغییر وضعیت
                     </button>
+                    {projects.some((p) => p.id === req.projectId) && (
+                      <button
+                        type="button"
+                        onClick={() => openProject(req.projectId)}
+                        className="min-h-[42px] px-3 rounded-md border border-line bg-raised text-ink-2 hover:text-ink text-xs font-bold cursor-pointer flex items-center gap-1"
+                        aria-label={`جزئیات پروژه ${req.projectCode}`}
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>پروژه</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setExpandedId(isExpanded ? null : req.id)}
@@ -1604,6 +1616,17 @@ export const MaterialCenter: React.FC<Props> = ({
           </div>
         </div></Portal>
       )}
+      <WarehouseProjectFlow
+        state={flow}
+        onChange={setFlow}
+        projects={projects}
+        users={users}
+        materialRequests={materialRequests}
+        todayKey={localDateKey()}
+        onAction={onWarehouseAction}
+        onViewProposal={onViewProposal}
+        onOpenTicketModal={onOpenTicketModal}
+      />
     </div>
   );
 };
