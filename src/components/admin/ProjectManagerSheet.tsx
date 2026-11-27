@@ -21,7 +21,11 @@ import {
   Plus,
   Check,
   ArrowRightLeft,
+  ImagePlus,
+  Maximize2,
 } from 'lucide-react';
+import { compressImageFile } from '../../utils/imageCompressor';
+import { movePhotoBetweenGroups, PHOTO_GROUP_LABEL } from '../../utils/photoGroups';
 import { Project, ProjectAuditRecord, ProjectStatus, QCStatus, Ticket, User, InstallationTeam } from '../../types';
 import { Sheet, Button, StatusPill, SegmentedControl, Badge } from '../ui';
 import { WarehouseStageBadge } from '../warehouse/WarehouseStageBadge';
@@ -137,6 +141,11 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
 
   // docs tab
   const [notesDraft, setNotesDraft] = useState(project.completionNotes || '');
+  // عکس‌ها: تأیید حذف، بزرگ‌نمایی، افزودن
+  const [confirmPhoto, setConfirmPhoto] = useState<string | null>(null);
+  const [viewPhoto, setViewPhoto] = useState<string | null>(null);
+  const [addingTo, setAddingTo] = useState<PhotoField | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   // history tab
   const [audit, setAudit] = useState<ProjectAuditRecord[] | null>(null);
@@ -966,35 +975,152 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
   const removePhoto = (field: PhotoField, idx: number) => {
     const list = [...((project[field] as string[] | undefined) || [])];
     list.splice(idx, 1);
-    void run({ [field]: list }, 'عکس حذف شد.', 'حذف عکس توسط مدیر');
+    setConfirmPhoto(null);
+    void run({ [field]: list }, 'عکس حذف شد.', `حذف یک عکس از «${PHOTO_GROUP_LABEL[field]}» توسط مدیر`);
   };
 
-  const photoGroup = (field: PhotoField, title: string) => {
+  /** عکسی که سرپرست اشتباهی در بخش دیگری گذاشته، به بخش درست منتقل می‌شود (هر دو فهرست با هم ذخیره می‌شوند) */
+  const movePhoto = (from: PhotoField, idx: number, to: PhotoField) => {
+    const patch = movePhotoBetweenGroups(project, from, idx, to);
+    if (!patch) return;
+    void run(
+      patch,
+      `عکس به «${PHOTO_GROUP_LABEL[to]}» منتقل شد.`,
+      `انتقال یک عکس از «${PHOTO_GROUP_LABEL[from]}» به «${PHOTO_GROUP_LABEL[to]}» توسط مدیر`
+    );
+  };
+
+  const addPhotos = async (field: PhotoField, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setAddingTo(field);
+    setPhotoError(null);
+    const added: string[] = [];
+    let failed = 0;
+    for (const file of Array.from(files).slice(0, 20)) {
+      try {
+        added.push(await compressImageFile(file, 1280, 1280, 0.75));
+      } catch {
+        failed += 1;
+      }
+    }
+    setAddingTo(null);
+    if (failed > 0) setPhotoError(`${toPersianDigits(failed)} عکس خوانده نشد (فرمت ناشناخته). بقیه اضافه شد.`);
+    if (added.length === 0) return;
     const list = (project[field] as string[] | undefined) || [];
-    if (list.length === 0) return null;
+    // عکس‌ها مثل عکس‌های سرپرست در صف ارسال آپلود می‌شوند؛ بدون اینترنت هم بعداً فرستاده می‌شوند
+    await run(
+      { [field]: [...list, ...added] },
+      `${toPersianDigits(added.length)} عکس به «${PHOTO_GROUP_LABEL[field]}» اضافه شد.`,
+      `افزودن ${added.length} عکس به «${PHOTO_GROUP_LABEL[field]}» توسط مدیر`
+    );
+  };
+
+  const photoGroup = (field: PhotoField, title: string, alwaysShow = false) => {
+    const list = (project[field] as string[] | undefined) || [];
+    if (list.length === 0 && (!alwaysShow || restricted)) return null;
+    const targets = (['beforePhotos', 'afterPhotos', 'completionPhotos'] as PhotoField[]).filter(
+      (f) => f !== field && (f !== 'completionPhotos' || ((project.completionPhotos || []).length > 0))
+    );
+    const inputId = `pm-add-${field}`;
     return (
       <div className="space-y-2">
-        <div className="text-xs font-bold text-ink-3">
-          {title} ({toPersianDigits(list.length)})
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs font-bold text-ink-3">
+            {title} ({toPersianDigits(list.length)})
+          </div>
+          {!restricted && (
+            <label
+              htmlFor={inputId}
+              className={`inline-flex items-center gap-1.5 text-xs font-bold text-brand-ink hover:underline cursor-pointer ${busy || addingTo ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              {addingTo === field ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+              افزودن عکس
+              <input
+                id={inputId}
+                type="file"
+                accept="image/*"
+                multiple
+                className="sr-only"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  void addPhotos(field, files).finally(() => {
+                    e.target.value = '';
+                  });
+                }}
+              />
+            </label>
+          )}
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          {list.map((src, i) => (
-            <div key={`${field}-${i}`} className="relative aspect-square rounded-md overflow-hidden bg-[#EFEBE4] dark:bg-[#222]">
-              <CloudImage src={src} alt={title} className="w-full h-full object-cover" />
-              {!restricted && (
-                <button
-                  type="button"
-                  aria-label="حذف عکس"
-                  disabled={busy}
-                  onClick={() => removePhoto(field, i)}
-                  className="absolute top-1 left-1 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-rose-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+        {list.length === 0 ? (
+          <p className="text-xs text-ink-3">عکسی ثبت نشده است.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {list.map((src, i) => {
+              const key = `${field}-${i}`;
+              const confirming = confirmPhoto === key;
+              return (
+                <div key={key} className="rounded-md border border-line overflow-hidden bg-surface">
+                  <button
+                    type="button"
+                    onClick={() => setViewPhoto(src)}
+                    aria-label="نمایش بزرگ عکس"
+                    className="relative block w-full aspect-square bg-[#EFEBE4] dark:bg-[#222] cursor-zoom-in"
+                  >
+                    <CloudImage src={src} alt={title} className="w-full h-full object-cover" />
+                    <span className="absolute bottom-1 left-1 w-7 h-7 rounded-full bg-black/55 text-white flex items-center justify-center">
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    </span>
+                  </button>
+                  {!restricted && (
+                    <div className="p-1.5 space-y-1">
+                      {confirming ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => removePhoto(field, i)}
+                            className="flex-1 min-h-9 rounded-md bg-rose-600 text-white text-xs font-bold"
+                          >
+                            حذف شود
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmPhoto(null)}
+                            className="flex-1 min-h-9 rounded-md border border-line text-xs font-bold"
+                          >
+                            انصراف
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          {targets.map((to) => (
+                            <button
+                              key={to}
+                              type="button"
+                              disabled={busy}
+                              onClick={() => movePhoto(field, i, to)}
+                              className="w-full min-h-9 rounded-md border border-line text-[12px] font-bold text-ink-2 hover:bg-sunken inline-flex items-center justify-center gap-1"
+                            >
+                              <ArrowRightLeft className="w-3.5 h-3.5" /> انتقال به {PHOTO_GROUP_LABEL[to]}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setConfirmPhoto(key)}
+                            className="w-full min-h-9 rounded-md text-[12px] font-bold text-rose-600 hover:bg-rose-500/10 inline-flex items-center justify-center gap-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> حذف
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -1128,9 +1254,28 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         >
           ذخیره‌ی گزارش
         </Button>
-        {photoGroup('beforePhotos', 'عکس‌های قبل از نصب')}
-        {photoGroup('afterPhotos', 'عکس‌های بعد از نصب')}
+        {photoError && <p className="text-xs text-amber-700 dark:text-amber-300">{photoError}</p>}
+        {photoGroup('beforePhotos', 'عکس‌های قبل از نصب', true)}
+        {photoGroup('afterPhotos', 'عکس‌های بعد از نصب', true)}
         {photoGroup('completionPhotos', 'عکس‌های اتمام کار')}
+        {viewPhoto && (
+          <div
+            role="dialog"
+            aria-label="عکس بزرگ"
+            className="fixed inset-0 z-[80] bg-black/85 flex items-center justify-center p-4"
+            onClick={() => setViewPhoto(null)}
+          >
+            <CloudImage src={viewPhoto} alt="عکس" className="max-w-full max-h-full object-contain rounded-lg" />
+            <button
+              type="button"
+              aria-label="بستن"
+              onClick={() => setViewPhoto(null)}
+              className="absolute top-4 left-4 w-11 h-11 rounded-full bg-white/15 text-white flex items-center justify-center"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
         {project.customerSignature && (
           <div className="space-y-2">
             <div className="text-xs font-bold text-ink-3">امضای مشتری</div>
