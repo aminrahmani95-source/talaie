@@ -101,6 +101,18 @@ export function getNavSections(role: string | undefined, counts: NavCounts): Nav
   if (role === 'CEO') {
     return [{ title: 'مدیریت', items: mk(['registry', 'planner', 'sales']) }];
   }
+  // هماهنگ‌کننده‌ی جدا: فقط کار اکیپ‌های خودش؛ انبار و فروش فقط دیدن (utils/coordinatorScope)
+  if (role === 'SCHEDULING_COORDINATOR') {
+    const items = mk(['materials', 'sales']).map((it) =>
+      it.id === 'materials'
+        ? { ...it, label: 'وضعیت انبار', shortLabel: 'انبار', hint: 'بار پروژه‌های اکیپ‌های شما (فقط دیدن)' }
+        : { ...it, label: 'رزروهای فروش', shortLabel: 'فروش', hint: 'برنامه‌ی فروشنده‌ها (دیدن)' }
+    );
+    return [
+      { title: 'کار روزانه', items: mk(['control', 'planner', 'qc', 'issues']) },
+      { title: 'انبار و فروش', items },
+    ];
+  }
   // مدیر QC و هماهنگ‌کننده: کار روزانه اول، بعد تدارکات، بعد پروژه‌ها و تیم
   return [
     { title: 'کار روزانه', items: mk(['control', 'planner', 'qc', 'issues']) },

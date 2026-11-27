@@ -17,6 +17,9 @@ export const QcDesk = React.lazy(() =>
 export const TicketCenter = React.lazy(() =>
   import('../components/admin/TicketCenter').then((m) => ({ default: m.TicketCenter }))
 );
+export const CoordinatorWarehouseView = React.lazy(() =>
+  import('../components/admin/CoordinatorWarehouseView').then((m) => ({ default: m.CoordinatorWarehouseView }))
+);
 export const MaterialCenter = React.lazy(() =>
   import('../components/admin/MaterialCenter').then((m) => ({ default: m.MaterialCenter }))
 );

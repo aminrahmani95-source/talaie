@@ -105,12 +105,17 @@ describe('Phase P3: Final Quality Control & Project Sign-off', () => {
       })
     ).toThrow('دسترسی غیرمجاز: تکنسین فقط می‌تواند وضعیت QC را روی PENDING تنظیم کند.');
 
-    // 4. SCHEDULING_COORDINATOR is blocked
+    // 4. هماهنگ‌کننده فقط QC پروژه‌های اکیپ‌های خودش را تأیید می‌کند
     expect(() =>
-      validateProjectPatchRoleGuards(coordinator, project, {
-        qcStatus: 'APPROVED',
+      validateProjectPatchRoleGuards(coordinator, project, { qcStatus: 'APPROVED' }, undefined, {
+        coordinatorTeamIds: new Set(['team-other']),
       })
-    ).toThrow('دسترسی غیرمجاز: تأیید نهایی کنترل کیفی (QC) فقط در صلاحیت مدیر QC است.');
+    ).toThrow(/به اکیپ‌های شما سپرده نشده/);
+    expect(() =>
+      validateProjectPatchRoleGuards(coordinator, project, { qcStatus: 'APPROVED' }, undefined, {
+        coordinatorTeamIds: new Set([project.assignedTeamId as string]),
+      })
+    ).not.toThrow();
   });
 
   it('Requirement 3: Critical unresolved defects prevent final QC approval (for all users including QC_MANAGER)', () => {

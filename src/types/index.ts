@@ -106,7 +106,7 @@ export interface QCInspectionRecord {
   inspectionDate: string; // ISO
   inspectorUserId: string;
   inspectorUserName: string;
-  inspectorRole: 'QC_MANAGER';
+  inspectorRole: 'QC_MANAGER' | 'SCHEDULING_COORDINATOR';
   result: QCInspectionResult;
   overallScore?: number; // 1 تا 5
   qualityScoreDetails?: QCQualityScore;
@@ -127,6 +127,10 @@ export interface InstallationTeam {
   supervisorName?: string;
   dailyCapacityHours?: number | null; // ظرفیت کاری روزانه اکیپ به ساعت (اختیاری)
   workingDays?: number[]; // روزهای کاری مجاز در هفته (0=یکشنبه تا 6=شنبه)
+  /** هماهنگ‌کننده‌ای که برنامه‌ریزی این اکیپ با اوست (خالی = مدیران QC) — مایگریشن ۰۲۸ */
+  coordinatorId?: string | null;
+  /** اکیپ غیرفعال در برنامه‌ریزی و تخصیص پیشنهاد نمی‌شود (پیش‌فرض: فعال) */
+  active?: boolean;
   createdAt: string;
   updatedAt: string;
 }

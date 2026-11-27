@@ -87,6 +87,11 @@ export interface ProjectManagerSheetProps {
   /** «قدم بعدی»: رفتن به رفع توقف یا بررسی QC همین پروژه */
   onOpenStuck?: (project: Project) => void;
   onOpenQc?: (project: Project) => void;
+  /**
+   * هماهنگ‌کننده‌ی جدا: فقط اطلاعات، برنامه‌ریزی (ویرایش در فرم)، QC و موانع.
+   * برگرداندن مرحله، بازنشانی، تغییر دستی وضعیت، انتقال اکیپ و حذف عکس/گزارش برایش نیست.
+   */
+  restricted?: boolean;
 }
 
 const sectionCls =
@@ -118,6 +123,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
   initialTab = 'info',
   onOpenStuck,
   onOpenQc,
+  restricted = false,
 }) => {
   const [tab, setTab] = useState<TabId>(initialTab);
   const [reason, setReason] = useState('');
@@ -610,7 +616,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
 
       {reasonBox(false)}
 
-      {canRevertOneStep(project) && (
+      {!restricted && canRevertOneStep(project) && (
         <div className={sectionCls}>
           <div className="flex items-center gap-2 font-bold text-sm">
             <Undo2 className="w-4 h-4 text-brand-ink" /> برگرداندن به مرحله قبل
@@ -632,6 +638,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
         </div>
       )}
 
+      {!restricted && (
       <div className={sectionCls}>
         <div className="flex items-center gap-2 font-bold text-sm">
           <RotateCcw className="w-4 h-4 text-brand-ink" /> بازنشانی کامل به «برنامه‌ریزی‌شده»
@@ -692,9 +699,10 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {/* انتقال به اکیپ دیگر */}
-      {canTransferProjectTeam(currentUser) && (
+      {!restricted && canTransferProjectTeam(currentUser) && (
         <div className={sectionCls}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 font-bold text-sm">
@@ -875,6 +883,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
       </div>
       )}
 
+      {!restricted && (
       <details className={sectionCls}>
         <summary className="cursor-pointer font-bold text-sm select-none">تغییر دستی وضعیت (پیشرفته)</summary>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
@@ -930,6 +939,7 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
           اعمال وضعیت
         </Button>
       </details>
+      )}
 
       {onDeleteProject && (
         <div className="rounded-lg border border-rose-500/40 p-4 space-y-2">
@@ -971,15 +981,17 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
           {list.map((src, i) => (
             <div key={`${field}-${i}`} className="relative aspect-square rounded-md overflow-hidden bg-[#EFEBE4] dark:bg-[#222]">
               <CloudImage src={src} alt={title} className="w-full h-full object-cover" />
-              <button
-                type="button"
-                aria-label="حذف عکس"
-                disabled={busy}
-                onClick={() => removePhoto(field, i)}
-                className="absolute top-1 left-1 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-rose-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              {!restricted && (
+                <button
+                  type="button"
+                  aria-label="حذف عکس"
+                  disabled={busy}
+                  onClick={() => removePhoto(field, i)}
+                  className="absolute top-1 left-1 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-rose-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -1017,20 +1029,22 @@ export const ProjectManagerSheet: React.FC<ProjectManagerSheetProps> = ({
                 <span className="text-xs font-bold">
                   {formatJalali(log.date)} — {getDisplayName(log.byUserName)}
                 </span>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() =>
-                    run(
-                      { dailyLogs: (project.dailyLogs || []).filter((l) => l.id !== log.id) },
-                      'گزارش روزانه حذف شد.',
-                      'حذف گزارش روزانه توسط مدیر'
-                    )
-                  }
-                  className="text-xs text-rose-600 hover:underline min-h-[32px] px-2"
-                >
-                  حذف
-                </button>
+                {!restricted && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      run(
+                        { dailyLogs: (project.dailyLogs || []).filter((l) => l.id !== log.id) },
+                        'گزارش روزانه حذف شد.',
+                        'حذف گزارش روزانه توسط مدیر'
+                      )
+                    }
+                    className="text-xs text-rose-600 hover:underline min-h-[32px] px-2"
+                  >
+                    حذف
+                  </button>
+                )}
               </div>
               {log.activityProgress && log.activityProgress.length > 0 && (
                 <div className="bg-sunken rounded-lg p-2.5 border border-line-strong space-y-1.5">

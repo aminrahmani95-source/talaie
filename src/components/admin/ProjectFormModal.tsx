@@ -127,7 +127,9 @@ export const ProjectFormModal: React.FC<Props> = ({
     { id: 'TEAM_3', name: 'اکیپ نصب 3', code: 'TEAM_3', createdAt: '', updatedAt: '' },
     { id: 'TEAM_4', name: 'اکیپ نصب 4', code: 'TEAM_4', createdAt: '', updatedAt: '' },
   ];
-  const effectiveTeams = teams && teams.length > 0 ? teams : defaultTeams;
+  // هماهنگ‌کننده‌ی جدا فقط اکیپ‌های خودش را دارد (حتی اگر هنوز اکیپی به او داده نشده باشد)
+  const isCoordinatorUser = currentUser?.role === 'SCHEDULING_COORDINATOR';
+  const effectiveTeams = isCoordinatorUser ? teams || [] : teams && teams.length > 0 ? teams : defaultTeams;
 
   // وضعیت انبار همیشه از نسخه‌ی زنده‌ی پروژه خوانده می‌شود؛ اگر انبار وسط ویرایش فرم کالا را تأیید کند،
   // فرم آن را می‌بیند و با ذخیره رویش نمی‌نویسد.
@@ -146,7 +148,7 @@ export const ProjectFormModal: React.FC<Props> = ({
 
   // Teams & Workload states
   const [assignedTeamId, setAssignedTeamId] = useState<string>(
-    effective?.assignedTeamId || ''
+    effective?.assignedTeamId || (currentUser?.role === 'SCHEDULING_COORDINATOR' && teams?.length === 1 ? teams[0].id : '')
   );
   const [assignedTeamName, setAssignedTeamName] = useState<string>(
     effective?.assignedTeamName || ''
@@ -370,6 +372,16 @@ export const ProjectFormModal: React.FC<Props> = ({
     if (!title.trim()) {
       setFormError('لطفاً عنوان یا نام پروژه را وارد کنید.');
       document.getElementById('project-title')?.focus();
+      return;
+    }
+
+    if (isCoordinatorUser && !assignedTeamId) {
+      setFormError(
+        effectiveTeams.length
+          ? 'اکیپ پروژه را از اکیپ‌های خودتان انتخاب کنید.'
+          : 'هنوز اکیپی به شما سپرده نشده است؛ از مدیر QC بخواهید در تنظیمات اکیپ‌هایتان را مشخص کند.'
+      );
+      document.getElementById('assigned-team')?.focus();
       return;
     }
 
@@ -972,7 +984,7 @@ export const ProjectFormModal: React.FC<Props> = ({
                   }}
                   className={`${inputCls} font-bold`}
                 >
-                  <option value="">بدون اکیپ ثابت (انتخاب دستی نفرات)</option>
+                  <option value="">{isCoordinatorUser ? '— اکیپ را انتخاب کنید —' : 'بدون اکیپ ثابت (انتخاب دستی نفرات)'}</option>
                   {effectiveTeams.map((t) => {
                     const leadMember = (teamMembers || []).find((m) => m.teamId === t.id && m.roleInTeam === 'LEAD');
                     const sup = users.find((u) => u.id === (leadMember?.userId || t.supervisorId));

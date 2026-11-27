@@ -40,6 +40,8 @@ export type ErrorSendResult = 'ok' | 'unavailable' | 'failed';
 interface ReporterConfig {
   send: (rows: ClientErrorRow[]) => Promise<ErrorSendResult>;
   getUser: () => { name?: string | null; role?: string | null } | null;
+  /** کد و عنوان پروژه از نسخه‌ی روی همین گوشی (اگر بعداً حذف شود، گزارش هنوز خوانا بماند) */
+  getProjectLabel?: (projectId: string) => string | null;
 }
 
 const PENDING_KEY = 'talaie_error_reports_pending_v1';
@@ -187,6 +189,14 @@ export function reportClientError(input: ClientErrorInput): void {
     writeJson(SENT_KEY, sent);
 
     const user = config?.getUser() || null;
+    let projectLabel: string | null = null;
+    if (input.projectId && config?.getProjectLabel) {
+      try {
+        projectLabel = config.getProjectLabel(input.projectId);
+      } catch {
+        projectLabel = null;
+      }
+    }
     const message = input.message.length > MAX_MESSAGE ? `${input.message.slice(0, MAX_MESSAGE)}…` : input.message;
     const row: ClientErrorRow = {
       occurred_at: new Date(now).toISOString(),
@@ -195,7 +205,11 @@ export function reportClientError(input: ClientErrorInput): void {
       project_id: input.projectId || null,
       context: input.context.slice(0, 80),
       message,
-      details: { ...sanitizeDetails(input.details), device: deviceInfo() },
+      details: {
+        ...sanitizeDetails(input.details),
+        ...(projectLabel ? { projectLabel: projectLabel.slice(0, 120) } : {}),
+        device: deviceInfo(),
+      },
       app_version: appVersion(),
       user_agent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 400) : null,
     };

@@ -44,8 +44,11 @@ export const IssuesDesk: React.FC<{
   const [tab, setTab] = useState<IssuesTab>(initialTab || (stuckCount > 0 || ticketCount === 0 ? 'stuck' : 'tickets'));
 
   // تعداد خطاهای گوشی‌ها در 24 ساعت گذشته (برای عدد روی زبانه)
+  // خطای گوشی‌ها فقط برای مدیر QC (سرور هم فقط به او نشان می‌دهد)
+  const showErrors = currentUser.role === 'QC_MANAGER' || currentUser.role === 'CEO';
   const [errorCount, setErrorCount] = useState(0);
   useEffect(() => {
+    if (!showErrors) return;
     let alive = true;
     const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     SupabaseSyncService.listClientErrorReports(since).then((res) => {
@@ -54,17 +57,18 @@ export const IssuesDesk: React.FC<{
     return () => {
       alive = false;
     };
-  }, []);
+  }, [showErrors]);
 
-  const tabs: Array<{ id: IssuesTab; label: string; count: number; icon: React.ReactNode }> = [
+  const allTabs: Array<{ id: IssuesTab; label: string; count: number; icon: React.ReactNode }> = [
     { id: 'stuck', label: 'توقف‌ها', count: stuckCount, icon: <AlertOctagon className="w-4 h-4" /> },
     { id: 'tickets', label: 'تیکت‌ها', count: ticketCount, icon: <AlertTriangle className="w-4 h-4" /> },
     { id: 'errors', label: 'خطای گوشی‌ها', count: errorCount, icon: <Smartphone className="w-4 h-4" /> },
   ];
+  const tabs = allTabs.filter((t) => t.id !== 'errors' || showErrors);
 
   return (
     <div className="space-y-4">
-      <div role="tablist" aria-label="موانع، تیکت‌ها و خطای گوشی‌ها" className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-sunken border border-line">
+      <div role="tablist" aria-label="موانع، تیکت‌ها و خطای گوشی‌ها" className={`grid ${showErrors ? 'grid-cols-3' : 'grid-cols-2'} gap-1 p-1 rounded-xl bg-sunken border border-line`}>
         {tabs.map((t) => {
           const selected = tab === t.id;
           return (
@@ -100,7 +104,7 @@ export const IssuesDesk: React.FC<{
           onManageProject={onManageProject}
           onReferToWarehouse={onReferToWarehouse}
         />
-      ) : tab === 'errors' ? (
+      ) : tab === 'errors' && showErrors ? (
         <ClientErrorsPanel projects={projects} onManageProject={onManageProject} />
       ) : (
         <TicketCenter

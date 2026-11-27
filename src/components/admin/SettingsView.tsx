@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Project, SystemSettings } from '../../types';
+import { Project, SystemSettings, InstallationTeamWithMembers, User } from '../../types';
 import {
   Layers,
   Eye,
@@ -24,6 +24,7 @@ import { SupabaseSyncService, RealtimeConnectionStatus } from '../../utils/supab
 import { toPersianDigits } from '../../utils/jalali';
 import { CapacitySettingsCard } from './CapacitySettingsCard';
 import { ServerBackupCard } from './ServerBackupCard';
+import { TeamAssignmentCard } from './TeamAssignmentCard';
 
 interface Props {
   settings: SystemSettings;
@@ -39,6 +40,10 @@ interface Props {
   canEdit?: boolean;
   /** تعداد اکیپ‌های تعریف‌شده، برای هشدار ناهماهنگی با ظرفیت */
   definedTeamCount?: number;
+  /** «اکیپ‌ها و مسئول برنامه‌ریزی» (فقط مدیر QC) */
+  teamsWithMembers?: InstallationTeamWithMembers[];
+  coordinators?: User[];
+  onUpdateTeamAssignment?: (teamId: string, patch: { coordinatorId?: string | null; active?: boolean }) => Promise<boolean>;
 }
 
 export const SettingsView: React.FC<Props> = ({
@@ -52,6 +57,9 @@ export const SettingsView: React.FC<Props> = ({
   canEditCapacity = false,
   canEdit = true,
   definedTeamCount,
+  teamsWithMembers = [],
+  coordinators = [],
+  onUpdateTeamAssignment,
 }) => {
   // یادآوری «پشتیبان» در پیشخوان مستقیم به همین بخش می‌آورد
   const backupRef = useRef<HTMLDivElement>(null);
@@ -255,6 +263,10 @@ export const SettingsView: React.FC<Props> = ({
           </button>
         </div>
       </div>
+
+      {onUpdateTeamAssignment && (
+        <TeamAssignmentCard teams={teamsWithMembers} coordinators={coordinators} onUpdate={onUpdateTeamAssignment} />
+      )}
 
       <CapacitySettingsCard settings={settings} canEdit={canEditCapacity} onSave={onUpdateSettings} definedTeamCount={definedTeamCount} />
 

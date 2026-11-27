@@ -108,6 +108,8 @@ export const MonthPlanner: React.FC<Props> = ({
   const days = useMemo(() => getUpcomingDays(365), [todayTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const isCeo = currentUser?.role === 'CEO';
   const isQcManager = currentUser?.role === 'QC_MANAGER';
+  // هماهنگ‌کننده‌ی جدا تاریخ و اکیپ پروژه‌های اکیپ‌های خودش را مستقیم عوض می‌کند (بدون درخواست)
+  const canEditDirectly = isQcManager || currentUser?.role === 'SCHEDULING_COORDINATOR';
   const canEditSchedule = !isCeo && Boolean(onNewProject);
 
   // View modes: '4DAYS' | '7DAYS' | 'TIMELINE' | 'FULL_MONTH'
@@ -815,7 +817,7 @@ export const MonthPlanner: React.FC<Props> = ({
                         {/* اکشن‌ها: مدیر QC خودش تاریخ و اکیپ را عوض می‌کند (قبلاً برای خودش درخواست می‌فرستاد) */}
                         {canEditSchedule && proj.status !== 'COMPLETED' && proj.status !== 'CANCELLED' && (
                           <div className="flex items-center gap-2 pt-1 border-t border-line text-xs">
-                            {isQcManager && onEditProject ? (
+                            {canEditDirectly && onEditProject ? (
                               <button
                                 type="button"
                                 onClick={() => onEditProject(proj)}

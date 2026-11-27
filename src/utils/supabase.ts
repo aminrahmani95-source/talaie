@@ -625,10 +625,18 @@ export const SupabaseSyncService = {
       throw new Error('عدم دسترسی به کلاینت Supabase.');
     }
 
-    const { data, error, status } = await client
+    // ستون‌های مسئول برنامه‌ریزی و فعال/غیرفعال از مایگریشن ۰۲۸؛ اگر هنوز اجرا نشده، بدون آن‌ها
+    let res: any = await client
       .from('installation_teams')
-      .select('id, name, code, supervisor_id, daily_capacity_hours, created_at, updated_at')
+      .select('id, name, code, supervisor_id, daily_capacity_hours, coordinator_id, active, created_at, updated_at')
       .order('code');
+    if (res.error && /coordinator_id|active|42703/.test(`${res.error.code} ${res.error.message}`)) {
+      res = await client
+        .from('installation_teams')
+        .select('id, name, code, supervisor_id, daily_capacity_hours, created_at, updated_at')
+        .order('code');
+    }
+    const { data, error, status } = res;
 
     if (error) {
       (error as any).status = status;
@@ -641,6 +649,8 @@ export const SupabaseSyncService = {
       name: t.name,
       code: t.code,
       supervisorId: t.supervisor_id || undefined,
+      coordinatorId: t.coordinator_id ?? null,
+      active: t.active !== false,
       dailyCapacityHours:
         t.daily_capacity_hours !== null && t.daily_capacity_hours !== undefined
           ? Number(t.daily_capacity_hours)
@@ -648,6 +658,22 @@ export const SupabaseSyncService = {
       createdAt: t.created_at,
       updatedAt: t.updated_at,
     }));
+  },
+
+  /** مسئول برنامه‌ریزی و فعال/غیرفعال بودن اکیپ (فقط مدیر QC؛ مایگریشن ۰۲۸) */
+  async updateTeamAssignment(teamId: string, patch: { coordinatorId?: string | null; active?: boolean }): Promise<void> {
+    const client = this.getClient();
+    if (!client) throw new Error('اتصال به سرور برقرار نیست.');
+    const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (patch.coordinatorId !== undefined) row.coordinator_id = patch.coordinatorId || null;
+    if (patch.active !== undefined) row.active = patch.active;
+    const { error } = await client.from('installation_teams').update(row).eq('id', teamId);
+    if (error) {
+      if (/coordinator_id|active|42703/.test(`${error.code} ${error.message}`)) {
+        throw new Error('برای این کار، اول فایل 028_coordinator_scope.sql باید در Supabase اجرا شود.');
+      }
+      throw new Error(error.message);
+    }
   },
 
   async updateTeamCapacity(teamId: string, dailyCapacityHours: number | null): Promise<void> {
@@ -2420,6 +2446,17 @@ configureErrorReporter({
   getUser: () => {
     const p = getCachedProfile();
     return p ? { name: p.name, role: p.role } : null;
+  },
+  getProjectLabel: (projectId: string) => {
+    const p = getCachedProfile();
+    if (!p || typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem(`talaie_projects_v6_${p.id}`);
+    if (!raw) return null;
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return null;
+    const found = list.find((x: any) => x && x.id === projectId);
+    if (!found) return null;
+    return [found.code, found.title || found.customerName].filter(Boolean).join(' · ') || null;
   },
   send: async (rows: ClientErrorRow[]): Promise<ErrorSendResult> => {
     const client = SupabaseSyncService.getClient();

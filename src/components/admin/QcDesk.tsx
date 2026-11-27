@@ -194,7 +194,8 @@ export const QcDesk: React.FC<Props> = ({
   const isQcManager = currentUser?.role === 'QC_MANAGER';
   const isCeo = currentUser?.role === 'CEO';
   // سرور فقط به مدیر QC اجازه‌ی تأیید نهایی می‌دهد؛ دکمه هم همین را نشان دهد
-  const canApproveRole = isQcManager;
+  // هماهنگ‌کننده‌ی جدا QC پروژه‌های اکیپ‌های خودش را تأیید یا رد می‌کند (فهرست پروژه‌ها از قبل محدود شده)
+  const canApproveRole = isQcManager || currentUser?.role === 'SCHEDULING_COORDINATOR';
 
   const unresolvedCriticalDefects = useMemo(() => {
     if (!selectedProject || !Array.isArray(selectedProject.qcDefects)) return [];
@@ -385,7 +386,7 @@ export const QcDesk: React.FC<Props> = ({
   };
 
   const handleVerifyDefect = (defectId: string) => {
-    if (!selectedProject || !currentUser || !isQcManager) return;
+    if (!selectedProject || !currentUser || !canApproveRole) return;
     try {
       const patch = createDefectVerificationPayload({
         project: selectedProject,
@@ -757,7 +758,7 @@ export const QcDesk: React.FC<Props> = ({
               {isDefectsOpen ? <ChevronUp className="w-4 h-4 text-ink-3" /> : <ChevronDown className="w-4 h-4 text-ink-3" />}
             </button>
 
-            {isQcManager && (
+            {canApproveRole && (
               <Button
                 variant="secondary"
                 size="sm"
@@ -770,7 +771,7 @@ export const QcDesk: React.FC<Props> = ({
           </div>
 
           {/* Form to add new Defect */}
-          {showAddDefect && isQcManager && (
+          {showAddDefect && canApproveRole && (
             <form onSubmit={handleAddDefect} className="bg-sunken p-3.5 rounded-md border border-amber-300 dark:border-amber-800/40 space-y-3">
               <div className="font-bold text-xs text-ink flex items-center gap-1.5">
                 <Plus className="w-3.5 h-3.5 text-amber-600" />
@@ -893,7 +894,7 @@ export const QcDesk: React.FC<Props> = ({
                             : 'باز'}
                         </span>
 
-                        {isQcManager && defect.status === 'RESOLVED' && (
+                        {canApproveRole && defect.status === 'RESOLVED' && (
                           <Button
                             variant="secondary"
                             size="sm"

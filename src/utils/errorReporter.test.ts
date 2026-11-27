@@ -130,6 +130,24 @@ describe('errorReporter', () => {
     expect(describeError('plain').message).toBe('plain');
     expect(describeError(null).message).toBeTruthy();
   });
+
+  it('keeps the project name in the report so it stays readable after the project is deleted', async () => {
+    const sent: ClientErrorRow[][] = [];
+    configureErrorReporter({
+      getUser: () => ({ name: 'فرهاد', role: 'LEAD_TECHNICIAN' }),
+      getProjectLabel: (id) => (id === 'p-9' ? 'PRJ-1044 · خانم احمدی' : null),
+      send: async (rows) => {
+        sent.push(rows);
+        return 'ok';
+      },
+    });
+    reportClientError({ context: 'SYNC_PATCH_PROJECT', projectId: 'p-9', message: 'x' });
+    reportClientError({ context: 'SYNC_PATCH_PROJECT', projectId: 'p-0', message: 'x' });
+    await flushErrorReports();
+    const rows = sent.flat();
+    expect(rows.find((r) => r.project_id === 'p-9')?.details.projectLabel).toBe('PRJ-1044 · خانم احمدی');
+    expect(rows.find((r) => r.project_id === 'p-0')?.details.projectLabel).toBeUndefined();
+  });
 });
 
 describe('clientErrors (manager view)', () => {
@@ -156,6 +174,17 @@ describe('clientErrors (manager view)', () => {
     expect(explainError(row({ message: 'The object exceeded the maximum allowed size' }))).toMatch(/حجم/);
     expect(explainError(row({ message: 'QuotaExceededError' }))).toMatch(/حافظه/);
     expect(explainError(row({ message: 'something new' }))).toBe('');
+  });
+
+  it('explains a deleted project and does not mistake the workSessions field for an expired session', () => {
+    const r = row({
+      message: 'پروژه مورد نظر یافت نشد: p-1795586073085',
+      details: { code: 'P0001', status: 400, fields: ['status', 'beforePhotos', 'workSessions'] },
+    });
+    expect(explainError(r)).toMatch(/دیگر روی سرور نیست/);
+    expect(explainError(r)).not.toMatch(/نشست/);
+    expect(explainError(row({ message: 'check failed', details: { fields: ['workSessions'] } }))).toBe('');
+    expect(explainError(row({ message: 'JWT expired' }))).toMatch(/نشست/);
   });
 
   it('labels sections and groups them', () => {

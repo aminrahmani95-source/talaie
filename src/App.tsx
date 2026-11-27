@@ -62,6 +62,17 @@ import {
 import { createDefectResolutionPayload } from './utils/qcWorkflow';
 import { getDisplayName } from './utils/technicianName';
 import { reportClientError, describeError } from './utils/errorReporter';
+import {
+  coordinatorTeamIds,
+  isProjectInScope,
+  isTabAllowedForCoordinator,
+  isTeamActive,
+  scopeMaterialRequests,
+  scopeProjects,
+  scopeTickets,
+  COORDINATOR_READONLY_MESSAGE,
+  COORDINATOR_TEAM_REQUIRED_MESSAGE,
+} from './utils/coordinatorScope';
 import { buildWarehousePatch, WarehouseAction } from './utils/warehouseStatus';
 import { autoResolveStuckPatch } from './utils/stuck';
 import { localDateKey, toPersianDigits } from './utils/jalali';
@@ -79,6 +90,7 @@ import {
   MonthPlanner,
   QcDesk,
   MaterialCenter,
+  CoordinatorWarehouseView,
   TechniciansManager,
   SettingsView,
   IssuesDesk,
@@ -798,6 +810,7 @@ export const App: React.FC = () => {
       if (!r.salesBookings) missing.push('023_sales_bookings_server_sync.sql');
       if (r.schemaVersion === null || r.schemaVersion < 25) missing.push('024_personnel_repair.sql');
       if (r.schemaVersion === null || r.schemaVersion < 26) missing.push('025_server_catch_up.sql');
+      if (r.schemaVersion === null || r.schemaVersion < 28) missing.push('028_coordinator_scope.sql');
       setMissingMigrations(missing);
     });
     return () => {
@@ -805,10 +818,47 @@ export const App: React.FC = () => {
     };
   }, [currentUser?.id, currentUser?.role]);
 
+  // ---- هماهنگ‌کننده‌ی جدا: همه‌ی صفحه‌های مدیریتی فقط با اکیپ‌ها و پروژه‌های خودش ----
+  const myCoordinatorTeamIds = useMemo(() => coordinatorTeamIds(currentUser, teams), [currentUser, teams]);
+  const viewProjects = useMemo(() => scopeProjects(projects, myCoordinatorTeamIds), [projects, myCoordinatorTeamIds]);
+  const viewProjectIds = useMemo(
+    () => (myCoordinatorTeamIds ? new Set(viewProjects.map((p) => p.id)) : null),
+    [myCoordinatorTeamIds, viewProjects]
+  );
+  const viewTickets = useMemo(() => scopeTickets(tickets, viewProjectIds), [tickets, viewProjectIds]);
+  const viewMaterialRequests = useMemo(
+    () => scopeMaterialRequests(materialRequests, viewProjectIds),
+    [materialRequests, viewProjectIds]
+  );
+  /** اکیپ‌هایی که برای برنامه‌ریزی پیشنهاد می‌شوند: فعال، و برای هماهنگ‌کننده فقط اکیپ‌های خودش */
+  const planningTeams = useMemo(
+    () => teams.filter((t) => isTeamActive(t) && (!myCoordinatorTeamIds || myCoordinatorTeamIds.has(t.id))),
+    [teams, myCoordinatorTeamIds]
+  );
+  const planningTeamsWithMembers = useMemo(
+    () => teamsWithMembers.filter((t) => isTeamActive(t) && (!myCoordinatorTeamIds || myCoordinatorTeamIds.has(t.id))),
+    [teamsWithMembers, myCoordinatorTeamIds]
+  );
+  /** پرسنل قابل انتخاب در فرم: برای هماهنگ‌کننده فقط نفرات اکیپ‌های خودش */
+  const planningUsers = useMemo(() => {
+    if (!myCoordinatorTeamIds) return usersWithTeams;
+    const allowed = new Set(teamMembers.filter((m) => myCoordinatorTeamIds.has(m.teamId)).map((m) => m.userId));
+    return usersWithTeams.filter(
+      (u) => (u.role !== 'TECHNICIAN' && u.role !== 'LEAD_TECHNICIAN') || allowed.has(u.id)
+    );
+  }, [usersWithTeams, teamMembers, myCoordinatorTeamIds]);
+
+  // هماهنگ‌کننده فقط صفحه‌های خودش را دارد (پیوند قدیمی یا دکمه‌ای که به صفحه‌ی دیگر می‌برد → پیشخوان)
+  useEffect(() => {
+    if (currentUser?.role === 'SCHEDULING_COORDINATOR' && !isTabAllowedForCoordinator(activeTab)) {
+      setActiveTabState('control');
+    }
+  }, [currentUser?.role, activeTab]);
+
   // Phone notifications: watch every data change for what concerns this person's role
   const notifySnapshot = useMemo(
-    () => ({ projects, tickets, materialRequests, scheduleChangeRequests, salesBookings }),
-    [projects, tickets, materialRequests, scheduleChangeRequests, salesBookings],
+    () => ({ projects: viewProjects, tickets: viewTickets, materialRequests: viewMaterialRequests, scheduleChangeRequests, salesBookings }),
+    [viewProjects, viewTickets, viewMaterialRequests, scheduleChangeRequests, salesBookings],
   );
   useNotificationWatcher(notifySnapshot, currentUser, isSyncedWithServer);
 
@@ -951,6 +1001,13 @@ export const App: React.FC = () => {
   ): Promise<boolean> => {
     if (!currentUser) return false;
 
+    // هماهنگ‌کننده‌ی جدا: فقط اکیپ‌های خودش؛ انبار و متریال فقط دیدن (سرور هم همین را اجرا می‌کند، مایگریشن ۰۲۸)
+    const coordIds = coordinatorTeamIds(currentUser, teams);
+    if (coordIds && (mutation.type === 'CREATE_MATERIAL_REQUEST' || mutation.type === 'PATCH_MATERIAL_REQUEST')) {
+      showToast('error', COORDINATOR_READONLY_MESSAGE);
+      return false;
+    }
+
     // Absolute deletion guard: physical deletion of material requests is prohibited to preserve audit trail
     if (mutation.type === 'DELETE_MATERIAL_REQUEST') {
       showToast('error', 'حذف فیزیکی درخواست متریال مجاز نمی‌باشد. لطفاً از فرآیند لغو درخواست استفاده نمایید.');
@@ -965,7 +1022,9 @@ export const App: React.FC = () => {
         if (currentProject) {
           const patch = mutation.payload?.patch || mutation.payload;
           try {
-            validateProjectPatchRoleGuards(currentUser, currentProject, patch, currentUser.teamId);
+            validateProjectPatchRoleGuards(currentUser, currentProject, patch, currentUser.teamId, {
+              coordinatorTeamIds: coordIds,
+            });
           } catch (err: any) {
             reportClientError({
               context: 'BLOCKED_PATCH_PROJECT',
@@ -980,6 +1039,11 @@ export const App: React.FC = () => {
       } else if (mutation.type === 'CREATE_PROJECT') {
         if (currentUser.role !== 'SCHEDULING_COORDINATOR') {
           showToast('error', 'تنها مدیر ارشد QC یا مسئول هماهنگی مجاز به ثبت پروژه است.');
+          return false;
+        }
+        const newProject = (mutation.payload?.project || mutation.payload) as Project | undefined;
+        if (coordIds && !isProjectInScope(newProject, coordIds)) {
+          showToast('error', COORDINATOR_TEAM_REQUIRED_MESSAGE);
           return false;
         }
       } else if (mutation.type === 'DELETE_PROJECT') {
@@ -1000,7 +1064,7 @@ export const App: React.FC = () => {
         const ticket = mutation.payload?.ticket || mutation.payload;
         const project = projectsRef.current.find((p) => p.id === ticket?.projectId);
         try {
-          validateTicketRoleGuards(currentUser, project, ticket, currentUser.teamId);
+          validateTicketRoleGuards(currentUser, project, ticket, currentUser.teamId, { coordinatorTeamIds: coordIds });
         } catch (err: any) {
           showToast('error', err.message || 'خطای عدم دسترسی به تیکت.');
           return false;
@@ -2383,6 +2447,39 @@ export const App: React.FC = () => {
     return { success: true };
   };
 
+  /** مسئول برنامه‌ریزی (هماهنگ‌کننده) و فعال/غیرفعال بودن اکیپ — فقط مدیر QC */
+  const handleUpdateTeamAssignment = async (
+    teamId: string,
+    patch: { coordinatorId?: string | null; active?: boolean }
+  ): Promise<boolean> => {
+    if (!currentUser || (currentUser.role !== 'QC_MANAGER' && currentUser.role !== 'CEO')) {
+      showToast('error', 'فقط مدیر QC می‌تواند اکیپ‌ها را تنظیم کند.');
+      return false;
+    }
+    try {
+      if (SupabaseSyncService.getClient()) await SupabaseSyncService.updateTeamAssignment(teamId, patch);
+    } catch (err: any) {
+      showToast('error', err?.message || 'تغییر اکیپ ذخیره نشد.');
+      return false;
+    }
+    setTeams((prev) => {
+      const updated = prev.map((t) =>
+        t.id === teamId
+          ? {
+              ...t,
+              ...(patch.coordinatorId !== undefined ? { coordinatorId: patch.coordinatorId || null } : {}),
+              ...(patch.active !== undefined ? { active: patch.active } : {}),
+              updatedAt: new Date().toISOString(),
+            }
+          : t
+      );
+      StorageService.saveTeams(updated);
+      return updated;
+    });
+    showToast('success', 'تنظیم اکیپ ذخیره شد.');
+    return true;
+  };
+
   const handleAssignTeamMember = async (
     teamId: string,
     userId: string,
@@ -2650,17 +2747,17 @@ export const App: React.FC = () => {
   // شمارنده‌های منو (یک منبع برای سایدبار، نوار پایین و پیشخوان). فقط وقتی داده عوض شود دوباره حساب می‌شود؛
   // قبلاً در هر رندر App کل صف اقدام از نو ساخته می‌شد.
   const navBadgeCounts = useMemo(() => {
-    const base = computeNavCounts(projects, tickets, materialRequests);
+    const base = computeNavCounts(viewProjects, viewTickets, viewMaterialRequests);
     // «موانع»: هر پروژه یک بار، چه توقف باز داشته باشد چه تیکت باز
     const keys = new Set<string>();
-    for (const p of projects) if (isStuckOpen(p)) keys.add(p.id);
-    for (const t of tickets) if (t.status === 'OPEN') keys.add(t.projectId || t.id);
+    for (const p of viewProjects) if (isStuckOpen(p)) keys.add(p.id);
+    for (const t of viewTickets) if (t.status === 'OPEN') keys.add(t.projectId || t.id);
     return {
       ...base,
-      actionQueueCount: buildActionQueue(projects, tickets, salesBookings).length,
+      actionQueueCount: buildActionQueue(viewProjects, viewTickets, salesBookings).length,
       issuesCount: keys.size,
     };
-  }, [projects, tickets, materialRequests, salesBookings]);
+  }, [viewProjects, viewTickets, viewMaterialRequests, salesBookings]);
 
   if (authChecking) {
     return <SplashScreen />;
@@ -2798,12 +2895,12 @@ export const App: React.FC = () => {
                 {activeTab === 'control' && (
                   <OperationsControlCenter
                     currentUser={currentUser}
-                    projects={projects}
+                    projects={viewProjects}
                     users={usersWithTeams}
-                    tickets={tickets}
-                    teamsWithMembers={teamsWithMembers}
+                    tickets={viewTickets}
+                    teamsWithMembers={planningTeamsWithMembers}
                     scheduleChangeRequests={scheduleChangeRequests}
-                    materialRequests={materialRequests}
+                    materialRequests={viewMaterialRequests}
                     salesBookings={salesBookings}
                     settings={settings}
                     onNavigateTab={(tab) => setActiveTab(tab)}
@@ -2832,9 +2929,9 @@ export const App: React.FC = () => {
                     key={plannerFocus.nonce}
                     focusBookingId={plannerFocus.bookingId}
                     openAlertsOnMount={Boolean(plannerFocus.alerts)}
-                    projects={projects}
+                    projects={viewProjects}
                     users={usersWithTeams}
-                    teams={teamsWithMembers}
+                    teams={planningTeamsWithMembers}
                     currentUser={currentUser}
                     settings={settings}
                     scheduleChangeRequests={scheduleChangeRequests}
@@ -2845,14 +2942,14 @@ export const App: React.FC = () => {
                     onMoveProjectDate={isCeo ? undefined : handleMoveProjectDate}
                     onViewProposal={(p) => setProposalModalProject(p)}
                     onOpenPreInspection={(p) => setPreInspectionProject(p)}
-                    onProposeScheduleChange={isCeo ? undefined : handleProposeScheduleChange}
-                    onReviewScheduleChange={isCeo ? undefined : handleReviewScheduleChange}
+                    onProposeScheduleChange={isCeo || isCoordinator ? undefined : handleProposeScheduleChange}
+                    onReviewScheduleChange={isCeo || isCoordinator ? undefined : handleReviewScheduleChange}
                   />
                 )}
 
                 {activeTab === 'qc' && (
                   <QcDesk
-                    projects={projects}
+                    projects={viewProjects}
                     users={usersWithTeams}
                     currentUser={currentUser}
                     selectedProjectId={selectedQcProjectId}
@@ -2860,7 +2957,7 @@ export const App: React.FC = () => {
                     onPatchProject={handlePatchProject}
                     onViewProposal={(p) => setProposalModalProject(p)}
                     onOpenCertificate={(p) => setCertificateModalProject(p)}
-                    onOpenEvaluation={(p) => setEvaluationProject(p)}
+                    onOpenEvaluation={isCoordinator ? undefined : (p) => setEvaluationProject(p)}
                     onManageProject={(p) => setManagedProjectId(p.id)}
                     autoOpenDetail={qcAutoOpen}
                   />
@@ -2869,8 +2966,8 @@ export const App: React.FC = () => {
                 {activeTab === 'issues' && (
                   <IssuesDesk
                     key={issuesNonce}
-                    projects={projects}
-                    tickets={tickets}
+                    projects={viewProjects}
+                    tickets={viewTickets}
                     users={usersWithTeams}
                     currentUser={currentUser}
                     initialTab={issuesTab}
@@ -2896,7 +2993,15 @@ export const App: React.FC = () => {
                   />
                 )}
 
-                {activeTab === 'materials' && (
+                {activeTab === 'materials' && isCoordinator && (
+                  <CoordinatorWarehouseView
+                    projects={viewProjects}
+                    materialRequests={viewMaterialRequests}
+                    onOpenProject={(p) => setManagedProjectId(p.id)}
+                  />
+                )}
+
+                {activeTab === 'materials' && !isCoordinator && (
                   <MaterialCenter
                     materialRequests={materialRequests}
                     currentUser={currentUser}
@@ -2954,12 +3059,15 @@ export const App: React.FC = () => {
                     onResetData={handleResetData}
                     canEditCapacity={isQcManager}
                     canEdit={isQcManager}
-                    definedTeamCount={teams.length}
+                    definedTeamCount={teams.filter(isTeamActive).length}
+                    teamsWithMembers={teamsWithMembers}
+                    coordinators={usersWithTeams.filter((u) => u.role === 'SCHEDULING_COORDINATOR' && u.active !== false)}
+                    onUpdateTeamAssignment={isQcManager || isCeo ? handleUpdateTeamAssignment : undefined}
                   />
                 )}
 
                 {activeTab === 'sales' && (
-                  <SalesPortal currentUser={currentUser} />
+                  <SalesPortal currentUser={currentUser} readOnly={isCoordinator} />
                 )}
               </React.Suspense>
             </div>
@@ -3013,11 +3121,15 @@ export const App: React.FC = () => {
             project={editingProject}
             initialData={projectFormInitialData}
             defaultDate={presetDateKey}
-            users={usersWithTeams}
-            teams={teams}
+            users={planningUsers}
+            teams={
+              editingProject?.assignedTeamId && !planningTeams.some((t) => t.id === editingProject.assignedTeamId)
+                ? [...planningTeams, ...teams.filter((t) => t.id === editingProject.assignedTeamId)]
+                : planningTeams
+            }
             teamMembers={teamMembers}
             settings={settings}
-            projects={projects}
+            projects={viewProjects}
             currentUser={currentUser}
             onClose={() => {
               projectCreatedHookRef.current = null;
@@ -3102,9 +3214,10 @@ export const App: React.FC = () => {
             <ProjectManagerSheet
               project={managed}
               users={usersWithTeams}
-              tickets={tickets}
+              tickets={viewTickets}
               teams={teamsWithMembers}
               currentUser={currentUser}
+              restricted={isCoordinator}
               isOnline={typeof navigator === 'undefined' || navigator.onLine}
               onClose={() => setManagedProjectId(null)}
               onEditInfo={(p) => handleOpenEditProject(p)}

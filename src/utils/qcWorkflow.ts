@@ -149,6 +149,14 @@ export function isAwaitingQc(p: Partial<Project> | null | undefined): boolean {
 }
 
 /**
+ * چه کسی QC را تأیید یا رد می‌کند: مدیر QC، و هماهنگ‌کننده‌ی جدا برای پروژه‌های اکیپ‌های خودش
+ * (محدوده‌ی پروژه‌ها جای دیگر بررسی می‌شود: utils/coordinatorScope و سرور، مایگریشن ۰۲۸).
+ */
+export function isQcReviewerRole(role?: string): boolean {
+  return role === 'QC_MANAGER' || role === 'SCHEDULING_COORDINATOR';
+}
+
+/**
  * ارزیابی صلاحیت مدیر و امکان‌پذیری تایید نهایی QC پروژه
  */
 export function canApproveFinalQC(
@@ -156,7 +164,7 @@ export function canApproveFinalQC(
   project: Project,
   patchDefects?: QCDefect[]
 ): { allowed: boolean; reason?: string } {
-  if (user.role !== 'QC_MANAGER') {
+  if (!isQcReviewerRole(user.role)) {
     return {
       allowed: false,
       reason: 'تأیید نهایی کنترل کیفی (QC) منحصراً در صلاحیت مدیر ارشد QC است.',
@@ -214,7 +222,7 @@ export function createQCInspectionPayload(params: CreateQCInspectionParams): {
     reworkScheduledDate,
   } = params;
 
-  if (user.role !== 'QC_MANAGER') {
+  if (!isQcReviewerRole(user.role)) {
     throw new Error('دسترسی غیرمجاز: ثبت رسمی بازرسی کنترل کیفی منحصراً در صلاحیت مدیر ارشد QC است.');
   }
 
@@ -253,7 +261,7 @@ export function createQCInspectionPayload(params: CreateQCInspectionParams): {
     inspectionDate: nowIso,
     inspectorUserId: user.id,
     inspectorUserName: user.name,
-    inspectorRole: 'QC_MANAGER',
+    inspectorRole: user.role === 'SCHEDULING_COORDINATOR' ? 'SCHEDULING_COORDINATOR' : 'QC_MANAGER',
     result,
     overallScore: finalScore,
     qualityScoreDetails,
@@ -369,7 +377,7 @@ export interface VerifyDefectParams {
 export function createDefectVerificationPayload(params: VerifyDefectParams): Partial<Project> {
   const { project, defectId, user, verificationNotes } = params;
 
-  if (user.role !== 'QC_MANAGER') {
+  if (!isQcReviewerRole(user.role)) {
     throw new Error('دسترسی غیرمجاز: تایید راستی‌آزمایی رفع نقص منحصراً در صلاحیت مدیر ارشد QC است.');
   }
 

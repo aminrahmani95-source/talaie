@@ -60,9 +60,12 @@ export const ClientErrorsPanel: React.FC<{
 
   const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
   const projectLabel = useCallback(
-    (id: string) => {
+    (id: string, details?: Record<string, any> | null) => {
       const p = projectsById.get(id);
-      if (!p) return id;
+      if (!p) {
+        const saved = details && typeof details.projectLabel === 'string' ? details.projectLabel : '';
+        return saved ? `${saved} (دیگر در فهرست پروژه‌ها نیست)` : `${id} (دیگر در فهرست پروژه‌ها نیست)`;
+      }
       const code = (p as any).code || (p as any).projectCode || '';
       const title = (p as any).title || (p as any).customerName || '';
       return [code, title].filter(Boolean).join(' · ') || id;
@@ -239,7 +242,7 @@ export const ClientErrorsPanel: React.FC<{
                       <span className="text-xs text-ink-3">{getUserRoleLabel(r.user_role || undefined)}</span>
                       <span className="text-xs font-bold text-ink-2">· {contextLabel(r.context)}</span>
                     </span>
-                    {r.project_id && <span className="block text-xs text-ink-2 truncate">پروژه: {projectLabel(r.project_id)}</span>}
+                    {r.project_id && <span className="block text-xs text-ink-2 truncate">پروژه: {projectLabel(r.project_id, r.details)}</span>}
                     <span dir="auto" className="block text-sm text-ink break-words leading-6 text-start">{r.message}</span>
                     {why && <span className="block text-xs text-brand leading-6">{why}</span>}
                     <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-ink-3 tabular-nums">

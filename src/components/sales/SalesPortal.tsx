@@ -43,11 +43,13 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   currentUser: User;
+  /** فقط دیدن رزروها (هماهنگ‌کننده‌ی جدا): بدون ثبت و ویرایش و حذف */
+  readOnly?: boolean;
 }
 
 type TabType = 'calendar' | 'all-bookings';
 
-export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
+export const SalesPortal: React.FC<Props> = ({ currentUser, readOnly = false }) => {
   const isCeo = currentUser.role === 'CEO';
   const isQcManager = currentUser.role === 'QC_MANAGER';
   const isFullAdmin = isCeo || isQcManager;
@@ -172,6 +174,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
   // 1. مدیرعامل و مدیر QC دسترسی مدیریتی کامل دارند (isFullAdmin).
   // 2. هر کارشناس فروش (یا هر نقش دیگری) صرفاً و منحصراً پروژه‌های ثبت‌شده توسط خودش را می‌تواند ویرایش کند.
   const canEditBooking = (b: SalesProjectBooking) => {
+    if (readOnly) return false;
     if (isFullAdmin) return true;
     // with an owner id only the id counts; partial name matching let «علی» edit «علی رضایی»'s bookings
     if (b.salesRepId) return b.salesRepId === currentUser.id;
@@ -1099,6 +1102,11 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
               )}
 
               {/* فرم ثبت اطلاعات پروژه */}
+              {readOnly ? (
+                <p className="text-xs text-ink-2 bg-sunken border border-line rounded-xl p-3 leading-6">
+                  ثبت رزرو با کارشناسان فروش است. رزروهای این روز را در تقویم نصب می‌توانید به اکیپ‌های خودتان بدهید.
+                </p>
+              ) : (
               <form onSubmit={handleBookingSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* نام مشتری */}
@@ -1316,6 +1324,7 @@ export const SalesPortal: React.FC<Props> = ({ currentUser }) => {
                   </button>
                 </div>
               </form>
+              )}
 
               {/* پروژه‌های از قبل ثبت‌شده در این روز */}
               <div className="border-t border-line pt-4 space-y-2.5">

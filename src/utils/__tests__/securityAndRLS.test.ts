@@ -149,14 +149,19 @@ describe('Core Security & Access Control (canAccessProject & role guards)', () =
       ).toThrow(PermanentError);
     });
 
-    it('blocks scheduling coordinator from approving QC or setting qcScore', () => {
+    it('scheduling coordinator approves QC and scores only projects of their own teams', () => {
+      const own = { coordinatorTeamIds: new Set(['team-1']) };
+      const other = { coordinatorTeamIds: new Set(['team-9']) };
       expect(() =>
-        validateProjectPatchRoleGuards(coordinator, baseProject, { qcStatus: 'APPROVED' })
-      ).toThrow('تأیید نهایی کنترل کیفی (QC) فقط در صلاحیت مدیر QC است');
-
+        validateProjectPatchRoleGuards(coordinator, baseProject, { qcStatus: 'APPROVED', qcScore: 95 }, undefined, own)
+      ).not.toThrow();
       expect(() =>
-        validateProjectPatchRoleGuards(coordinator, baseProject, { qcScore: 100 })
-      ).toThrow('ثبت امتیاز کیفی فقط در صلاحیت مدیر QC است');
+        validateProjectPatchRoleGuards(coordinator, baseProject, { qcStatus: 'APPROVED' }, undefined, other)
+      ).toThrow(/به اکیپ‌های شما سپرده نشده/);
+      // سپردن پروژه به اکیپی که مال او نیست
+      expect(() =>
+        validateProjectPatchRoleGuards(coordinator, baseProject, { assignedTeamId: 'team-2' }, undefined, own)
+      ).toThrow(/یکی از اکیپ‌های خودتان/);
     });
 
     it('allows scheduling coordinator to update schedule and team assignments', () => {

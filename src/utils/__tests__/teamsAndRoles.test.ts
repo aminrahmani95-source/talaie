@@ -195,16 +195,20 @@ describe('4-Team Operational Structure & Roles', () => {
       expect(() => validateTicketRoleGuards(coordinator, baseProject, ticket)).not.toThrow();
     });
 
-    it('blocks SCHEDULING_COORDINATOR from resolving tickets (only QC_MANAGER can resolve)', () => {
+    it('SCHEDULING_COORDINATOR resolves tickets only for projects of their own teams', () => {
       const ticket: Partial<Ticket> = {
         id: 't-1',
         projectId: baseProject.id,
         status: 'RESOLVED',
       };
-      expect(() => validateTicketRoleGuards(coordinator, baseProject, ticket)).toThrow(PermanentError);
-      expect(() => validateTicketRoleGuards(coordinator, baseProject, ticket)).toThrow(
-        'تنها مدیر ارشد QC می‌تواند وضعیت تیکت را به حل‌شده (RESOLVED) تغییر دهد'
-      );
+      const ownTeam = baseProject.assignedTeamId || 'team-x';
+      const project = { ...baseProject, assignedTeamId: ownTeam };
+      expect(() =>
+        validateTicketRoleGuards(coordinator, project, ticket, undefined, { coordinatorTeamIds: new Set([ownTeam]) })
+      ).not.toThrow();
+      expect(() =>
+        validateTicketRoleGuards(coordinator, project, ticket, undefined, { coordinatorTeamIds: new Set(['other']) })
+      ).toThrow(PermanentError);
     });
 
     it('allows QC_MANAGER to resolve tickets', () => {

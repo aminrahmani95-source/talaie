@@ -1,3 +1,4 @@
+import { COORDINATOR_SCOPE_MESSAGE, COORDINATOR_TEAM_REQUIRED_MESSAGE } from './coordinatorScope';
 import { CREW_LEAD_ONLY_MESSAGE, isProjectSupervisor } from './crew';
 import { Project, ProjectStatus, Ticket, User, QCDefect } from '../types';
 import { PermanentError } from './offlineQueue';
@@ -251,8 +252,23 @@ export function validateProjectPatchRoleGuards(
   user: User,
   project: Project,
   patch: Record<string, any>,
-  userTeamId?: string
+  userTeamId?: string,
+  /** اکیپ‌های هماهنگ‌کننده (برای بقیه‌ی نقش‌ها خالی) — utils/coordinatorScope */
+  scope?: { coordinatorTeamIds?: Set<string> | null }
 ): void {
+  // هماهنگ‌کننده‌ی جدا فقط پروژه‌های اکیپ‌های خودش را تغییر می‌دهد و فقط به همان اکیپ‌ها می‌سپارد
+  if (user.role === 'SCHEDULING_COORDINATOR' && scope?.coordinatorTeamIds) {
+    const ids = scope.coordinatorTeamIds;
+    if (!project.assignedTeamId || !ids.has(project.assignedTeamId)) {
+      throw new PermanentError(COORDINATOR_SCOPE_MESSAGE);
+    }
+    if (patch.assignedTeamId !== undefined && (!patch.assignedTeamId || !ids.has(patch.assignedTeamId))) {
+      throw new PermanentError(COORDINATOR_TEAM_REQUIRED_MESSAGE);
+    }
+  }
+  // تأیید و رد QC: مدیر QC، و هماهنگ‌کننده برای پروژه‌های اکیپ‌های خودش (محدوده در بالا بررسی شد)
+  const canReviewQc = user.role === 'QC_MANAGER' || user.role === 'SCHEDULING_COORDINATOR';
+
   // ممانعت از جعل یا دستکاری پرچم مهاجرت تاریخی
   if (patch.technicalHandover && 'isHistoricalMigration' in patch.technicalHandover) {
     throw new PermanentError('دسترسی غیرمجاز: امکان تغییر یا انتساب دستی پرچم سوابق تاریخی وجود ندارد.');
@@ -379,7 +395,7 @@ export function validateProjectPatchRoleGuards(
     if (user.role === 'TECHNICIAN' || user.role === 'LEAD_TECHNICIAN') {
       throw new PermanentError('دسترسی غیرمجاز: تکنسین فقط می‌تواند وضعیت QC را روی PENDING تنظیم کند.');
     }
-    if (user.role !== 'QC_MANAGER') {
+    if (!canReviewQc) {
       throw new PermanentError('دسترسی غیرمجاز: تأیید نهایی کنترل کیفی (QC) فقط در صلاحیت مدیر QC است.');
     }
     if (hasUnresolvedCriticalDefects(project, patch.qcDefects)) {
@@ -391,7 +407,7 @@ export function validateProjectPatchRoleGuards(
 
   // 3.2. صیانت از سوابق بازرسی‌های کنترل کیفیت (qcInspections)
   if (patch.qcInspections !== undefined) {
-    if (user.role !== 'QC_MANAGER') {
+    if (!canReviewQc) {
       throw new PermanentError('دسترسی غیرمجاز: ثبت رسمی برگه بازرسی کنترل کیفی منحصراً در صلاحیت مدیر ارشد QC است.');
     }
     if (!Array.isArray(patch.qcInspections)) {
@@ -415,7 +431,7 @@ export function validateProjectPatchRoleGuards(
     }
     const existingDefects = project.qcDefects || [];
 
-    if (user.role !== 'QC_MANAGER') {
+    if (!canReviewQc) {
       // تکنسین‌ها و سایر نقش‌ها نمی‌توانند عیوب را حذف کنند
       if (patch.qcDefects.length < existingDefects.length) {
         throw new PermanentError('دسترسی غیرمجاز: حذف عیوب کیفی ثبت‌شده مجاز نیست.');
@@ -441,12 +457,7 @@ export function validateProjectPatchRoleGuards(
 
   // نقش مسئول هماهنگی و زمان‌بندی (SCHEDULING_COORDINATOR)
   if (user.role === 'SCHEDULING_COORDINATOR') {
-    if (patch.qcStatus === 'APPROVED') {
-      throw new PermanentError('دسترسی غیرمجاز: تأیید نهایی کنترل کیفی (QC) فقط در صلاحیت مدیر QC است.');
-    }
-    if (patch.qcScore !== undefined && patch.qcScore !== null) {
-      throw new PermanentError('دسترسی غیرمجاز: ثبت امتیاز کیفی فقط در صلاحیت مدیر QC است.');
-    }
+    // محدوده (اکیپ‌های خودش) در ابتدای همین تابع بررسی شد؛ QC و امتیاز پروژه‌های خودش با خودش است
     return;
   }
 
@@ -653,7 +664,8 @@ export function validateTicketRoleGuards(
   user: User,
   project: Project | undefined,
   ticket: Partial<Ticket>,
-  userTeamId?: string
+  userTeamId?: string,
+  scope?: { coordinatorTeamIds?: Set<string> | null }
 ): void {
   if (user.role === 'QC_MANAGER') {
     return;
@@ -664,12 +676,10 @@ export function validateTicketRoleGuards(
     return;
   }
 
-  // مسئول هماهنگی می‌تواند برای هر پروژه‌ای تیکت ثبت یا پیگیری کند اما اجازه حل کردن تیکت را ندارد
+  // هماهنگ‌کننده تیکت‌های پروژه‌های اکیپ‌های خودش را کامل رسیدگی می‌کند (تا حل‌شده)
   if (user.role === 'SCHEDULING_COORDINATOR') {
-    if (ticket.status === 'RESOLVED') {
-      throw new PermanentError(
-        'دسترسی غیرمجاز: تنها مدیر ارشد QC می‌تواند وضعیت تیکت را به حل‌شده (RESOLVED) تغییر دهد.'
-      );
+    if (scope?.coordinatorTeamIds && (!project?.assignedTeamId || !scope.coordinatorTeamIds.has(project.assignedTeamId))) {
+      throw new PermanentError(COORDINATOR_SCOPE_MESSAGE);
     }
     return;
   }
