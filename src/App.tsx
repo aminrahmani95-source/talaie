@@ -3000,6 +3000,7 @@ export const App: React.FC = () => {
               onConfirmLoadPickup={(p) => handleWarehouseAction(p.id, { kind: 'HAND_OVER', via: 'LEAD' })}
               onResolveDefect={handleResolveDefect}
               tickets={tickets}
+              users={users}
             />
           </div>
         )}

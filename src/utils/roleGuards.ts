@@ -1,3 +1,4 @@
+import { CREW_LEAD_ONLY_MESSAGE, isProjectSupervisor } from './crew';
 import { Project, ProjectStatus, Ticket, User, QCDefect } from '../types';
 import { PermanentError } from './offlineQueue';
 import { getEffectiveProjectPlan, getEffectivePlannedQuantity } from './planProgress';
@@ -480,6 +481,12 @@ export function validateProjectPatchRoleGuards(
 
   if (!isDirectlyAssigned && !isTeamAssigned) {
     throw new PermanentError('دسترسی غیرمجاز: شما مسئول یا تکنسین تخصیص‌یافته به این پروژه نیستید.');
+  }
+
+  // 1.1. مراحل کار فقط با سرپرست همین پروژه است؛ تکنسین‌ها فقط تیکت و درخواست متریال دارند
+  // (که در جدول‌های جدا ثبت می‌شوند و پروژه را تغییر نمی‌دهند). سرور هم همین را اجرا می‌کند (مایگریشن ۰۲۷).
+  if ((user.role === 'TECHNICIAN' || user.role === 'LEAD_TECHNICIAN') && !isProjectSupervisor(user, project)) {
+    throw new PermanentError(CREW_LEAD_ONLY_MESSAGE);
   }
 
   // 2. بررسی کلیدهای مجاز برای تکنسین

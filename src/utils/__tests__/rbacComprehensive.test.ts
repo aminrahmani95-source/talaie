@@ -523,10 +523,10 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
       expect(canAccessProject(technicianUser, baseProject, 'TEAM_1')).toBe(true);
       expect(canAccessProject(leadTechUser, baseProject, 'TEAM_1')).toBe(true);
 
-      // Allowed fields
+      // Allowed fields (سرپرست پروژه)
       expect(() =>
         validateProjectPatchRoleGuards(
-          technicianUser,
+          leadTechUser,
           baseProject,
           {
             beforePhotos: ['data:image/png;base64,photo1'],
@@ -536,6 +536,16 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
           'TEAM_1'
         )
       ).not.toThrow();
+
+      // تکنسینِ همان پروژه مراحل کار را ثبت نمی‌کند (فقط تیکت و درخواست متریال)
+      expect(() =>
+        validateProjectPatchRoleGuards(
+          technicianUser,
+          baseProject,
+          { beforePhotos: ['data:image/png;base64,photo1'] },
+          'TEAM_1'
+        )
+      ).toThrowError(/فقط سرپرست این پروژه/);
     });
 
     it('strictly isolates unassigned technicians from viewing or patching project', () => {
@@ -589,10 +599,10 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
         )
       ).toThrow(PermanentError);
 
-      // Allowed to set PENDING when finishing job
+      // Allowed to set PENDING when finishing job (سرپرست پروژه)
       expect(() =>
         validateProjectPatchRoleGuards(
-          technicianUser,
+          leadTechUser,
           baseProject,
           { status: 'COMPLETED', qcStatus: 'PENDING' },
           'TEAM_1'
@@ -676,7 +686,7 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
         ],
       };
 
-      // Appending a new log by technician: allowed
+      // گزارش روزانه را فقط سرپرست پروژه ثبت می‌کند؛ تکنسین کمکی نه ثبت می‌کند نه تأیید
       const newLog = {
         id: 'log-2',
         byUserId: technicianUser.id,
@@ -694,7 +704,7 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
           { dailyLogs: [...existingProject.dailyLogs!, newLog] },
           'TEAM_1'
         )
-      ).not.toThrow();
+      ).toThrowError(/فقط سرپرست این پروژه/);
 
       // Attempting to self-confirm supervisor by helper technician: denied
       const selfConfirmedLog = { ...newLog, supervisorConfirmed: true };
@@ -706,14 +716,6 @@ describe('Talaei Full 5-Role RBAC & Authority Boundaries Verification', () => {
           'TEAM_1'
         )
       ).toThrow(PermanentError);
-      expect(() =>
-        validateProjectPatchRoleGuards(
-          technicianUser,
-          existingProject,
-          { dailyLogs: [...existingProject.dailyLogs!, selfConfirmedLog] },
-          'TEAM_1'
-        )
-      ).toThrowError(/تایید گزارش روزانه منحصراً در صلاحیت سرپرست اکیپ یا مدیر QC است/);
 
       // Lead technician appending with supervisorConfirmed: true is allowed
       const leadLog = {

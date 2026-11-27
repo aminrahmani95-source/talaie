@@ -23,6 +23,7 @@ import {
   Package,
   Camera,
   Flame,
+  Users,
 } from 'lucide-react';
 import { toPersianDigits, localDateKey, getDayInfoFromDateKey } from '../../utils/jalali';
 import { ActiveJobTimer } from '../ActiveJobTimer';
@@ -35,6 +36,7 @@ import { CloudImage } from '../common/CloudImage';
 import { LeadWarehouseStrip } from './LeadWarehouseStrip';
 import { isHandoverGatePassed } from '../../utils/roleGuards';
 import { triggerToast } from '../Toast';
+import { getProjectCrew, isProjectSupervisor } from '../../utils/crew';
 
 interface Props {
   project: Project;
@@ -56,6 +58,8 @@ interface Props {
   /** سرپرست تحویل بار از انبار را تأیید می‌کند */
   onConfirmLoadPickup?: (project: Project) => Promise<void> | void;
   tickets?: Ticket[];
+  /** پرسنل (برای نام و شماره‌ی سرپرست و نفرات همین پروژه) */
+  users?: User[];
   isTransitioning?: boolean;
   /** another job of this person that is already en route / in progress */
   busyWith?: Project;
@@ -80,9 +84,13 @@ export const ProjectCard: React.FC<Props> = ({
   onResolveDefect,
   onConfirmLoadPickup,
   tickets = [],
+  users = [],
   isTransitioning = false,
   busyWith,
 }) => {
+  // مراحل کار (حرکت، شروع، پایان، اتمام) فقط با سرپرست همین پروژه است؛ بقیه‌ی نفرات تیکت و کسری ثبت می‌کنند
+  const canOperate = isProjectSupervisor(currentUser, project);
+  const crew = useMemo(() => getProjectCrew(project, users, currentUser.id), [project, users, currentUser.id]);
   const activeTicket = useMemo(() => {
     return (tickets || []).find(
       (t) =>
@@ -414,7 +422,7 @@ export const ProjectCard: React.FC<Props> = ({
                     </div>
                   )}
 
-                  {isPending && onResolveDefect && (
+                  {isPending && onResolveDefect && canOperate && (
                     resolvingDefectId === defect.id ? (
                       <div className="pt-2 space-y-2 border-t border-dashed border-stone-300 dark:border-stone-700">
                         <textarea
@@ -553,7 +561,7 @@ export const ProjectCard: React.FC<Props> = ({
               <div className="text-[12px] text-ink-2">
                 اقلام: {dispatch.items.map((i: any) => `${i.title} (${toPersianDigits(i.dispatchedQty)} ${i.unit || ''})`).join('، ')}
               </div>
-              {onConfirmMaterialReceipt && (
+              {onConfirmMaterialReceipt && canOperate && (
                 <button
                   type="button"
                   onClick={() => setConfirmingReceiptTarget({ request, dispatch })}
@@ -675,6 +683,46 @@ export const ProjectCard: React.FC<Props> = ({
         )}
       </div>
 
+      {/* اکیپ همین پروژه: سرپرست و نفرات با شماره (اکیپ‌ها ثابت نیستند و برای هر پروژه فرق می‌کنند) */}
+      {(crew.lead || crew.members.length > 0) && (
+        <div className="rounded-md border border-line bg-sunken/60 p-2.5 space-y-1.5" aria-label="اکیپ این پروژه">
+          <div className="flex items-center gap-1.5 text-[12px] font-bold text-ink-2">
+            <Users className="w-3.5 h-3.5 text-brand-ink" aria-hidden="true" />
+            <span>اکیپ این پروژه</span>
+          </div>
+          <ul className="flex flex-wrap gap-1.5">
+            {[...(crew.lead ? [crew.lead] : []), ...crew.members].map((m) => (
+              <li
+                key={m.id}
+                className={`flex items-center gap-1.5 rounded-full border pr-2.5 pl-1 py-0.5 text-xs ${
+                  m.isLead ? 'border-brand/50 bg-brand/10' : 'border-line bg-surface'
+                }`}
+              >
+                <span className={`font-bold ${m.isLead ? 'text-brand-ink' : 'text-ink'}`}>
+                  {m.isLead ? 'سرپرست: ' : ''}
+                  {m.isMe ? `${m.name} (شما)` : m.name}
+                </span>
+                {m.phone && !m.isMe ? (
+                  <a
+                    href={`tel:${m.phone}`}
+                    aria-label={`تماس با ${m.name}`}
+                    title={`تماس با ${m.name}`}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-brand-ink hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  >
+                    <Phone className="w-3.5 h-3.5" aria-hidden="true" />
+                  </a>
+                ) : (
+                  <span className="w-1" />
+                )}
+              </li>
+            ))}
+          </ul>
+          {!canOperate && crew.lead && (
+            <p className="text-[11px] text-ink-3">برای هماهنگی رفتن و کارها با سرپرست تماس بگیرید.</p>
+          )}
+        </div>
+      )}
+
       {/* Action Row: فقط کارهایی که برای این پروژه واقعاً ممکن است (بدون کاشی خاموش «بدون تلفن») */}
       <div className="flex gap-2 text-xs">
         {project.customerPhone && (
@@ -743,6 +791,37 @@ export const ProjectCard: React.FC<Props> = ({
                 : 'شروع یا ادامه کار نصب تا زمان ثبت تایید رسمی توسط سرپرست اکیپ مجاز نمی‌باشد.'}
             </p>
           </div>
+        ) : !canOperate ? (
+          (isScheduled || isPaused || isEnRoute || isInProgress) && (
+            <div className="rounded-md border border-line bg-sunken/60 p-3 space-y-2.5">
+              <p className="text-xs text-ink-2 leading-6">
+                <span className="font-bold text-ink">
+                  حرکت، شروع کار و ثبت مراحل با سرپرست این پروژه{crew.lead ? ` (${crew.lead.name})` : ''} است.
+                </span>{' '}
+                شما اگر ایرادی دیدید یا چیزی کم بود، از همین‌جا ثبت کنید.
+              </p>
+              <div className={`grid gap-2 ${onOpenMaterialModal ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                <button
+                  type="button"
+                  onClick={() => onOpenTicketModal(project)}
+                  className="py-2.5 px-2 bg-surface hover:bg-raised rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[48px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand text-amber-700 dark:text-amber-300 border border-amber-500/40"
+                >
+                  <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+                  <span>ثبت ایراد</span>
+                </button>
+                {onOpenMaterialModal && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenMaterialModal(project)}
+                    className="py-2.5 px-2 bg-surface hover:bg-raised rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[48px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand text-purple-700 dark:text-purple-300 border border-purple-500/40"
+                  >
+                    <Package className="w-4 h-4" aria-hidden="true" />
+                    <span>درخواست متریال / کسری</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )
         ) : (
           <>
             {(isScheduled || isPaused) && (
@@ -750,7 +829,7 @@ export const ProjectCard: React.FC<Props> = ({
                 {isScheduled && (
                   <LeadWarehouseStrip
                     project={project}
-                    canConfirmPickup={currentUser.id === project.leadTechnicianId}
+                    canConfirmPickup={canOperate}
                     onConfirmPickup={onConfirmLoadPickup}
                   />
                 )}
@@ -943,7 +1022,7 @@ export const ProjectCard: React.FC<Props> = ({
       </div>
 
       {/* Secondary Actions: وقتی کار در جریان است همه‌ی این‌ها بالاتر روی کارت هستند */}
-      {!isInProgress && (
+      {!isInProgress && (canOperate || !(isScheduled || isPaused || isEnRoute)) && (
         <div className="pt-1 flex items-center justify-between border-t border-line text-xs">
           <button
             type="button"

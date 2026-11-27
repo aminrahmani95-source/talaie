@@ -27,6 +27,8 @@ interface Props {
   onConfirmLoadPickup?: (project: Project) => Promise<void> | void;
   onResolveDefect?: (projectId: string, defectId: string, resolutionNotes: string, photos?: string[]) => void;
   tickets?: Ticket[];
+  /** پرسنل، برای نمایش سرپرست و نفرات هر پروژه */
+  users?: User[];
   inFlightTransitions?: Set<string>;
 }
 
@@ -50,6 +52,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
   onConfirmLoadPickup,
   onResolveDefect,
   tickets = [],
+  users = [],
   inFlightTransitions,
 }) => {
   const isLead = currentUser.role === 'LEAD_TECHNICIAN';
@@ -262,6 +265,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 onConfirmLoadPickup={onConfirmLoadPickup}
                 onResolveDefect={onResolveDefect}
                 tickets={tickets}
+                users={users}
                 isTransitioning={inFlightTransitions?.has(proj.id)}
                 busyWith={busyProjects.find((b) => b.id !== proj.id)}
               />
@@ -371,6 +375,7 @@ export const TechnicianDashboard: React.FC<Props> = ({
                 onConfirmLoadPickup={onConfirmLoadPickup}
               onResolveDefect={onResolveDefect}
               tickets={tickets}
+              users={users}
               isTransitioning={inFlightTransitions?.has(proj.id)}
               busyWith={busyProjects.find((b) => b.id !== proj.id)}
             />

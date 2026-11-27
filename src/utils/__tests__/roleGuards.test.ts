@@ -122,13 +122,13 @@ describe('Role Guards & State Machine Validation', () => {
       }).toThrowError(/شما مسئول یا تکنسین تخصیص‌یافته به این پروژه نیستید/);
     });
 
-    it('allows assigned technician or lead to patch permitted keys', () => {
+    it('only the project lead runs the work steps; other crew members are told to leave it to the lead', () => {
       expect(() => {
         validateProjectPatchRoleGuards(technician, mockProject, {
           status: 'EN_ROUTE',
           updatedAt: new Date().toISOString(),
         });
-      }).not.toThrow();
+      }).toThrow(/فقط سرپرست این پروژه/);
 
       expect(() => {
         validateProjectPatchRoleGuards(leadTech, mockProject, {
@@ -142,7 +142,7 @@ describe('Role Guards & State Machine Validation', () => {
       const disallowedKeys = ['title', 'customerName', 'address', 'scheduledDate', 'leadTechnicianId', 'price'];
       for (const key of disallowedKeys) {
         expect(() => {
-          validateProjectPatchRoleGuards(technician, mockProject, {
+          validateProjectPatchRoleGuards(leadTech, mockProject, {
             [key]: 'hacked_value',
           });
         }).toThrowError(PermanentError);
@@ -158,7 +158,7 @@ describe('Role Guards & State Machine Validation', () => {
 
       // Technician cannot set qcStatus = APPROVED
       expect(() => {
-        validateProjectPatchRoleGuards(technician, inProgressProject, {
+        validateProjectPatchRoleGuards(leadTech, inProgressProject, {
           status: 'COMPLETED',
           qcStatus: 'APPROVED',
         });
@@ -166,7 +166,7 @@ describe('Role Guards & State Machine Validation', () => {
 
       // Technician cannot set qcStatus = REJECTED
       expect(() => {
-        validateProjectPatchRoleGuards(technician, inProgressProject, {
+        validateProjectPatchRoleGuards(leadTech, inProgressProject, {
           status: 'COMPLETED',
           qcStatus: 'REJECTED',
         });
@@ -174,14 +174,14 @@ describe('Role Guards & State Machine Validation', () => {
 
       // Technician cannot set qcStatus = PENDING without status = COMPLETED
       expect(() => {
-        validateProjectPatchRoleGuards(technician, inProgressProject, {
+        validateProjectPatchRoleGuards(leadTech, inProgressProject, {
           qcStatus: 'PENDING',
         });
       }).toThrowError(/تنظیم وضعیت QC روی PENDING فقط همراه با اتمام کار \(COMPLETED\) مجاز است/);
 
       // Valid: status = COMPLETED and qcStatus = PENDING
       expect(() => {
-        validateProjectPatchRoleGuards(technician, inProgressProject, {
+        validateProjectPatchRoleGuards(leadTech, inProgressProject, {
           status: 'COMPLETED',
           qcStatus: 'PENDING',
           completedAt: new Date().toISOString(),
@@ -195,14 +195,14 @@ describe('Role Guards & State Machine Validation', () => {
     it('enforces status transition machine for technicians', () => {
       // 1. Double tap / skipping EN_ROUTE from SCHEDULED directly to IN_PROGRESS
       expect(() => {
-        validateProjectPatchRoleGuards(technician, mockProject, {
+        validateProjectPatchRoleGuards(leadTech, mockProject, {
           status: 'IN_PROGRESS',
         });
       }).toThrowError(/انتقال وضعیت از «SCHEDULED» به «IN_PROGRESS» برای تکنسین مجاز نیست/);
 
       // 2. Valid transition from SCHEDULED to EN_ROUTE
       expect(() => {
-        validateProjectPatchRoleGuards(technician, mockProject, {
+        validateProjectPatchRoleGuards(leadTech, mockProject, {
           status: 'EN_ROUTE',
         });
       }).not.toThrow();
@@ -210,7 +210,7 @@ describe('Role Guards & State Machine Validation', () => {
       // 3. Valid transition from EN_ROUTE to IN_PROGRESS
       const enRouteProject: Project = { ...mockProject, status: 'EN_ROUTE' };
       expect(() => {
-        validateProjectPatchRoleGuards(technician, enRouteProject, {
+        validateProjectPatchRoleGuards(leadTech, enRouteProject, {
           status: 'IN_PROGRESS',
           startedAt: new Date().toISOString(),
         });
@@ -230,7 +230,7 @@ describe('Role Guards & State Machine Validation', () => {
       };
 
       expect(() => {
-        validateProjectPatchRoleGuards(technician, inProgressProject, {
+        validateProjectPatchRoleGuards(leadTech, inProgressProject, {
           status: 'STUCK',
           stuckIncidents: [newIncident],
         });
@@ -270,7 +270,7 @@ describe('Role Guards & State Machine Validation', () => {
 
       // 1. Valid append of a second incident with resolutionStatus = OPEN
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithStuck, {
+        validateProjectPatchRoleGuards(leadTech, projectWithStuck, {
           status: 'STUCK',
           stuckIncidents: [initialIncident, secondValidIncident],
         });
@@ -278,7 +278,7 @@ describe('Role Guards & State Machine Validation', () => {
 
       // 2. Reject if newly appended incident has resolutionStatus = RESOLVED
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithStuck, {
+        validateProjectPatchRoleGuards(leadTech, projectWithStuck, {
           status: 'STUCK',
           stuckIncidents: [
             initialIncident,
@@ -289,7 +289,7 @@ describe('Role Guards & State Machine Validation', () => {
 
       // 3. Reject if existing incident was modified
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithStuck, {
+        validateProjectPatchRoleGuards(leadTech, projectWithStuck, {
           status: 'STUCK',
           stuckIncidents: [
             { ...initialIncident, description: 'دستکاری گزارش قبلی' },
@@ -300,14 +300,14 @@ describe('Role Guards & State Machine Validation', () => {
 
       // 4. Reject if no new incident appended (same length)
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithStuck, {
+        validateProjectPatchRoleGuards(leadTech, projectWithStuck, {
           stuckIncidents: [initialIncident],
         });
       }).toThrowError(/دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند/);
 
       // 5. Reject if incidents array truncated
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithStuck, {
+        validateProjectPatchRoleGuards(leadTech, projectWithStuck, {
           stuckIncidents: [],
         });
       }).toThrowError(/دسترسی غیرمجاز: تکنسین فقط میتواند گزارش استاک جدید ثبت کند/);
@@ -331,7 +331,7 @@ describe('Role Guards & State Machine Validation', () => {
 
       const inProgressProject: Project = { ...mockProject, status: 'IN_PROGRESS' };
       expect(() => {
-        validateProjectPatchRoleGuards(technician, inProgressProject, {
+        validateProjectPatchRoleGuards(leadTech, inProgressProject, {
           status: 'PAUSED',
         });
       }).not.toThrow();
@@ -353,42 +353,42 @@ describe('Role Guards & State Machine Validation', () => {
         dailyLogs: [existingLog],
       };
 
-      // Appending valid daily log by same technician
+      // سرپرست پروژه گزارش روزانه‌ی خودش را اضافه می‌کند
       const newLog = {
         id: 'log-2',
         date: '2026-11-02',
         note: 'روز دوم پارچه‌ها آویزان شدند',
         photos: [],
-        byUserId: technician.id,
-        byUserName: technician.name,
+        byUserId: leadTech.id,
+        byUserName: leadTech.name,
         createdAt: '2026-11-02T16:00:00Z',
       };
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithLog, {
+        validateProjectPatchRoleGuards(leadTech, projectWithLog, {
           dailyLogs: [existingLog, newLog],
         });
       }).not.toThrow();
 
       // Appending log with another user's ID
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithLog, {
+        validateProjectPatchRoleGuards(leadTech, projectWithLog, {
           dailyLogs: [existingLog, { ...newLog, byUserId: 'other-user' }],
         });
       }).toThrowError(/ثبت لاگ روزانه فقط با هویت خودتان مجاز است/);
 
       // Mutating previous log
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithLog, {
+        validateProjectPatchRoleGuards(leadTech, projectWithLog, {
           dailyLogs: [{ ...existingLog, note: 'دستکاری شد' }, newLog],
         });
       }).toThrowError(/ویرایش لاگ‌های روزانه قبلی مجاز نیست/);
 
-      // Technician cannot forge supervisor confirmation
+      // تکنسین (نه سرپرست) اصلاً گزارش روزانه ثبت نمی‌کند، چه برسد به تأیید سرپرست
       expect(() => {
         validateProjectPatchRoleGuards(technician, projectWithLog, {
-          dailyLogs: [existingLog, { ...newLog, supervisorConfirmed: true }],
+          dailyLogs: [existingLog, { ...newLog, byUserId: technician.id, supervisorConfirmed: true }],
         });
-      }).toThrowError(/تایید گزارش روزانه منحصراً در صلاحیت سرپرست اکیپ یا مدیر QC است/);
+      }).toThrowError(/فقط سرپرست این پروژه/);
 
       // Lead technician CAN submit daily log with supervisorConfirmed = true
       expect(() => {
@@ -400,7 +400,7 @@ describe('Role Guards & State Machine Validation', () => {
 
     it('allows exceptional completion fields in technician patch', () => {
       expect(() => {
-        validateProjectPatchRoleGuards(technician, { ...mockProject, status: 'IN_PROGRESS' }, {
+        validateProjectPatchRoleGuards(leadTech, { ...mockProject, status: 'IN_PROGRESS' }, {
           status: 'COMPLETED',
           qcStatus: 'PENDING',
           isExceptionalCompletion: true,
@@ -434,7 +434,7 @@ describe('Role Guards & State Machine Validation', () => {
         endedAt: '2026-11-01T16:00:00Z',
       };
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithOpenSession, {
+        validateProjectPatchRoleGuards(leadTech, projectWithOpenSession, {
           workSessions: [closedSession],
         });
       }).not.toThrow();
@@ -451,21 +451,21 @@ describe('Role Guards & State Machine Validation', () => {
         workSessions: [sessionByLead],
       };
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithLeadSession, {
+        validateProjectPatchRoleGuards(leadTech, projectWithLeadSession, {
           workSessions: [{ ...sessionByLead, endedAt: '2026-11-01T16:00:00Z' }],
         });
       }).not.toThrow();
 
       // ...but cannot rewrite its start time while closing it
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithLeadSession, {
+        validateProjectPatchRoleGuards(leadTech, projectWithLeadSession, {
           workSessions: [{ ...sessionByLead, startedAt: '2026-11-01T01:00:00Z', endedAt: '2026-11-01T16:00:00Z' }],
         });
       }).toThrowError(/تغییر سایر مشخصات جلسه کاری مجاز نیست/);
 
       // Unchanged arrays (no-op) are allowed
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithLeadSession, {
+        validateProjectPatchRoleGuards(leadTech, projectWithLeadSession, {
           workSessions: [sessionByLead],
           dailyLogs: [],
         });
@@ -520,7 +520,7 @@ describe('Role Guards & State Machine Validation', () => {
 
       // Technician blocked
       expect(() => {
-        validateProjectPatchRoleGuards(technician, lockedProject, {
+        validateProjectPatchRoleGuards(leadTech, lockedProject, {
           originalPlan: {
             lockedAt: '2026-05-01T08:00:00Z',
             activities: [],
@@ -555,7 +555,7 @@ describe('Role Guards & State Machine Validation', () => {
 
       // Technician cannot initialize it even during MEASUREMENT_PENDING
       expect(() => {
-        validateProjectPatchRoleGuards(technician, draftProject, {
+        validateProjectPatchRoleGuards(leadTech, draftProject, {
           originalPlan: {
             lockedAt: '2026-05-01T08:00:00Z',
             activities: [],
@@ -623,7 +623,7 @@ describe('Role Guards & State Machine Validation', () => {
       };
 
       expect(() => {
-        validateProjectPatchRoleGuards(technician, projectWithAmend, {
+        validateProjectPatchRoleGuards(leadTech, projectWithAmend, {
           planAmendments: [approvedAmend, pendingAmend],
         });
       }).toThrowError(/تایید بازنگری و تغییر سقف برنامه فقط در صلاحیت مدیر QC است/);

@@ -59,6 +59,9 @@ export function deviceSummary(ua?: string | null): string {
 /** توضیح ساده‌ی علت احتمالی خطا برای مدیر (نه برنامه‌نویس) */
 export function explainError(r: Pick<ClientErrorReport, 'context' | 'message' | 'details'>): string {
   const m = `${r.message} ${JSON.stringify(r.details || {})}`.toLowerCase();
+  if (/فقط سرپرست این پروژه/.test(m)) {
+    return 'این کار را فقط سرپرست همان پروژه می‌تواند انجام دهد؛ تکنسین‌ها فقط ثبت ایراد و درخواست متریال دارند (احتمالاً نسخه‌ی قدیمی برنامه روی گوشی است).';
+  }
   if (/row-level security|violates row|42501|permission denied|unauthorized|غیرمجاز|دسترسی/.test(m)) {
     return 'سرور اجازه نداد. معمولاً یعنی این کاربر دیگر به این پروژه دسترسی ندارد (مثلاً پروژه به اکیپ دیگری منتقل شده) یا نقشش اجازه‌ی این کار را ندارد.';
   }

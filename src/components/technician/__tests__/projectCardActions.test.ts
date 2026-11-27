@@ -4,7 +4,17 @@ import { renderToString } from 'react-dom/server';
 import { ProjectCard } from '../ProjectCard';
 import { Project, User } from '../../../types';
 
+// سرپرست همین پروژه (فقط او دکمه‌های مراحل کار را دارد)
 const mockUser: User = {
+  id: 'lead-1',
+  name: 'رضا سرپرست',
+  phone: '09120000009',
+  role: 'LEAD_TECHNICIAN',
+  active: true,
+  teamId: 'team-1',
+};
+
+const crewTechnician: User = {
   id: 'tech-1',
   name: 'علی نصاب',
   phone: '09120000001',
@@ -19,7 +29,7 @@ const baseProject: Project = {
   title: 'پروژه تست پرده سالن',
   status: 'IN_PROGRESS',
   leadTechnicianId: 'lead-1',
-  assignedTechnicianIds: ['tech-1'],
+  assignedTechnicianIds: ['lead-1', 'tech-1'],
   assignedTeamId: 'team-1',
   customerName: 'کارفرما تست',
   customerPhone: '09121111111',
@@ -137,5 +147,31 @@ describe('ProjectCard Action Hierarchy (Milestone 1A)', () => {
 
     expect(html).toContain('ادامه کار (اعلام حرکت به محل)');
     expect(html).toContain('در محل پروژه هستم (شروع مستقیم ادامه نصب)');
+  });
+
+  it('Scenario 5: a crew technician (not the lead) sees the lead and the crew, and only ticket and material/shortage actions', () => {
+    const html = renderToString(
+      createElement(ProjectCard, {
+        project: { ...baseProject, status: 'SCHEDULED', technicalHandover: { isHandoverComplete: true } as any },
+        currentUser: crewTechnician,
+        users: [mockUser, crewTechnician],
+        onViewProposal: () => {},
+        onOpenToolChecklist: () => {},
+        onOpenTicketModal: () => {},
+        onOpenCompletionModal: () => {},
+        onOpenDailyLogModal: () => {},
+        onUpdateStatus: () => {},
+        onOpenMaterialModal: () => {},
+      })
+    );
+    expect(html).toContain('سرپرست: ');
+    expect(html).toContain('رضا سرپرست');
+    expect(html).toContain('علی نصاب (شما)');
+    expect(html).toContain('href="tel:09120000009"');
+    expect(html).toContain('ثبت ایراد');
+    expect(html).toContain('درخواست متریال / کسری');
+    expect(html).not.toContain('حرکت به محل نصب');
+    expect(html).not.toContain('ثبت اتمام');
+    expect(html).not.toContain('اعلام توقف');
   });
 });

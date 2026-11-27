@@ -748,7 +748,7 @@ describe('Phase P2.1 — Original Installation Plan & Simplified Field Progress 
           dailyLogs: [forgedLog],
         }
       )
-    ).toThrow(/تایید گزارش روزانه منحصراً در صلاحیت سرپرست اکیپ یا مدیر QC است/);
+    ).toThrow(/فقط سرپرست این پروژه/);
 
     // But supervisor submitting with supervisorConfirmed = true is allowed
     const validSupervisorLog: DailyLog = {
