@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildActionQueue } from './actionQueue';
-import type { Project, Ticket } from '../types';
+import { buildActionQueue, isBookingAwaitingAssignment } from './actionQueue';
+import type { Project, SalesProjectBooking, Ticket } from '../types';
 
 const proj = (id: string, extra: Partial<Project> = {}) =>
   ({ id, code: id, title: id, status: 'SCHEDULED', assignedTeamId: 'T1', scheduledDate: '2026-12-01', ...extra }) as Project;
@@ -82,5 +82,26 @@ describe('dashboard audit fixes', () => {
     const orig = proj('P', { endDate: '2026-12-03', customerPhone: '0912' } as Partial<Project>);
     const diff = computeProjectDiff(orig, { endDate: undefined, customerPhone: '', address: '' } as Partial<Project>);
     expect(diff).toEqual({ endDate: null, customerPhone: null });
+  });
+});
+
+describe('sales bookings already placed by another manager', () => {
+  const booking = (id: string, extra: Partial<SalesProjectBooking> = {}) =>
+    ({ id, customerName: id, requestedDate: '2000-01-01', createdAt: '2026-11-01', ...extra }) as SalesProjectBooking;
+  const linked = booking('B1', { convertedToProjectId: 'P-QC-TEAM' });
+  const free = booking('B2');
+
+  it('the QC manager (sees every project) gets a booking back only when its project is gone', () => {
+    expect(isBookingAwaitingAssignment(linked, [proj('P-QC-TEAM')])).toBe(false);
+    expect(isBookingAwaitingAssignment(linked, [])).toBe(true);
+    expect(isBookingAwaitingAssignment(free, [])).toBe(true);
+  });
+
+  it('the coordinator does not see a booking placed with a team outside his list as unscheduled', () => {
+    // his project list holds only his own teams' jobs, so P-QC-TEAM is not in it
+    expect(isBookingAwaitingAssignment(linked, [], false)).toBe(false);
+    expect(isBookingAwaitingAssignment(free, [], false)).toBe(true);
+    const q = buildActionQueue([], [], [linked, free], false);
+    expect(q.filter((i) => i.kind === 'BOOKING').map((i) => i.booking?.id)).toEqual(['B2']);
   });
 });

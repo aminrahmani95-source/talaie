@@ -915,6 +915,8 @@ export interface SalesProjectBooking {
   convertedToProjectId?: string; // شناسه پروژه معادل در صورت انتقال به برنامه نصب
   scheduledInstallationDate?: string; // تاریخ قطعی نصب تعیین‌شده توسط مدیر اپ و QC
   assignedInstallationTeamId?: string; // شناسه اکیپ قطعی تعیین‌شده
+  convertedByName?: string; // چه کسی رزرو را به برنامه‌ی نصب منتقل کرد
+  convertedAt?: string;
 }
 
 export interface TeamDayAllocation {

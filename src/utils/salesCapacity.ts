@@ -619,7 +619,8 @@ export function linkBookingToInstallationProject(
   bookingId: string,
   projectId: string,
   scheduledDate: string,
-  assignedTeamId: string
+  assignedTeamId: string,
+  byName?: string
 ): boolean {
   const bookings = getStoredBookings();
   const index = bookings.findIndex((b) => b.id === bookingId);
@@ -630,6 +631,8 @@ export function linkBookingToInstallationProject(
     convertedToProjectId: projectId,
     scheduledInstallationDate: scheduledDate,
     assignedInstallationTeamId: assignedTeamId,
+    ...(byName ? { convertedByName: byName } : {}),
+    convertedAt: new Date().toISOString(),
   };
 
   saveStoredBookings(bookings);

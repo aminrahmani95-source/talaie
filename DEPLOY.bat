@@ -16,6 +16,7 @@ echo.
 echo [1/7] Saving local changes...
 git add -A
 git reset -q -- .env .env.local .env.production 2>nul
+git reset -q -- "talaie-backup-*" "*.zip" 2>nul
 git diff --cached --quiet
 if errorlevel 1 (
   git commit -q -m "Update from Claude (local changes)" || goto fail

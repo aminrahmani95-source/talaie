@@ -66,6 +66,8 @@ export interface OperationsControlCenterProps {
   materialRequests?: MaterialRequest[];
   /** sales bookings (so bookings waiting for a team show up in the action queue) */
   salesBookings?: SalesProjectBooking[];
+  /** false برای هماهنگ‌کننده: رزروی که به پروژه‌ای (حتی بیرون از فهرست او) متصل است، برنامه‌ریزی‌شده است */
+  allProjectsVisible?: boolean;
   settings?: SystemSettings | null;
   onNavigateTab: (tab: ManagerTab) => void;
   /** برگه‌ی مدیریت پروژه */
@@ -94,6 +96,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   teamsWithMembers,
   scheduleChangeRequests = [],
   salesBookings = [],
+  allProjectsVisible = true,
   onNavigateTab,
   onOpenProject,
   onOpenQcProject,
@@ -119,7 +122,7 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   }, [currentUser.role]);
 
   // ---------------------------------------------------------------- صف اقدام
-  const actionQueue = useMemo(() => buildActionQueue(projects, tickets, salesBookings), [projects, tickets, salesBookings, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const actionQueue = useMemo(() => buildActionQueue(projects, tickets, salesBookings, allProjectsVisible), [projects, tickets, salesBookings, allProjectsVisible, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const groupCounts = useMemo(() => {
     const c: Record<ActionGroup, number> = { ISSUES: 0, QC: 0, PLAN: 0 };
     for (const i of actionQueue) c[ACTION_GROUP[i.kind]]++;
@@ -127,8 +130,8 @@ export const OperationsControlCenter: React.FC<OperationsControlCenterProps> = (
   }, [actionQueue]);
   const pendingScheduleRequests = scheduleChangeRequests.filter((r) => r.status === 'PENDING').length;
   const laterBookings = useMemo(
-    () => salesBookings.filter((b) => isBookingAwaitingAssignment(b, projects) && !isBookingDueSoon(b)),
-    [salesBookings, projects]
+    () => salesBookings.filter((b) => isBookingAwaitingAssignment(b, projects, allProjectsVisible) && !isBookingDueSoon(b)),
+    [salesBookings, projects, allProjectsVisible]
   );
 
   // داخل هر گروه: عقب‌افتاده‌ترین اول

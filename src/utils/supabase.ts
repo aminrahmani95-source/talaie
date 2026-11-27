@@ -27,6 +27,8 @@ export interface ClientErrorReport {
 function isMissingTableError(error: any): boolean {
   const code = String(error?.code || '');
   const msg = String(error?.message || '').toLowerCase();
+  // «ستون وجود ندارد» (42703) یعنی جدول هست؛ نباید «جدول نیست» حساب شود
+  if (code === '42703' || /column .* does not exist/.test(msg)) return false;
   return code === '42P01' || code === 'PGRST205' || code === 'PGRST202' || msg.includes('does not exist') || msg.includes('could not find the table');
 }
 
@@ -1775,6 +1777,8 @@ export const SupabaseSyncService = {
                 status: d.status,
                 name: d.name,
                 retry: op.retryCount,
+                // چند دقیقه این کار روی گوشی منتظر مانده بود (کار آفلاین که دیر فرستاده شد)
+                waitedMin: op.createdAt ? Math.max(0, Math.round((Date.now() - op.createdAt) / 60000)) : undefined,
                 fields: patch && typeof patch === 'object' ? Object.keys(patch).slice(0, 25) : undefined,
                 hint: (err as any)?.hint,
                 pgDetails: (err as any)?.details,
@@ -1835,11 +1839,11 @@ export const SupabaseSyncService = {
         if (orderBy) q = q.order(orderBy, { ascending: true });
         const { data, error } = await q.range(from, from + pageSize - 1);
         if (error) {
-          if (isMissingTableError(error)) return { status: 'missing' };
           // جدولی که ستون id ندارد (مثل talaie_sync): بدون مرتب‌سازی دوباره
           if (orderBy && /column .* does not exist|42703/i.test(`${error.code} ${error.message}`)) {
             return this.fetchTableForBackup(table, '');
           }
+          if (isMissingTableError(error)) return { status: 'missing' };
           return { status: 'failed', message: error.message };
         }
         rows.push(...(data || []));

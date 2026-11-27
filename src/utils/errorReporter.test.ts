@@ -8,7 +8,7 @@ import {
   sanitizeDetails,
   type ClientErrorRow,
 } from './errorReporter';
-import { contextLabel, deviceSummary, errorGroup, explainError, summarizeByUser } from './clientErrors';
+import { contextLabel, detailsLine, deviceSummary, errorGroup, explainError, summarizeByUser } from './clientErrors';
 import type { ClientErrorReport } from './supabase';
 
 function memoryStorage() {
@@ -185,6 +185,13 @@ describe('clientErrors (manager view)', () => {
     expect(explainError(r)).not.toMatch(/نشست/);
     expect(explainError(row({ message: 'check failed', details: { fields: ['workSessions'] } }))).toBe('');
     expect(explainError(row({ message: 'JWT expired' }))).toMatch(/نشست/);
+  });
+
+  it('shows how long a change waited on the phone before it was sent', () => {
+    expect(detailsLine({ waitedMin: 5 })).toBe('');
+    expect(detailsLine({ waitedMin: 45 })).toBe('45 دقیقه در صف گوشی مانده بود');
+    expect(detailsLine({ waitedMin: 180 })).toBe('3 ساعت در صف گوشی مانده بود');
+    expect(detailsLine({ waitedMin: 2 * 1440 + 100 })).toBe('2 روز در صف گوشی مانده بود');
   });
 
   it('labels sections and groups them', () => {

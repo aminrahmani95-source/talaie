@@ -2754,10 +2754,10 @@ export const App: React.FC = () => {
     for (const t of viewTickets) if (t.status === 'OPEN') keys.add(t.projectId || t.id);
     return {
       ...base,
-      actionQueueCount: buildActionQueue(viewProjects, viewTickets, salesBookings).length,
+      actionQueueCount: buildActionQueue(viewProjects, viewTickets, salesBookings, !myCoordinatorTeamIds).length,
       issuesCount: keys.size,
     };
-  }, [viewProjects, viewTickets, viewMaterialRequests, salesBookings]);
+  }, [viewProjects, viewTickets, viewMaterialRequests, salesBookings, myCoordinatorTeamIds]);
 
   if (authChecking) {
     return <SplashScreen />;
@@ -2895,6 +2895,7 @@ export const App: React.FC = () => {
                 {activeTab === 'control' && (
                   <OperationsControlCenter
                     currentUser={currentUser}
+                    allProjectsVisible={!isCoordinator}
                     projects={viewProjects}
                     users={usersWithTeams}
                     tickets={viewTickets}
@@ -2929,6 +2930,7 @@ export const App: React.FC = () => {
                     key={plannerFocus.nonce}
                     focusBookingId={plannerFocus.bookingId}
                     openAlertsOnMount={Boolean(plannerFocus.alerts)}
+                    allProjectsVisible={!isCoordinator}
                     projects={viewProjects}
                     users={usersWithTeams}
                     teams={planningTeamsWithMembers}

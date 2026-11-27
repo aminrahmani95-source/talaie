@@ -125,6 +125,16 @@ export function detailsLine(details: Record<string, any> | null | undefined): st
   if (dev.net) parts.push(`شبکه ${dev.net}`);
   if (typeof dev.downlinkMbps === 'number') parts.push(`${dev.downlinkMbps}Mbps`);
   if (details.retry) parts.push(`تلاش ${details.retry}`);
+  if (typeof details.waitedMin === 'number' && details.waitedMin >= 10) {
+    const m = details.waitedMin;
+    parts.push(
+      m >= 1440
+        ? `${Math.round(m / 1440)} روز در صف گوشی مانده بود`
+        : m >= 60
+        ? `${Math.round(m / 60)} ساعت در صف گوشی مانده بود`
+        : `${m} دقیقه در صف گوشی مانده بود`
+    );
+  }
   return parts.join(' · ');
 }
 

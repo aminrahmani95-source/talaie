@@ -60,9 +60,20 @@ export function isBookingDueSoon(b: SalesProjectBooking, now: Date = new Date())
   return b.requestedDate < dayKeyAfter(BOOKING_ACTION_DAYS, now);
 }
 
-/** a sales booking the manager still has to turn into a scheduled project */
-export function isBookingAwaitingAssignment(b: SalesProjectBooking, projects: Project[]): boolean {
+/**
+ * a sales booking the manager still has to turn into a scheduled project.
+ * allProjectsVisible=false (the scheduling coordinator sees only his own teams' projects):
+ * a booking already linked to a project counts as scheduled even when that project is not
+ * in his list — otherwise bookings the QC manager had placed with other teams looked
+ * unscheduled to him and could be scheduled a second time.
+ */
+export function isBookingAwaitingAssignment(
+  b: SalesProjectBooking,
+  projects: Project[],
+  allProjectsVisible = true
+): boolean {
   if (!b.convertedToProjectId) return true;
+  if (!allProjectsVisible) return false;
   return !projects.some((p) => p.id === b.convertedToProjectId);
 }
 
@@ -75,6 +86,7 @@ export function buildActionQueue(
   projects: Project[],
   tickets: Ticket[],
   bookings: SalesProjectBooking[] = [],
+  allProjectsVisible = true,
 ): ActionItem[] {
   const openTickets = tickets.filter((t) => t.status === 'OPEN');
   const ticketsByProject = new Map<string, Ticket[]>();
@@ -126,7 +138,7 @@ export function buildActionQueue(
   // in the next few days are listed: with weeks of bookings the queue was all bookings and the
   // real problems (stops, tickets) got lost below them. Later ones are summed up on the dashboard.
   const waiting = bookings
-    .filter((b) => isBookingAwaitingAssignment(b, projects) && isBookingDueSoon(b))
+    .filter((b) => isBookingAwaitingAssignment(b, projects, allProjectsVisible) && isBookingDueSoon(b))
     .sort((a, b) => (a.requestedDate || '').localeCompare(b.requestedDate || ''));
   for (const b of waiting) {
     items.push({ kind: 'BOOKING', key: `booking-${b.id}`, booking: b, tickets: [] });

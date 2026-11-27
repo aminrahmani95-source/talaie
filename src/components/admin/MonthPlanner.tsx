@@ -40,7 +40,8 @@ import {
   getProjectDailyDurationHours,
   getTeamDailyCapacity,
 } from '../../utils/capacity';
-import { linkBookingToInstallationProject, isSalesWorkingDay, workingDaysFrom } from '../../utils/salesCapacity';
+import { linkBookingToInstallationProject, isSalesWorkingDay, workingDaysFrom, getStoredBookings } from '../../utils/salesCapacity';
+import { syncSalesBookings } from '../../utils/salesBookingSync';
 import { useToday } from '../../hooks/useToday';
 import type { ScheduleConflict } from '../../utils/capacity';
 import { useSalesBookings } from '../../hooks/useSalesBookings';
@@ -84,6 +85,8 @@ interface Props {
   focusBookingId?: string | null;
   /** از پیشخوان: فهرست هشدارها و درخواست‌های تغییر برنامه باز باشد */
   openAlertsOnMount?: boolean;
+  /** false برای هماهنگ‌کننده: همه‌ی پروژه‌ها را نمی‌بیند (رزرو متصل‌شده = برنامه‌ریزی‌شده) */
+  allProjectsVisible?: boolean;
 }
 
 export const MonthPlanner: React.FC<Props> = ({
@@ -102,6 +105,7 @@ export const MonthPlanner: React.FC<Props> = ({
   onReviewScheduleChange,
   focusBookingId,
   openAlertsOnMount = false,
+  allProjectsVisible = true,
 }) => {
   // نیمه‌شب خودش جلو می‌رود (قبلاً صفحه‌ی بازمانده «امروز» را دیروز نشان می‌داد)
   const todayTick = useToday();
@@ -164,25 +168,55 @@ export const MonthPlanner: React.FC<Props> = ({
   const unassignedSalesBookings = useMemo(
     () =>
       allSalesBookings
-        .filter((b) => isBookingAwaitingAssignment(b, projects))
+        .filter((b) => isBookingAwaitingAssignment(b, projects, allProjectsVisible))
         // به ترتیب تاریخ اجرای درخواستی (نزدیک‌ترین اول)، نه تاریخ ثبت؛ بدون تاریخ آخر
         .sort(
           (a, b) =>
             String(a.requestedDate || '9999').localeCompare(String(b.requestedDate || '9999')) ||
             String(a.createdAt || '').localeCompare(String(b.createdAt || ''))
         ),
-    [allSalesBookings, projects],
+    [allSalesBookings, projects, allProjectsVisible],
   );
+
+  /**
+   * پیش از باز کردن فرم، آخرین وضعیت رزروها از سرور خوانده می‌شود تا رزروی که مدیر دیگری
+   * همین حالا برنامه‌ریزی کرده، دوباره (و برای اکیپ دوم) برنامه‌ریزی نشود.
+   */
+  const [checkingBookingId, setCheckingBookingId] = useState<string | null>(null);
+  const startAssigning = async (b: SalesProjectBooking) => {
+    if (checkingBookingId) return;
+    setCheckingBookingId(b.id);
+    try {
+      await syncSalesBookings();
+    } catch {
+      // بدون اینترنت: با آخرین نسخه‌ی همین دستگاه ادامه می‌دهیم
+    } finally {
+      setCheckingBookingId(null);
+    }
+    const fresh = getStoredBookings().find((x) => x.id === b.id);
+    if (!fresh) {
+      triggerToast('error', `رزرو «${b.customerName}» دیگر وجود ندارد (حذف شده است).`);
+      return;
+    }
+    if (!isBookingAwaitingAssignment(fresh, projects, allProjectsVisible)) {
+      triggerToast(
+        'error',
+        `رزرو «${fresh.customerName}» قبلاً${fresh.convertedByName ? ` توسط ${fresh.convertedByName}` : ''} به برنامه‌ی نصب منتقل شده است.`
+      );
+      return;
+    }
+    setAssigningBooking(fresh);
+  };
   // «تخصیص در تقویم» از پیشخوان: فرم همان رزرو باز شود (قبلاً تقویم با سینی بسته باز می‌شد)
   React.useEffect(() => {
     if (!focusBookingId || focusedBookingHandled.current === focusBookingId) return;
     const b = allSalesBookings.find((x) => x.id === focusBookingId);
     if (b) {
       focusedBookingHandled.current = focusBookingId;
-      if (canEditSchedule) setAssigningBooking(b);
+      if (canEditSchedule) void startAssigning(b);
       else setIsSalesTrayOpen(true);
     }
-  }, [focusBookingId, allSalesBookings, canEditSchedule]);
+  }, [focusBookingId, allSalesBookings, canEditSchedule]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayedDays = useMemo(() => {
     if (viewMode === '1DAY') return days.slice(startIndex, startIndex + 1);
@@ -433,7 +467,8 @@ export const MonthPlanner: React.FC<Props> = ({
                   {canEditSchedule ? (
                     <button
                       type="button"
-                      onClick={() => setAssigningBooking(b)}
+                      onClick={() => void startAssigning(b)}
+                      disabled={checkingBookingId === b.id}
                       className="w-full py-1.5 rounded-lg bg-brand hover:bg-brand-hover text-on-brand font-black text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
                     >
                       <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -846,8 +881,8 @@ export const MonthPlanner: React.FC<Props> = ({
                     <button
                       key={b.id}
                       type="button"
-                      disabled={!canEditSchedule}
-                      onClick={() => setAssigningBooking(b)}
+                      disabled={!canEditSchedule || checkingBookingId === b.id}
+                      onClick={() => void startAssigning(b)}
                       title="رزرو فروش بدون اکیپ — برای تخصیص بزنید"
                       className="w-full text-right p-2.5 rounded-md border border-dashed border-sky-500/60 bg-sky-500/5 hover:bg-sky-500/10 transition cursor-pointer disabled:cursor-default"
                     >
@@ -1156,7 +1191,22 @@ export const MonthPlanner: React.FC<Props> = ({
                 status: 'SCHEDULED',
               },
               (project) => {
-                linkBookingToInstallationProject(booking.id, project.id, project.scheduledDate, project.assignedTeamId || teamId);
+                // در فاصله‌ی پر کردن فرم ممکن است مدیر دیگری همین رزرو را برنامه‌ریزی کرده باشد
+                const latest = getStoredBookings().find((x) => x.id === booking.id);
+                if (latest?.convertedToProjectId && latest.convertedToProjectId !== project.id) {
+                  triggerToast(
+                    'error',
+                    `توجه: رزرو «${booking.customerName}» هم‌زمان${latest.convertedByName ? ` توسط ${latest.convertedByName}` : ''} هم برنامه‌ریزی شده بود. یکی از دو پروژه را حذف کنید تا مشتری دو بار برنامه نداشته باشد.`
+                  );
+                  return;
+                }
+                linkBookingToInstallationProject(
+                  booking.id,
+                  project.id,
+                  project.scheduledDate,
+                  project.assignedTeamId || teamId,
+                  currentUser?.name
+                );
                 triggerToast('success', `رزرو «${booking.customerName}» به برنامه نصب منتقل شد.`);
               }
             );

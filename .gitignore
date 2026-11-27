@@ -30,3 +30,7 @@ graphify-out/
 *.sw?
 
 Claude outputs/
+
+# Server backups (customer data) must never go to GitHub
+talaie-backup-*
+*.zip
